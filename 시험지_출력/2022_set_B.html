@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2022_set_B — 시험지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root { --ink:#1a1a1a; --line:#d8d8d8; --paper:#fff; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:#ececec;
+    font-family:"Noto Serif KR","Pretendard",serif;
+    color:var(--ink); line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .sheet {
+    max-width:760px; margin:32px auto; background:var(--paper);
+    padding:56px 56px 72px; box-shadow:0 4px 24px rgba(0,0,0,.12);
+  }
+  .sheet-head {
+    text-align:center; border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:30px;
+  }
+  .sheet-head h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.3px; }
+  .sheet-head p { font-size:13px; color:#666; margin:0; }
+  .q { padding:26px 0; border-bottom:1px solid #eee; }
+  .q-body { display:flex; gap:8px; align-items:baseline; }
+  .q-no { font-size:18px; font-weight:700; flex:0 0 auto; }
+  .q-stem { flex:1; font-size:16.5px; line-height:1.8; }
+  /* 인라인 분수가 든 '그 줄'만 line-height 확대 (다른 줄은 그대로) */
+  .q-stem .katex:has(.mfrac) { line-height:2.9; }
+  .q-stem .katex-display .katex { line-height:normal; }  /* display 블록은 제외 */
+  .q-text + .q-text { margin-top:.5em; }
+  /* 수능 조건 박스 (가)(나) */
+  .cond-box { border:1px solid #333; border-radius:2px; padding:16px 26px; margin:20px 0 22px; }
+  .cond { display:flex; gap:9px; margin:9px 0; font-size:16.5px; }
+  .cond-label { flex:0 0 auto; }
+  .cond-body { flex:1; }
+  .cond-body .katex-display { padding-left:1.4em; margin:1.4em 0; }
+  .katex-display { margin:2.5em 0; text-align:left; padding-left:2.8em; }
+  .katex-display > .katex { text-align:left; }
+  .q-point { font-family:"Pretendard",sans-serif; font-size:.9em; color:#333; margin-left:4px; white-space:nowrap; }
+  .choices { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:0 6px 0 28px; margin-top:18px; }
+  .choice { display:flex; align-items:center; gap:7px; font-size:16px; }
+  .cnum { flex:0 0 auto; font-size:16px; line-height:1; }
+  .q-meta { font-family:"Pretendard",sans-serif; font-size:12px; color:#999; margin-bottom:10px; }
+  .q-toggle {
+    margin-top:18px; font-family:"Pretendard",sans-serif; font-size:13px;
+    color:#c0392b; background:none; border:1px solid #e0c0bd; border-radius:6px;
+    padding:6px 12px; cursor:pointer;
+  }
+  .q-sol { display:none; margin-top:14px; padding:16px 18px; background:#faf7f2; border-radius:8px; }
+  .q-sol.open { display:block; }
+  .q-ans { font-size:15px; margin-bottom:10px; font-family:"Pretendard",sans-serif; }
+  .q-ans b { color:#c0392b; font-size:17px; }
+  .q-ansval { color:#888; font-size:13px; }
+  .q-exp { white-space:pre-wrap; font-size:15px; color:#333; }
+  .katex { font-size:1.04em; }
+  @media print {
+    body { background:#fff; }
+    .sheet { box-shadow:none; margin:0; max-width:none; }
+    .q-toggle { display:none; }
+    .q-sol { display:block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h1>2022_set_B</h1>
+      <p>Pullit · AI 생성 진단 세트 · 총 10문항</p>
+    </div>
+    
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">공비가 양수인 등비수열 $\{a_n\}$에 대하여 $a_2=6$, $a_4=24$일 때, $a_6$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$24$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$48$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$96$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$192$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$384$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 등차수열과 등비수열 · Basic</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(96)</span></div>
+          <div class="q-exp">등비수열 $\{a_n\}$의 공비를 $r$ ($r&gt;0$)이라 하자.
+$a_4 = a_2 r^2$이므로 $24 = 6 \times r^2$이다.
+$r^2 = 4$이고 $r&gt;0$이므로 $r=2$이다.
+따라서 $a_6 = a_4 r^2 = 24 \times 2^2 = 24 \times 4 = 96$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x) = \log_2 (x-a) + b$의 역함수를 $g(x)$라 하자. 함수 $y=g(x)$의 그래프가 두 점 $(1, 3)$, $(4, 10)$을 지날 때, $a+b$의 값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$-1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$0$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$3$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 지수함수와 로그함수 · Normal</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(3)</span></div>
+          <div class="q-exp">함수 $y=g(x)$의 그래프가 두 점 $(1, 3)$, $(4, 10)$을 지나므로
+$g(1) = 3$, $g(4) = 10$이다.
+역함수의 성질에 의하여
+$f(3) = 1$, $f(10) = 4$이다.
+$f(3) = \log_2 (3-a) + b = 1$ $\cdots\cdots$ ㉠
+$f(10) = \log_2 (10-a) + b = 4$ $\cdots\cdots$ ㉡
+㉡에서 ㉠을 변끼리 빼면
+$\log_2 (10-a) - \log_2 (3-a) = 3$
+$\log_2 \dfrac{10-a}{3-a} = 3$
+로그의 정의에 의하여
+$\dfrac{10-a}{3-a} = 2^3 = 8$
+$10-a = 8(3-a)$
+$10-a = 24-8a$
+$7a = 14$
+$a = 2$
+$a=2$를 ㉠에 대입하면
+$\log_2 (3-2) + b = 1$
+$\log_2 1 + b = 1$
+$0 + b = 1$
+$b = 1$
+따라서 $a+b = 2+1 = 3$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">자연수 $n$에 대하여 점 $(0, -n)$에서 곡선 $y=x^2$에 그은 두 접선 중 기울기가 양수인 직선을 $l_n$이라 하자. 직선 $l_n$의 $x$절편을 $a_n$이라 할 때, $\sum_{k=1}^{120} \dfrac{1}{a_k+a_{k+1}}$의 값은? <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$20$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$22$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$24$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$26$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$28$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 수열의 합 · Advanced</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(20)</span></div>
+          <div class="q-exp">접선 $l_n$은 점 $(0, -n)$을 지나고 기울기가 양수인 직선이므로 그 방정식을 $y = mx - n$ ($m&gt;0$)이라 하자.
+이 직선이 곡선 $y=x^2$에 접하므로 이차방정식 $x^2 - mx + n = 0$이 중근을 가져야 한다.
+판별식 $D = m^2 - 4n = 0$에서 $m&gt;0$이므로 $m = 2\sqrt{n}$이다.
+따라서 직선 $l_n$의 방정식은 $y = 2\sqrt{n}x - n$이다.
+직선 $l_n$의 $x$절편 $a_n$은 $y=0$일 때의 $x$값이므로 $2\sqrt{n}x = n$에서 $a_n = \dfrac{\sqrt{n}}{2}$이다.
+(이 문항은 $S_n$에서 $a_n$을 역추적하는 구조가 아니므로, 별도의 $n=1$ 검증 절차 없이 기하적 조건에서 유도된 일반항을 모든 자연수에 대하여 바로 적용한다.)
+구하고자 하는 식은 분모에 무리식을 포함한 분수꼴이므로, 분모를 유리화하여 연쇄 소거하는 합산 기술을 선택한다.
+$\sum_{k=1}^{120} \dfrac{1}{a_k+a_{k+1}} = \sum_{k=1}^{120} \dfrac{1}{\dfrac{\sqrt{k}}{2} + \dfrac{\sqrt{k+1}}{2}} = 2 \sum_{k=1}^{120} \dfrac{1}{\sqrt{k+1} + \sqrt{k}}$
+분모와 분자에 $(\sqrt{k+1} - \sqrt{k})$를 곱하여 유리화하면
+$= 2 \sum_{k=1}^{120} \dfrac{\sqrt{k+1} - \sqrt{k}}{(\sqrt{k+1} + \sqrt{k})(\sqrt{k+1} - \sqrt{k})} = 2 \sum_{k=1}^{120} (\sqrt{k+1} - \sqrt{k})$
+$= 2 \{ (\sqrt{2}-\sqrt{1}) + (\sqrt{3}-\sqrt{2}) + \cdots + (\sqrt{121}-\sqrt{120}) \}$
+$= 2 ( \sqrt{121} - 1 ) = 2 (11 - 1) = 20$이다.
+따라서 정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">4.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x)=3x^2+4x+1$의 한 부정적분 $F(x)$에 대하여 $F(0)=2$일 때, $F(1)$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">6</span></span><span class="choice"><span class="cnum">②</span><span class="m">7</span></span><span class="choice"><span class="cnum">③</span><span class="m">8</span></span><span class="choice"><span class="cnum">④</span><span class="m">9</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">10</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 부정적분 · Basic</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(6)</span></div>
+          <div class="q-exp">함수 $F(x)$는 함수 $f(x)$의 한 부정적분이므로
+$$F(x) = \int f(x) dx$$
+$$= \int (3x^2+4x+1) dx$$
+$$= x^3+2x^2+x+C$$
+(단, $C$는 적분상수)
+이다.
+$F(0)=2$에서 $C=2$이므로
+$$F(x)=x^3+2x^2+x+2$$
+이다.
+따라서 $F(1)=1+2+1+2=6$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">5.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x)$를 
+$$f(x) = \begin{cases} x+2 &amp; (x &lt; a) \\ x^2-4 &amp; (x \ge a) \end{cases}$$
+라 하자. 함수 $g(x)=x-2a$ 에 대하여 함수 $f(x)g(x)$가 실수 전체의 집합에서 연속이 되도록 하는 모든 상수 $a$의 값의 합은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$5$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 함수의 연속 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(1)</span></div>
+          <div class="q-exp">함수 $f(x)g(x)$가 $x \ne a$ 인 모든 실수에서 연속이므로 실수 전체의 집합에서 연속이 되려면 $x=a$ 에서 연속이어야 한다.
+즉, $\lim\limits_{x \to a-} f(x)g(x) = \lim\limits_{x \to a+} f(x)g(x) = f(a)g(a)$ 가 성립해야 한다.
+$\lim\limits_{x \to a-} f(x)g(x) = \lim\limits_{x \to a-} (x+2)(x-2a) = (a+2)(-a)$
+$\lim\limits_{x \to a+} f(x)g(x) = \lim\limits_{x \to a+} (x^2-4)(x-2a) = (a^2-4)(-a)$
+$f(a)g(a) = (a^2-4)(-a)$
+이므로
+$-a(a+2) = -a(a^2-4)$
+$-a(a+2) + a(a-2)(a+2) = 0$
+$a(a+2)\{ (a-2) - 1 \} = 0$
+$a(a+2)(a-3) = 0$
+따라서 $a=0$ 또는 $a=-2$ 또는 $a=3$ 이다.
+모든 상수 $a$의 값의 합은 $0 + (-2) + 3 = 1$ 이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">6.</span>
+          <div class="q-stem"><div class="q-text">다항함수 $f(x)$가 모든 실수 $x$에 대하여
+$$xf(x)=2x^3-2x^2+\int_1^x f(t)dt$$
+를 만족시킬 때, $f(3)$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$8$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$10$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$12$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$14$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$16$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 정적분 · Normal</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(16)</span></div>
+          <div class="q-exp">주어진 등식의 양변에 $x=1$을 대입하면
+$1 \times f(1) = 2 - 2 + \int_1^1 f(t)dt$
+$f(1) = 0$
+주어진 등식의 양변을 $x$에 대하여 미분하면
+$f(x) + xf&#x27;(x) = 6x^2 - 4x + f(x)$
+$xf&#x27;(x) = 6x^2 - 4x$
+$f(x)$가 다항함수이므로 $f&#x27;(x) = 6x - 4$이다.
+$f(x) = \int f&#x27;(x)dx = \int (6x - 4)dx = 3x^2 - 4x + C$ (단, $C$는 적분상수)
+$f(1) = 0$이므로 $3 - 4 + C = 0$, $C = 1$
+따라서 $f(x) = 3x^2 - 4x + 1$이므로
+$f(3) = 3 \times 3^2 - 4 \times 3 + 1 = 27 - 12 + 1 = 16$
+정답 ⑤</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">7.</span>
+          <div class="q-stem"><div class="q-text">수직선 위를 움직이는 두 점 $\mathrm{P}$, $\mathrm{Q}$의 시각 $t$ ($t \ge 0$)에서의 위치 $x_1$, $x_2$가 각각
+$$x_1(t) = t^3 - 2t^2 + 10t, \quad x_2(t) = at^2 + bt$$
+이다. 두 점 $\mathrm{P}$, $\mathrm{Q}$의 속도가 같아지는 순간이 두 번 있고, 이때의 시각을 각각 $t_1$, $t_2$ ($0 &lt; t_1 &lt; t_2$)라 할 때, 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">시각 $t=t_2$에서 두 점 $\mathrm{P}$와 $\mathrm{Q}$는 만난다.</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">시각 $t=t_1$에서 두 점 $\mathrm{P}$, $\mathrm{Q}$ 사이의 거리는 $4$이다.</span></div></div>
+<div class="q-text">시각 $t=0$에서 $t=t_2$까지 점 $\mathrm{Q}$가 움직인 거리를 $s$라 할 때, $s$의 값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$37$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$39$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$41$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$43$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$45$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 도함수의 활용 · Advanced</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(39)</span></div>
+          <div class="q-exp">두 점 $\mathrm{P}$, $\mathrm{Q}$의 시각 $t$에서의 속도를 각각 $v_1(t)$, $v_2(t)$라 하면
+$v_1(t) = x_1&#x27;(t) = 3t^2 - 4t + 10$
+$v_2(t) = x_2&#x27;(t) = 2at + b$
+시각 $t=t_1$, $t=t_2$에서 두 점의 속도가 같으므로 $v_1(t) = v_2(t)$에서
+$3t^2 - 2(a+2)t + 10 - b = 0$ $\cdots$ ㉠
+이 이차방정식의 두 근이 $t_1, t_2$ ($0 &lt; t_1 &lt; t_2$)이다.
+조건 (가)에 의하여 시각 $t=t_2$에서 두 점 $\mathrm{P}$, $\mathrm{Q}$가 만나므로 $x_1(t_2) = x_2(t_2)$에서
+$t_2^3 - 2t_2^2 + 10t_2 = at_2^2 + bt_2$
+$t_2 &gt; 0$이므로 양변을 $t_2$로 나누면
+$t_2^2 - (a+2)t_2 + 10 - b = 0$ $\cdots$ ㉡
+㉠에 $t=t_2$를 대입하면 $3t_2^2 - 2(a+2)t_2 + 10 - b = 0$ $\cdots$ ㉢
+㉢에서 ㉡을 빼면
+$2t_2^2 - (a+2)t_2 = 0$
+$t_2 &gt; 0$이므로 $a+2 = 2t_2$, 즉 $a = 2t_2 - 2$이다.
+이를 ㉡에 대입하면 $t_2^2 - 2t_2^2 + 10 - b = 0$에서 $b = 10 - t_2^2$이다.
+이를 ㉠에 대입하면
+$3t^2 - 4t_2 t + t_2^2 = 0$
+$(3t - t_2)(t - t_2) = 0$
+$t = \dfrac{t_2}{3}$ 또는 $t = t_2$
+$0 &lt; t_1 &lt; t_2$이므로 $t_1 = \dfrac{t_2}{3}$이다.
+조건 (나)에 의하여 시각 $t=t_1$에서 두 점 사이의 거리가 $4$이므로
+$|x_1(t_1) - x_2(t_1)| = |t_1^3 - (a+2)t_1^2 + (10-b)t_1|$
+$t_1 = \dfrac{t_2}{3}$, $a+2 = 2t_2$, $10-b = t_2^2$을 대입하면
+$\left| \left(\dfrac{t_2}{3}\right)^3 - 2t_2\left(\dfrac{t_2}{3}\right)^2 + t_2^2\left(\dfrac{t_2}{3}\right) \right| = \left| \dfrac{t_2^3}{27} - \dfrac{2t_2^3}{9} + \dfrac{t_2^3}{3} \right| = \left| \dfrac{4t_2^3}{27} \right| = \dfrac{4}{27}t_2^3$
+$\dfrac{4}{27}t_2^3 = 4$에서 $t_2^3 = 27$이므로 $t_2 = 3$이다.
+따라서 $a = 2(3) - 2 = 4$, $b = 10 - 3^2 = 1$이므로
+$x_2(t) = 4t^2 + t$이고, $v_2(t) = 8t + 1$이다.
+$t \ge 0$에서 $v_2(t) &gt; 0$이므로 점 $\mathrm{Q}$는 항상 양의 방향으로 움직인다.
+따라서 시각 $t=0$에서 $t=3$까지 점 $\mathrm{Q}$가 움직인 거리 $s$는
+$s = \int_0^3 |v_2(t)| dt = \int_0^3 (8t+1) dt = \left[ 4t^2 + t \right]_0^3 = 36 + 3 = 39$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">8.</span>
+          <div class="q-stem"><div class="q-text">다항식 $(x+y+z)^5$의 전개식에서 서로 다른 항의 개수는? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$15$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$21$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$28$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$35$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$42$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 순열과 조합 · Basic</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(21)</span></div>
+          <div class="q-exp">다항식 $(x+y+z)^5$의 전개식에서 서로 다른 항의 개수는 $3$개의 문자 $x$, $y$, $z$ 중에서 중복을 허락하여 $5$개를 택하는 중복조합의 수와 같으므로
+$${}_{3}\mathrm{H}_{5} = {}_{3+5-1}\mathrm{C}_{5} = {}_{7}\mathrm{C}_{5} = {}_{7}\mathrm{C}_{2} = \dfrac{7 \times 6}{2 \times 1} = 21$$
+정답은 ②이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">9.</span>
+          <div class="q-stem"><div class="q-text">다항식 $(x+1)^3(x+a)^4$의 전개식에서 $x^6$의 계수가 $19$일 때, 상수 $a$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$6$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$7$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 이항정리 · Normal</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(4)</span></div>
+          <div class="q-exp">다항식 $(x+1)^3$의 전개식의 일반항은 $\binom{3}{r_1} x^{3-r_1} 1^{r_1} = \binom{3}{r_1} x^{3-r_1}$ ($r_1=0, 1, 2, 3$)이다.
+다항식 $(x+a)^4$의 전개식의 일반항은 $\binom{4}{r_2} x^{4-r_2} a^{r_2}$ ($r_2=0, 1, 2, 3, 4$)이다.
+$(x+1)^3(x+a)^4$의 전개식에서 $x^6$항은 $(3-r_1) + (4-r_2) = 6$, 즉 $r_1+r_2=1$일 때 나타난다.
+$r_1, r_2$는 음이 아닌 정수이므로 $r_1+r_2=1$을 만족시키는 순서쌍 $(r_1, r_2)$는 $(0, 1)$, $(1, 0)$이다.
+
+(i) $r_1=0, r_2=1$인 경우
+$\binom{3}{0} x^3 \times \binom{4}{1} x^3 a^1 = 1 \cdot x^3 \times 4ax^3 = 4ax^6$
+
+(ii) $r_1=1, r_2=0$인 경우
+$\binom{3}{1} x^2 \times \binom{4}{0} x^4 a^0 = 3 \cdot x^2 \times 1 \cdot x^4 = 3x^6$
+
+(i), (ii)에서 $x^6$의 계수는 두 경우의 합이므로 $4a+3$이다.
+$x^6$의 계수가 $19$이므로
+$4a+3=19$
+$4a=16$, $a=4$
+따라서 정답은 ②이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">10.</span>
+          <div class="q-stem"><div class="q-text">어느 모집단의 확률변수 $X$의 확률분포를 표로 나타내면 다음과 같다.</div>
+<div class="q-text">| $X$ | $5$ | $10$ | $15$ | 합계 |
+|:---:|:---:|:---:|:---:|:---:|
+| $P(X=x)$ | $p$ | $q$ | $r$ | $1$ |</div>
+<div class="q-text">확률변수 $X$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$E(X)=10$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$q=\dfrac{9}{25}$</span></div></div>
+<div class="q-text">이 모집단에서 크기가 $16$인 표본을 임의추출하여 구한 표본평균이 $\bar{x}_1$일 때, 모평균 $m$에 대한 신뢰도 $95\%$의 신뢰구간은 $8.04 \le m \le a$ 이다.
+이 모집단에서 크기가 $n$인 표본을 임의추출하여 구한 표본평균이 $\bar{x}_2$일 때, 모평균 $m$에 대한 신뢰도 $99\%$의 신뢰구간은 $b \le m \le c$ 이다.
+$a=c$ 이고 $\bar{x}_1+\bar{x}_2=20.24$ 일 때, 자연수 $n$의 값은?
+(단, $Z$가 표준정규분포를 따르는 확률변수일 때, $P(0 \le Z \le 1.96)=0.475$, $P(0 \le Z \le 2.58)=0.495$로 계산하고, $a$, $b$, $c$는 상수이다.) <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">36</span></span><span class="choice"><span class="cnum">②</span><span class="m">49</span></span><span class="choice"><span class="cnum">③</span><span class="m">64</span></span><span class="choice"><span class="cnum">④</span><span class="m">81</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">100</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 통계적 추정 · Advanced</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(36)</span></div>
+          <div class="q-exp">확률변수 $X$의 확률의 총합은 $1$이므로
+$p+q+r=1$
+조건 (나)에서 $q=\dfrac{9}{25}$이므로
+$p+r=\dfrac{16}{25}$ $\cdots$ ㉠
+
+조건 (가)에서 $E(X)=10$이므로
+$E(X) = 5p + 10q + 15r = 10$
+$5p + 10 \times \dfrac{9}{25} + 15r = 10$
+$5p + 15r = 10 - \dfrac{18}{5} = \dfrac{32}{5}$
+양변을 $5$로 나누면
+$p+3r=\dfrac{32}{25}$ $\cdots$ ㉡
+
+㉡에서 ㉠을 빼면
+$2r = \dfrac{32}{25} - \dfrac{16}{25} = \dfrac{16}{25}$
+$r = \dfrac{8}{25}$
+$p = \dfrac{16}{25} - \dfrac{8}{25} = \dfrac{8}{25}$
+
+확률변수 $X$의 분산을 구하기 위해 $E(X^2)$을 계산하면
+$E(X^2) = 5^2 \times p + 10^2 \times q + 15^2 \times r$
+$= 25 \times \dfrac{8}{25} + 100 \times \dfrac{9}{25} + 225 \times \dfrac{8}{25}$
+$= 8 + 36 + 72 = 116$
+모분산 $\sigma^2$은 $V(X)$와 같으므로
+$\sigma^2 = V(X) = E(X^2) - \{E(X)\}^2 = 116 - 10^2 = 16$
+따라서 모표준편차 $\sigma = 4$이다.
+
+크기가 $16$인 표본을 추출했을 때의 표본평균이 $\bar{x}_1$이므로 모평균 $m$에 대한 신뢰도 $95\%$의 신뢰구간은
+$\bar{x}_1 - 1.96 \times \dfrac{4}{\sqrt{16}} \le m \le \bar{x}_1 + 1.96 \times \dfrac{4}{\sqrt{16}}$
+$\bar{x}_1 - 1.96 \le m \le \bar{x}_1 + 1.96$
+이 신뢰구간이 $8.04 \le m \le a$ 이므로
+$\bar{x}_1 - 1.96 = 8.04$ 에서 $\bar{x}_1 = 10$
+$a = \bar{x}_1 + 1.96 = 10 + 1.96 = 11.96$
+
+문제에서 $\bar{x}_1 + \bar{x}_2 = 20.24$ 이므로
+$10 + \bar{x}_2 = 20.24$ 에서 $\bar{x}_2 = 10.24$
+
+크기가 $n$인 표본을 추출했을 때의 표본평균이 $\bar{x}_2$이므로 모평균 $m$에 대한 신뢰도 $99\%$의 신뢰구간은
+$\bar{x}_2 - 2.58 \times \dfrac{4}{\sqrt{n}} \le m \le \bar{x}_2 + 2.58 \times \dfrac{4}{\sqrt{n}}$
+$10.24 - \dfrac{10.32}{\sqrt{n}} \le m \le 10.24 + \dfrac{10.32}{\sqrt{n}}$
+이 신뢰구간이 $b \le m \le c$ 이므로
+$c = 10.24 + \dfrac{10.32}{\sqrt{n}}$
+
+문제에서 $a=c$ 이므로
+$11.96 = 10.24 + \dfrac{10.32}{\sqrt{n}}$
+$\dfrac{10.32}{\sqrt{n}} = 1.72$
+$\sqrt{n} = \dfrac{10.32}{1.72} = 6$
+따라서 $n = 36$</div>
+        </div>
+      </article>
+  </div>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  });
+</script>
+</body>
+</html>

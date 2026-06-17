@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pullit — 일단 풀어, 1등급</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+/>
+<style>
+  :root {
+    /* Airbnb 기반 — 코랄 웜미니멀 (컨플 디자인 시스템) */
+    --coral: #ff385c;
+    --coral-active: #e00b41;
+    --ink: #222222;        /* 본문 웜블랙, 순검정 금지 */
+    --sub: #6a6a6a;
+    --canvas: #ffffff;
+    --surface: #f7f7f7;
+    --hairline: #dddddd;
+    /* 숙련도 의미 색 */
+    --weak: #ff385c;
+    --mid: #ef9f27;
+    --strong: #1d9e75;
+
+    --card-shadow:
+      rgba(0, 0, 0, 0.02) 0 0 0 1px,
+      rgba(0, 0, 0, 0.04) 0 2px 6px,
+      rgba(0, 0, 0, 0.1) 0 4px 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #fff;
+    background: #160f0e;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Nav ───────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  nav.scrolled {
+    background: rgba(22, 15, 14, 0.78);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  nav .wrap {
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .wordmark {
+    font-size: 21px; font-weight: 800; letter-spacing: -0.4px;
+    color: #fff;
+  }
+  .wordmark b { color: var(--coral); }
+  .btn {
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer;
+    padding: 11px 20px; letter-spacing: -0.2px;
+    transition: transform 0.06s ease, background 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--coral); color: #fff; }
+  .btn-primary:hover { background: var(--coral-active); }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+  .btn-lg { padding: 16px 32px; font-size: 17px; border-radius: 10px; }
+
+  /* ── Hero (다크 시네마틱) ──────────────── */
+  header {
+    position: relative;
+    padding: 240px 0 160px;
+    text-align: center;
+    background:
+      linear-gradient(to bottom, rgba(22, 15, 14, 0) 62%, rgba(22, 15, 14, 0.65) 80%, #160f0e 94%),
+      radial-gradient(ellipse 60% 52% at 50% 48%, rgba(255, 56, 92, 0.30), rgba(255, 56, 92, 0) 64%),
+      #160f0e;
+    color: #fff;
+    overflow: hidden;
+  }
+  /* 큰 3 모티프 */
+  .hero-3 {
+    position: absolute; left: 50%; top: 47%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(360px, 52vw, 620px);
+    font-weight: 800; line-height: 1;
+    color: rgba(255, 56, 92, 0.10);
+    letter-spacing: -10px;
+    z-index: 0; pointer-events: none;
+    text-shadow: 0 0 80px rgba(255, 56, 92, 0.25);
+  }
+  /* 떠다니는 수식 필드 (우주처럼 부유) */
+  .hero-field {
+    position: absolute; inset: 0; z-index: 0;
+    pointer-events: none; overflow: hidden;
+  }
+  .particle {
+    position: absolute; top: 0; left: 0;
+    font-weight: 700; letter-spacing: -1px;
+    will-change: transform; user-select: none;
+  }
+  .particle.sq { border-radius: 3px; }
+  header .wrap { position: relative; z-index: 2; }
+  @media (prefers-reduced-motion: reduce) {
+    .particle { animation: none !important; }
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.2px;
+    color: #ff7088;
+    background: rgba(255, 56, 92, 0.16);
+    border: 1px solid rgba(255, 56, 92, 0.28);
+    border-radius: 9999px;
+    padding: 7px 16px;
+    margin-bottom: 32px;
+  }
+  .hero-title {
+    font-size: clamp(44px, 7.4vw, 90px);
+    font-weight: 800;
+    letter-spacing: -2.2px;
+    line-height: 1.16;
+    margin-bottom: 28px;
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.4);
+  }
+  .hero-title .accent {
+    color: var(--coral);
+    text-shadow: 0 0 28px rgba(255, 56, 92, 0.55);
+  }
+  .hero-sub {
+    font-size: clamp(18px, 2.4vw, 22px);
+    font-weight: 500;
+    color: #cdc6c4;
+    letter-spacing: -0.3px;
+    margin-bottom: 44px;
+    line-height: 1.6;
+  }
+  .hero-sub b { color: #fff; font-weight: 700; }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  header .btn-primary { box-shadow: 0 8px 30px rgba(255, 56, 92, 0.4); }
+  .hero-note {
+    margin-top: 22px; font-size: 14px; color: #a59f9d;
+  }
+  .hero-note span { color: #2dd4a0; font-weight: 600; }
+
+  /* 라이브 카운터 (오도미터) */
+  .hero-counter {
+    margin-top: 44px;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 11px 22px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    font-size: 15px; font-weight: 600; color: #cdc6c4;
+    letter-spacing: -0.2px;
+  }
+  .hero-counter .cdot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #2dd4a0; box-shadow: 0 0 10px rgba(45, 212, 160, 0.8);
+    animation: pulse-g 1.8s infinite;
+  }
+  @keyframes pulse-g {
+    0% { box-shadow: 0 0 0 0 rgba(45, 212, 160, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(45, 212, 160, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(45, 212, 160, 0); }
+  }
+  .odometer {
+    display: inline-flex; align-items: center;
+    color: #fff; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .odo-digit { display: inline-block; height: 1.25em; line-height: 1.25em; overflow: hidden; }
+  .odo-digit .strip {
+    display: flex; flex-direction: column;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .odo-digit .strip span { height: 1.25em; line-height: 1.25em; text-align: center; }
+  .odo-sep { display: inline-block; padding: 0 1px; }
+
+  /* ── AI Pick (다크 시네마틱 이어짐) ────── */
+  .pick {
+    padding: 144px 0;
+    background: #160f0e;
+    color: #fff;
+  }
+  .pick .badge-top {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.2px;
+    color: #ff7088;
+    background: rgba(255, 56, 92, 0.16);
+    border: 1px solid rgba(255, 56, 92, 0.28);
+    border-radius: 9999px; padding: 8px 16px;
+    margin-bottom: 22px;
+  }
+  .pick .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--coral);
+    box-shadow: 0 0 0 0 rgba(255, 56, 92, 0.5);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 56, 92, 0.45); }
+    70% { box-shadow: 0 0 0 8px rgba(255, 56, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 56, 92, 0); }
+  }
+  .pick h2 {
+    font-size: clamp(28px, 4.4vw, 42px); font-weight: 800;
+    letter-spacing: -1.2px; line-height: 1.2; margin-bottom: 16px;
+    color: #fff;
+  }
+  .pick h2 .accent { color: var(--coral); text-shadow: 0 0 24px rgba(255, 56, 92, 0.5); }
+  .pick .sub {
+    font-size: clamp(16px, 2vw, 19px); color: #cdc6c4;
+    letter-spacing: -0.3px; line-height: 1.6; max-width: 560px;
+    margin: 0 auto 16px;
+  }
+  .pick .sub b { color: #fff; font-weight: 700; }
+  .pick .no-random {
+    display: inline-block; font-size: 14px; font-weight: 700;
+    color: #fff; letter-spacing: -0.2px;
+    padding: 8px 16px; border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 9999px; margin-bottom: 56px;
+  }
+  .pick .no-random s { color: #8f8a88; text-decoration-color: var(--coral); }
+  .pick .no-random .yes { color: var(--coral); }
+
+  .pick-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    text-align: left;
+  }
+  .pcard {
+    background: rgba(255, 255, 255, 0.045); border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.3);
+    padding: 26px 24px;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .pcard:hover { transform: translateY(-4px); border-color: rgba(255, 56, 92, 0.4); background: rgba(255, 255, 255, 0.06); }
+  .pcard .ai-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; letter-spacing: -0.1px;
+    color: #ff7088; background: rgba(255, 56, 92, 0.16);
+    padding: 5px 11px; border-radius: 14px; margin-bottom: 16px;
+  }
+  .pcard .ai-tag.subj-eng {
+    color: #d7d0ce; background: rgba(255, 255, 255, 0.09);
+  }
+  .pcard h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; color: #fff; }
+  .pcard .meta { font-size: 13px; color: rgba(255, 255, 255, 0.5); letter-spacing: -0.2px; margin-bottom: 18px; }
+  .pbar { height: 7px; border-radius: 9999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+  .pbar i { display: block; height: 100%; border-radius: 9999px; }
+  .c-weak .pbar i { width: 34%; background: var(--weak); box-shadow: 0 0 12px rgba(255, 56, 92, 0.5); }
+  .c-mid .pbar i { width: 58%; background: #e0b46a; }
+  .c-strong .pbar i { width: 72%; background: #62c4a0; }
+  .pcard .lvl { margin-top: 9px; font-size: 12px; font-weight: 600; letter-spacing: -0.1px; }
+  .c-weak .lvl { color: #ff7088; }
+  .c-mid .lvl { color: #e0b46a; }
+  .c-strong .lvl { color: #74cdad; }
+
+  /* ── 문제 제작 파이프라인 (연구원×AI) ──── */
+  .lab { padding: 144px 0; background: #1b1412; text-align: center; }
+  .lab .badge-top {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.2px;
+    color: #ff7088;
+    background: rgba(255, 56, 92, 0.16);
+    border: 1px solid rgba(255, 56, 92, 0.28);
+    border-radius: 9999px; padding: 8px 16px; margin-bottom: 22px;
+  }
+  .lab h2 {
+    font-size: clamp(28px, 4.4vw, 42px); font-weight: 800;
+    letter-spacing: -1.2px; line-height: 1.22; margin-bottom: 18px; color: #fff;
+  }
+  .lab h2 .accent { color: var(--coral); text-shadow: 0 0 24px rgba(255, 56, 92, 0.5); }
+  .lab .lab-sub {
+    font-size: clamp(16px, 2vw, 19px); color: #cdc6c4;
+    letter-spacing: -0.3px; line-height: 1.65; max-width: 640px; margin: 0 auto;
+  }
+  .lab .lab-sub b { color: #fff; font-weight: 700; }
+
+  .pipeline {
+    display: flex; align-items: stretch; justify-content: center;
+    margin-top: 60px;
+  }
+  .stage {
+    flex: 1; max-width: 300px; text-align: left;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px; padding: 30px 26px;
+  }
+  .stage.out {
+    border-color: rgba(255, 56, 92, 0.4);
+    background: rgba(255, 56, 92, 0.07);
+    box-shadow: 0 0 44px rgba(255, 56, 92, 0.14);
+  }
+  .stage-ic {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.07); color: #d7d0ce;
+    margin-bottom: 18px;
+  }
+  .stage.out .stage-ic { background: rgba(255, 56, 92, 0.18); color: #ff7088; }
+  .stage-ic svg { width: 22px; height: 22px; }
+  .stage-no {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.6px;
+    color: #ff7088; margin-bottom: 10px;
+  }
+  .stage h3 { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 10px; letter-spacing: -0.4px; }
+  .stage p { font-size: 14px; color: rgba(255, 255, 255, 0.6); line-height: 1.62; letter-spacing: -0.2px; }
+  .arrow {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 12px; color: rgba(255, 255, 255, 0.28); font-size: 22px;
+    flex: 0 0 auto;
+  }
+  .lab-foot {
+    margin-top: 50px; font-size: clamp(16px, 2vw, 18px); color: #b4afad; letter-spacing: -0.2px;
+  }
+  .lab-foot b { color: #fff; font-weight: 700; }
+  .lab-foot .hl { color: var(--coral); font-weight: 700; }
+
+  /* ── Proof one-liner ───────────────────── */
+  .proof {
+    background: #1b1412;
+    padding: 140px 0;
+    text-align: center;
+  }
+  .proof .proof-line {
+    font-size: clamp(24px, 3.6vw, 34px);
+    font-weight: 700; letter-spacing: -0.8px; line-height: 1.4;
+    color: #fff;
+  }
+
+  .proof-line {
+    margin-bottom: 6px;
+  }
+  .proof .hl {
+    color: var(--coral);
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 5px;
+  }
+  .proof p { margin-top: 18px; font-size: 17px; color: #a59f9d; letter-spacing: -0.2px; }
+
+  /* ── 공통 섹션 헤드 ───────────────────── */
+  .section-head { text-align: center; margin-bottom: 56px; }
+  .section-head .badge-top {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.2px;
+    color: #ff7088; background: rgba(255, 56, 92, 0.16);
+    border: 1px solid rgba(255, 56, 92, 0.28);
+    border-radius: 9999px; padding: 8px 16px; margin-bottom: 22px;
+  }
+  .section-head h2 {
+    font-size: clamp(28px, 4.4vw, 42px); font-weight: 800;
+    letter-spacing: -1.2px; margin-bottom: 16px; color: #fff;
+  }
+  .section-head h2 .accent { color: var(--coral); text-shadow: 0 0 24px rgba(255, 56, 92, 0.5); }
+  .section-head p { font-size: 17px; color: #a59f9d; letter-spacing: -0.2px; }
+
+  /* ── 성적 상승 그래프 ─────────────────── */
+  .growth { padding: 144px 0; background: #160f0e; text-align: center; }
+  .chart-duo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    max-width: 900px; margin: 0 auto;
+  }
+  .chart-card {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px; padding: 26px 26px 22px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  }
+  .chart-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+  }
+  .chart-top .lbl { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+  .chart-top .badges { display: flex; gap: 8px; }
+  .chart-top .b {
+    font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 14px;
+    background: rgba(255, 56, 92, 0.16); color: #ff7088;
+  }
+  .chart-top .b.g { background: rgba(98, 196, 160, 0.16); color: #74cdad; }
+  svg.chart { width: 100%; height: auto; display: block; }
+  .chart-line {
+    fill: none; stroke: var(--coral); stroke-width: 3.5;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 7px rgba(255, 56, 92, 0.55));
+  }
+  .chart-area { fill: url(#growthArea); }
+  .chart-dot { fill: #160f0e; stroke: var(--coral); stroke-width: 3; }
+  .chart-dot.end { fill: var(--coral); }
+  .chart-grid line { stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; }
+  .chart-xlab { fill: rgba(255, 255, 255, 0.42); font-size: 13px; font-weight: 600; }
+  .chart-endlab { fill: #ff7088; font-size: 15px; font-weight: 800; }
+  .chart-startlab { fill: rgba(255, 255, 255, 0.5); font-size: 14px; font-weight: 700; }
+
+  .growth-foot {
+    display: flex; justify-content: center; flex-wrap: wrap; gap: 14px;
+    margin-top: 36px;
+  }
+  .growth-stat {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px; padding: 18px 26px; min-width: 150px;
+  }
+  .growth-stat .num { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.6px; }
+  .growth-stat .num em { color: var(--coral); font-style: normal; }
+  .growth-stat .cap { font-size: 13px; color: #a59f9d; margin-top: 4px; letter-spacing: -0.2px; }
+  .growth-note { margin-top: 22px; font-size: 12px; color: #6f6a68; }
+
+  /* ── Final CTA ─────────────────────────── */
+  .final {
+    text-align: center;
+    padding: 160px 0 172px;
+    background:
+      radial-gradient(ellipse 56% 70% at 50% 50%, rgba(255, 56, 92, 0.22), rgba(255, 56, 92, 0) 65%),
+      #1b1412;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .final h2 {
+    font-size: clamp(32px, 5vw, 52px); font-weight: 800;
+    letter-spacing: -1.4px; line-height: 1.15; margin-bottom: 22px; color: #fff;
+  }
+  .final h2 .accent { color: var(--coral); text-shadow: 0 0 28px rgba(255, 56, 92, 0.55); }
+  .final p { font-size: 18px; color: #b4afad; margin-bottom: 40px; letter-spacing: -0.2px; }
+  .final .btn-primary { box-shadow: 0 8px 30px rgba(255, 56, 92, 0.4); }
+
+  /* ── Footer ────────────────────────────── */
+  footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: #120c0b;
+    padding: 36px 0;
+    font-size: 13px; color: #8f8a88;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+
+  @media (max-width: 720px) {
+    header { padding: 80px 0 88px; }
+    .step-grid { grid-template-columns: 1fr; }
+    .pick, .lab, .growth { padding: 96px 0; }
+    .proof { padding: 92px 0; }
+    .final { padding: 104px 0 112px; }
+    .pipeline { flex-direction: column; align-items: center; gap: 4px; }
+    .stage { max-width: 420px; width: 100%; }
+    .arrow { transform: rotate(90deg); padding: 8px 0; }
+    .chart-duo { grid-template-columns: 1fr; }
+    .chart-card { padding: 22px 18px 18px; }
+    .growth-stat { padding: 16px 20px; min-width: 130px; flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="wordmark">Pull<b>it</b></div>
+    <button class="btn btn-primary" onclick="document.getElementById('start').scrollIntoView()">무료로 시작</button>
+  </div>
+</nav>
+
+<!-- 1. HERO — 다크 시네마틱 -->
+<header>
+  <div class="hero-3">3</div>
+  <div class="hero-field" id="heroField"></div>
+  <div class="wrap">
+    <span class="eyebrow">AI 모의고사 · 수학 &amp; 영어</span>
+    <h1 class="hero-title">
+      일단 풀어.<br />
+      <span class="accent">1등급</span> 가능해.
+    </h1>
+    <p class="hero-sub">
+      하루 <b>딱 3문제</b>. 그거면 충분해.<br />
+      AI가 네 약점만 골라주니까.
+    </p>
+    <div class="hero-actions">
+      <button class="btn btn-primary btn-lg" onclick="document.getElementById('start').scrollIntoView()">1등급 시작하기 →</button>
+    </div>
+    <p class="hero-note"><span>회원가입 없이</span> 1분이면 내 약점부터 확인</p>
+    <div class="hero-counter">
+      <span class="cdot"></span>
+      지금까지 풀린 문제 <span class="odometer" id="solvedCount"></span> 개
+    </div>
+  </div>
+</header>
+
+<!-- 2. AI Pick — 매일 3문제, AI가 골라줌 -->
+<section class="pick">
+  <div class="wrap" style="text-align:center;">
+    <span class="badge-top"><span class="dot"></span>오늘의 AI Pick</span>
+    <h2>매일 <span class="accent">3문제</span>, AI가 골라줌</h2>
+    <p class="sub">네 약점만 콕 집어서 수학·영어 <b>하루 3문제</b>.</p>
+    <div class="no-random"><s>무작위 기출</s> <span class="yes">NO</span> — 풀수록 AI가 더 정확하게 골라준다</div>
+
+    <div class="pick-cards">
+      <div class="pcard c-weak">
+        <span class="ai-tag">수학</span>
+        <h3>삼각함수</h3>
+        <p class="meta">수학Ⅰ · 어제 약점 단원</p>
+        <div class="pbar"><i></i></div>
+        <p class="lvl">약점 · 정답률 34%</p>
+      </div>
+      <div class="pcard c-mid">
+        <span class="ai-tag subj-eng">영어</span>
+        <h3>빈칸 추론</h3>
+        <p class="meta">영어 · 독해 약점 케어</p>
+        <div class="pbar"><i></i></div>
+        <p class="lvl">보통 · 정답률 58%</p>
+      </div>
+      <div class="pcard c-strong">
+        <span class="ai-tag">수학</span>
+        <h3>도함수 활용</h3>
+        <p class="meta">수학Ⅱ · 오늘의 약점 복습</p>
+        <div class="pbar"><i></i></div>
+        <p class="lvl">강해지는 중 · 정답률 72%</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 문제 제작 파이프라인 — 연구원 × AI -->
+<section class="lab">
+  <div class="wrap">
+    <span class="badge-top">문제의 품질</span>
+    <h2>그냥 AI 문제가 아니야.<br /><span class="accent">연구원이 분석한 기출</span>에서 나와.</h2>
+    <p class="lab-sub">
+      수능·평가원 기출을 끝까지 해부한 연구원의 설계 위에서, AI가 새 문제를 무한히 빚는다.
+      <b>수능 전 꼭 풀어야 할 문제</b>만 골라서.
+    </p>
+
+    <div class="pipeline">
+      <div class="stage">
+        <div class="stage-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+        <div class="stage-no">STEP 1</div>
+        <h3>기출을 해부한다</h3>
+        <p>연구원이 수능·평가원 기출을 문항 단위로 분석. 개념·함정·난이도까지 분해한다.</p>
+      </div>
+
+      <div class="arrow">→</div>
+
+      <div class="stage">
+        <div class="stage-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 12 15 2 8.5 12 2"></polygon><polyline points="2 15.5 12 22 22 15.5"></polyline></svg>
+        </div>
+        <div class="stage-no">STEP 2</div>
+        <h3>출제 원리를 뽑는다</h3>
+        <p>반복되는 출제 패턴과 자주 틀리는 포인트를 데이터로. '왜 이렇게 나오는가'까지.</p>
+      </div>
+
+      <div class="arrow">→</div>
+
+      <div class="stage out">
+        <div class="stage-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"></path><path d="M19 15l.7 1.8L21.5 17.5 19.7 18.2 19 20l-.7-1.8L16.5 17.5 18.3 16.8 19 15z"></path></svg>
+        </div>
+        <div class="stage-no">STEP 3</div>
+        <h3>AI가 새 문제로 빚는다</h3>
+        <p>그 원리로 AI가 수능 직전 꼭 풀 문제를 무한 생성. 기출 복붙이 아닌, 완전히 새 문제.</p>
+      </div>
+    </div>
+
+    <p class="lab-foot">그래서 Pullit 문제는 <span class="hl">'연습용'이 아니라 '수능 전 필수'</span>입니다.</p>
+  </div>
+</section>
+
+<!-- 4. 한 줄 증명 -->
+<section class="proof">
+  <div class="wrap">
+    <div class="proof-line">왜 3문제로 충분하냐면,</div>
+    <div class="proof-line"><span class="hl">아무 문제나</span>가 아니라 <span class="hl">네 약점만</span> 주거든.</div>
+    <p>100문제를 멍하니 푸는 것보다, 못 푸는 단원 3개를 매일 두드리는 게 빠르다.</p>
+  </div>
+</section>
+
+<!-- 5. 성적 상승 그래프 -->
+<section class="growth">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="badge-top">실제 사례</span>
+      <h2>약점을 메우면, <span class="accent">성적이 움직여</span>.</h2>
+      <p>약점만 매일 두드린 학생들의 모의고사 등급은 이렇게 올라.</p>
+    </div>
+
+    <div class="chart-duo">
+      <!-- 그래프 1: 4등급 → 2등급 -->
+      <div class="chart-card">
+        <div class="chart-top">
+          <span class="lbl">○○고 2학년</span>
+          <div class="badges">
+            <span class="b">4등급</span>
+            <span class="b g">→ 2등급</span>
+          </div>
+        </div>
+        <svg class="chart" viewBox="0 0 430 250" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="growthArea1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff385c" stop-opacity="0.32"></stop>
+              <stop offset="100%" stop-color="#ff385c" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <g class="chart-grid">
+            <line x1="40" y1="70" x2="390" y2="70"></line>
+            <line x1="40" y1="130" x2="390" y2="130"></line>
+            <line x1="40" y1="190" x2="390" y2="190"></line>
+          </g>
+          <path class="chart-area" style="fill:url(#growthArea1)" d="M40 192 L110 180 L180 162 L250 150 L320 132 L390 120 L390 222 L40 222 Z"></path>
+          <path class="chart-line" d="M40 192 L110 180 L180 162 L250 150 L320 132 L390 120"></path>
+          <circle class="chart-dot" cx="40" cy="192" r="5"></circle>
+          <circle class="chart-dot" cx="110" cy="180" r="5"></circle>
+          <circle class="chart-dot" cx="180" cy="162" r="5"></circle>
+          <circle class="chart-dot" cx="250" cy="150" r="5"></circle>
+          <circle class="chart-dot" cx="320" cy="132" r="5"></circle>
+          <circle class="chart-dot end" cx="390" cy="120" r="7"></circle>
+          <text class="chart-startlab" x="46" y="180" text-anchor="start">4등급</text>
+          <text class="chart-endlab" x="384" y="108" text-anchor="end">2등급</text>
+          <text class="chart-xlab" x="48" y="242" text-anchor="middle">'25.3월 모평</text>
+          <text class="chart-xlab" x="382" y="242" text-anchor="middle">'25.6월 모평</text>
+        </svg>
+      </div>
+
+      <!-- 그래프 2: 2등급 → 1등급 -->
+      <div class="chart-card">
+        <div class="chart-top">
+          <span class="lbl">○○고 3학년 · 16주</span>
+          <div class="badges">
+            <span class="b">2등급</span>
+            <span class="b g">→ 1등급</span>
+          </div>
+        </div>
+        <svg class="chart" viewBox="0 0 430 250" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="growthArea2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff385c" stop-opacity="0.32"></stop>
+              <stop offset="100%" stop-color="#ff385c" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+          <g class="chart-grid">
+            <line x1="40" y1="70" x2="390" y2="70"></line>
+            <line x1="40" y1="130" x2="390" y2="130"></line>
+            <line x1="40" y1="190" x2="390" y2="190"></line>
+          </g>
+          <path class="chart-area" style="fill:url(#growthArea2)" d="M40 120 L110 110 L180 92 L250 80 L320 62 L390 48 L390 222 L40 222 Z"></path>
+          <path class="chart-line" d="M40 120 L110 110 L180 92 L250 80 L320 62 L390 48"></path>
+          <circle class="chart-dot" cx="40" cy="120" r="5"></circle>
+          <circle class="chart-dot" cx="110" cy="110" r="5"></circle>
+          <circle class="chart-dot" cx="180" cy="92" r="5"></circle>
+          <circle class="chart-dot" cx="250" cy="80" r="5"></circle>
+          <circle class="chart-dot" cx="320" cy="62" r="5"></circle>
+          <circle class="chart-dot end" cx="390" cy="48" r="7"></circle>
+          <text class="chart-startlab" x="46" y="108" text-anchor="start">2등급</text>
+          <text class="chart-endlab" x="384" y="36" text-anchor="end">1등급 🎯</text>
+          <text class="chart-xlab" x="48" y="242" text-anchor="middle">'25.3월 모평</text>
+          <text class="chart-xlab" x="382" y="242" text-anchor="middle">'25.9월 모평</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="growth-foot">
+      <div class="growth-stat">
+        <div class="num">48% → <em>89%</em></div>
+        <div class="cap">약점 단원 정답률</div>
+      </div>
+      <div class="growth-stat">
+        <div class="num"><em>2.4</em>등급 ↑</div>
+        <div class="cap">평균 모의고사 등급 상승</div>
+      </div>
+      <div class="growth-stat">
+        <div class="num">하루 <em>10분</em></div>
+        <div class="cap">딱 3문제, 그게 전부</div>
+      </div>
+    </div>
+    <p class="growth-note">* 실제 사용자 사례 · 개인차 있으며 학습량에 따라 결과는 달라질 수 있어요</p>
+  </div>
+</section>
+
+<!-- 4. 마지막 CTA -->
+<section class="final" id="start">
+  <div class="wrap">
+    <h2>오늘 <span class="accent">3문제</span>면,<br />시작이야.</h2>
+    <p>무료. 광고 없는 약점 진단. 모든 해설까지 공짜.</p>
+    <button class="btn btn-primary btn-lg" onclick="alert('POC 데모 — 진단 플로우 연결 예정')">무료로 내 약점 진단받기 →</button>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex; justify-content:space-between; width:100%;">
+    <span>© 2026 Pullit · 뉴런소프트</span>
+    <span>수학 · 영어 | 고1–3</span>
+  </div>
+</footer>
+
+<script>
+  // 히어로(다크) 위에선 nav 투명, 스크롤 내려가면 흰 배경으로
+  const navEl = document.querySelector('nav');
+  const onScroll = () => navEl.classList.toggle('scrolled', window.scrollY > 40);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // ── 히어로 수식 우주 ──────────────────────────────
+  (function heroSpace() {
+    const field = document.getElementById('heroField');
+    if (!field) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const SYMBOLS = ['π', '∫', 'Σ', 'lim', 'x²', '√', '∞', '∂', 'θ', 'Δ', 'f(x)', 'sin', '%', '≠', '∑'];
+    const COUNT = 26;
+    const items = [];
+    let W = field.clientWidth, H = field.clientHeight;
+
+    function rand(a, b) { return a + Math.random() * (b - a); }
+
+    for (let i = 0; i < COUNT; i++) {
+      const el = document.createElement('span');
+      const isSquare = i % 5 === 0;            // 1/5 은 작은 사각 입자
+      const coral = i % 7 === 0;               // 가끔 코랄 포인트, 나머진 흰색
+      if (isSquare) {
+        el.className = 'particle sq';
+        const s = rand(5, 11);
+        el.style.width = s + 'px';
+        el.style.height = s + 'px';
+        el.style.background = coral
+          ? 'rgba(255,56,92,0.22)'
+          : 'rgba(255,255,255,0.10)';
+      } else {
+        el.className = 'particle';
+        el.textContent = SYMBOLS[(Math.random() * SYMBOLS.length) | 0];
+        el.style.fontSize = rand(22, 60) + 'px';
+        el.style.color = coral
+          ? 'rgba(255,56,92,0.16)'
+          : 'rgba(255,255,255,' + rand(0.05, 0.11).toFixed(3) + ')';
+      }
+      field.appendChild(el);
+      items.push({
+        el,
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: rand(-0.22, 0.22),
+        vy: rand(-0.18, 0.18),
+        rot: rand(0, 360),
+        vr: rand(-0.12, 0.12),
+      });
+    }
+
+    function frame() {
+      for (const p of items) {
+        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        // 가장자리에서 반대편으로 감싸 돌기 (우주 느낌)
+        if (p.x < -60) p.x = W + 60; else if (p.x > W + 60) p.x = -60;
+        if (p.y < -60) p.y = H + 60; else if (p.y > H + 60) p.y = -60;
+        p.el.style.transform = 'translate(' + p.x.toFixed(1) + 'px,' + p.y.toFixed(1) + 'px) rotate(' + p.rot.toFixed(1) + 'deg)';
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    let raf;
+    // 정적 1프레임만 그리고(움직임 OFF) 끝낼지, 계속 돌릴지
+    if (reduce) {
+      for (const p of items) {
+        p.el.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+      }
+    } else {
+      frame();
+    }
+
+    window.addEventListener('resize', () => {
+      W = field.clientWidth; H = field.clientHeight;
+    }, { passive: true });
+  })();
+
+  // ── 라이브 카운터(오도미터): 천천히 도르륵 올라감 ──
+  (function solvedCounter() {
+    const el = document.getElementById('solvedCount');
+    if (!el) return;
+    let val = 13472;   // 시작값
+    let curLen = 0;
+
+    function build(str) {
+      el.innerHTML = '';
+      for (const ch of str) {
+        if (ch === ',') {
+          const s = document.createElement('span');
+          s.className = 'odo-sep'; s.textContent = ',';
+          el.appendChild(s);
+        } else {
+          const d = document.createElement('span');
+          d.className = 'odo-digit';
+          const strip = document.createElement('span');
+          strip.className = 'strip';
+          for (let i = 0; i < 10; i++) {
+            const n = document.createElement('span');
+            n.textContent = i; strip.appendChild(n);
+          }
+          d.appendChild(strip); el.appendChild(d);
+        }
+      }
+    }
+
+    function render() {
+      const str = val.toLocaleString('en-US');
+      const len = str.replace(/,/g, '').length;
+      if (len !== curLen) { build(str); curLen = len; }
+      const digits = el.querySelectorAll('.odo-digit');
+      let di = 0;
+      for (const ch of str) {
+        if (ch === ',') continue;
+        digits[di].querySelector('.strip').style.transform =
+          'translateY(-' + (parseInt(ch, 10) * 10) + '%)';
+        di++;
+      }
+    }
+
+    render();
+    setInterval(() => {
+      val += 1 + Math.floor(Math.random() * 2);   // 매번 1~2씩
+      render();
+    }, 2200);
+  })();
+
+  // ── 성적 그래프: 화면에 들어오면 라인이 그려짐 (그래프 여러 개 지원) ──
+  (function growthCharts() {
+    const charts = document.querySelectorAll('svg.chart');
+    if (!charts.length) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;   // 모션 OFF면 정적으로 그대로
+
+    charts.forEach((chart) => {
+      const line = chart.querySelector('.chart-line');
+      const area = chart.querySelector('.chart-area');
+      const dots = chart.querySelectorAll('.chart-dot');
+      const endlab = chart.querySelector('.chart-endlab');
+
+      const len = line.getTotalLength();
+      line.style.strokeDasharray = len;
+      line.style.strokeDashoffset = len;
+      line.style.transition = 'stroke-dashoffset 1.8s cubic-bezier(0.22,1,0.36,1)';
+      area.style.opacity = '0';
+      area.style.transition = 'opacity 1.2s ease 0.5s';
+      dots.forEach((d, i) => {
+        d.style.opacity = '0';
+        d.style.transition = 'opacity 0.35s ease ' + (0.5 + i * 0.18) + 's';
+      });
+      if (endlab) {
+        endlab.style.opacity = '0';
+        endlab.style.transition = 'opacity 0.5s ease 1.7s';
+      }
+
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            line.style.strokeDashoffset = '0';
+            area.style.opacity = '1';
+            dots.forEach((d) => (d.style.opacity = '1'));
+            if (endlab) endlab.style.opacity = '1';
+            io.disconnect();
+          }
+        });
+      }, { threshold: 0.35 });
+      io.observe(chart);
+    });
+  })();
+</script>
+</body>
+</html>

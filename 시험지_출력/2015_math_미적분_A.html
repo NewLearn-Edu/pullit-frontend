@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2015_math_미적분_A — 시험지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root { --ink:#1a1a1a; --line:#d8d8d8; --paper:#fff; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:#ececec;
+    font-family:"Noto Serif KR","Pretendard",serif;
+    color:var(--ink); line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .sheet {
+    max-width:760px; margin:32px auto; background:var(--paper);
+    padding:56px 56px 72px; box-shadow:0 4px 24px rgba(0,0,0,.12);
+  }
+  .sheet-head {
+    text-align:center; border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:30px;
+  }
+  .sheet-head h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.3px; }
+  .sheet-head p { font-size:13px; color:#666; margin:0; }
+  .q { padding:26px 0; border-bottom:1px solid #eee; }
+  .q-body { display:flex; gap:8px; align-items:baseline; }
+  .q-no { font-size:18px; font-weight:700; flex:0 0 auto; }
+  .q-stem { flex:1; font-size:16.5px; line-height:1.8; }
+  /* 인라인 분수가 든 '그 줄'만 line-height 확대 (다른 줄은 그대로) */
+  .q-stem .katex:has(.mfrac) { line-height:2.9; }
+  .q-stem .katex-display .katex { line-height:normal; }  /* display 블록은 제외 */
+  .q-text + .q-text { margin-top:.5em; }
+  /* 수능 조건 박스 (가)(나) */
+  .cond-box { border:1px solid #333; border-radius:2px; padding:16px 26px; margin:20px 0 22px; }
+  .cond { display:flex; gap:9px; margin:9px 0; font-size:16.5px; }
+  .cond-label { flex:0 0 auto; }
+  .cond-body { flex:1; }
+  .cond-body .katex-display { padding-left:1.4em; margin:1.4em 0; }
+  .katex-display { margin:2.5em 0; text-align:left; padding-left:2.8em; }
+  .katex-display > .katex { text-align:left; }
+  .q-point { font-family:"Pretendard",sans-serif; font-size:.9em; color:#333; margin-left:4px; white-space:nowrap; }
+  .choices { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:0 6px 0 28px; margin-top:18px; }
+  .choice { display:flex; align-items:center; gap:7px; font-size:16px; }
+  .cnum { flex:0 0 auto; font-size:16px; line-height:1; }
+  .q-meta { font-family:"Pretendard",sans-serif; font-size:12px; color:#999; margin-bottom:10px; }
+  .q-toggle {
+    margin-top:18px; font-family:"Pretendard",sans-serif; font-size:13px;
+    color:#c0392b; background:none; border:1px solid #e0c0bd; border-radius:6px;
+    padding:6px 12px; cursor:pointer;
+  }
+  .q-sol { display:none; margin-top:14px; padding:16px 18px; background:#faf7f2; border-radius:8px; }
+  .q-sol.open { display:block; }
+  .q-ans { font-size:15px; margin-bottom:10px; font-family:"Pretendard",sans-serif; }
+  .q-ans b { color:#c0392b; font-size:17px; }
+  .q-ansval { color:#888; font-size:13px; }
+  .q-exp { white-space:pre-wrap; font-size:15px; color:#333; }
+  .katex { font-size:1.04em; }
+  @media print {
+    body { background:#fff; }
+    .sheet { box-shadow:none; margin:0; max-width:none; }
+    .q-toggle { display:none; }
+    .q-sol { display:block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h1>2015_math_미적분_A</h1>
+      <p>Pullit · AI 생성 진단 세트 · 총 10문항</p>
+    </div>
+    
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">양의 실수 $a$와 실수 $x$에 대하여 $a^x = 3$, $a^{2x-1} = 1$일 때, $a$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$9$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$12$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$15$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$18$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$21$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 지수와 로그 · Basic</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(9)</span></div>
+          <div class="q-exp">$a^{2x-1} = 1$에서 $a$는 양의 실수이므로 다음 두 가지 경우로 나누어 생각할 수 있다.
+
+(i) $a=1$인 경우
+$a^x = 1^x = 1$이 되므로, 조건 $a^x = 3$을 만족시키지 않는다.
+따라서 $a \ne 1$이다.
+
+(ii) $a \ne 1$인 경우
+$a \ne 1$이고 $a^{2x-1} = 1$이므로 지수가 $0$이어야 한다.
+즉, $2x-1 = 0$에서
+$x = \dfrac{1}{2}$
+이다.
+
+이를 $a^x = 3$에 대입하면
+$a^{\dfrac{1}{2}} = 3$
+이므로 양변을 제곱하면
+$a = 9$
+이다.
+
+구한 $a=9$, $x=\dfrac{1}{2}$을 원래 조건에 대입하면
+$a^x = 9^{\dfrac{1}{2}} = 3$,
+$a^{2x-1} = 9^0 = 1$
+이 되어 모두 만족시킨다.
+
+따라서 $a = 9$이다.
+
+정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">함수
+$$f(x) = \begin{cases} x^2 + ax &amp; (x \ge 1) \\ b &amp; (x &lt; 1) \end{cases}$$
+이 $x=1$에서 미분가능할 때, $a+b$의 값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$-4$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$-3$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$-2$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$-1$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$0$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 미분계수 · Basic</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(-3)</span></div>
+          <div class="q-exp">함수 $f(x)$가 $x=1$에서 미분가능하면 $x=1$에서 연속이므로
+$\lim_{x \to 1^-} f(x) = f(1)$
+이 성립한다.
+$\lim_{x \to 1^-} f(x) = b$, $f(1) = 1+a$이므로
+$b = 1+a$ …… ㉠
+
+한편, $x \ne 1$인 모든 실수 $x$에서 함수 $f(x)$는 미분가능하고 그 도함수 $f&#x27;(x)$는
+$$f&#x27;(x) = \begin{cases} 2x+a &amp; (x &gt; 1) \\ 0 &amp; (x &lt; 1) \end{cases}$$
+이다. 함수 $f(x)$가 $x=1$에서 미분가능하므로
+$\lim_{x \to 1^-} f&#x27;(x) = \lim_{x \to 1^+} f&#x27;(x)$
+가 성립해야 한다.
+$0 = 2+a$
+$a = -2$
+$a = -2$를 ㉠에 대입하면
+$b = -1$
+따라서
+$a+b = -2 + (-1) = -3$
+
+정답은 ②이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">$\dfrac{3}{2}\pi &lt; \theta &lt; 2\pi$인 $\theta$에 대하여
+$$ \dfrac{\cos \theta}{1 + \sin \theta} + \dfrac{\cos \theta}{1 - \sin \theta} = 4 $$
+일 때, $\sin \theta - \tan \theta$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$-\dfrac{\sqrt{3}}{2}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{\sqrt{3}}{2}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\sqrt{3}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{3\sqrt{3}}{2}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$2\sqrt{3}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 삼각함수 · Normal</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">($\frac{\sqrt{3}}{2}$)</span></div>
+          <div class="q-exp">$$\dfrac{\cos \theta}{1 + \sin \theta} + \dfrac{\cos \theta}{1 - \sin \theta} = \dfrac{\cos \theta(1 - \sin \theta) + \cos \theta(1 + \sin \theta)}{(1 + \sin \theta)(1 - \sin \theta)}$$
+$$= \dfrac{2\cos \theta}{1 - \sin^2 \theta} = \dfrac{2\cos \theta}{\cos^2 \theta} = \dfrac{2}{\cos \theta}$$
+주어진 방정식에서 $\dfrac{2}{\cos \theta} = 4$이므로 $\cos \theta = \dfrac{1}{2}$이다.
+$\dfrac{3}{2}\pi &lt; \theta &lt; 2\pi$이므로 $\sin \theta &lt; 0$이다.
+$\sin^2 \theta = 1 - \cos^2 \theta = 1 - \dfrac{1}{4} = \dfrac{3}{4}$이므로 $\sin \theta = -\dfrac{\sqrt{3}}{2}$이다.
+$\tan \theta = \dfrac{\sin \theta}{\cos \theta} = \dfrac{-\dfrac{\sqrt{3}}{2}}{\dfrac{1}{2}} = -\sqrt{3}$
+따라서
+$\sin \theta - \tan \theta = -\dfrac{\sqrt{3}}{2} - (-\sqrt{3}) = \dfrac{\sqrt{3}}{2}$</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">4.</span>
+          <div class="q-stem"><div class="q-text">닫힌구간 $[-2, 3]$에서 정의된 함수 $f(x)$가
+$$ f(x) = \begin{cases} 2x+a &amp; (-2 \le x &lt; 0) \\ -x^2+4x+b &amp; (0 \le x \le 3) \end{cases} $$
+이다. 함수 $f(x)$가 닫힌구간 $[-2, 3]$에서 연속이고 최댓값이 $10$일 때, 함수 $f(x)$의 최솟값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$5$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 함수의 연속 · Normal</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(2)</span></div>
+          <div class="q-exp">함수 $f(x)$가 닫힌구간 $[-2, 3]$에서 연속이므로 $x=0$에서도 연속이어야 한다.
+$\lim_{x \to 0-} f(x) = \lim_{x \to 0-} (2x+a) = a$
+$\lim_{x \to 0+} f(x) = \lim_{x \to 0+} (-x^2+4x+b) = b$
+$f(0) = b$
+따라서 $a=b$이다.
+닫힌구간 $[-2, 3]$에서 함수 $f(x)$의 식을 $a$로 나타내면
+$$ f(x) = \begin{cases} 2x+a &amp; (-2 \le x &lt; 0) \\ -x^2+4x+a &amp; (0 \le x \le 3) \end{cases} $$
+이다.
+$0 \le x \le 3$일 때, $f(x) = -(x-2)^2+a+4$이므로 $x=2$에서 최댓값 $a+4$를 갖는다.
+$-2 \le x &lt; 0$일 때, $f(x) = 2x+a$는 증가하는 함수이고 $f(x) &lt; a$이므로,
+함수 $f(x)$의 최댓값은 $a+4$이다.
+조건에서 함수 $f(x)$의 최댓값이 $10$이므로
+$a+4 = 10$, 즉 $a=6$이다.
+따라서 $b=6$이고,
+$$ f(x) = \begin{cases} 2x+6 &amp; (-2 \le x &lt; 0) \\ -x^2+4x+6 &amp; (0 \le x \le 3) \end{cases} $$
+이다.
+닫힌구간 $[-2, 3]$에서 함수 $f(x)$의 최솟값을 구하기 위해 구간별 값의 범위를 확인하면,
+$-2 \le x &lt; 0$에서 $f(x)$는 증가하므로 $x=-2$일 때 최솟값 $f(-2) = 2$를 갖는다.
+$0 \le x \le 3$에서 $f(0)=6$, $f(3)=-9+12+6=9$이므로 이 구간에서 최솟값은 $6$이다.
+따라서 닫힌구간 $[-2, 3]$에서 함수 $f(x)$의 전체 최솟값은 $2$이다.
+따라서 정답은 ②이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">5.</span>
+          <div class="q-stem"><div class="q-text">다항함수 $f(x)$가 모든 실수 $x$에 대하여
+$$ \int_{1}^{x} f(t) dt = x^3 + ax^2 - 5x + b $$
+를 만족시키고 $f(1) = 2$일 때, $f(a)+b$의 값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$17$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$18$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$19$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$20$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$21$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 정적분 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(17)</span></div>
+          <div class="q-exp">주어진 등식 $\int_{1}^{x} f(t) dt = x^3 + ax^2 - 5x + b$ 의 양변을 $x$에 대하여 미분하면
+$f(x) = 3x^2 + 2ax - 5$
+$f(1) = 2$이므로
+$3 + 2a - 5 = 2$, $2a = 4$
+$a = 2$
+주어진 등식의 양변에 $x=1$을 대입하면
+$\int_{1}^{1} f(t) dt = 1^3 + a \times 1^2 - 5 \times 1 + b$ 이므로
+$0 = 1 + 2 - 5 + b$, $b = 2$
+따라서 $f(x) = 3x^2 + 4x - 5$이므로
+$f(a)+b = f(2)+2 = (12 + 8 - 5) + 2 = 17$
+
+따라서 정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">6.</span>
+          <div class="q-stem"><div class="q-text">공비가 정수인 등비수열 $\{a_n\}$이 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$|a_2|+a_5=54$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$a_1+a_4=-21$</span></div></div>
+<div class="q-text">$a_5$의 값은? <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$12$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$24$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$36$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$48$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$60$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 등차수열과 등비수열 · Advanced</div>
+          <div class="q-ans">정답 <b>④</b> <span class="q-ansval">(48)</span></div>
+          <div class="q-exp">등비수열 $\{a_n\}$의 첫째항을 $a$, 공비를 $r$라 하자. (단, $a \neq 0$이고 $r$는 정수)
+
+조건 (나)에서 $a + ar^3 = -21$이므로
+$a(1+r^3) = -21$ $\cdots$ ㉠
+
+조건 (가)에서 $|ar| + ar^4 = 54$이다.
+
+(i) $a_2 = ar \ge 0$인 경우
+$ar + ar^4 = 54$이므로
+$ar(1+r^3) = 54$ $\cdots$ ㉡
+㉠, ㉡에서 $1+r^3 \neq 0$이므로 양변을 나누면
+$\dfrac{ar(1+r^3)}{a(1+r^3)} = \dfrac{54}{-21}$
+$r = -\dfrac{18}{7}$
+이는 $r$가 정수라는 조건에 모순이다.
+
+(ii) $a_2 = ar &lt; 0$인 경우
+$-ar + ar^4 = 54$이므로
+$ar(r^3-1) = 54$ $\cdots$ ㉢
+㉢을 ㉠으로 나누면 ($a \neq 0$이고 $r \neq -1$이므로)
+$\dfrac{ar(r^3-1)}{a(r^3+1)} = \dfrac{54}{-21}$
+$\dfrac{r(r^3-1)}{r^3+1} = -\dfrac{18}{7}$
+$7r(r^3-1) = -18(r^3+1)$
+$7r^4 - 7r = -18r^3 - 18$
+$7r^4 + 18r^3 - 7r + 18 = 0$
+
+조립제법을 이용하여 인수분해하면
+$(r+2)(7r^3 + 4r^2 - 8r + 9) = 0$이다.
+$r$는 정수이므로 $r = -2$이다. (방정식 $7r^3 + 4r^2 - 8r + 9 = 0$은 정수해를 갖지 않는다.)
+
+$r = -2$를 ㉠에 대입하면
+$a\{1 + (-2)^3\} = -21$
+$-7a = -21$, 즉 $a = 3$이다.
+이때 $a_2 = ar = 3 \times (-2) = -6 &lt; 0$이므로 가정에 모순되지 않는다.
+
+따라서 등비수열 $\{a_n\}$의 일반항은 $a_n = 3 \times (-2)^{n-1}$이므로
+$a_5 = 3 \times (-2)^4 = 3 \times 16 = 48$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">7.</span>
+          <div class="q-stem"><div class="q-text">곡선 $y=x^3-3x$ 위의 점 $(t,t^3-3t)$에서의 접선이 점 $(0,2)$를 지날 때, $t$의 값으로 옳은 것을 고르시오. <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">-5</span></span><span class="choice"><span class="cnum">②</span><span class="m">-4</span></span><span class="choice"><span class="cnum">③</span><span class="m">-3</span></span><span class="choice"><span class="cnum">④</span><span class="m">-2</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">-1</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 도함수의 활용 · Advanced</div>
+          <div class="q-ans">정답 <b>⑤ -1</b> <span class="q-ansval">(⑤ -1)</span></div>
+          <div class="q-exp">접선식에 $(0,2)$를 대입하면 $2=t^3-3t-(3t^2-3)t=-2t^3$이다. 따라서 $t^3=-1$이고 $t=-1$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">수열 $\{e_n\}$에 대하여 $\displaystyle\lim_{n \to \infty}\dfrac{6e_n-5}{7}=8$일 때, $\displaystyle\lim_{n \to \infty}\dfrac{e_n+n}{6n+e_n}$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$- \dfrac{1}{3}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$- \dfrac{1}{6}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$0$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{1}{6}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{1}{3}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 수열의 극한 · Basic</div>
+          <div class="q-ans">정답 <b>④</b> <span class="q-ansval">(\frac{1}{6})</span></div>
+          <div class="q-exp">주어진 조건에서 $\{e_n\}$은 유한한 값으로 수렴하므로 $\dfrac{e_n}{n} \to 0$이다. 따라서 $\dfrac{e_n+n}{6n+e_n}=\dfrac{\dfrac{e_n}{n}+1}{6+\dfrac{e_n}{n}}$의 극한값은 $\dfrac{1}{6}$이다. 답은 $③$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x)=e^{6x} \cos 2x + a e^{-2x}$에 대하여
+$$ \lim_{x \to 0} \dfrac{f(x)-2}{x}=b $$
+일 때, $a+b$의 값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$5$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 여러가지 함수의 미분 · Normal</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(5)</span></div>
+          <div class="q-exp">$\lim_{x \to 0} \dfrac{f(x)-2}{x}=b$에서 $x \to 0$일 때 (분모) $\to 0$이고 극한값이 존재하므로 (분자) $\to 0$이어야 한다.
+$\lim_{x \to 0} \{f(x)-2\}=0$이므로 $f(0)=2$이다.
+$f(x)=e^{6x} \cos 2x + ae^{-2x}$이므로 $f(0)=1+a=2$에서 $a=1$이다.
+그러므로 $f(x)=e^{6x} \cos 2x + e^{-2x}$이다.
+한편, 주어진 극한식은 미분계수의 정의에 의하여
+$\lim_{x \to 0} \dfrac{f(x)-2}{x} = \lim_{x \to 0} \dfrac{f(x)-f(0)}{x-0} = f&#x27;(0) = b$이다.
+$f(x)$를 미분하면 곱의 미분법과 합성함수의 미분법에 의하여
+$f&#x27;(x)=6e^{6x} \cos 2x - 2e^{6x} \sin 2x - 2e^{-2x}$
+이므로 $b=f&#x27;(0)=6-0-2=4$이다.
+따라서 $a+b=1+4=5$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">양수 $a$에 대하여 함수 $f(x)$를
+$$f(x) = \int_{e^{-1}}^x \left| at - \dfrac{1}{4at} \right| dt \quad (x&gt;0)$$
+이라 하자. 방정식 $f&#x27;(x)=0$의 실근이 구간 $(0, 2)$ 에 존재하고, $x=e^{-1}$에서 $x=e^2$까지 곡선 $y=f(x)$의 길이가 $\dfrac{e^6+6e^2-1}{4e^2}$일 때, $f(e)$의 값은? <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\dfrac{e^4 - 3e^2 + 1}{4e^2}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{e^4 - 2e^2 + 1}{4e^2}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{e^4 - e^2 + 1}{4e^2}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{e^4 + 1}{4e^2}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{e^4 + e^2 + 1}{4e^2}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 정적분의 활용 · Advanced</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">($\frac{e^4 - 2e^2 + 1}{4e^2}$)</span></div>
+          <div class="q-exp">목표: 곡선의 길이 공식을 이용하여 상수 $a$를 구하고, 절댓값이 포함된 정적분으로 정의된 함수의 값을 구간을 나누어 계산한다.
+
+함수 $f(x)$가 정적분으로 정의되어 있으므로 미분적분학의 기본 정리에 의해 $x&gt;0$에서
+$$f&#x27;(x) = \left| ax - \dfrac{1}{4ax} \right|$$
+이다.
+$x=e^{-1}$에서 $x=e^2$까지 곡선 $y=f(x)$의 길이를 $L$이라 하면,
+$$L = \int_{e^{-1}}^{e^2} \sqrt{1 + \{f&#x27;(x)\}^2} dx$$
+이다. 근호 안의 식을 정리하면
+$$1 + \{f&#x27;(x)\}^2 = 1 + \left( ax - \dfrac{1}{4ax} \right)^2 = 1 + a^2 x^2 - \dfrac{1}{2} + \dfrac{1}{16a^2 x^2} = \left( ax + \dfrac{1}{4ax} \right)^2$$
+이므로, $x&gt;0, a&gt;0$에서 $ax + \dfrac{1}{4ax} &gt; 0$임에 따라
+$$L = \int_{e^{-1}}^{e^2} \left( ax + \dfrac{1}{4ax} \right) dx$$
+$$= \left[ \dfrac{a}{2} x^2 + \dfrac{1}{4a} \ln x \right]_{e^{-1}}^{e^2}$$
+$$= \left( \dfrac{a}{2} e^4 + \dfrac{1}{4a} \cdot 2 \right) - \left( \dfrac{a}{2} e^{-2} + \dfrac{1}{4a} \cdot (-1) \right)$$
+$$= \dfrac{a(e^6-1)}{2e^2} + \dfrac{3}{4a}$$
+이 된다. 조건에서 $L = \dfrac{e^6+6e^2-1}{4e^2}$ 이므로
+$$\dfrac{a(e^6-1)}{2e^2} + \dfrac{3}{4a} = \dfrac{e^6-1}{4e^2} + \dfrac{3}{2}$$
+양변에 $4a$를 곱하여 정리하면
+$$2(e^6-1)a^2 - (e^6+6e^2-1)a + 3e^2 = 0$$
+$$2(e^6-1)a^2 - \{ (e^6-1) + 6e^2 \} a + 3e^2 = 0$$
+$$(2a - 1) \{ (e^6-1)a - 3e^2 \} = 0$$
+따라서 $a = \dfrac{1}{2}$ 또는 $a = \dfrac{3e^2}{e^6-1}$ 이다.
+
+한편, $f&#x27;(x)=0$에서 $ax = \dfrac{1}{4ax}$, 즉 $x^2 = \dfrac{1}{4a^2}$ 이므로 양수 근은 $x = \dfrac{1}{2a}$ 이다.
+조건에서 이 실근이 구간 $(0, 2)$에 존재해야 하므로 $0 &lt; \dfrac{1}{2a} &lt; 2$ 에서 $a &gt; \dfrac{1}{4}$ 이어야 한다.
+$a = \dfrac{3e^2}{e^6-1}$인 경우, $\dfrac{1}{2a} = \dfrac{e^6-1}{6e^2} = \dfrac{e^4 - e^{-2}}{6} &gt; \dfrac{54 - 1}{6} &gt; 8$ 이므로 조건에 모순이다.
+따라서 조건을 만족시키는 상수는 $a = \dfrac{1}{2}$로 유일하게 확정된다.
+
+이제 $f(e)$의 값을 구하기 위해 피적분함수의 절댓값 기호를 벗겨야 한다.
+$a = \dfrac{1}{2}$일 때, 피적분함수는 $\left| \dfrac{1}{2}t - \dfrac{1}{2t} \right|$ 이고, 이 식의 부호는 $t=1$을 기준으로 바뀐다.
+$e^{-1} \le t \le 1$ 에서는 $\dfrac{1}{2}t - \dfrac{1}{2t} \le 0$ 이고,
+$1 \le t \le e$ 에서는 $\dfrac{1}{2}t - \dfrac{1}{2t} \ge 0$ 이다.
+따라서 정적분 구간을 나누어 계산하면 다음과 같다.
+$$f(e) = \int_{e^{-1}}^e \left| \dfrac{1}{2}t - \dfrac{1}{2t} \right| dt$$
+$$= \int_{e^{-1}}^1 \left( \dfrac{1}{2t} - \dfrac{1}{2}t \right) dt + \int_1^e \left( \dfrac{1}{2}t - \dfrac{1}{2t} \right) dt$$
+$$= \left[ \dfrac{1}{2} \ln t - \dfrac{1}{4} t^2 \right]_{e^{-1}}^1 + \left[ \dfrac{1}{4} t^2 - \dfrac{1}{2} \ln t \right]_1^e$$
+$$= \left\{ \left(0 - \dfrac{1}{4}\right) - \left(-\dfrac{1}{2} - \dfrac{1}{4e^2}\right) \right\} + \left\{ \left(\dfrac{1}{4}e^2 - \dfrac{1}{2}\right) - \left(\dfrac{1}{4} - 0\right) \right\}$$
+$$= \left( \dfrac{1}{4} + \dfrac{1}{4e^2} \right) + \left( \dfrac{1}{4}e^2 - \dfrac{3}{4} \right)$$
+$$= \dfrac{1}{4}e^2 - \dfrac{1}{2} + \dfrac{1}{4e^2}$$
+$$= \dfrac{e^4 - 2e^2 + 1}{4e^2}$$
+그러므로 정답은 ②이다.</div>
+        </div>
+      </article>
+  </div>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  });
+</script>
+</body>
+</html>

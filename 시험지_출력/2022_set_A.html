@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2022_set_A — 시험지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root { --ink:#1a1a1a; --line:#d8d8d8; --paper:#fff; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:#ececec;
+    font-family:"Noto Serif KR","Pretendard",serif;
+    color:var(--ink); line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .sheet {
+    max-width:760px; margin:32px auto; background:var(--paper);
+    padding:56px 56px 72px; box-shadow:0 4px 24px rgba(0,0,0,.12);
+  }
+  .sheet-head {
+    text-align:center; border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:30px;
+  }
+  .sheet-head h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.3px; }
+  .sheet-head p { font-size:13px; color:#666; margin:0; }
+  .q { padding:26px 0; border-bottom:1px solid #eee; }
+  .q-body { display:flex; gap:8px; align-items:baseline; }
+  .q-no { font-size:18px; font-weight:700; flex:0 0 auto; }
+  .q-stem { flex:1; font-size:16.5px; line-height:1.8; }
+  /* 인라인 분수가 든 '그 줄'만 line-height 확대 (다른 줄은 그대로) */
+  .q-stem .katex:has(.mfrac) { line-height:2.9; }
+  .q-stem .katex-display .katex { line-height:normal; }  /* display 블록은 제외 */
+  .q-text + .q-text { margin-top:.5em; }
+  /* 수능 조건 박스 (가)(나) */
+  .cond-box { border:1px solid #333; border-radius:2px; padding:16px 26px; margin:20px 0 22px; }
+  .cond { display:flex; gap:9px; margin:9px 0; font-size:16.5px; }
+  .cond-label { flex:0 0 auto; }
+  .cond-body { flex:1; }
+  .cond-body .katex-display { padding-left:1.4em; margin:1.4em 0; }
+  .katex-display { margin:2.5em 0; text-align:left; padding-left:2.8em; }
+  .katex-display > .katex { text-align:left; }
+  .q-point { font-family:"Pretendard",sans-serif; font-size:.9em; color:#333; margin-left:4px; white-space:nowrap; }
+  .choices { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:0 6px 0 28px; margin-top:18px; }
+  .choice { display:flex; align-items:center; gap:7px; font-size:16px; }
+  .cnum { flex:0 0 auto; font-size:16px; line-height:1; }
+  .q-meta { font-family:"Pretendard",sans-serif; font-size:12px; color:#999; margin-bottom:10px; }
+  .q-toggle {
+    margin-top:18px; font-family:"Pretendard",sans-serif; font-size:13px;
+    color:#c0392b; background:none; border:1px solid #e0c0bd; border-radius:6px;
+    padding:6px 12px; cursor:pointer;
+  }
+  .q-sol { display:none; margin-top:14px; padding:16px 18px; background:#faf7f2; border-radius:8px; }
+  .q-sol.open { display:block; }
+  .q-ans { font-size:15px; margin-bottom:10px; font-family:"Pretendard",sans-serif; }
+  .q-ans b { color:#c0392b; font-size:17px; }
+  .q-ansval { color:#888; font-size:13px; }
+  .q-exp { white-space:pre-wrap; font-size:15px; color:#333; }
+  .katex { font-size:1.04em; }
+  @media print {
+    body { background:#fff; }
+    .sheet { box-shadow:none; margin:0; max-width:none; }
+    .q-toggle { display:none; }
+    .q-sol { display:block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h1>2022_set_A</h1>
+      <p>Pullit · AI 생성 진단 세트 · 총 10문항</p>
+    </div>
+    
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">$3^3 \times 27^{-\dfrac{2}{3}}$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$6$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$7$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 지수와 로그 · Basic</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(3)</span></div>
+          <div class="q-exp">$$3^3 \times 27^{-\dfrac{2}{3}} = 3^3 \times (3^3)^{-\dfrac{2}{3}}$$
+$$= 3^3 \times 3^{-2}$$
+$$= 3^{3-2}$$
+$$= 3^1 = 3$$
+따라서 정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">$0 \le x &lt; 2\pi$일 때, 방정식 $$2\cos^2 x + 3\sin x - 3 = 0$$을 만족시키는 모든 실수 $x$의 값의 합은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\pi$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{7\pi}{6}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{4\pi}{3}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{3\pi}{2}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{5\pi}{3}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 삼각함수 · Normal</div>
+          <div class="q-ans">정답 <b>④</b> <span class="q-ansval">(\frac{3\pi}{2})</span></div>
+          <div class="q-exp">$0 \le x &lt; 2\pi$일 때, 방정식 $2\cos^2 x + 3\sin x - 3 = 0$에서
+$\cos^2 x = 1 - \sin^2 x$이므로
+$2(1 - \sin^2 x) + 3\sin x - 3 = 0$
+$2\sin^2 x - 3\sin x + 1 = 0$
+$(2\sin x - 1)(\sin x - 1) = 0$
+$\sin x = \dfrac{1}{2}$ 또는 $\sin x = 1$
+
+$0 \le x &lt; 2\pi$에서
+$\sin x = \dfrac{1}{2}$을 만족시키는 실수 $x$의 값은 $x = \dfrac{\pi}{6}$ 또는 $x = \dfrac{5\pi}{6}$이고,
+$\sin x = 1$을 만족시키는 실수 $x$의 값은 $x = \dfrac{\pi}{2}$이다.
+
+따라서 주어진 방정식을 만족시키는 모든 실수 $x$의 값의 합은
+$\dfrac{\pi}{6} + \dfrac{5\pi}{6} + \dfrac{\pi}{2} = \dfrac{3\pi}{2}$
+
+정답은 ④이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">다음 조건을 만족시키는 모든 수열 $\{a_n\}$에 대하여 $a_1$의 값의 합은? <span class="q-point">[4점]</span></div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">모든 자연수 $n$에 대하여
+$$ a_{n+1} = \begin{cases} a_n + 4 &amp; (a_n \le 0) \\ -\dfrac{1}{2}a_n + 3 &amp; (a_n &gt; 0) \end{cases} $$
+이다.</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$a_5 = 2$</span></div></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">18</span></span><span class="choice"><span class="cnum">②</span><span class="m">21</span></span><span class="choice"><span class="cnum">③</span><span class="m">24</span></span><span class="choice"><span class="cnum">④</span><span class="m">27</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">30</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">대수 · 수학적 귀납법 · Advanced</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(24)</span></div>
+          <div class="q-exp">조건 (가)의 점화식을 $a_n$에 대하여 정리하면 다음과 같다.
+
+$a_n \le 0$일 때, $a_{n+1} = a_n + 4$이므로 $a_n = a_{n+1} - 4$이다. 이때 $a_n \le 0$이어야 하므로 $a_{n+1} \le 4$이다.
+$a_n &gt; 0$일 때, $a_{n+1} = -\dfrac{1}{2}a_n + 3$이므로 $a_n = -2a_{n+1} + 6$이다. 이때 $a_n &gt; 0$이어야 하므로 $a_{n+1} &lt; 3$이다.
+
+조건 (나)에서 $a_5 = 2$이므로 역추적하여 $a_4$를 구하면,
+$a_5 \le 4$이므로 $a_4 = 2 - 4 = -2$이고,
+$a_5 &lt; 3$이므로 $a_4 = -2 \times 2 + 6 = 2$이다.
+따라서 $a_4 \in \{-2, 2\}$이다.
+
+같은 방법으로 $a_3, a_2, a_1$을 차례로 구한다.
+
+(i) $a_4 = -2$인 경우
+$a_4 \le 4$이므로 $a_3 = -2 - 4 = -6$
+$a_4 &lt; 3$이므로 $a_3 = -2 \times (-2) + 6 = 10$
+
+(ii) $a_4 = 2$인 경우
+$a_4 \le 4$이므로 $a_3 = 2 - 4 = -2$
+$a_4 &lt; 3$이므로 $a_3 = -2 \times 2 + 6 = 2$
+
+따라서 가능한 $a_3$의 값은 $-6, 10, -2, 2$이다.
+
+이어서 $a_2$를 구하면,
+$a_3 = -6$일 때, $-6 \le 4$에서 $a_2 = -10$, $-6 &lt; 3$에서 $a_2 = 18$
+$a_3 = 10$일 때, $10 \not\le 4$이고 $10 \not&lt; 3$이므로 조건을 만족시키는 $a_2$는 존재하지 않는다.
+$a_3 = -2$일 때, $-2 \le 4$에서 $a_2 = -6$, $-2 &lt; 3$에서 $a_2 = 10$
+$a_3 = 2$일 때, $2 \le 4$에서 $a_2 = -2$, $2 &lt; 3$에서 $a_2 = 2$
+따라서 가능한 $a_2$의 값은 $-10, 18, -6, 10, -2, 2$이다.
+
+마지막으로 $a_1$을 구하면,
+$a_2 = -10$일 때, $-10 \le 4$에서 $a_1 = -14$, $-10 &lt; 3$에서 $a_1 = 26$
+$a_2 = 18$일 때, $18 \not\le 4$이고 $18 \not&lt; 3$이므로 조건을 만족시키는 $a_1$은 존재하지 않는다.
+$a_2 = -6$일 때, $-6 \le 4$에서 $a_1 = -10$, $-6 &lt; 3$에서 $a_1 = 18$
+$a_2 = 10$일 때, 조건을 만족시키는 $a_1$은 존재하지 않는다.
+$a_2 = -2$일 때, $-2 \le 4$에서 $a_1 = -6$, $-2 &lt; 3$에서 $a_1 = 10$
+$a_2 = 2$일 때, $2 \le 4$에서 $a_1 = -2$, $2 &lt; 3$에서 $a_1 = 2$
+
+결과적으로 조건을 만족시키는 모든 $a_1$의 값은 $-14, 26, -10, 18, -6, 10, -2, 2$이며, 이 모든 값의 합은
+$(-14) + 26 + (-10) + 18 + (-6) + 10 + (-2) + 2 = 24$
+이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">4.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x)=2x^2-x+2$에 대하여 곡선 $y=f(x)$ 위의 점 $(1, 3)$에서의 접선의 기울기는? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$0$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$4$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 미분계수 · Basic</div>
+          <div class="q-ans">정답 <b>④</b> <span class="q-ansval">(3)</span></div>
+          <div class="q-exp">곡선 $y=f(x)$ 위의 점 $(1, 3)$에서의 접선의 기울기는 함수 $f(x)$의 $x=1$에서의 미분계수 $f&#x27;(1)$과 같다.
+함수 $f(x)=2x^2-x+2$에서
+$f&#x27;(x)=4x-1$
+이므로
+$f&#x27;(1)=4 \times 1 - 1 = 3$
+이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">5.</span>
+          <div class="q-stem"><div class="q-text">다항함수 $f(x)$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$\lim_{x \to \infty} \dfrac{f(x)}{x^2} = 2$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$\lim_{x \to 1} \dfrac{f(x)}{x-1} = 5$</span></div></div>
+<div class="q-text">$f(2)$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$8$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$9$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$10$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$11$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 함수의 극한 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(7)</span></div>
+          <div class="q-exp">조건 (가)에서 $\lim_{x \to \infty} \dfrac{f(x)}{x^2} = 2$이므로 $f(x)$는 최고차항의 계수가 $2$인 이차함수이다.
+$f(x) = 2x^2 + ax + b$ (단, $a$, $b$는 상수)라 하자.
+조건 (나)의 $\lim_{x \to 1} \dfrac{f(x)}{x-1} = 5$에서 $x \to 1$일 때 (분모) $\to 0$이고 극한값이 수렴하므로 (분자) $\to 0$이어야 한다.
+즉, 수렴 조건에 의하여 $\lim_{x \to 1} f(x) = 0$이므로 $f(1) = 2 + a + b = 0$에서 $b = -a - 2$이다.
+이를 대입하여 식을 인수분해하면, 부정형을 해소할 수 있다.
+$f(x) = 2x^2 + ax - a - 2 = 2(x^2 - 1) + a(x - 1) = (x - 1)(2x + a + 2)$
+주어진 극한식에 대입하면 약분을 통해 $\dfrac{0}{0}$ 꼴의 부정형이 해소된다.
+$\lim_{x \to 1} \dfrac{f(x)}{x-1} = \lim_{x \to 1} \dfrac{(x - 1)(2x + a + 2)}{x - 1} = \lim_{x \to 1} (2x + a + 2) = a + 4$
+극한값이 $5$이므로 $a + 4 = 5$, 즉 $a = 1$이다.
+$a = 1$을 $b = -a - 2$에 대입하면 $b = -3$이다.
+따라서 $f(x) = 2x^2 + x - 3$이므로 구하는 값은 $f(2) = 2 \times 2^2 + 2 - 3 = 7$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">6.</span>
+          <div class="q-stem"><div class="q-text">두 다항함수 $f(x)$, $g(x)$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$\lim_{x \to 1} \dfrac{f(x) - 2}{x - 1} = 3$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$\lim_{x \to 1} \dfrac{f(x) + g(x) - 5}{x - 1} = 4$</span></div></div>
+<div class="q-text">함수 $h(x) = 2f(x) - g(x)$에 대하여 $h&#x27;(1)$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$9$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 도함수 · Normal</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(5)</span></div>
+          <div class="q-exp">조건 (가)에서 $x \to 1$일 때 분모가 $0$으로 가고 극한값이 존재하므로 분자도 $0$으로 간다.
+즉, $\lim_{x \to 1} \{f(x) - 2\} = 0$에서 $f(1) = 2$이다.
+미분계수의 정의에 의하여
+$\lim_{x \to 1} \dfrac{f(x) - 2}{x - 1} = \lim_{x \to 1} \dfrac{f(x) - f(1)}{x - 1} = f&#x27;(1) = 3$이다.
+
+조건 (나)에서 $x \to 1$일 때 분모가 $0$으로 가고 극한값이 존재하므로 분자도 $0$으로 간다.
+즉, $\lim_{x \to 1} \{f(x) + g(x) - 5\} = 0$에서 $f(1) + g(1) = 5$이다.
+미분계수의 정의에 의하여
+$\lim_{x \to 1} \dfrac{f(x) + g(x) - 5}{x - 1} = \lim_{x \to 1} \dfrac{\{f(x) + g(x)\} - \{f(1) + g(1)\}}{x - 1} = f&#x27;(1) + g&#x27;(1) = 4$이다.
+$f&#x27;(1) = 3$이므로 $3 + g&#x27;(1) = 4$에서 $g&#x27;(1) = 1$이다.
+
+함수 $h(x) = 2f(x) - g(x)$를 미분하면
+$h&#x27;(x) = 2f&#x27;(x) - g&#x27;(x)$
+이므로 $x = 1$에서의 미분계수는
+$h&#x27;(1) = 2f&#x27;(1) - g&#x27;(1) = 2 \times 3 - 1 = 5$이다.
+따라서 정답은 ③이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">7.</span>
+          <div class="q-stem"><div class="q-text">수직선 위를 움직이는 점 $\mathrm{P}$의 시각 $t$ ($t \ge 0$)에서의 속도 $v(t)$가
+$$v(t) = \begin{cases} 3t^2 - 12t + 9 &amp; (0 \le t \le 3) \\ a(3-t) &amp; (t &gt; 3) \end{cases}$$
+이다. 시각 $t=0$에서 점 $\mathrm{P}$의 위치는 $0$이다. 시각 $t$ ($t \ge 0$)에서의 점 $\mathrm{P}$의 위치를 $x(t)$라 하고, 시각 $0$에서 $t$까지 점 $\mathrm{P}$가 움직인 거리를 $s(t)$라 하자. 부등식 $s(t) - x(t) \ge 26$을 만족시키는 실수 $t$의 값의 범위가 $t \ge 5$일 때, 상수 $a$의 값은? (단, $a&gt;0$이다.) <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\dfrac{5}{2}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{7}{2}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{9}{2}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분Ⅰ · 정적분의 활용 · Advanced</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">($\frac{9}{2}$)</span></div>
+          <div class="q-exp">시각 $t$ ($t \ge 0$)에서의 점 $\mathrm{P}$의 위치 $x(t)$는 $x(t) = \int_{0}^{t} v(k) dk$ 이고, 시각 $0$에서 $t$까지 점 $\mathrm{P}$가 움직인 거리 $s(t)$는 $s(t) = \int_{0}^{t} |v(k)| dk$ 이다.
+$0 \le t \le 3$일 때, $v(t) = 3(t-1)(t-3)$이므로 $0 \le t \le 1$에서 $v(t) \ge 0$이고, $1 &lt; t \le 3$에서 $v(t) &lt; 0$이다.
+$0 \le t \le 3$에서의 $x(t)$와 $s(t)$를 구하면 다음과 같다.
+$x(3) = \int_{0}^{3} (3t^2 - 12t + 9) dk = \left[ t^3 - 6t^2 + 9t \right]_{0}^{3} = 27 - 54 + 27 = 0$
+$s(3) = \int_{0}^{1} (3t^2 - 12t + 9) dk - \int_{1}^{3} (3t^2 - 12t + 9) dk = \left[ t^3 - 6t^2 + 9t \right]_{0}^{1} - \left[ t^3 - 6t^2 + 9t \right]_{1}^{3} = 4 - (-4) = 8$
+$t &gt; 3$일 때, $a&gt;0$이므로 $v(t) = a(3-t) &lt; 0$이다.
+따라서 $t &gt; 3$일 때 $x(t)$와 $s(t)$는
+$x(t) = x(3) + \int_{3}^{t} a(3-k) dk = 0 + a \left[ 3k - \dfrac{1}{2}k^2 \right]_{3}^{t} = a \left( 3t - \dfrac{1}{2}t^2 - \dfrac{9}{2} \right) = -\dfrac{a}{2}(t-3)^2$
+$s(t) = s(3) + \int_{3}^{t} |a(3-k)| dk = 8 + \int_{3}^{t} a(k-3) dk = 8 + a \left[ \dfrac{1}{2}k^2 - 3k \right]_{3}^{t} = 8 + a \left( \dfrac{1}{2}t^2 - 3t + \dfrac{9}{2} \right) = 8 + \dfrac{a}{2}(t-3)^2$
+이다.
+$s(t) - x(t) = \left\{ 8 + \dfrac{a}{2}(t-3)^2 \right\} - \left\{ -\dfrac{a}{2}(t-3)^2 \right\} = 8 + a(t-3)^2$ 이다.
+한편, $0 \le t \le 3$에서는 $s(t) - x(t) = \int_{0}^{t} (|v(k)| - v(k)) dk$ 이고, 피적분함수가 $|v(k)| - v(k) \ge 0$이므로 이 구간에서 $s(t) - x(t)$는 최댓값 $s(3) - x(3) = 8$을 갖는다.
+따라서 부등식 $s(t) - x(t) \ge 26$을 만족시키는 $t$는 $t &gt; 3$ 범위에 존재한다.
+$t &gt; 3$일 때, $8 + a(t-3)^2 \ge 26$에서 $a(t-3)^2 \ge 18$이다.
+$(t-3)^2 \ge \dfrac{18}{a}$ 이고, $t&gt;3$이므로 $t - 3 \ge \sqrt{\dfrac{18}{a}}$, 즉 $t \ge 3 + \sqrt{\dfrac{18}{a}}$ 이다.
+조건에서 부등식을 만족시키는 $t$의 값의 범위가 $t \ge 5$이므로
+$3 + \sqrt{\dfrac{18}{a}} = 5$, $\sqrt{\dfrac{18}{a}} = 2$ 이다.
+양변을 제곱하면 $\dfrac{18}{a} = 4$ 이므로 $a = \dfrac{9}{2}$ 이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">8.</span>
+          <div class="q-stem"><div class="q-text">두 사건 $A$, $B$가 서로 배반사건이고
+$$P(A^C) = \dfrac{3}{4}, \quad P(A \cup B) = \dfrac{2}{3}$$
+일 때, $P(B)$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\dfrac{1}{12}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{1}{6}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{1}{4}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{1}{3}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{5}{12}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 확률의 뜻과 활용 · Basic</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(\frac{5}{12})</span></div>
+          <div class="q-exp">여사건의 확률의 성질에 의하여
+$$P(A) = 1 - P(A^C) = 1 - \dfrac{3}{4} = \dfrac{1}{4}$$
+이다.
+두 사건 $A$와 $B$가 서로 배반사건이므로
+$$P(A \cap B) = 0$$
+이다.
+확률의 덧셈정리에 의하여
+$$P(A \cup B) = P(A) + P(B) - P(A \cap B) = P(A) + P(B)$$
+이므로
+$$\dfrac{2}{3} = \dfrac{1}{4} + P(B)$$
+이다.
+따라서 $P(B) = \dfrac{2}{3} - \dfrac{1}{4} = \dfrac{8}{12} - \dfrac{3}{12} = \dfrac{5}{12}$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">9.</span>
+          <div class="q-stem"><div class="q-text">주머니 $\rm A$에는 흰 공 $2$개와 검은 공 $3$개가 들어 있고, 주머니 $\rm B$에는 흰 공 $3$개와 검은 공 $2$개가 들어 있다. 주머니 $\rm A$에서 임의로 $1$개의 공을 꺼내어 주머니 $\rm B$에 넣은 후, 주머니 $\rm B$에서 임의로 $1$개의 공을 꺼낼 때, 주머니 $\rm B$에서 꺼낸 공이 검은 공일 확률은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\dfrac{11}{30}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{2}{5}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{13}{30}$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{7}{15}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{1}{2}$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 조건부확률 · Normal</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(\frac{13}{30})</span></div>
+          <div class="q-exp">주머니 $\rm A$에서 흰 공을 꺼내는 사건을 $E_{1}$, 검은 공을 꺼내는 사건을 $E_{2}$라 하고, 주머니 $\rm B$에서 검은 공을 꺼내는 사건을 $E$라 하자.
+주머니 $\rm A$에는 총 $5$개의 공 중 흰 공이 $2$개, 검은 공이 $3$개 들어 있으므로
+$\mathrm{P}(E_{1}) = \dfrac{2}{5}$, $\mathrm{P}(E_{2}) = \dfrac{3}{5}$
+
+(i) 주머니 $\rm A$에서 흰 공을 꺼내어 주머니 $\rm B$에 넣는 경우
+주머니 $\rm B$에는 흰 공 $4$개, 검은 공 $2$개가 있게 되므로 주머니 $\rm B$에서 검은 공을 꺼낼 확률은
+$\mathrm{P}(E|E_{1}) = \dfrac{2}{6} = \dfrac{1}{3}$
+이때의 확률은 확률의 곱셈정리에 의하여
+$\mathrm{P}(E_{1} \cap E) = \mathrm{P}(E_{1})\mathrm{P}(E|E_{1}) = \dfrac{2}{5} \times \dfrac{1}{3} = \dfrac{2}{15}$
+
+(ii) 주머니 $\rm A$에서 검은 공을 꺼내어 주머니 $\rm B$에 넣는 경우
+주머니 $\rm B$에는 흰 공 $3$개, 검은 공 $3$개가 있게 되므로 주머니 $\rm B$에서 검은 공을 꺼낼 확률은
+$\mathrm{P}(E|E_{2}) = \dfrac{3}{6} = \dfrac{1}{2}$
+이때의 확률은 확률의 곱셈정리에 의하여
+$\mathrm{P}(E_{2} \cap E) = \mathrm{P}(E_{2})\mathrm{P}(E|E_{2}) = \dfrac{3}{5} \times \dfrac{1}{2} = \dfrac{3}{10}$
+
+(i), (ii)의 두 사건은 서로 배반사건이므로 구하는 확률은
+$\mathrm{P}(E) = \mathrm{P}(E_{1} \cap E) + \mathrm{P}(E_{2} \cap E) = \dfrac{2}{15} + \dfrac{3}{10} = \dfrac{4}{30} + \dfrac{9}{30} = \dfrac{13}{30}$</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">10.</span>
+          <div class="q-stem"><div class="q-text">정규분포 $N(m, \sigma^2)$을 따르는 확률변수 $X$에 대하여 확률변수 $Y$를 $Y=2X-4$라 하자.
+두 확률변수 $X$, $Y$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$P(X \le 8) = P(Y \ge 8)$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$P(X \ge 10) + P(Y \le 4) = 0.1336$</span></div></div>
+<div class="q-text">$P(X \le 5) + P(Y \ge 18)$의 값은? (단, $m$, $\sigma$는 상수이고 $\sigma&gt;0$이다. 또한 $Z$가 표준정규분포를 따르는 확률변수일 때, $P(0 \le Z \le 1)=0.3413$, $P(0 \le Z \le 1.5)=0.4332$, $P(0 \le Z \le 2)=0.4772$로 계산한다.) <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$0.1587$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$0.1815$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$0.2014$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$0.2255$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$0.2415$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">확률과통계 · 확률분포 · Advanced</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(0.1815)</span></div>
+          <div class="q-exp">확률변수 $X$가 정규분포 $N(m, \sigma^2)$을 따르고, $Y=2X-4$이므로
+$E(Y) = 2E(X) - 4 = 2m-4$,
+$V(Y) = 2^2 V(X) = 4\sigma^2$이다.
+따라서 확률변수 $Y$는 정규분포 $N(2m-4, (2\sigma)^2)$을 따른다.
+
+조건 (가)에서 $P(X \le 8) = P(Y \ge 8)$이고, $Z$가 표준정규분포를 따르는 확률변수일 때
+$P(X \le 8) = P\left(Z \le \dfrac{8-m}{\sigma}\right)$
+$P(Y \ge 8) = P\left(Z \ge \dfrac{8-(2m-4)}{2\sigma}\right) = P\left(Z \ge \dfrac{12-2m}{2\sigma}\right) = P\left(Z \ge \dfrac{6-m}{\sigma}\right)$이다.
+표준정규분포곡선은 $z=0$에 대하여 대칭이므로
+$\dfrac{8-m}{\sigma} = -\dfrac{6-m}{\sigma}$
+$8-m = -6+m$, $2m = 14$, $m = 7$이다.
+그러므로 $X \sim N(7, \sigma^2)$, $Y \sim N(10, (2\sigma)^2)$이다.
+
+조건 (나)에서 $P(X \ge 10) + P(Y \le 4) = 0.1336$이고,
+$P(X \ge 10) = P\left(Z \ge \dfrac{10-7}{\sigma}\right) = P\left(Z \ge \dfrac{3}{\sigma}\right)$
+$P(Y \le 4) = P\left(Z \le \dfrac{4-10}{2\sigma}\right) = P\left(Z \le -\dfrac{6}{2\sigma}\right) = P\left(Z \le -\dfrac{3}{\sigma}\right) = P\left(Z \ge \dfrac{3}{\sigma}\right)$
+이므로
+$2 P\left(Z \ge \dfrac{3}{\sigma}\right) = 0.1336$, $P\left(Z \ge \dfrac{3}{\sigma}\right) = 0.0668$이다.
+이때 $P\left(0 \le Z \le \dfrac{3}{\sigma}\right) = 0.5 - 0.0668 = 0.4332$이므로 표준정규분포표에서 $\dfrac{3}{\sigma} = 1.5$이다.
+따라서 $\sigma = 2$이다.
+
+그러므로 $X \sim N(7, 2^2)$, $Y \sim N(10, 4^2)$이다.
+$P(X \le 5) + P(Y \ge 18)$
+$= P\left(Z \le \dfrac{5-7}{2}\right) + P\left(Z \ge \dfrac{18-10}{4}\right)$
+$= P(Z \le -1) + P(Z \ge 2)$
+$= P(Z \ge 1) + P(Z \ge 2)$
+$= (0.5 - 0.3413) + (0.5 - 0.4772)$
+$= 0.1587 + 0.0228 = 0.1815$이다.
+정답은 2번이다.</div>
+        </div>
+      </article>
+  </div>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  });
+</script>
+</body>
+</html>

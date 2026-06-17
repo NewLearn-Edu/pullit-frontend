@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2015_math_미적분_B — 시험지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root { --ink:#1a1a1a; --line:#d8d8d8; --paper:#fff; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:#ececec;
+    font-family:"Noto Serif KR","Pretendard",serif;
+    color:var(--ink); line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .sheet {
+    max-width:760px; margin:32px auto; background:var(--paper);
+    padding:56px 56px 72px; box-shadow:0 4px 24px rgba(0,0,0,.12);
+  }
+  .sheet-head {
+    text-align:center; border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:30px;
+  }
+  .sheet-head h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.3px; }
+  .sheet-head p { font-size:13px; color:#666; margin:0; }
+  .q { padding:26px 0; border-bottom:1px solid #eee; }
+  .q-body { display:flex; gap:8px; align-items:baseline; }
+  .q-no { font-size:18px; font-weight:700; flex:0 0 auto; }
+  .q-stem { flex:1; font-size:16.5px; line-height:1.8; }
+  /* 인라인 분수가 든 '그 줄'만 line-height 확대 (다른 줄은 그대로) */
+  .q-stem .katex:has(.mfrac) { line-height:2.9; }
+  .q-stem .katex-display .katex { line-height:normal; }  /* display 블록은 제외 */
+  .q-text + .q-text { margin-top:.5em; }
+  /* 수능 조건 박스 (가)(나) */
+  .cond-box { border:1px solid #333; border-radius:2px; padding:16px 26px; margin:20px 0 22px; }
+  .cond { display:flex; gap:9px; margin:9px 0; font-size:16.5px; }
+  .cond-label { flex:0 0 auto; }
+  .cond-body { flex:1; }
+  .cond-body .katex-display { padding-left:1.4em; margin:1.4em 0; }
+  .katex-display { margin:2.5em 0; text-align:left; padding-left:2.8em; }
+  .katex-display > .katex { text-align:left; }
+  .q-point { font-family:"Pretendard",sans-serif; font-size:.9em; color:#333; margin-left:4px; white-space:nowrap; }
+  .choices { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:0 6px 0 28px; margin-top:18px; }
+  .choice { display:flex; align-items:center; gap:7px; font-size:16px; }
+  .cnum { flex:0 0 auto; font-size:16px; line-height:1; }
+  .q-meta { font-family:"Pretendard",sans-serif; font-size:12px; color:#999; margin-bottom:10px; }
+  .q-toggle {
+    margin-top:18px; font-family:"Pretendard",sans-serif; font-size:13px;
+    color:#c0392b; background:none; border:1px solid #e0c0bd; border-radius:6px;
+    padding:6px 12px; cursor:pointer;
+  }
+  .q-sol { display:none; margin-top:14px; padding:16px 18px; background:#faf7f2; border-radius:8px; }
+  .q-sol.open { display:block; }
+  .q-ans { font-size:15px; margin-bottom:10px; font-family:"Pretendard",sans-serif; }
+  .q-ans b { color:#c0392b; font-size:17px; }
+  .q-ansval { color:#888; font-size:13px; }
+  .q-exp { white-space:pre-wrap; font-size:15px; color:#333; }
+  .katex { font-size:1.04em; }
+  @media print {
+    body { background:#fff; }
+    .sheet { box-shadow:none; margin:0; max-width:none; }
+    .q-toggle { display:none; }
+    .q-sol { display:block !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h1>2015_math_미적분_B</h1>
+      <p>Pullit · AI 생성 진단 세트 · 총 10문항</p>
+    </div>
+    
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">$\sum_{k=1}^5 (k^2+2k)$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$85$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$90$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$95$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$100$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$105$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 수열의 합 · Basic</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(85)</span></div>
+          <div class="q-exp">$\sum_{k=1}^5 (k^2+2k) = \sum_{k=1}^5 k^2 + 2\sum_{k=1}^5 k$
+$= \dfrac{5 \times 6 \times 11}{6} + 2 \times \dfrac{5 \times 6}{2}$
+$= 55 + 2 \times 15$
+$= 55 + 30 = 85$</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x)$에 대하여 $f&#x27;(x)=6x^2-2x+1$이고 $f(1)=3$일 때, $f(2)$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$9$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$11$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$13$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$15$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 부정적분 · Basic</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(15)</span></div>
+          <div class="q-exp">$f&#x27;(x)=6x^2-2x+1$이므로
+$f(x) = \int (6x^2-2x+1)dx = 2x^3-x^2+x+C$ (단, $C$는 적분상수)
+이다.
+$f(1)=2-1+1+C=C+2$이고 $f(1)=3$이므로 $C+2=3$, 즉 $C=1$이다.
+따라서 $f(x)=2x^3-x^2+x+1$이므로
+$f(2) = 2 \times 2^3 - 2^2 + 2 + 1 = 16 - 4 + 3 = 15$
+이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">함수 $y=2^{x-a}+b$의 그래프가 점 $(6, 3)$을 지나고 제$2$사분면을 지나지 않을 때, 정수 $a$의 최댓값은? (단, $a$, $b$는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$6$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$8$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 지수함수와 로그함수 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(4)</span></div>
+          <div class="q-exp">함수 $f(x)=2^{x-a}+b$라 하자.
+함수 $y=f(x)$의 그래프가 점 $(6, 3)$을 지나므로
+$f(6) = 2^{6-a}+b=3$, 즉 $b = 3 - 2^{6-a}$ $\cdots\cdots$ ㉠
+함수 $f(x)$는 밑이 $2$이므로 $x$의 값이 증가할 때 $f(x)$의 값도 증가한다.
+따라서 함수 $y=f(x)$의 그래프가 제$2$사분면을 지나지 않으려면 $x=0$일 때의 함숫값이 $0$ 이하이어야 한다.
+즉, $f(0) \le 0$이어야 하므로
+$2^{-a}+b \le 0$
+이 부등식에 ㉠을 대입하면
+$2^{-a}+3-2^{6-a} \le 0$
+$3 - 63 \times 2^{-a} \le 0$
+$63 \times 2^{-a} \ge 3$
+$2^{-a} \ge \dfrac{3}{63} = \dfrac{1}{21}$
+$2^a \le 21$
+이를 만족시키는 정수 $a$는 $\dots, 2, 3, 4$이다.
+따라서 정수 $a$의 최댓값은 $4$이다.
+
+정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">4.</span>
+          <div class="q-stem"><div class="q-text">다항함수 $f(x)$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">$\lim_{x \to \infty} \dfrac{f(x)-2x^3}{x^2} = 3$</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$\lim_{x \to 1+} \dfrac{f(x)}{|x-1|} = 4$</span></div></div>
+<div class="q-text">$\lim_{x \to 1-} \dfrac{f(x)}{|x-1|} + f(2)$의 값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$11$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$13$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$15$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$17$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$19$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 함수의 극한 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(11)</span></div>
+          <div class="q-exp">조건 (가)에서 $x \to \infty$일 때 극한값이 존재하고 분모가 이차식이므로, 다항함수 $f(x)$는 삼차항의 계수가 $2$이고 이차항의 계수가 $3$이다.
+$f(x) = 2x^3 + 3x^2 + ax + b$ ($a$, $b$는 상수)로 놓을 수 있다.
+
+조건 (나)에서 극한식에 절댓값이 포함되어 있으므로 우극한과 좌극한을 분리하여 해석해야 한다.
+$x \to 1+$일 때, $x - 1 &gt; 0$이므로 $|x - 1| = x - 1$이다.
+$$ \lim_{x \to 1+} \dfrac{f(x)}{x - 1} = 4 $$
+$x \to 1+$일 때 (분모) $\to 0$이고 극한값이 존재하므로 (분자) $\to 0$이어야 한다.
+$$ \lim_{x \to 1+} f(x) = f(1) = 0 $$
+$$ 2 + 3 + a + b = 0 $$
+$$ b = -a - 5 $$
+이를 $f(x)$에 대입하면 다음과 같다.
+$$ f(x) = 2x^3 + 3x^2 + ax - a - 5 $$
+$$ f(x) = (x - 1)(2x^2 + 5x + a + 5) $$
+조건 (나)의 식에 대입하면 다음과 같다.
+$$ \lim_{x \to 1+} \dfrac{(x - 1)(2x^2 + 5x + a + 5)}{x - 1} = \lim_{x \to 1+} (2x^2 + 5x + a + 5) = a + 12 $$
+$a + 12 = 4$이므로 $a = -8$이다.
+따라서 $b = 3$이고, $f(x) = (x - 1)(2x^2 + 5x - 3)$이다.
+
+$x \to 1-$일 때, $x - 1 &lt; 0$이므로 $|x - 1| = -(x - 1)$이다.
+$$ \lim_{x \to 1-} \dfrac{f(x)}{|x - 1|} = \lim_{x \to 1-} \dfrac{(x - 1)(2x^2 + 5x - 3)}{-(x - 1)} $$
+$$ = \lim_{x \to 1-} -(2x^2 + 5x - 3) = -4 $$
+또한, $f(2) = 15$이다.
+$$ \lim_{x \to 1-} \dfrac{f(x)}{|x - 1|} + f(2) = -4 + 15 = 11 $$</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">5.</span>
+          <div class="q-stem"><div class="q-text">함수 $f(x) = x^3 - 3ax^2 + 3bx + 5$ 가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">함수 $f(x)$ 는 $x=1$ 에서 극댓값을 갖는다.</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">함수 $f&#x27;(x)$ 의 최솟값은 $-3$ 이다.</span></div></div>
+<div class="q-text">함수 $f(x)$ 의 극솟값은? (단, $a$, $b$ 는 상수이다.) <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$5$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 도함수 · Normal</div>
+          <div class="q-ans">정답 <b>⑤</b> <span class="q-ansval">(5)</span></div>
+          <div class="q-exp">함수 $f(x) = x^3 - 3ax^2 + 3bx + 5$ 의 도함수 $f&#x27;(x)$ 는
+$f&#x27;(x) = 3x^2 - 6ax + 3b = 3(x-a)^2 - 3a^2 + 3b$ 이다.
+조건 (나)에서 함수 $f&#x27;(x)$ 의 최솟값이 $-3$ 이므로
+$-3a^2 + 3b = -3$, 즉 $b = a^2 - 1$ 이다.
+조건 (가)에서 함수 $f(x)$ 가 $x=1$ 에서 극댓값을 가지므로 $f&#x27;(1) = 0$ 이고, $x=1$ 의 좌우에서 $f&#x27;(x)$ 의 부호가 양에서 음으로 바뀌어야 한다.
+$f&#x27;(1) = 3 - 6a + 3b = 0$ 이므로 $b = 2a - 1$ 이다.
+$a^2 - 1 = 2a - 1$ 에서 $a^2 - 2a = 0$ 이므로
+$a=0$ 또는 $a=2$ 이다.
+
+(i) $a=0$ 인 경우
+$b = -1$ 이고 $f&#x27;(x) = 3x^2 - 3 = 3(x+1)(x-1)$ 이다.
+이때 $x&lt;-1$ 에서 $f&#x27;(x)&gt;0$, $-1&lt;x&lt;1$ 에서 $f&#x27;(x)&lt;0$, $x&gt;1$ 에서 $f&#x27;(x)&gt;0$ 이다.
+따라서 함수 $f(x)$ 는 $x=-1$ 에서 극댓값을 갖고, $x=1$ 에서 극솟값을 갖는다.
+이는 함수 $f(x)$ 가 $x=1$ 에서 극댓값을 갖는다는 조건 (가)를 만족시키지 않는다.
+
+(ii) $a=2$ 인 경우
+$b = 3$ 이고 $f&#x27;(x) = 3x^2 - 12x + 9 = 3(x-1)(x-3)$ 이다.
+이때 $x&lt;1$ 에서 $f&#x27;(x)&gt;0$, $1&lt;x&lt;3$ 에서 $f&#x27;(x)&lt;0$, $x&gt;3$ 에서 $f&#x27;(x)&gt;0$ 이다.
+따라서 함수 $f(x)$ 는 $x=1$ 에서 극댓값을 갖고, $x=3$ 에서 극솟값을 갖는다.
+이는 조건 (가)를 만족시킨다.
+
+(i), (ii)에 의하여 $a=2$, $b=3$ 이므로
+$f(x) = x^3 - 6x^2 + 9x + 5$ 이다.
+함수 $f(x)$ 는 $x=3$ 에서 극소이므로 구하는 극솟값은
+$f(3) = 3^3 - 6 \times 3^2 + 9 \times 3 + 5 = 27 - 54 + 27 + 5 = 5$ 이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">6.</span>
+          <div class="q-stem"><div class="q-text">제$2$사분면의 각 $\theta$에 대하여 $4\sin\theta+3\cos\theta=0$이다. $5\sin\theta$의 값은? <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$1$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$2$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$3$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$5$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학I · 삼각함수 · Advanced</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(3)</span></div>
+          <div class="q-exp">$4\sin\theta+3\cos\theta=0$에서 $\tan\theta=-\dfrac{3}{4}$이다. 제$2$사분면에서는 $\sin\theta&gt;0,\ \cos\theta&lt;0$이고 $\sin^2\theta+\cos^2\theta=1$이므로 $\sin\theta=\dfrac{3}{5},\ \cos\theta=-\dfrac{4}{5}$이다. 따라서 $5\sin\theta=3$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">7.</span>
+          <div class="q-stem"><div class="q-text">양수 $a$에 대하여 함수 $f(x)=|x^2-ax|$라 하자. 곡선 $y=f(x)$와 직선 $y=2x$로 둘러싸인 부분의 넓이가 $\dfrac{52}{3}$일 때, $a$의 값은? <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$\dfrac{9}{2}$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$\dfrac{11}{2}$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$6$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">수학II · 정적분의 활용 · Advanced</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(4)</span></div>
+          <div class="q-exp">함수 $f(x) = |x^2 - ax|$의 그래프와 직선 $y=2x$의 교점의 $x$좌표를 구하자.
+$x^2 - ax = 0$에서 $x=0$ 또는 $x=a$이므로, $x \ge a$ 또는 $x \le 0$일 때 $f(x) = x^2 - ax$이고, $0 &lt; x &lt; a$일 때 $f(x) = -x^2 + ax$이다.
+직선 $y=2x$와의 교점을 구하면
+(i) $x \ge a$ 또는 $x \le 0$인 경우: $x^2 - ax = 2x$에서 $x^2 - (a+2)x = 0$이므로 $x = 0$ 또는 $x = a+2$이다. ($a&gt;0$이므로 $a+2 &gt; a$가 되어 $x=a+2$는 항상 교점이다.)
+(ii) $0 &lt; x &lt; a$인 경우: $-x^2 + ax = 2x$에서 $x^2 - (a-2)x = 0$이므로 $x = a-2$이다. 이때 이 교점이 $0 &lt; x &lt; a$ 범위에 존재하려면 $0 &lt; a-2 &lt; a$이어야 하므로 $a &gt; 2$이어야 한다.
+
+따라서 $a$의 값의 범위에 따라 두 가지 경우로 나눌 수 있다.
+
+(Case 1) $0 &lt; a \le 2$일 때
+구간 $(0, a)$에서 곡선 $y=f(x)$와 직선 $y=2x$의 교점은 존재하지 않거나 $x=0$뿐이다.
+구간 $[0, a+2]$에서 항상 $2x \ge f(x)$이므로 둘러싸인 부분은 하나뿐이다.
+그 넓이를 $S$라 하면
+$S = \int_{0}^{a+2} (2x - f(x)) dx = \int_{0}^{a} (2x - (-x^2+ax)) dx + \int_{a}^{a+2} (2x - (x^2-ax)) dx$
+$= \int_{0}^{a} (x^2 - (a-2)x) dx + \int_{a}^{a+2} (-x^2 + (a+2)x) dx$
+$= \left[ \dfrac{1}{3}x^3 - \dfrac{a-2}{2}x^2 \right]_{0}^{a} + \left[ -\dfrac{1}{3}x^3 + \dfrac{a+2}{2}x^2 \right]_{a}^{a+2}$
+$= \left( \dfrac{1}{3}a^3 - \dfrac{a-2}{2}a^2 \right) + \dfrac{1}{6}(a+2)^3 - \left( -\dfrac{1}{3}a^3 + \dfrac{a+2}{2}a^2 \right)$
+$= \dfrac{2a^3 - 3a^3 + 6a^2}{6} + \dfrac{a^3+6a^2+12a+8}{6} - \dfrac{-2a^3 + 3a^3 + 6a^2}{6}$
+$= \dfrac{-a^3+6a^2}{6} + \dfrac{a^3+6a^2+12a+8}{6} + \dfrac{-a^3-6a^2}{6}$
+$= \dfrac{-a^3+6a^2+12a+8}{6}$
+$S = \dfrac{52}{3}$이므로 $\dfrac{-a^3+6a^2+12a+8}{6} = \dfrac{104}{6}$에서 $a^3 - 6a^2 - 12a + 96 = 0$이다.
+$g(a) = a^3 - 6a^2 - 12a + 96$이라 하면, $g&#x27;(a) = 3a^2 - 12a - 12 = 3(a^2-4a-4)$이다.
+$0 &lt; a \le 2$에서 $g&#x27;(a) &lt; 0$이므로 $g(a)$는 감소하며, $g(2) = 56 &gt; 0$이므로 이 구간에서 조건을 만족시키는 $a$는 존재하지 않는다.
+
+(Case 2) $a &gt; 2$일 때
+구간 $(0, a)$에서 두 그래프는 $x=a-2$에서 만난다.
+구간 $[0, a-2]$에서는 $f(x) \ge 2x$이고, 구간 $[a-2, a+2]$에서는 $2x \ge f(x)$이므로
+둘러싸인 부분의 넓이 $S$는
+$S = \int_{0}^{a-2} (f(x) - 2x) dx + \int_{a-2}^{a+2} (2x - f(x)) dx$
+$= \int_{0}^{a-2} (-x^2 + (a-2)x) dx + \int_{a-2}^{a} (x^2 - (a-2)x) dx + \int_{a}^{a+2} (-x^2 + (a+2)x) dx$
+$= \dfrac{1}{6}(a-2)^3 + \left[ \dfrac{1}{3}x^3 - \dfrac{a-2}{2}x^2 \right]_{a-2}^{a} + \left[ -\dfrac{1}{3}x^3 + \dfrac{a+2}{2}x^2 \right]_{a}^{a+2}$
+$= \dfrac{1}{6}(a-2)^3 + \dfrac{12a-8}{6} + \dfrac{12a+8}{6} = \dfrac{1}{6}(a-2)^3 + 4a$
+$S = \dfrac{52}{3}$이므로 $\dfrac{1}{6}(a-2)^3 + 4a = \dfrac{104}{6}$에서
+$(a-2)^3 + 24a = 104$
+$a^3 - 6a^2 + 12a - 8 + 24a - 104 = 0$
+$a^3 - 6a^2 + 36a - 112 = 0$
+$(a-4)(a^2 - 2a + 28) = 0$
+이때 $a^2 - 2a + 28 = (a-1)^2 + 27 &gt; 0$이므로 실수 $a$의 값은 $4$뿐이며, 이는 $a&gt;2$를 만족시킨다.
+
+따라서 구하는 양수 $a$의 값은 $4$이다.
+
+따라서 정답은 ①이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">1.</span>
+          <div class="q-stem"><div class="q-text">두 수열 $\{a_n\}$, $\{b_n\}$에 대하여 두 급수 $\sum_{n=1}^{\infty} a_n$, $\sum_{n=1}^{\infty} b_n$이 모두 수렴하고
+$$ \sum_{n=1}^{\infty} a_n = 4, \quad \sum_{n=1}^{\infty} (3a_n - 2b_n) = 2 $$
+일 때, $\sum_{n=1}^{\infty} b_n$의 값은? <span class="q-point">[2점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$6$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$8$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 급수 · Basic</div>
+          <div class="q-ans">정답 <b>②</b> <span class="q-ansval">(5)</span></div>
+          <div class="q-exp">두 급수 $\sum_{n=1}^{\infty} a_n$, $\sum_{n=1}^{\infty} b_n$이 모두 수렴하므로, 급수의 성질에 의하여
+$$ \sum_{n=1}^{\infty} (3a_n - 2b_n) = 3 \sum_{n=1}^{\infty} a_n - 2 \sum_{n=1}^{\infty} b_n $$
+이 성립한다.
+주어진 조건에서 $\sum_{n=1}^{\infty} a_n = 4$, $\sum_{n=1}^{\infty} (3a_n - 2b_n) = 2$이므로
+$$ 3 \times 4 - 2 \sum_{n=1}^{\infty} b_n = 2 $$
+$$ 12 - 2 \sum_{n=1}^{\infty} b_n = 2 $$
+$$ 2 \sum_{n=1}^{\infty} b_n = 10 $$
+따라서 $\sum_{n=1}^{\infty} b_n = 5$이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">2.</span>
+          <div class="q-stem"><div class="q-text">모든 양수 $x$ 에 대하여 부등식
+$$ \sqrt{x} - k \ln x \ge 0 $$
+이 성립하도록 하는 상수 $k$ 의 최댓값은? <span class="q-point">[3점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$\dfrac{e}{2}$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$e$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$\dfrac{3}{2}e$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$2e$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$\dfrac{5}{2}e$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 도함수의 활용 · Normal</div>
+          <div class="q-ans">정답 <b>①</b> <span class="q-ansval">(\frac{e}{2})</span></div>
+          <div class="q-exp">함수 $f(x)=\sqrt{x}-k\ln x$ $(x&gt;0)$ 이라 하자.
+$k &lt; 0$ 일 때, $\lim_{x \to 0+} f(x) = -\infty$ 이므로 모든 양수 $x$ 에 대하여 $f(x) \ge 0$ 이 성립하지 않는다.
+$k=0$ 일 때, $f(x)=\sqrt{x} \ge 0$ 이므로 모든 양수 $x$ 에 대하여 성립한다.
+$k&gt;0$ 일 때, 함수 $f(x)$ 의 도함수는
+$$ f&#x27;(x) = \dfrac{1}{2\sqrt{x}} - \dfrac{k}{x} = \dfrac{\sqrt{x}-2k}{2x} $$
+$f&#x27;(x)=0$ 에서 $\sqrt{x}=2k$, 즉 $x=4k^2$ 이다.
+$x=4k^2$ 의 좌우에서 $f&#x27;(x)$ 의 부호가 음에서 양으로 바뀌므로 함수 $f(x)$ 는 $x=4k^2$ 에서 극소이면서 최소이다.
+모든 양수 $x$ 에 대하여 부등식 $f(x) \ge 0$ 이 성립하려면 $f(4k^2) \ge 0$ 이어야 한다.
+$$ f(4k^2) = \sqrt{4k^2} - k\ln(4k^2) = 2k - k(2\ln 2k) = 2k(1-\ln 2k) \ge 0 $$
+$k&gt;0$ 이므로 $1-\ln 2k \ge 0$ 이다.
+$\ln 2k \le 1$
+$2k \le e$, 즉 $0 &lt; k \le \dfrac{e}{2}$
+따라서 상수 $k$ 의 최댓값은 $\dfrac{e}{2}$ 이다.</div>
+        </div>
+      </article>
+      <article class="q">
+        <div class="q-body">
+          <span class="q-no">3.</span>
+          <div class="q-stem"><div class="q-text">양의 실수 전체의 집합에서 연속인 함수 $f(x)$가 모든 양수 $x$에 대하여 $f(x)&gt;0$이다. 양수 $x$에 대하여 함수 $g(x)$를
+$$ g(x)=\int_{1}^{x} \dfrac{\ln t}{t\{1+f(t)\}} dt $$
+라 할 때, 함수 $f(x)$와 상수 $a$가 다음 조건을 만족시킨다.</div>
+<div class="cond-box"><div class="cond"><span class="cond-label">(가)</span><span class="cond-body">모든 양수 $x$에 대하여 $f(x)f\left(\dfrac{1}{x}\right)=1$이다.</span></div><div class="cond"><span class="cond-label">(나)</span><span class="cond-body">$\int_{e^{-a}}^{e^a} \dfrac{g(x)}{x} dx = 36$</span></div></div>
+<div class="q-text">상수 $a$의 값은? (단, $a&gt;0$이다.) <span class="q-point">[4점]</span></div></div>
+        </div>
+        <div class="choices"><span class="choice"><span class="cnum">①</span><span class="m">$4$</span></span><span class="choice"><span class="cnum">②</span><span class="m">$5$</span></span><span class="choice"><span class="cnum">③</span><span class="m">$6$</span></span><span class="choice"><span class="cnum">④</span><span class="m">$7$</span></span><span class="choice"><span class="cnum">⑤</span><span class="m">$8$</span></span></div>
+        <button class="q-toggle" onclick="this.nextElementSibling.classList.toggle('open')">정답 · 해설 보기</button>
+        <div class="q-sol">
+          <div class="q-meta">미적분 · 여러 가지 적분법 · Advanced</div>
+          <div class="q-ans">정답 <b>③</b> <span class="q-ansval">(6)</span></div>
+          <div class="q-exp">[목표 재진술]
+조건 (나)에 주어진 정적분 $\int_{e^{-a}}^{e^a} \dfrac{g(x)}{x} dx$ 의 값을 계산하여, 이를 바탕으로 상수 $a$의 값을 확정해야 한다.
+
+[적분 구조 파악 및 적분법 선택]
+조건 (가)에 주어진 $f(x)f\left(\dfrac{1}{x}\right)=1$의 형태를 활용하기 위해, 함수 $g(x)$의 구조를 파악하고 역수 치환을 적용하여 $g\left(\dfrac{1}{x}\right)$의 관계를 이끌어내야 한다. 이를 위해 $g\left(\dfrac{1}{x}\right)$의 적분식에서 $t=\dfrac{1}{u}$로 치환하는 치환적분법을 선택한다.
+
+[방법 선택 이유 및 구간·부호 점검]
+피적분함수 내에 $f(t)$가 포함되어 있어 $g(x)$를 직접 구하는 것은 불가능하다. 하지만 조건 (가)를 이용하면 $g(x)$와 $g\left(\dfrac{1}{x}\right)$의 합을 구하는 구조로 변환할 수 있으므로, 적분 구간을 분할한 뒤 치환적분법을 적용한다.
+$g\left(\dfrac{1}{x}\right) = \int_{1}^{\dfrac{1}{x}} \dfrac{\ln t}{t\{1+f(t)\}} dt$ 에서 $t=\dfrac{1}{u}$로 치환하면, $dt = -\dfrac{1}{u^2} du$ 이다.
+정적분의 구간은 $t=1$일 때 $u=1$이고, $t=\dfrac{1}{x}$일 때 $u=x$로 변경되며 부호가 반전된다.
+
+[후보 생성 및 식의 변형]
+치환적분을 적용하면,
+$$ g\left(\dfrac{1}{x}\right) = \int_{1}^{x} \dfrac{\ln\left(\dfrac{1}{u}\right)}{\dfrac{1}{u} \left\{1+f\left(\dfrac{1}{u}\right)\right\}} \left(-\dfrac{1}{u^2}\right) du = \int_{1}^{x} \dfrac{\ln u}{u \left\{1+\dfrac{1}{f(u)}\right\}} du = \int_{1}^{x} \dfrac{f(u)\ln u}{u\{1+f(u)\}} du $$
+두 식을 더하면 피적분함수에서 $f(u)$의 항이 정리된다.
+$$ g(x) + g\left(\dfrac{1}{x}\right) = \int_{1}^{x} \dfrac{\ln u}{u\{1+f(u)\}} du + \int_{1}^{x} \dfrac{f(u)\ln u}{u\{1+f(u)\}} du = \int_{1}^{x} \dfrac{\{1+f(u)\}\ln u}{u\{1+f(u)\}} du = \int_{1}^{x} \dfrac{\ln u}{u} du $$
+여기서 다시 $v=\ln u$로 치환하면 $dv=\dfrac{1}{u}du$이므로,
+$$ \int_{1}^{x} \dfrac{\ln u}{u} du = \left[ \dfrac{1}{2}(\ln u)^2 \right]_{1}^{x} = \dfrac{1}{2}(\ln x)^2 $$
+즉, 모든 양수 $x$에 대하여 $g(x) + g\left(\dfrac{1}{x}\right) = \dfrac{1}{2}(\ln x)^2$ 이다.
+
+[가능·불가능 판정 및 최종값 확정]
+조건 (나)의 정적분 $\int_{e^{-a}}^{e^a} \dfrac{g(x)}{x} dx$ 의 구간을 $[e^{-a}, 1]$과 $[1, e^a]$로 분할한다.
+$$ \int_{e^{-a}}^{e^a} \dfrac{g(x)}{x} dx = \int_{e^{-a}}^{1} \dfrac{g(x)}{x} dx + \int_{1}^{e^a} \dfrac{g(x)}{x} dx $$
+첫 번째 정적분에서 $x=\dfrac{1}{s}$로 치환하면 $dx = -\dfrac{1}{s^2} ds$ 이며, $x=e^{-a}$일 때 $s=e^a$, $x=1$일 때 $s=1$이다.
+$$ \int_{e^{-a}}^{1} \dfrac{g(x)}{x} dx = \int_{e^a}^{1} \dfrac{g\left(\dfrac{1}{s}\right)}{\dfrac{1}{s}} \left(-\dfrac{1}{s^2}\right) ds = \int_{1}^{e^a} \dfrac{g\left(\dfrac{1}{s}\right)}{s} ds $$
+따라서 조건 (나)의 정적분은 다음과 같이 결합된다.
+$$ \int_{1}^{e^a} \dfrac{g(x)}{x} dx + \int_{1}^{e^a} \dfrac{g\left(\dfrac{1}{x}\right)}{x} dx = \int_{1}^{e^a} \dfrac{g(x)+g\left(\dfrac{1}{x}\right)}{x} dx = \int_{1}^{e^a} \dfrac{\dfrac{1}{2}(\ln x)^2}{x} dx $$
+이 정적분에서 $w=\ln x$로 치환하면 $dw=\dfrac{1}{x}dx$이므로,
+$$ \int_{0}^{a} \dfrac{1}{2} w^2 dw = \left[ \dfrac{1}{6} w^3 \right]_{0}^{a} = \dfrac{1}{6} a^3 $$
+
+[유일성 확인]
+조건 (나)에 의해 $\dfrac{1}{6} a^3 = 36$ 이 성립해야 한다.
+$$ a^3 = 216 $$
+조건에서 $a&gt;0$인 실수는 $a=6$으로 유일하게 결정된다.
+따라서 구하는 상수 $a$의 값은 $6$이다.</div>
+        </div>
+      </article>
+  </div>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false }
+      ],
+      throwOnError: false
+    });
+  });
+</script>
+</body>
+</html>
