@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KoPubWorld 폰트 · 문제·해설 본문에 사용 (교과서·시험지 스타일)
+   출처: https://www.kopus.org/biz-electronic-font2/  · 로컬 배포 (public/fonts) */
+@font-face {
+  font-family: 'KoPubWorld Batang';
+  src: url('/fonts/KoPubWorldBatang-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorld Batang';
+  src: url('/fonts/KoPubWorldBatang-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorld Batang';
+  src: url('/fonts/KoPubWorldBatang-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorld Dotum';
+  src: url('/fonts/KoPubWorldDotum-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorld Dotum';
+  src: url('/fonts/KoPubWorldDotum-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'KoPubWorld Dotum';
+  src: url('/fonts/KoPubWorldDotum-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  html {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system,
+      'Apple SD Gothic Neo', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-foreground;
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  /* 터치·펜 필기 시 스크롤·확대 방지용 */
+  .no-touch-action {
+    touch-action: none;
+  }
+
+  /* 필기 영역에서 iOS Safari 텍스트 선택 · 컨텍스트 메뉴 · 확대 등 방지 */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 필기 세션 전체 화면에서 텍스트 선택 · 콜아웃 · 하이라이트 완전 차단
+     KaTeX 렌더링된 수식 span 을 포함해 모든 후손에 강제 적용 */
+  .quiz-page,
+  .quiz-page *,
+  .quiz-page *::before,
+  .quiz-page *::after {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* 브라우저 기본 focus outline 완전 제거 (호버·hover:bg 로 시각 피드백 충분) */
+  .quiz-page button:focus,
+  .quiz-page button:focus-visible {
+    outline: none;
+  }
+
+  /* 두께 선택 팝오버 · 활성 dot 자리에서 자라나오고 · 닫힐 때 다시 그 자리로 흡수.
+     - transform-origin: top center  = 팝오버의 위쪽 (= 활성 dot 위치) 을 기준으로 스케일
+     - 열림: 스프링 커브 (cubic-bezier ...1.56 ...) 로 오버슛 후 정착 → "뽀잉"
+     - 닫힘: 부드러운 감속 커브로 원점(0.15)으로 흡수 → 튐 없이 스며듬 */
+  .bubble {
+    transform-origin: top center;
+    will-change: transform, opacity;
+  }
+
+  .bubble-closed {
+    opacity: 0;
+    transform: scale(0.15);
+    pointer-events: none;
+    transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 200ms cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  .bubble-open {
+    opacity: 1;
+    transform: scale(1);
+    transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      opacity 220ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@layer components {
+  /* PC inner 1180 · 넘지 않도록 · 좌우 안전 여백 */
+  .inner {
+    @apply mx-auto w-full max-w-inner px-lg;
+  }
+
+  /* xlarge Primary CTA (TDS Mobile 기준 · 앱 UI 용) */
+  .btn-xl {
+    @apply inline-flex h-14 items-center justify-center rounded-btn-xl bg-primary
+      px-xl text-[17px] font-semibold text-white transition-colors
+      hover:bg-primary-hover active:bg-primary-hover
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* 마케팅 dark CTA */
+  .btn-marketing-dark {
+    @apply inline-flex h-[46px] items-center justify-center rounded-marketing
+      bg-[rgba(22,15,14,0.8)] px-lg text-[17px] font-semibold text-white
+      transition-opacity hover:opacity-90;
+  }
+
+  /* 마케팅 weak (핑크 pale) CTA */
+  .btn-marketing-weak {
+    @apply inline-flex h-10 items-center justify-center rounded-marketing
+      bg-weak-bg px-lg text-[15px] font-semibold text-weak-fg
+      transition-opacity hover:opacity-90;
+  }
+}
+
+/* 채점 마크 (○ · /) 손으로 그어지는 draw-on 애니메이션 */
+@keyframes grade-mark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.grade-mark-draw {
+  animation: grade-mark-draw 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 블록 수식 · 폭 넘칠 때 얇은 스크롤바로 좌우 스크롤 힌트 */
+.katex-block {
+  /* iOS 관성 스크롤 · 스크롤바 시각적 존재감은 최소 */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+.katex-block::-webkit-scrollbar {
+  height: 4px;
+}
+.katex-block::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+.katex-block::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* KaTeX display 자체의 margin 을 제거 · 스크롤 컨테이너로 이관 */
+.katex-block .katex-display {
+  margin: 0;
+}

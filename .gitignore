@@ -1,3 +1,21 @@
 .DS_Store
 __pycache__/
 *.pyc
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
