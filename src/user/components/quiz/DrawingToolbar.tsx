@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { StrokeTool } from './DrawingCanvas'
-import { useIsCompact, useIsTouchDevice } from '@/hooks/useMediaQuery'
+import { useIsCompact, useIsTouchDevice } from '@/user/hooks/useMediaQuery'
 
 const COLORS = ['#120C0B', '#2563EB', '#DC2626', '#059669']
 

@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { formatTime } from '@/utils/scoring'
+import { formatTime } from '@/user/utils/scoring'
 
 interface TimerBadgeProps {
   /** 경과 시간 (초) · 0:00 부터 count-up */

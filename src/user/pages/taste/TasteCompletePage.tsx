@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AppHeader from '@/components/AppHeader'
-import { useTasteStore } from '@/stores/tasteStore'
+import AppHeader from '@/user/components/AppHeader'
+import { useTasteStore } from '@/user/stores/tasteStore'
 
 export default function TasteCompletePage() {
   const navigate = useNavigate()

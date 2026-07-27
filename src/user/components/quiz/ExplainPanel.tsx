@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
-import type { Problem } from '@/data/mockProblems'
-import { KatexText } from './KatexText'
+import type { Problem } from '@/user/data/mockProblems'
+import { KatexText } from '@/shared/components/KatexText'
 
 interface ExplainPanelProps {
   open: boolean

@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { QuizTopBar } from '@/components/quiz/QuizTopBar'
-import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/components/quiz/DrawingCanvas'
-import { DrawingToolbar } from '@/components/quiz/DrawingToolbar'
-import { ExplainPanel } from '@/components/quiz/ExplainPanel'
-import { ResizeDivider } from '@/components/quiz/ResizeDivider'
-import { GradeMark } from '@/components/quiz/GradeMark'
-import { GuessCheckPopup } from '@/components/quiz/GuessCheckPopup'
-import { TimerBadge } from '@/components/quiz/TimerBadge'
-import { KatexText } from '@/components/quiz/KatexText'
+import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
+import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
+import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
+import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
+import { GradeMark } from '@/user/components/quiz/GradeMark'
+import { GuessCheckPopup } from '@/user/components/quiz/GuessCheckPopup'
+import { TimerBadge } from '@/user/components/quiz/TimerBadge'
+import { KatexText } from '@/shared/components/KatexText'
 import {
   getProblemsBySkillNode,
   getProblemsByEnglishType,
   type Problem,
-} from '@/data/mockProblems'
-import { useTasteStore } from '@/stores/tasteStore'
-import { computeScore } from '@/utils/scoring'
+} from '@/user/data/mockProblems'
+import { useTasteStore } from '@/user/stores/tasteStore'
+import { computeScore } from '@/user/utils/scoring'
 
 type Subject = 'math' | 'english'
 

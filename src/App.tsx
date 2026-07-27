@@ -1,8 +1,12 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import LandingPage from './pages/LandingPage'
-import TasteStartPage from './pages/taste/TasteStartPage'
-import TasteQuizPage from './pages/taste/TasteQuizPage'
-import TasteCompletePage from './pages/taste/TasteCompletePage'
+import LandingPage from './user/pages/LandingPage'
+import TasteStartPage from './user/pages/taste/TasteStartPage'
+import TasteQuizPage from './user/pages/taste/TasteQuizPage'
+import TasteCompletePage from './user/pages/taste/TasteCompletePage'
+
+// 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
+const AdminRoutes = lazy(() => import('./admin/routes'))
 
 /**
  * POC 단계에서는 skill_node · 유형 선택 페이지를 스킵하고
@@ -16,6 +20,14 @@ export default function App() {
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
+      <Route
+        path="/admin/*"
+        element={
+          <Suspense fallback={null}>
+            <AdminRoutes />
+          </Suspense>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
