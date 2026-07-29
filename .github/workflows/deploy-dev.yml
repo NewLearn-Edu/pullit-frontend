@@ -11,6 +11,7 @@ permissions:
 env:
   ECR_REGISTRY: 860051323093.dkr.ecr.ap-northeast-2.amazonaws.com
   ECR_REPOSITORY: pullit/front-dev
+  EC2_INSTANCE_ID: i-015747fe42316cb05
 
 jobs:
   build-and-push:
@@ -42,3 +43,16 @@ jobs:
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # push된 latest를 EC2가 pull & 재기동 (SSM Run Command — SSH/키 불필요)
+      - name: Deploy to EC2 via SSM
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "deploy ${{ github.repository }} ${{ github.sha }}" \
+            --parameters 'commands=["cd /home/ubuntu/pullit && docker compose --env-file .env.dev pull --quiet && docker compose --env-file .env.dev up -d && docker image prune -f"]' \
+            --query "Command.CommandId" --output text)
+          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$EC2_INSTANCE_ID" || true
+          RESULT=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$EC2_INSTANCE_ID")
+          echo "$RESULT" | python3 -c "import sys,json; r=json.load(sys.stdin); print('status:', r['Status']); print(r['StandardOutputContent']); print(r['StandardErrorContent'], file=sys.stderr); sys.exit(0 if r['Status']=='Success' else 1)"
