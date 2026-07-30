@@ -17,6 +17,7 @@ import {
 } from '@/user/data/mockProblems'
 import { useTasteStore } from '@/user/stores/tasteStore'
 import { computeScore } from '@/user/utils/scoring'
+import styles from './styles/TasteQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
 
@@ -79,14 +80,12 @@ export default function TasteQuizPage() {
   // 드래그 중에는 width transition 을 꺼야 매끄러움
   const [resizing, setResizing] = useState(false)
   // 채점 상태 · 문제 헤더에 ○/사선 오버레이 표시용
-  // 'none' = 미채점, 'correct' = 정답, 'wrong' = 오답 (모르겠어요·peek 포함)
   const [grading, setGrading] = useState<'none' | 'correct' | 'wrong'>('none')
   // 10초 안에 정답 맞힘 → "찍은 거 같은데" 확인 팝업
   const [guessCheckOpen, setGuessCheckOpen] = useState(false)
 
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const startAt = useRef<number>(Date.now())
-  // 채점 후 다음 문제로 자동 넘어가는 타이머 · 문제 변경 시 clear
   const advanceTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -105,7 +104,6 @@ export default function TasteQuizPage() {
     startAt.current = Date.now()
   }, [idx, subject])
 
-  // 언마운트 시 auto-advance 타이머 정리
   useEffect(() => {
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current)
@@ -122,7 +120,6 @@ export default function TasteQuizPage() {
   }, [idx, subject, grading])
 
   // iOS Safari 콜아웃 (복사하기 · 선택 영역 찾기 …) 강제 차단
-  // 실수로 텍스트가 선택되면 즉시 해제 · selectstart 도 원천 봉쇄
   useEffect(() => {
     const clearSelection = () => {
       const sel = window.getSelection()
@@ -151,8 +148,6 @@ export default function TasteQuizPage() {
       setPeeked(true)
       effectivePeeked = true
     }
-    // 채점 마크 · peek 하면 커밋된 것으로 간주 → 정오답 확정
-    // peeked 상태거나 미선택이면 오답, 그 외엔 선택값 기준
     const correct =
       selected != null && selected === problem.answer && !effectivePeeked
     setGrading(correct ? 'correct' : 'wrong')
@@ -181,25 +176,20 @@ export default function TasteQuizPage() {
       elapsedMs: Date.now() - startAt.current,
     })
 
-    // 채점 마크 표시 · peek 했으면 오답으로 표시
     const effectiveCorrect = correct && !peeked
     setGrading(effectiveCorrect ? 'correct' : 'wrong')
 
-    // 10초 이내 정답 → "찍은 거 같은데" 확인 팝업 (자동 넘김 스킵)
     if (effectiveCorrect && elapsedSec < 10) {
-      // 마크 draw-on 애니메이션 살짝 보여준 뒤 팝업 오픈
       advanceTimerRef.current = window.setTimeout(() => {
         setGuessCheckOpen(true)
       }, 500)
     } else {
-      // 마크 잔상 시간 후 자동 다음 문제
       advanceTimerRef.current = window.setTimeout(() => {
         goNext()
       }, 1100)
     }
   }
 
-  // 팝업 응답 · 짧게 delay 후 다음 문제로 (POC 는 결과 flag 저장 안 함 · 나중에 필요하면 추가)
   const handleGuessResponse = () => {
     setGuessCheckOpen(false)
     advanceTimerRef.current = window.setTimeout(() => {
@@ -228,7 +218,6 @@ export default function TasteQuizPage() {
     }
   }
 
-  // "모르겠어요" - 선택 없이 오답 처리하고 다음 문제로 (0점 · 시간 초과 여부만 플래그)
   const handleDontKnow = () => {
     addResult(subject as Subject, {
       problemId: problem.id,
@@ -239,7 +228,6 @@ export default function TasteQuizPage() {
       peekedBeforeAnswer: false,
       elapsedMs: Date.now() - startAt.current,
     })
-    // 채점 마크 · 모르겠어요 = 오답
     setGrading('wrong')
     advanceTimerRef.current = window.setTimeout(() => {
       goNext()
@@ -250,7 +238,7 @@ export default function TasteQuizPage() {
   const submitLabel = overTime ? '시간초과 채점' : '채점하기'
 
   return (
-    <div className="quiz-page flex min-h-dvh min-w-[350px] flex-col bg-[#F2F2F2]">
+    <div className={styles.page}>
       <QuizTopBar
         progress={{ current: idx + 1, total: problems.length }}
         subjectLabel={SUBJECT_LABEL[subject as Subject]}
@@ -277,19 +265,12 @@ export default function TasteQuizPage() {
         onClear={() => canvasRef.current?.clear()}
       />
 
-      {/* 컨텐츠 영역 · 데스크탑에서는 main + panel 이 flex row 로 나란히 · 모바일은 panel 이 fixed overlay */}
-      <div className="flex flex-1 flex-row min-h-0">
-        {/* main 이 relative → ResizeDivider 가 main 의 우측 끝 (= 패널 좌측 border) 에 absolute 앵커 */}
-        <main className="relative flex flex-1 min-w-0 flex-col items-center">
-          {/* 문제 영역 · 항상 max-w-[500px] 고정 (해설 열려도 유지)
-              해설 패널은 우측에 별도 폭으로 붙음 · 문제 영역은 가독성 위한 500px 유지 */}
-          <section className="relative flex w-full max-w-[500px] flex-1 flex-col overflow-hidden bg-canvas no-select">
-            <div className="flex h-12 flex-none items-center justify-between border-b border-line px-lg">
-              {/* 채점 마크는 "문제 N" 텍스트 위에 절대 배치 · 텍스트 클리핑 방지를 위해 wrapper 만 relative */}
-              <div className="relative flex items-center">
-                <h2 className="text-body font-bold text-foreground">
-                  문제 {idx + 1}
-                </h2>
+      <div className={styles.content}>
+        <main className={styles.main}>
+          <section className={styles.problemCard}>
+            <div className={styles.problemHeader}>
+              <div className={styles.problemTitleWrap}>
+                <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>
                 {grading !== 'none' && (
                   <GradeMark
                     // key 로 매 채점마다 새 인스턴스 → 애니메이션 재시작
@@ -298,8 +279,8 @@ export default function TasteQuizPage() {
                   />
                 )}
               </div>
-              <div className="flex items-center gap-md">
-                <div className="whitespace-nowrap text-body-sm tabular-nums text-muted">
+              <div className={styles.problemMeta}>
+                <div className={styles.problemTime}>
                   권장 {Math.max(1, Math.round(problem.tRecSec / 60))}분 · 제한 {Math.max(1, Math.round(problem.tMaxSec / 60))}분
                 </div>
                 <TimerBadge
@@ -311,44 +292,31 @@ export default function TasteQuizPage() {
               </div>
             </div>
 
-            {/* 캔버스 영역 · 문제 · 보기 · 빈 공간 다 필기 가능
-                원형 숫자만 z-20 으로 캔버스 위에 노출 → 클릭 가능
-                다른 요소 (문제 텍스트 · 답 값 · 빈 공간) 는 캔버스가 위에 덮어서 필기 통과
-                min-h 없음 → 뷰포트 짧아도 컨텐츠(문제+선지) 우선 표시 · 필기 공간은 flex-1 spacer 로 남은 만큼 */}
-            <div className="relative flex flex-1 flex-col">
-              {/* 문제 본문 · 배경 (z-0) */}
-              <div className="px-xl pt-lg no-select">
+            <div className={styles.canvasArea}>
+              <div className={styles.bodyWrap}>
                 <ProblemBody problem={problem} />
               </div>
 
-              {/* 보기 · 원형 숫자만 z-20 · 답 값은 z-0 */}
-              <div className="mt-lg px-lg">
-                <div className="grid grid-cols-5">
+              <div className={styles.choicesWrap}>
+                <div className={styles.choicesGrid}>
                   {problem.choices.map((choice, i) => {
                     const choiceNo = i + 1
                     const active = selected === choiceNo
                     const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
                     return (
-                      <div
-                        key={choiceNo}
-                        className="flex min-h-11 items-center justify-center gap-sm py-md"
-                      >
-                        {/* 원형 숫자 (클릭 대상) · z-20 로 캔버스 위 · 클릭 가능 */}
+                      <div key={choiceNo} className={styles.choiceCell}>
                         <button
                           type="button"
                           onClick={() => setSelected(choiceNo)}
                           aria-pressed={active}
                           className={clsx(
-                            'relative z-20 flex h-7 w-7 flex-none items-center justify-center rounded-full text-[13px] font-bold transition-all',
-                            active
-                              ? 'bg-primary text-white'
-                              : 'border-[1.8px] border-foreground bg-canvas text-foreground',
+                            styles.choiceButton,
+                            active && styles.choiceButtonActive,
                           )}
                         >
                           {choiceNo}
                         </button>
-                        {/* 답 값 · z-0 · 캔버스가 위에 덮으므로 클릭 안 됨 · 필기 통과 */}
-                        <span className="font-batang text-body font-medium text-foreground">
+                        <span className={styles.choiceValue}>
                           <KatexText text={answerText} />
                         </span>
                       </div>
@@ -357,12 +325,9 @@ export default function TasteQuizPage() {
                 </div>
               </div>
 
-              {/* 빈 필기 공간 · flex-1 로 나머지 채움 */}
-              <div className="flex-1" />
+              <div className={styles.spacer} />
 
-              {/* 캔버스 · z-10 · 문제 · 답 값 위에 필기 가능 (원형 숫자 아래)
-                  해설 패널 열려있어도 필기는 가능 · md+ 는 옆에 나란히 · 모바일은 overlay 라 시각적으로만 가려짐 */}
-              <div className="absolute inset-0 z-10">
+              <div className={styles.canvasOverlay}>
                 <DrawingCanvas
                   ref={canvasRef}
                   tool={tool}
@@ -374,25 +339,22 @@ export default function TasteQuizPage() {
               </div>
             </div>
 
-            {/* 모르겠어요 · 카드 최하단 */}
-            <div className="border-t border-line bg-canvas/95 px-lg py-md">
+            <div className={styles.footer}>
               <button
                 type="button"
                 onClick={handleDontKnow}
-                className="flex min-h-10 w-full items-center justify-center rounded-btn-md border border-dashed border-line bg-canvas px-md py-sm text-body-sm font-semibold text-muted transition-colors hover:border-muted hover:bg-surface hover:text-body"
+                className={styles.dontKnowButton}
               >
                 모르겠어요 · 넘어가기
               </button>
             </div>
           </section>
-          {/* 드래그 divider · main 우측 끝 (해설 패널 좌측 border) 위에 겹쳐서 표시
-              해설 열림 상태에서만 노출 · 모바일은 자체적으로 hidden */}
+
           <ResizeDivider
             show={panelOpen}
             onStart={() => setResizing(true)}
             onDrag={(dx) =>
               setPanelWidth((w) => {
-                // 우측 이동(양수 dx) → 우측 패널 폭 감소. 300~800px 범위 clamp
                 const next = w - dx
                 return Math.max(300, Math.min(800, next))
               })
@@ -413,7 +375,6 @@ export default function TasteQuizPage() {
         />
       </div>
 
-      {/* 10초 이내 정답 확인 팝업 · 두 버튼 다 동일 flow (다음 문제로) · POC */}
       <GuessCheckPopup
         open={guessCheckOpen}
         elapsedSec={elapsedSec}
@@ -425,24 +386,20 @@ export default function TasteQuizPage() {
 }
 
 function ProblemBody({ problem }: { problem: Problem }) {
-  // 수능 스타일 · 문장 마지막에 [N점] 표기
   const pointsBadge = (
-    <span className="ml-xs whitespace-nowrap text-body-sm font-normal text-body">
-      [{problem.points}점]
-    </span>
+    <span className={styles.pointsBadge}>[{problem.points}점]</span>
   )
   const hasConditions = !!problem.conditions && problem.conditions.length > 0
   const hasQuestion = !!problem.question
 
   return (
-    <div className="font-batang space-y-xl text-[16px] font-medium leading-[1.85] text-foreground">
+    <div className={styles.problemBody}>
       <div>
         <KatexText text={problem.bodyText} />
-        {/* 조건도 없고 별도 question 도 없으면 bodyText 마지막에 [N점] */}
         {!hasConditions && !hasQuestion && pointsBadge}
       </div>
       {hasConditions && (
-        <div className="rounded-md bg-surface px-xl py-xl space-y-lg">
+        <div className={styles.conditionsBox}>
           {problem.conditions!.map((c, i) => (
             <div key={i}>
               <KatexText text={c} />

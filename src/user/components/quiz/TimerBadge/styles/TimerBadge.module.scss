@@ -1,0 +1,48 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// TimerBadge
+// -----------------------------------------------------------------------------
+// 경과 시간 (0:00 부터 count-up) 배지. Phase 색상으로 시간 압박 표시.
+// - variant: onDark (검정 상단바 위) · onLight (흰 카드 위)
+// - phase:   ok(초록) · warn(노랑) · over(빨강)
+// -----------------------------------------------------------------------------
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-full;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  @include sm-up {
+    padding: $space-xs $space-md;
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-full;
+  flex: none;
+}
+
+// Phase 색 · dot 배경
+.dotOk    { background: $color-success; }
+.dotWarn  { background: #EAB308; } // yellow-500 equivalent
+.dotOver  { background: $color-danger; }
+
+// Variant × Phase 텍스트 색상 매트릭스
+.onDarkOk    { color: $color-white-a80; }
+.onDarkWarn  { color: #FACC15; } // yellow-400
+.onDarkOver  { color: $color-primary; }
+
+.onLightOk    { color: $color-foreground; }
+.onLightWarn  { color: #A16207; } // yellow-700
+.onLightOver  { color: $color-primary; }

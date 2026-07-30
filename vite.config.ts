@@ -24,4 +24,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Sass 에서 src 기반 절대 경로 import 가능하게 · 사용 예: @use 'styles/tokens' as *;
+        loadPaths: [path.resolve(__dirname, './src')],
+      },
+    },
+  },
 })

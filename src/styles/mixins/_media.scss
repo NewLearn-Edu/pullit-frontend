@@ -1,0 +1,32 @@
+// -----------------------------------------------------------------------------
+// Media Query mixins
+// -----------------------------------------------------------------------------
+// 사용 예:
+//   @include mobile { ... }        // < 640px
+//   @include tablet-up { ... }     // >= 768px
+//   @include desktop-up { ... }    // >= 1024px
+// -----------------------------------------------------------------------------
+
+@use '../tokens/breakpoints' as *;
+
+// 이하 (max-width) - 특정 breakpoint 미만에서만 적용
+@mixin mobile { @media (max-width: #{$bp-sm - 1}) { @content; } }
+@mixin below-tablet { @media (max-width: #{$bp-md - 1}) { @content; } }
+@mixin below-desktop { @media (max-width: #{$bp-lg - 1}) { @content; } }
+
+// 이상 (min-width) - 특정 breakpoint 이상에서만 적용 (권장)
+@mixin sm-up { @media (min-width: #{$bp-sm}) { @content; } }
+@mixin tablet-up { @media (min-width: #{$bp-md}) { @content; } }
+@mixin desktop-up { @media (min-width: #{$bp-lg}) { @content; } }
+@mixin xl-up { @media (min-width: #{$bp-xl}) { @content; } }
+
+// 포인터 종류
+@mixin touch-device { @media (pointer: coarse) { @content; } }
+@mixin mouse-device { @media (hover: hover) and (pointer: fine) { @content; } }
+
+// iOS · iPadOS sticky hover 회피용: hover: hover 를 지원하는 기기만 hover 스타일 적용
+@mixin hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover { @content; }
+  }
+}

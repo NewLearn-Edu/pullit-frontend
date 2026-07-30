@@ -1,0 +1,44 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ResizeDivider · 문제·해설 사이 드래그 분할 바
+// -----------------------------------------------------------------------------
+// - 상위 relative 컨테이너 안에서 absolute 로 배치
+// - 히트 영역 (14px) 을 우측 border 라인 중앙에 겹치도록 translateX 50%
+// - md+ 에서만 노출 · 모바일은 hidden
+// -----------------------------------------------------------------------------
+
+.divider {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: $z-canvas;
+  transform: translate(50%, -50%);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+
+  @include tablet-up {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 56px;
+  }
+}
+
+.grip {
+  width: 5px;
+  height: 40px;
+  border-radius: $radius-full;
+  background: $color-line;
+  // border 라인 위에서도 grip 이 뜨는 느낌 · 흰 아웃라인 대비 확보
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+  transition: background-color 150ms ease;
+
+  .divider:hover & {
+    background: rgba(111, 106, 104, 0.6); // body 색 60%
+  }
+}

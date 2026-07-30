@@ -1,0 +1,195 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// QuizTopBar · 문제풀이 화면 최상단 네비게이션 바
+// -----------------------------------------------------------------------------
+// - 다크 배경 (foreground) · sticky 상단
+// - 3-column grid: 좌(닫기) · 중앙(과목·진행) · 우(해설·정답·채점)
+// -----------------------------------------------------------------------------
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: $z-header;
+  width: 100%;
+  background: $color-foreground;
+  border-bottom: 1px solid $color-white-a10;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: $space-sm;
+  height: 56px;
+  width: 100%;
+  min-width: 350px;
+  padding-left: $space-lg;
+  padding-right: $space-lg;
+
+  @include sm-up { gap: $space-lg; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 좌측 · 닫기 버튼
+// ─────────────────────────────────────────────────────────────────────────────
+
+.left {
+  display: flex;
+  align-items: center;
+}
+
+.closeButton {
+  @include button-reset;
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  margin-left: -$space-xs;
+  border-radius: $radius-full;
+  color: $color-white-a80;
+  font-size: $fs-h4;
+  line-height: 1;
+  transition: background-color 150ms ease;
+  flex: none;
+
+  @include hover { background: $color-white-a10; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 중앙 · 과목명 | 진행
+// ─────────────────────────────────────────────────────────────────────────────
+
+.center {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+  line-height: 1;
+}
+
+.subject {
+  flex: none;
+  color: #fff;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vDivider {
+  flex: none;
+  width: 1px;
+  height: 12px;
+  background: $color-white-a20;
+}
+
+.remaining {
+  flex: none;
+  color: $color-white-a60;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.remainingCount {
+  color: $color-white-a80;
+  font-weight: $fw-semibold;
+  font-variant-numeric: tabular-nums;
+}
+
+.segments {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+}
+
+.segment {
+  width: 22px;
+  height: 4px;
+  border-radius: $radius-full;
+  background: $color-white-a15;
+  transition: background-color 200ms ease;
+}
+
+.segmentFilled {
+  background: $color-primary;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 우측 · 해설 · 정답 · 채점
+// ─────────────────────────────────────────────────────────────────────────────
+
+.right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-xs;
+
+  @include sm-up { gap: $space-md; }
+}
+
+.peekButton {
+  @include button-reset;
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-full;
+  color: $color-white-a80;
+  flex: none;
+  transition: background-color 150ms ease, color 150ms ease;
+
+  @include hover {
+    background: $color-white-a10;
+    color: $color-primary;
+  }
+
+  @include sm-up {
+    width: auto;
+    height: 32px;
+    border-radius: $radius-btn-sm;
+    padding: 0 $space-sm;
+  }
+}
+
+.peekIcon {
+  @include sm-up { display: none; }
+}
+
+.peekLabel {
+  display: none;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+
+  @include sm-up { display: inline; }
+}
+
+.submitButton {
+  @include button-reset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 $space-md;
+  border-radius: $radius-btn-md;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+  flex: none;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+  @include sm-up { padding: 0 $space-lg; }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: $color-white-a10;
+    color: rgba(255, 255, 255, 0.40);
+  }
+}

@@ -1,0 +1,53 @@
+// -----------------------------------------------------------------------------
+// Typography 토큰
+// -----------------------------------------------------------------------------
+// 폰트 패밀리 · 사이즈 · line-height · weight
+// -----------------------------------------------------------------------------
+
+// Font Family
+$font-sans:
+  'Pretendard Variable',
+  Pretendard,
+  -apple-system,
+  'Apple SD Gothic Neo',
+  sans-serif;
+
+// KoPubWorld 명조체 · 문제·해설 본문 (교과서·시험지 톤)
+$font-batang:
+  'KoPubWorld Batang',
+  'Apple SD Gothic Neo',
+  'Nanum Myeongjo',
+  serif;
+
+// KoPubWorld 고딕체
+$font-dotum:
+  'KoPubWorld Dotum',
+  'Apple SD Gothic Neo',
+  sans-serif;
+
+// Font Size (Tailwind text-h1~body-sm 매핑)
+$fs-h1:      36px;
+$fs-h2:      30px;
+$fs-h3:      24px;
+$fs-h4:      22px;
+$fs-body:    16px;
+$fs-body-sm: 14px;
+$fs-caption: 12px;
+
+// Line Height
+$lh-h1:      54px;
+$lh-h2:      45px;
+$lh-h3:      36px;
+$lh-h4:      33px;
+$lh-body:    24px;
+$lh-body-sm: 21px;
+$lh-tight:   1.4;
+$lh-normal:  1.5;
+$lh-relaxed: 1.85; // 문제 본문 (Batang) 용
+
+// Font Weight
+$fw-light:    300;
+$fw-normal:   400;
+$fw-medium:   500;
+$fw-semibold: 600;
+$fw-bold:     700;

@@ -1,0 +1,258 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// TasteQuizPage · 맛보기 테스트 문제풀이 화면
+// -----------------------------------------------------------------------------
+// 구조:
+//   [상단바 QuizTopBar] (h-14)
+//   [필기 툴바 DrawingToolbar] (h-12 + 모바일 row2 h-12)
+//   [컨텐츠 영역 flex-row]
+//     [main - 문제 카드 + ResizeDivider]
+//     [ExplainPanel - 우측 해설]
+// -----------------------------------------------------------------------------
+
+// 전체 페이지 · 필기 화면 특성상 텍스트 선택 · 콜아웃 완전 차단
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-width: 350px;
+  background: $color-page-bg;
+
+  // 후손까지 강제 · KaTeX 렌더링된 수식 span 포함
+  &,
+  & *,
+  & *::before,
+  & *::after {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  // 브라우저 기본 focus outline 완전 제거 (호버·hover:bg 로 시각 피드백 충분)
+  button:focus,
+  button:focus-visible {
+    outline: none;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 컨텐츠 영역 (main + 해설 패널)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  min-height: 0;
+}
+
+.main {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 문제 카드 (section) · 항상 500px 고정 · 해설 열려도 유지
+// ─────────────────────────────────────────────────────────────────────────────
+
+.problemCard {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 500px;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: $color-canvas;
+}
+
+// 문제 카드 헤더 · 문제 N · 시간 정보
+.problemHeader {
+  display: flex;
+  height: 48px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $space-lg;
+  border-bottom: 1px solid $color-line;
+}
+
+.problemTitleWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.problemTitle {
+  margin: 0;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.problemMeta {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.problemTime {
+  font-size: $fs-body-sm;
+  font-variant-numeric: tabular-nums;
+  color: $color-muted;
+  white-space: nowrap;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 문제 본문 · 선지 · 캔버스 오버레이 영역
+// ─────────────────────────────────────────────────────────────────────────────
+
+.canvasArea {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.bodyWrap {
+  padding: $space-lg $space-xl 0;
+}
+
+.choicesWrap {
+  margin-top: $space-lg;
+  padding: 0 $space-lg;
+}
+
+.choicesGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.choiceCell {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  padding: $space-md 0;
+}
+
+// 원형 숫자 버튼 · z-canvas-above 로 캔버스 위에 얹혀 클릭 가능
+.choiceButton {
+  @include button-reset;
+  position: relative;
+  z-index: $z-canvas-above;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-full;
+  border: 1.8px solid $color-foreground;
+  background: $color-canvas;
+  color: $color-foreground;
+  font-size: 13px;
+  font-weight: $fw-bold;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.choiceButtonActive {
+  border-color: $color-primary;
+  background: $color-primary;
+  color: #fff;
+}
+
+// 답 값 span · z-canvas 아래 · 캔버스가 위에 덮음 (필기 통과)
+.choiceValue {
+  font-family: $font-batang;
+  font-size: $fs-body;
+  font-weight: $fw-medium;
+  color: $color-foreground;
+}
+
+// 빈 필기 공간 · flex-1 로 나머지 채움
+.spacer {
+  flex: 1;
+}
+
+// 필기 캔버스 오버레이
+.canvasOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: $z-canvas;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 모르겠어요 · 카드 최하단
+// ─────────────────────────────────────────────────────────────────────────────
+
+.footer {
+  padding: $space-md $space-lg;
+  border-top: 1px solid $color-line;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.dontKnowButton {
+  @include button-reset;
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: $space-sm $space-md;
+  border: 1px dashed $color-line;
+  border-radius: $radius-btn-md;
+  background: $color-canvas;
+  color: $color-muted;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+
+  @include hover {
+    border-color: $color-muted;
+    background: $color-surface;
+    color: $color-body;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ProblemBody · 본문 · 조건 박스 · 배점 뱃지
+// ─────────────────────────────────────────────────────────────────────────────
+
+.problemBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+  font-family: $font-batang;
+  font-size: 16px;
+  font-weight: $fw-medium;
+  line-height: $lh-relaxed;
+  color: $color-foreground;
+}
+
+.pointsBadge {
+  margin-left: $space-xs;
+  font-family: $font-sans;
+  font-size: $fs-body-sm;
+  font-weight: $fw-normal;
+  color: $color-body;
+  white-space: nowrap;
+}
+
+// 조건 박스 (가), (나), ...
+.conditionsBox {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  padding: $space-xl;
+  border-radius: $radius-md;
+  background: $color-surface;
+}

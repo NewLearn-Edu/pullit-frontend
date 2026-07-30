@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { formatTime } from '@/user/utils/scoring'
+import styles from './styles/TimerBadge.module.scss'
 
 interface TimerBadgeProps {
   /** 경과 시간 (초) · 0:00 부터 count-up */
@@ -25,34 +26,29 @@ export function TimerBadge({
   const phase: 'ok' | 'warn' | 'over' =
     elapsedSec <= tRecSec ? 'ok' : elapsedSec <= tMaxSec ? 'warn' : 'over'
 
-  const dot = clsx(
-    'h-2 w-2 rounded-full',
-    phase === 'ok' && 'bg-success',
-    phase === 'warn' && 'bg-yellow-500',
-    phase === 'over' && 'bg-danger',
-  )
+  // Phase → dot 색 · text 색 SCSS 클래스 매핑
+  const dotClass = {
+    ok: styles.dotOk,
+    warn: styles.dotWarn,
+    over: styles.dotOver,
+  }[phase]
 
-  const textColor =
-    variant === 'onDark'
-      ? clsx(
-          phase === 'ok' && 'text-white/80',
-          phase === 'warn' && 'text-yellow-400',
-          phase === 'over' && 'text-primary',
-        )
-      : clsx(
-          phase === 'ok' && 'text-foreground',
-          phase === 'warn' && 'text-yellow-700',
-          phase === 'over' && 'text-primary',
-        )
+  const textClass = {
+    onDark: {
+      ok: styles.onDarkOk,
+      warn: styles.onDarkWarn,
+      over: styles.onDarkOver,
+    },
+    onLight: {
+      ok: styles.onLightOk,
+      warn: styles.onLightWarn,
+      over: styles.onLightOver,
+    },
+  }[variant][phase]
 
   return (
-    <span
-      className={clsx(
-        'inline-flex flex-none items-center gap-xs whitespace-nowrap rounded-full px-sm py-xs text-body-sm font-semibold tabular-nums sm:px-md',
-        textColor,
-      )}
-    >
-      <span className={dot} aria-hidden />
+    <span className={clsx(styles.badge, textClass)}>
+      <span className={clsx(styles.dot, dotClass)} aria-hidden />
       {formatTime(elapsedSec)}
     </span>
   )

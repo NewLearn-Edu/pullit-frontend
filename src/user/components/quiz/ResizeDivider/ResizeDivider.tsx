@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import styles from './styles/ResizeDivider.module.scss'
 
 interface ResizeDividerProps {
   show: boolean
@@ -43,21 +44,18 @@ export function ResizeDivider({ show, onStart, onDrag, onEnd }: ResizeDividerPro
 
   if (!show) return null
 
-  // 이 컴포넌트는 상위 relative 컨테이너 안에서 absolute 로 배치됨.
-  // 히트영역 (14px 폭) 을 오른쪽 border 라인 중앙에 맞추기 위해 translate-x-1/2 사용.
   return (
     <div
       role="separator"
       aria-orientation="vertical"
       aria-label="문제 · 해설 폭 조절"
-      className="group absolute right-0 top-1/2 z-10 hidden md:flex md:h-14 md:w-[14px] md:-translate-y-1/2 md:translate-x-1/2 md:cursor-col-resize md:items-center md:justify-center touch-none select-none"
+      className={styles.divider}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {/* 중앙 grip · 세로 캡슐 · border 라인 위에 겹쳐서 표시됨 · hover 시 진해짐 */}
-      <div className="h-10 w-[5px] rounded-full bg-line shadow-[0_0_0_1px_rgba(255,255,255,0.6)] transition-colors group-hover:bg-body/60" />
+      <div className={styles.grip} />
     </div>
   )
 }

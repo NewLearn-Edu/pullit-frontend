@@ -1,0 +1,15 @@
+// -----------------------------------------------------------------------------
+// Tokens barrel · 한 번의 @forward 로 모든 토큰 노출
+// -----------------------------------------------------------------------------
+// 사용:
+//   @use 'src/styles/tokens' as *;
+//   .foo { color: $color-primary; padding: $space-lg; }
+// -----------------------------------------------------------------------------
+
+@forward 'colors';
+@forward 'spacing';
+@forward 'typography';
+@forward 'radius';
+@forward 'shadow';
+@forward 'breakpoints';
+@forward 'z-index';

@@ -1,0 +1,38 @@
+@use 'styles/tokens' as *;
+
+// -----------------------------------------------------------------------------
+// DrawingCanvas · 필기 캔버스 (문제 위 오버레이)
+// -----------------------------------------------------------------------------
+// - 부모의 absolute 오버레이 · 문제·선지 위에 얹혀 필기
+// - 지우개 도구 시 원형 커서 오버레이 · pointerRef 로 이동
+// -----------------------------------------------------------------------------
+
+.container {
+  position: absolute;
+  inset: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  // 터치·펜 필기 시 스크롤·확대 방지
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+// 지우개 커서 · 실제 지우개 반경만큼 원형 표시
+.eraserCursor {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(111, 106, 104, 0.5); // body 색 50%
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-full;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}

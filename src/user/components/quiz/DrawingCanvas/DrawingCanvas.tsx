@@ -1,5 +1,6 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import { getStroke } from 'perfect-freehand'
+import styles from './styles/DrawingCanvas.module.scss'
 
 export type StrokeTool = 'pen' | 'highlighter' | 'eraser' | 'laser'
 
@@ -423,10 +424,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         : 'crosshair'
 
     return (
-      <div ref={containerRef} className="absolute inset-0 no-select">
+      <div ref={containerRef} className={styles.container}>
         <canvas
           ref={canvasRef}
-          className="h-full w-full no-touch-action no-select"
+          className={styles.canvas}
           style={{ cursor: cursorStyle }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -440,13 +441,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           <div
             ref={eraserCursorRef}
             aria-hidden
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-body/50 bg-white/20 transition-opacity duration-100"
+            className={styles.eraserCursor}
             style={{
               width: `${eraserDiameterPx}px`,
               height: `${eraserDiameterPx}px`,
               left: 0,
               top: 0,
-              opacity: 0,
             }}
           />
         )}

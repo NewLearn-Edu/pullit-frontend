@@ -1,0 +1,65 @@
+// -----------------------------------------------------------------------------
+// Button 관련 mixin
+// -----------------------------------------------------------------------------
+
+@use '../tokens/colors' as *;
+@use '../tokens/radius' as *;
+@use '../tokens/typography' as *;
+@use 'media' as *;
+
+// button 태그 기본 reset (border · outline · bg 제거)
+@mixin button-reset {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  &:focus { outline: none; }
+}
+
+// Primary CTA (h-9)
+@mixin btn-primary {
+  @include button-reset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: $radius-btn-md;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.40);
+  }
+}
+
+// Secondary (surface bg)
+@mixin btn-secondary {
+  @include button-reset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: $radius-btn-md;
+  background: $color-surface;
+  color: $color-body;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-line; }
+}

@@ -1,0 +1,178 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ExplainPanel · 우측 사이드 패널 (정답 · 해설)
+// -----------------------------------------------------------------------------
+// - 데스크탑 (md+): inline 사이드바 · width 애니메이션으로 등장·수축
+// - 모바일 (< md): 전체 화면 slide-in · overlay backdrop
+// -----------------------------------------------------------------------------
+
+// 모바일 dim 오버레이
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: $z-panel-backdrop;
+  background: $color-foreground-a20;
+
+  @include tablet-up { display: none; }
+}
+
+// 패널 wrapper · 반응형 스타일 분기
+// md+ 폭은 인라인 style 로 주입된 --pw 를 참조 (드래그 값 반영)
+.aside {
+  display: flex;
+  flex-direction: column;
+  background: $color-canvas;
+
+  // 모바일: 우측 fixed slide-in
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: $z-panel;
+  height: 100dvh;
+  width: 100%;
+  max-width: 448px; // Tailwind max-w-md
+  border-left: 1px solid $color-line;
+  box-shadow: $shadow-xl;
+  transform: translateX(100%);
+  transition: transform 300ms ease;
+
+  &.open { transform: translateX(0); }
+
+  // 데스크탑 (md+): inline · width 로 등장·수축
+  @include tablet-up {
+    position: static;
+    z-index: auto;
+    height: auto;
+    max-width: none;
+    box-shadow: none;
+    transform: none;
+    overflow: hidden;
+    width: var(--pw, 0px);
+  }
+}
+
+// 드래그 중이 아닐 때만 width transition (드래그 시엔 즉시 반영)
+.asideAnimated {
+  @include tablet-up {
+    transition: width 300ms ease;
+  }
+}
+
+// 닫힘 상태 (md+) · border 제거
+.asideClosedDesktop {
+  @include tablet-up { border-left: 0; }
+}
+
+// 내부 컨텐츠 · 닫힘 애니메이션 중에도 폭 유지 (텍스트 리플로우 방지)
+.inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+
+  @include tablet-up {
+    width: var(--pw, 420px);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 상단 탭 헤더
+// ─────────────────────────────────────────────────────────────────────────────
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 $space-lg;
+  border-bottom: 1px solid $color-line;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.tabButton {
+  @include button-reset;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-muted;
+  transition: color 150ms ease;
+
+  @include hover { color: $color-body; }
+}
+
+.tabButtonActive {
+  color: $color-primary;
+
+  @include hover { color: $color-primary; }
+}
+
+.closeButton {
+  @include button-reset;
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  color: $color-body;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-surface; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 본문 영역 (스크롤 가능)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-lg;
+}
+
+// revealed=false 시 답 노출 방지 (블러 처리)
+.bodyBlurred {
+  user-select: none;
+  filter: blur(4px);
+}
+
+// 정답 뷰
+.answerLabel {
+  margin: 0;
+  font-size: $fs-body-sm;
+  color: $color-muted;
+}
+
+.answerValue {
+  margin: $space-md 0 0;
+  font-size: $fs-h2;
+  line-height: $lh-h2;
+  font-weight: $fw-bold;
+  color: $color-primary;
+}
+
+// 해설 · 여러 섹션 세로 배치
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// 각 섹션 (정답 분석 · 오답 분석)
+.sectionTitle {
+  margin: 0;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-muted;
+}
+
+.sectionBody {
+  margin-top: $space-xs;
+  font-size: $fs-body;
+  color: $color-foreground;
+}
