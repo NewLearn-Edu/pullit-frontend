@@ -35,13 +35,7 @@ export default function TasteQuizPage() {
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
-  const {
-    mathSkillNodeId,
-    englishTypeId,
-    addResult,
-    isMathComplete,
-    isEnglishComplete,
-  } = useTasteStore()
+  const { mathSkillNodeId, englishTypeId, addResult } = useTasteStore()
 
   const problems = useMemo(() => {
     if (subject === 'math' && mathSkillNodeId) {
@@ -197,19 +191,14 @@ export default function TasteQuizPage() {
     }, 250)
   }
 
+  // 선택한 과목의 문제만 풀고 완주 (2026-07-31 플로우 변경 · 과목 선택 페이지 도입)
   const goNext = () => {
     const nextIdx = idx + 1
     if (nextIdx < problems.length) {
       navigate(`/taste/quiz/${subject}/${nextIdx}`)
       return
     }
-    if (subject === 'math') {
-      if (isEnglishComplete()) navigate('/taste/complete')
-      else navigate('/taste/quiz/english/0')
-    } else {
-      if (isMathComplete()) navigate('/taste/complete')
-      else navigate('/taste/quiz/math/0')
-    }
+    navigate('/taste/complete')
   }
 
   const handleClose = () => {
