@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './user/pages/LandingPage'
+import HomePage from './user/pages/home/HomePage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
@@ -17,6 +18,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/home" element={<HomePage />} />
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
