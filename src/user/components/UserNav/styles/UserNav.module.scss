@@ -1,0 +1,134 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// UserNav · 학생 서비스 공용 네비게이션
+// -----------------------------------------------------------------------------
+// - 데스크탑 (>= 1024px): 좌측 사이드바 (5메뉴 + 하단 크레딧)
+// - iPad · 모바일 (< 1024px): fixed 하단 네비 바 (3메뉴 · 시안 175 기준)
+// -----------------------------------------------------------------------------
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 데스크탑 사이드바
+// ─────────────────────────────────────────────────────────────────────────────
+
+.sidebar {
+  display: none;
+
+  @include desktop-up {
+    display: flex;
+    flex-direction: column;
+    width: 224px;
+    flex: none;
+    padding: $space-xl $space-lg;
+    background: $color-canvas;
+    border-right: 1px solid $color-line;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+  }
+}
+
+.logo {
+  font-size: $fs-h4;
+  font-weight: $fw-bold;
+  font-style: italic;
+  color: $color-primary;
+  text-decoration: none;
+  padding: 0 $space-md;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  margin-top: $space-xxl;
+}
+
+.item {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-lg;
+  border-radius: $radius-btn-lg;
+  color: $color-muted;
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+
+  @include hover { background: $color-surface; }
+}
+
+// 활성 메뉴 · 연핑크 필 배경 + 빨간 아이콘 (시안 177)
+.itemActive {
+  background: $color-weak-bg;
+  color: $color-foreground;
+  font-weight: $fw-semibold;
+
+  @include hover { background: $color-weak-bg; }
+
+  .itemIcon { color: $color-primary; }
+}
+
+.itemIcon {
+  @include flex-center;
+  flex: none;
+  color: inherit;
+}
+
+// 사이드바 하단 크레딧 필
+.creditPill {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-top: auto;
+  padding: $space-md $space-lg;
+  border-radius: $radius-btn-lg;
+  background: $color-surface;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+}
+
+.creditSpark { color: $color-primary; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 하단 네비게이션 바 (< 1024px)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.bottomNav {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: $z-header;
+  height: 64px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: $color-canvas;
+  border-top: 1px solid $color-line;
+  align-items: stretch;
+  justify-content: space-around;
+
+  @include desktop-up { display: none; }
+}
+
+.bottomItem {
+  @include button-reset;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  font-size: $fs-caption;
+  color: $color-muted;
+  text-decoration: none;
+}
+
+.bottomItemActive {
+  color: $color-primary;
+  font-weight: $fw-semibold;
+}

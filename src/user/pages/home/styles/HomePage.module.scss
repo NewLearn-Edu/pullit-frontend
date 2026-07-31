@@ -30,27 +30,7 @@
   background: $color-surface;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 데스크탑 사이드바 (>= 1024px)
-// ─────────────────────────────────────────────────────────────────────────────
-
-.sidebar {
-  display: none;
-
-  @include desktop-up {
-    display: flex;
-    flex-direction: column;
-    width: 224px;
-    flex: none;
-    padding: $space-xl $space-lg;
-    background: $color-canvas;
-    border-right: 1px solid $color-line;
-    position: sticky;
-    top: 0;
-    height: 100dvh;
-  }
-}
-
+// 로고 (모바일 헤더용 · 사이드바는 UserNav 컴포넌트 소관)
 .sidebarLogo {
   font-size: $fs-h4;
   font-weight: $fw-bold;
@@ -58,78 +38,6 @@
   color: $color-primary;
   text-decoration: none;
   padding: 0 $space-md;
-}
-
-.sidebarNav {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  margin-top: $space-xxl;
-}
-
-.sidebarItem {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-md;
-  border-radius: $radius-btn-md;
-  color: $color-muted;
-  font-size: $fs-body-sm;
-  font-weight: $fw-medium;
-  transition: background-color 150ms ease, color 150ms ease;
-
-  @include hover { background: $color-surface; }
-}
-
-.sidebarItemActive {
-  color: $color-foreground;
-  font-weight: $fw-semibold;
-}
-
-// 활성 아이템 아이콘 배경 (시안 · 홈 아이콘에 연회색 사각)
-.sidebarItemIcon {
-  @include flex-center;
-  width: 36px;
-  height: 36px;
-  flex: none;
-  border-radius: $radius-btn-md;
-}
-
-.sidebarItemIconActive {
-  background: $color-surface;
-  color: $color-foreground;
-}
-
-.sidebarFooter {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  margin-top: auto;
-  padding: 0 $space-md;
-}
-
-.bellButton {
-  @include button-reset;
-  @include flex-center;
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-full;
-  color: $color-muted;
-
-  @include hover { background: $color-surface; }
-}
-
-.avatar {
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  flex: none;
-  border-radius: $radius-full;
-  background: $color-primary;
-  color: #fff;
-  font-size: $fs-caption;
-  font-weight: $fw-bold;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -536,37 +444,4 @@
   @include hover { background: $color-line; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 하단 네비게이션 바 (< 1024px · iPad 포함)
-// ─────────────────────────────────────────────────────────────────────────────
-
-.bottomNav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: $z-header;
-  height: 64px;
-  padding-bottom: env(safe-area-inset-bottom); // iPhone 홈 인디케이터 회피
-  background: $color-canvas;
-  border-top: 1px solid $color-line;
-  align-items: stretch;
-  justify-content: space-around;
-}
-
-.bottomNavItem {
-  @include button-reset;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-xs;
-  font-size: $fs-caption;
-  color: $color-muted;
-}
-
-.bottomNavItemActive {
-  color: $color-primary;
-  font-weight: $fw-semibold;
-}
+// (하단 네비게이션은 UserNav 컴포넌트로 이동)

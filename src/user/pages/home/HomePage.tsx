@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { UserNav } from '@/user/components/UserNav'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import styles from './styles/HomePage.module.scss'
 
@@ -52,23 +53,8 @@ export default function HomePage() {
 
   return (
     <div className={styles.page}>
-      {/* 데스크탑 사이드바 */}
-      <aside className={styles.sidebar}>
-        <Link to="/home" className={styles.sidebarLogo}>
-          풀잇
-        </Link>
-        <nav className={styles.sidebarNav}>
-          <SidebarItem icon={<HomeIcon />} label="추천 문제" active />
-          <SidebarItem icon={<DocIcon />} label="자유 문제" />
-          <SidebarItem icon={<ChartIcon />} label="리포트" />
-        </nav>
-        <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.bellButton} aria-label="알림">
-            <BellIcon />
-          </button>
-          <span className={styles.avatar}>S</span>
-        </div>
-      </aside>
+      {/* 공용 네비게이션 · 데스크탑 사이드바 + 모바일 하단 바 */}
+      <UserNav active="recommend" credit={CREDIT} />
 
       <main className={styles.main}>
         {/* 모바일 · iPad 상단 헤더 */}
@@ -157,7 +143,11 @@ export default function HomePage() {
           <button type="button" className={styles.quickLink}>
             <MapIcon /> 로드맵
           </button>
-          <button type="button" className={styles.quickLink}>
+          <button
+            type="button"
+            onClick={() => navigate('/wrong-note')}
+            className={styles.quickLink}
+          >
             <BookmarkIcon /> 오답노트
           </button>
         </div>
@@ -210,91 +200,11 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* 하단 네비게이션 (iPad · 모바일) */}
-      <nav className={clsx(styles.mobileOnly, styles.bottomNav)} aria-label="메인 메뉴">
-        <button type="button" className={clsx(styles.bottomNavItem, styles.bottomNavItemActive)}>
-          <HomeIcon />
-          추천 문제
-        </button>
-        <button type="button" className={styles.bottomNavItem}>
-          <DocIcon />
-          자유 문제
-        </button>
-        <button type="button" className={styles.bottomNavItem}>
-          <ChartIcon />
-          리포트
-        </button>
-      </nav>
     </div>
   )
 }
 
-function SidebarItem({
-  icon,
-  label,
-  active,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      className={clsx(styles.sidebarItem, active && styles.sidebarItemActive)}
-    >
-      <span
-        className={clsx(
-          styles.sidebarItemIcon,
-          active && styles.sidebarItemIconActive,
-        )}
-      >
-        {icon}
-      </span>
-      {label}
-    </button>
-  )
-}
-
 /* --- 인라인 SVG 아이콘 --- */
-
-function HomeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V21h14V9.5" />
-    </svg>
-  )
-}
-
-function DocIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="3" width="14" height="18" rx="2" />
-      <path d="M9 8h6" />
-      <path d="M9 12h6" />
-    </svg>
-  )
-}
-
-function ChartIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 21V13" />
-      <path d="M12 21V7" />
-      <path d="M19 21V3" />
-    </svg>
-  )
-}
-
-function BellIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-    </svg>
-  )
-}
 
 function PersonIcon() {
   return (

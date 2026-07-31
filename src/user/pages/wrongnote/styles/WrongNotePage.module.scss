@@ -1,0 +1,199 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// WrongNotePage · 오답노트 (Figma 177 시안)
+// -----------------------------------------------------------------------------
+
+.page {
+  display: flex;
+  min-height: 100dvh;
+  background: $color-surface;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 $space-lg 96px; // 하단 네비 회피 여백
+
+  @include desktop-up {
+    padding: $space-xxl 48px;
+    align-items: center;
+  }
+}
+
+// 모바일 상단 헤더 (로고 + 크레딧)
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-lg 0;
+
+  @include desktop-up { display: none; }
+}
+
+.logo {
+  font-size: $fs-h4;
+  font-weight: $fw-bold;
+  font-style: italic;
+  color: $color-primary;
+  text-decoration: none;
+}
+
+.creditPillSmall {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-xs $space-md;
+  border-radius: $radius-full;
+  background: $color-canvas;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+}
+
+.creditSpark { color: $color-primary; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 화이트 패널 (컨텐츠 래퍼)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.panel {
+  width: 100%;
+  border-radius: $radius-btn-lg;
+  background: $color-canvas;
+  padding: $space-xl $space-lg;
+
+  @include desktop-up {
+    max-width: 1180px;
+    padding: $space-xxl 48px;
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+
+  @include desktop-up { font-size: 28px; }
+}
+
+.subtitle {
+  margin: $space-sm 0 0;
+  font-size: $fs-body;
+  color: $color-body;
+}
+
+// 과목 탭 · 컴팩트 (패널 안 inline · 폭 고정)
+.tabs {
+  display: flex;
+  width: 240px;
+  margin-top: $space-xl;
+  padding: $space-xs;
+  border-radius: $radius-btn-lg;
+  background: #ECEAE8;
+}
+
+.tab {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 40px;
+  border-radius: $radius-btn-md;
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: $color-body;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.tabActive {
+  background: $color-canvas;
+  color: $color-foreground;
+  font-weight: $fw-semibold;
+  box-shadow: $shadow-sm;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 목록 헤더 + 오답 카드
+// ─────────────────────────────────────────────────────────────────────────────
+
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $space-xxl;
+  margin-bottom: $space-lg;
+}
+
+.listCount {
+  margin: 0;
+  font-size: 20px;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.listSort {
+  font-size: $fs-body-sm;
+  color: $color-body;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-lg;
+  padding: $space-lg $space-xl;
+  border: 1px solid $color-line;
+  border-radius: $radius-btn-lg;
+  background: $color-canvas;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+  @include truncate;
+}
+
+.cardMeta {
+  font-size: $fs-body-sm;
+  color: $color-body;
+}
+
+.reviewButton {
+  @include button-reset;
+  flex: none;
+  padding: $space-md $space-lg;
+  border-radius: $radius-btn-md;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+}
+
+// 오답 없음 (탭 전환 시 빈 상태)
+.empty {
+  padding: $space-xxl 0;
+  text-align: center;
+  font-size: $fs-body;
+  color: $color-muted;
+}
