@@ -101,25 +101,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.segments {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 3px;
-}
-
-.segment {
-  width: 22px;
-  height: 4px;
-  border-radius: $radius-full;
-  background: $color-white-a15;
-  transition: background-color 200ms ease;
-}
-
-.segmentFilled {
-  background: $color-primary;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 우측 · 해설 · 정답 · 채점
 // ─────────────────────────────────────────────────────────────────────────────

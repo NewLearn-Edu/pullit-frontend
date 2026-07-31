@@ -268,6 +268,15 @@ export default function TasteQuizPage() {
       <div className={styles.content}>
         <main className={styles.main}>
           <section className={styles.problemCard}>
+            {/* 진행 바 · 현재 문제 위치 / 전체 (문제 1 부터 1칸 채워짐) */}
+            <div className={styles.progressWrap}>
+              <div className={styles.progressTrack}>
+                <div
+                  className={styles.progressFill}
+                  style={{ width: `${((idx + 1) / problems.length) * 100}%` }}
+                />
+              </div>
+            </div>
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>

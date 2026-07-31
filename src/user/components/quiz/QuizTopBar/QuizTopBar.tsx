@@ -1,4 +1,3 @@
-import { clsx } from 'clsx'
 import styles from './styles/QuizTopBar.module.scss'
 
 interface QuizTopBarProps {
@@ -27,8 +26,7 @@ export function QuizTopBar({
   submitDisabled,
   submitLabel,
 }: QuizTopBarProps) {
-  // 진행 세그먼트 채움 개수 · 시작 (문제 1) 부터 1개 채워짐 → 현재 문제까지 도달한 것으로 표시
-  const filled = Math.min(progress.total, progress.current)
+  // 현재 문제 포함 남은 문제 수
   const remaining = Math.max(0, progress.total - progress.current + 1)
 
   return (
@@ -46,7 +44,7 @@ export function QuizTopBar({
           </button>
         </div>
 
-        {/* 중앙: 과목명 | 성적 상승까지 N문제 + 세그먼트 진행바 */}
+        {/* 중앙: 과목명 | 성적 상승까지 N문제 (진행 바는 문제 카드 상단으로 이동) */}
         <div className={styles.center}>
           <span className={styles.subject}>{subjectLabel}</span>
           <span aria-hidden className={styles.vDivider} />
@@ -54,18 +52,6 @@ export function QuizTopBar({
             성적 상승까지{' '}
             <span className={styles.remainingCount}>{remaining}문제</span>
           </span>
-          <div className={styles.segments}>
-            {Array.from({ length: progress.total }, (_, i) => (
-              <span
-                key={i}
-                aria-hidden
-                className={clsx(
-                  styles.segment,
-                  i < filled && styles.segmentFilled,
-                )}
-              />
-            ))}
-          </div>
         </div>
 
         {/* 우측: 해설 · 정답 · 채점하기 */}

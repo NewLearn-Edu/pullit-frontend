@@ -73,6 +73,26 @@
   background: $color-canvas;
 }
 
+// 진행 바 · 문제 카드 최상단 · 연속형 (참고: 대성마이맥 스타일)
+.progressWrap {
+  flex: none;
+  padding: $space-lg $space-lg 0;
+}
+
+.progressTrack {
+  height: 8px;
+  border-radius: $radius-full;
+  background: $color-line;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: $radius-full;
+  background: $color-primary;
+  transition: width 400ms ease;
+}
+
 // 문제 카드 헤더 · 문제 N · 시간 정보
 .problemHeader {
   display: flex;
