@@ -42,20 +42,6 @@
   text-decoration: none;
 }
 
-.creditPillSmall {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-xs $space-md;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
-}
-
-.creditSpark { color: $color-primary; }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 화이트 패널 (컨텐츠 래퍼)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,33 +73,9 @@
   color: $color-body;
 }
 
-// 과목 탭 · 컴팩트 (패널 안 inline · 폭 고정)
-.tabs {
-  display: flex;
-  width: 240px;
+// 과목 탭 래퍼 (탭 자체는 SubjectTabs 공용 컴포넌트 · compact)
+.tabsWrap {
   margin-top: $space-xl;
-  padding: $space-xs;
-  border-radius: $radius-btn-lg;
-  background: #ECEAE8;
-}
-
-.tab {
-  @include button-reset;
-  @include flex-center;
-  flex: 1;
-  height: 40px;
-  border-radius: $radius-btn-md;
-  font-size: $fs-body-sm;
-  font-weight: $fw-medium;
-  color: $color-body;
-  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.tabActive {
-  background: $color-canvas;
-  color: $color-foreground;
-  font-weight: $fw-semibold;
-  box-shadow: $shadow-sm;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

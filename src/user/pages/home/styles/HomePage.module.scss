@@ -30,14 +30,13 @@
   background: $color-surface;
 }
 
-// 로고 (모바일 헤더용 · 사이드바는 UserNav 컴포넌트 소관)
-.sidebarLogo {
+// 로고 (모바일 헤더용)
+.logo {
   font-size: $fs-h4;
   font-weight: $fw-bold;
   font-style: italic;
   color: $color-primary;
   text-decoration: none;
-  padding: 0 $space-md;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,18 +53,6 @@
   display: flex;
   align-items: center;
   gap: $space-md;
-}
-
-.creditPillSmall {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-xs $space-md;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
 }
 
 .avatarMuted {
@@ -118,50 +105,9 @@
   color: $color-foreground;
 }
 
-.creditPill {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-md $space-lg;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
-  white-space: nowrap;
-}
-
-.creditSpark { color: $color-primary; }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 과목 세그먼트 탭 (수학 | 영어)
-// ─────────────────────────────────────────────────────────────────────────────
-
-.tabs {
-  display: flex;
-  padding: $space-xs;
-  border-radius: $radius-btn-lg;
-  background: #ECEAE8; // 트랙 · surface 보다 살짝 진하게
+// 과목 탭 래퍼 (탭 자체는 SubjectTabs 공용 컴포넌트)
+.tabsWrap {
   margin-bottom: $space-xl;
-}
-
-.tab {
-  @include button-reset;
-  @include flex-center;
-  flex: 1;
-  height: 44px;
-  border-radius: $radius-btn-md;
-  font-size: $fs-body;
-  font-weight: $fw-medium;
-  color: $color-body;
-  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.tabActive {
-  background: $color-canvas;
-  color: $color-foreground;
-  font-weight: $fw-semibold;
-  box-shadow: $shadow-sm;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -185,7 +131,7 @@
   display: flex;
   flex-direction: column;
   padding: $space-xl;
-  border-radius: 20px;
+  border-radius: $radius-card;
   background: $color-primary;
   color: #fff;
 }
@@ -238,7 +184,7 @@
 .statusCard {
   flex-direction: column;
   padding: $space-xl;
-  border-radius: 20px;
+  border-radius: $radius-card;
   background: $color-canvas;
 }
 
@@ -363,7 +309,7 @@
   display: flex;
   flex-direction: column;
   padding: $space-xl;
-  border-radius: 20px;
+  border-radius: $radius-card;
   background: $color-canvas;
 }
 

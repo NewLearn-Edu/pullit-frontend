@@ -1,0 +1,44 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// SubjectTabs · 수학 | 영어 세그먼트 탭 (공용)
+// -----------------------------------------------------------------------------
+// - 기본: 부모 폭 채움 · 탭 높이 44px (홈)
+// - compact: 240px 고정 폭 · 탭 높이 40px (오답노트 등 패널 내부)
+// -----------------------------------------------------------------------------
+
+.tabs {
+  display: flex;
+  padding: $space-xs;
+  border-radius: $radius-btn-lg;
+  background: $color-tab-track;
+}
+
+.tabsCompact {
+  width: 240px;
+}
+
+.tab {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 44px;
+  border-radius: $radius-btn-md;
+  font-size: $fs-body;
+  font-weight: $fw-medium;
+  color: $color-body;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+
+  .tabsCompact & {
+    height: 40px;
+    font-size: $fs-body-sm;
+  }
+}
+
+.tabActive {
+  background: $color-canvas;
+  color: $color-foreground;
+  font-weight: $fw-semibold;
+  box-shadow: $shadow-sm;
+}

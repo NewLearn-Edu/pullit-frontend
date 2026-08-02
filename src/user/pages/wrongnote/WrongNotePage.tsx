@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
+import { SubjectTabs } from '@/user/components/SubjectTabs'
+import { CreditBadge } from '@/user/components/CreditBadge'
 import { type Subject } from '@/user/stores/tasteStore'
 import styles from './styles/WrongNotePage.module.scss'
 
@@ -46,9 +47,7 @@ export default function WrongNotePage() {
           <Link to="/home" className={styles.logo}>
             풀잇
           </Link>
-          <span className={styles.creditPillSmall}>
-            <span className={styles.creditSpark}>✦</span> {CREDIT}
-          </span>
+          <CreditBadge credit={CREDIT} />
         </header>
 
         <div className={styles.panel}>
@@ -56,25 +55,8 @@ export default function WrongNotePage() {
           <p className={styles.subtitle}>틀린 문제를 단원별로 모았어요</p>
 
           {/* 과목 탭 */}
-          <div className={styles.tabs} role="tablist" aria-label="과목">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={subject === 'math'}
-              onClick={() => setSubject('math')}
-              className={clsx(styles.tab, subject === 'math' && styles.tabActive)}
-            >
-              수학
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={subject === 'english'}
-              onClick={() => setSubject('english')}
-              className={clsx(styles.tab, subject === 'english' && styles.tabActive)}
-            >
-              영어
-            </button>
+          <div className={styles.tabsWrap}>
+            <SubjectTabs value={subject} onChange={setSubject} compact />
           </div>
 
           {/* 목록 헤더 */}

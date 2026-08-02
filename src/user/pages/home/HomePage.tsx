@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
+import { SubjectTabs } from '@/user/components/SubjectTabs'
+import { CreditBadge } from '@/user/components/CreditBadge'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import styles from './styles/HomePage.module.scss'
 
@@ -59,13 +61,11 @@ export default function HomePage() {
       <main className={styles.main}>
         {/* 모바일 · iPad 상단 헤더 */}
         <header className={clsx(styles.mobileOnly, styles.mobileHeader)}>
-          <Link to="/home" className={styles.sidebarLogo}>
+          <Link to="/home" className={styles.logo}>
             풀잇
           </Link>
           <div className={styles.mobileHeaderRight}>
-            <span className={styles.creditPillSmall}>
-              <span className={styles.creditSpark}>✦</span> {CREDIT}
-            </span>
+            <CreditBadge credit={CREDIT} />
             <span className={styles.avatarMuted}>
               <PersonIcon />
             </span>
@@ -78,31 +78,12 @@ export default function HomePage() {
             <p className={styles.headingEyebrow}>매일 3문제</p>
             <h1 className={styles.headingTitle}>약한 단원부터, 지금 바로 풀어.</h1>
           </div>
-          <span className={styles.creditPill}>
-            <span className={styles.creditSpark}>✦</span> 크레딧 {CREDIT}
-          </span>
+          <CreditBadge credit={CREDIT} size="md" />
         </div>
 
         {/* 과목 탭 */}
-        <div className={styles.tabs} role="tablist" aria-label="과목">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={subject === 'math'}
-            onClick={() => setSubject('math')}
-            className={clsx(styles.tab, subject === 'math' && styles.tabActive)}
-          >
-            수학
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={subject === 'english'}
-            onClick={() => setSubject('english')}
-            className={clsx(styles.tab, subject === 'english' && styles.tabActive)}
-          >
-            영어
-          </button>
+        <div className={styles.tabsWrap}>
+          <SubjectTabs value={subject} onChange={setSubject} />
         </div>
 
         {/* 히어로 행 · 빨간 추천 카드 + (데스크탑) 학습 상태 */}

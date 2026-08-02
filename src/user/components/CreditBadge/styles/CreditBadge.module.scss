@@ -1,0 +1,29 @@
+@use 'styles/tokens' as *;
+
+// -----------------------------------------------------------------------------
+// CreditBadge · ✦ 크레딧 배지 (공용)
+// -----------------------------------------------------------------------------
+// - sm: 모바일 헤더용 작은 필 (✦ 5)
+// - md: 데스크탑 헤딩용 큰 필 (✦ 크레딧 5)
+// -----------------------------------------------------------------------------
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  border-radius: $radius-full;
+  background: $color-canvas;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+  white-space: nowrap;
+}
+
+.badgeSm { padding: $space-xs $space-md; }
+
+.badgeMd {
+  gap: $space-sm;
+  padding: $space-md $space-lg;
+}
+
+.spark { color: $color-primary; }
