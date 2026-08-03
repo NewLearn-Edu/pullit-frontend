@@ -15,10 +15,15 @@
   margin-top: 10px;
 }
 
-/* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보 */
+/* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보.
+   긴 수식은 KaTeX 가 .base 단위로 줄바꿈하는데 줄끼리 붙어 한 덩어리로 보임 →
+   간격은 .base 의 세로 마진이 담당 (한 줄짜리도 2+5=7px 로 기존과 동일) */
 .katex-tall {
   display: inline-block;
-  padding: 7px 0;
+  padding: 2px 0;
+}
+.katex-tall .katex .base {
+  margin: 5px 0;
 }
 
 /* 절댓값(|)·대괄호([ ]) 볼드 글리프 — 수능 지면의 획 굵기 (KatexText 가 감쌈) */
