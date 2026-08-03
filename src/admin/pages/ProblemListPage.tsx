@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { ExamText } from '@/shared/components/ExamText'
@@ -92,6 +93,26 @@ export default function ProblemListPage() {
   const [data, setData] = useState<ProblemPage | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<ProblemDetail | null>(null)
+  // 미리보기 디바이스 프레임 — 문제 영역 폭: min 350px · max 500px (실서비스 규칙)
+  const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
+  // 패드: 맛보기와 동일하게 가운데 디바이더 드래그로 문제 패널 폭 조절
+  const [padWidth, setPadWidth] = useState(524)
+
+  const startPadDrag = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = padWidth
+    const onMove = (ev: MouseEvent) => {
+      // 내부 문제 영역(프레임 패딩 24px 제외)이 350~500px 을 오가는 범위
+      setPadWidth(Math.min(524, Math.max(374, startWidth + ev.clientX - startX)))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   const isMath = subject === 'math'
 
@@ -146,7 +167,23 @@ export default function ProblemListPage() {
       setDetail(null)
       return
     }
+    setDevice('web')
     fetchProblemDetail(selectedId).then(setDetail).catch(() => setDetail(null))
+  }, [selectedId])
+
+  // 미리보기 모달: ESC 닫기 + 열려 있는 동안 뒤 화면 스크롤 잠금
+  useEffect(() => {
+    if (selectedId == null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [selectedId])
 
   const bigNodes = useMemo(() => (apiSubject ? sortNodes(apiSubject, '', tree) : []), [apiSubject, tree])
@@ -257,7 +294,7 @@ export default function ProblemListPage() {
         )}
       </div>
 
-      <div className={clsx('list-layout', selectedId != null && 'open')}>
+      <div>
         <div className="card">
           <div className="toolbar">
             <div className="search-box">
@@ -373,64 +410,102 @@ export default function ProblemListPage() {
           </div>
         </div>
 
-        {/* 문제 미리보기 (500px) */}
-        <aside className="preview">
-          <div className="card">
-            <div className="card-head" style={{ marginBottom: 14 }}>
+      </div>
+
+      {/* 문제 미리보기 모달 — 문제 영역 500px 고정(실서비스 렌더 폭 검증) + 우측 해설.
+          .view 진입 애니메이션의 transform 이 fixed 기준점을 바꾸므로 포털로 밖에 렌더 (항상 화면 정중앙).
+          어드민 CSS 변수가 .admin-root 스코프라 포털 대상도 .admin-root */}
+      {selectedId != null &&
+        createPortal(
+        <div className="pv-modal-overlay" onClick={() => setSelectedId(null)}>
+          <div className={clsx('pv-modal-wrap', device)} onClick={(e) => e.stopPropagation()}>
+            {/* 디바이스 토글 — 팝업 카드 바깥 상단 */}
+            <div className="seg pv-device-seg">
+              {([['web', '웹'], ['pad', '패드'], ['mobile', '모바일']] as const).map(([key, tabLabel]) => (
+                <button key={key} className={clsx(device === key && 'on')} onClick={() => setDevice(key)}>
+                  {tabLabel}
+                </button>
+              ))}
+            </div>
+            <div className="pv-modal">
+            <div className="pv-modal-head">
               <div>
                 <div className="card-title">문제 미리보기</div>
                 <div className="card-sub">
-                  {detail
-                    ? `${detail.id} · ${previewPath}`
-                    : selectedId != null
-                      ? '불러오는 중…'
-                      : '문제를 선택하세요'}
+                  {detail ? `${detail.id} · ${previewPath}` : '불러오는 중…'}
                 </div>
               </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelectedId(null)}>
+                닫기
+              </button>
             </div>
             {detail && (
-              <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
-                {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
-                <div className="pv-question">
-                  <ExamText text={detail.question} /> [{detail.points}점]
+              <div className="pv-modal-body">
+                <div
+                  className={clsx('pv-device', device)}
+                  style={device === 'pad' ? { width: padWidth } : undefined}
+                >
+                  <div className="pv-device-inner">
+                  <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
+                    {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
+                    <div className="pv-question">
+                      <ExamText text={detail.question} /> [{detail.points}점]
+                    </div>
+                    {detail.passage && (
+                      /* lang="en" — 브라우저 하이픈 분철(hyphens: auto) 활성화 조건 */
+                      <div className="pv-passage" lang={detail.subject === 'ENGLISH' ? 'en' : undefined}>
+                        <ExamText text={detail.passage} />
+                      </div>
+                    )}
+                    {Object.keys(detail.glossary).length > 0 && (
+                      <div className="pv-glossary">
+                        {Object.entries(detail.glossary)
+                          .map(([word, meaning], i) => `${'*'.repeat(i + 1)} ${word}: ${meaning}`)
+                          .join('   ')}
+                      </div>
+                    )}
+                    {detail.choices.length > 0 && (
+                      <div className="pv-choices">
+                        {detail.choices.map((c, i) => {
+                          const correct = detail.answerNumber === i + 1
+                          return (
+                            <span key={i} className={clsx('choice', correct && 'correct')}>
+                              {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
+                              <span className="choice-num">
+                                {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                              </span>
+                              <span><ExamText text={c} /></span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  </div>
                 </div>
-                {detail.passage && (
-                  /* lang="en" — 브라우저 하이픈 분철(hyphens: auto) 활성화 조건 */
-                  <div className="pv-passage" lang={detail.subject === 'ENGLISH' ? 'en' : undefined}>
-                    <ExamText text={detail.passage} />
+                {/* 패드: 맛보기와 동일한 드래그 디바이더 (좌우 폭 조절) */}
+                {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
+                <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
+                  <p className="pv-label">정답</p>
+                  <div className="pv-explain-body">
+                    {detail.choices.length > 0 ? (
+                      String.fromCodePoint(0x245f + detail.answerNumber)
+                    ) : (
+                      <ExamText text={detail.answerText} />
+                    )}
                   </div>
-                )}
-                {Object.keys(detail.glossary).length > 0 && (
-                  <div className="pv-glossary">
-                    {Object.entries(detail.glossary)
-                      .map(([word, meaning], i) => `${'*'.repeat(i + 1)} ${word}: ${meaning}`)
-                      .join('   ')}
+                  <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
+                  <div className="pv-explain-body">
+                    <ExamText text={detail.explanation} />
                   </div>
-                )}
-                {detail.choices.length > 0 && (
-                  <div className="pv-choices">
-                    {detail.choices.map((c, i) => {
-                      const correct = detail.answerNumber === i + 1
-                      return (
-                        <span key={i} className={clsx('choice', correct && 'correct')}>
-                          {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
-                          <span className="choice-num">
-                            {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
-                          </span>
-                          <span><ExamText text={c} /></span>
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
-                {detail.choices.length === 0 && (
-                  <div className="pv-score">단답형 · 정답 <ExamText text={detail.answerText} /></div>
-                )}
+                </div>
               </div>
             )}
+            </div>
           </div>
-        </aside>
-      </div>
+        </div>,
+          document.querySelector('.admin-root') ?? document.body,
+        )}
     </section>
   )
 }
