@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* STIX Two Text · 수능 영어 지문 서체 (Times 계열 가변 폰트, 400~700 미세 굵기)
+   출처: https://github.com/stipub/stixfonts (SIL OFL) · 로컬 배포 (public/fonts, latin 서브셋) */
+@font-face {
+  font-family: 'STIX Two Text';
+  src: url('/fonts/STIXTwoText-Variable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'STIX Two Text';
+  src: url('/fonts/STIXTwoText-Italic-Variable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* KoPubWorld 폰트 · 문제·해설 본문에 사용 (교과서·시험지 스타일)
    출처: https://www.kopus.org/biz-electronic-font2/  · 로컬 배포 (public/fonts) */
 @font-face {

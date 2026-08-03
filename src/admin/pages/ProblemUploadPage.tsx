@@ -189,12 +189,18 @@ export default function ProblemUploadPage() {
             <div className="pv-body vw-body">
               <div className="pv-question"><RichText text={item?.question ?? ''} /></div>
               <div className="pv-choices">
-                {(item?.choices ?? []).map((c, i) => (
-                  <span key={i} className={clsx('choice', item?.answer_no === i + 1 && 'correct')}>
-                    <span className="choice-num">{i + 1}</span>
-                    <span><RichText text={c} /></span>
-                  </span>
-                ))}
+                {(item?.choices ?? []).map((c, i) => {
+                  const correct = item?.answer_no === i + 1
+                  return (
+                    <span key={i} className={clsx('choice', correct && 'correct')}>
+                      {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
+                      <span className="choice-num">
+                        {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                      </span>
+                      <span><RichText text={c} /></span>
+                    </span>
+                  )
+                })}
               </div>
               {item?.answer_no != null && <div className="vw-answer">정답 {item.answer_no}번</div>}
               {/* key={idx} — 문항 이동 시 해설 접힘 상태 초기화 (프로토타입과 동일) */}
