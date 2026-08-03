@@ -1,19 +1,73 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
-import { KatexText } from '@/shared/components/KatexText'
+import { ExamText } from '@/shared/components/ExamText'
 import { IcoSearch } from '../components/icons'
 import {
-  DIFF_LABEL,
-  ENGLISH_PROBLEMS,
-  MATH_PROBLEMS,
-  STATUS_LABEL,
-  UNITS,
-  getPreview,
-  normUnit,
-} from '../data/mockAdmin'
+  fetchProblemDetail,
+  fetchProblemFilters,
+  fetchProblems,
+  type ApiSubject,
+  type Difficulty,
+  type FilterNode,
+  type ProblemDetail,
+  type ProblemPage,
+  type ProblemStatus,
+} from '../api/adminApi'
 
 const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어' }
+const API_SUBJECT: Record<string, ApiSubject> = { math: 'MATH', english: 'ENGLISH' }
+
+const STATUS_LABEL: Record<ProblemStatus, string> = { ACTIVE: '게시 중', INACTIVE: '비공개' }
+const STATUS_BADGE: Record<ProblemStatus, string> = { ACTIVE: 'live', INACTIVE: 'hidden' }
+
+const PAGE_SIZE = 30
+
+/** 트리 정렬 — 교육과정/정책 확정 순서 (API 는 가나다순이라 화면에서 재정렬) */
+const NODE_ORDER: Record<string, string[]> = {
+  'MATH:': ['대수', '미적분Ⅰ', '확률과 통계'],
+  'MATH:대수': ['지수함수와 로그함수', '삼각함수', '수열'],
+  'MATH:미적분Ⅰ': ['함수의 극한과 연속', '미분', '적분'],
+  'MATH:확률과 통계': ['경우의 수', '확률', '통계'],
+  'ENGLISH:': ['중심 내용 파악', '논리 구조 이해', '종합·추론 능력', '정보 확인 능력', '기초 언어 능력'],
+  'ENGLISH:중심 내용 파악': ['주제', '제목', '요지', '목적'],
+  'ENGLISH:논리 구조 이해': ['주장', '순서', '삽입', '무관한 문장'],
+  'ENGLISH:종합·추론 능력': ['요약', '빈칸', '어휘 의미'],
+  'ENGLISH:정보 확인 능력': ['안내문 일치', '안내문 불일치', '내용 불일치', '도표'],
+  'ENGLISH:기초 언어 능력': ['어휘 쓰임'],
+}
+
+function sortNodes(subject: ApiSubject, parent: string, nodes: FilterNode[]): FilterNode[] {
+  const order = NODE_ORDER[`${subject}:${parent}`]
+  if (!order) return nodes
+  return [...nodes].sort((a, b) => {
+    const ai = order.indexOf(a.name)
+    const bi = order.indexOf(b.name)
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+  })
+}
+
+const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.')
+
+/** 영어 유형 영문 표기 (13유형 분류표 기준) — 목록에서 한글명 아래 보조 표시 */
+const EN_TYPE_LABEL: Record<string, string> = {
+  주제: 'Topic',
+  제목: 'Title',
+  요지: 'Gist',
+  주장: 'Claim',
+  순서: 'Order',
+  삽입: 'Insertion',
+  요약: 'Summary',
+  빈칸: 'Blank',
+  '안내문 일치': 'Notice Match',
+  '안내문 불일치': 'Notice Mismatch',
+  '내용 불일치': 'Content Mismatch',
+  목적: 'Purpose',
+  '어휘 의미': 'Vocabulary (Meaning)',
+  '어휘 쓰임': 'Vocabulary (Usage)',
+  도표: 'Chart',
+  '무관한 문장': 'Irrelevant Sentence',
+}
 
 interface CasSel {
   big: string | null
@@ -21,169 +75,302 @@ interface CasSel {
   small: string | null
 }
 
+const EMPTY_CAS: CasSel = { big: null, mid: null, small: null }
+
 export default function ProblemListPage() {
   const { subject = '' } = useParams()
   const label = SUBJECT_LABEL[subject]
+  const apiSubject = API_SUBJECT[subject]
 
-  const [cas, setCas] = useState<CasSel>({ big: null, mid: null, small: null })
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [tree, setTree] = useState<FilterNode[]>([])
+  const [cas, setCas] = useState<CasSel>(EMPTY_CAS)
+  const [status, setStatus] = useState<'' | ProblemStatus>('')
+  const [difficulty, setDifficulty] = useState<'' | Difficulty>('')
+  const [qInput, setQInput] = useState('')
+  const [q, setQ] = useState('')
+  const [page, setPage] = useState(0)
+  const [data, setData] = useState<ProblemPage | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [detail, setDetail] = useState<ProblemDetail | null>(null)
 
-  // 과목 전환 시: 선택 해제 + 미리보기 닫힘 (프로토타입 applySubject 와 동일)
+  const isMath = subject === 'math'
+
+  // 과목 전환: 필터·선택 전부 초기화
   useEffect(() => {
+    setCas(EMPTY_CAS)
+    setStatus('')
+    setDifficulty('')
+    setQInput('')
+    setQ('')
+    setPage(0)
     setSelectedId(null)
+    setDetail(null)
   }, [subject])
 
-  const mathRows = useMemo(
-    () =>
-      MATH_PROBLEMS.filter(
-        (p) =>
-          (!cas.big || normUnit(p.big) === normUnit(cas.big)) &&
-          (!cas.mid || normUnit(p.mid) === normUnit(cas.mid)) &&
-          (!cas.small || normUnit(p.small) === normUnit(cas.small)),
-      ),
-    [cas],
+  // 분류 트리 로드
+  useEffect(() => {
+    if (!apiSubject) return
+    fetchProblemFilters(apiSubject).then(setTree).catch(() => setTree([]))
+  }, [apiSubject])
+
+  // 검색 디바운스 (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQ(qInput)
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [qInput])
+
+  // 목록 로드
+  useEffect(() => {
+    if (!apiSubject) return
+    fetchProblems({
+      subject: apiSubject,
+      unitLarge: cas.big ?? undefined,
+      unitMid: isMath ? (cas.mid ?? undefined) : undefined,
+      skillNode: (isMath ? cas.small : cas.mid) ?? undefined,
+      status: status || undefined,
+      difficulty: difficulty || undefined,
+      q: q || undefined,
+      page,
+      size: PAGE_SIZE,
+    })
+      .then(setData)
+      .catch(() => setData(null))
+  }, [apiSubject, isMath, cas, status, difficulty, q, page])
+
+  // 미리보기 상세 로드
+  useEffect(() => {
+    if (selectedId == null) {
+      setDetail(null)
+      return
+    }
+    fetchProblemDetail(selectedId).then(setDetail).catch(() => setDetail(null))
+  }, [selectedId])
+
+  const bigNodes = useMemo(() => (apiSubject ? sortNodes(apiSubject, '', tree) : []), [apiSubject, tree])
+  const selectedBig = useMemo(() => tree.find((n) => n.name === cas.big) ?? null, [tree, cas.big])
+  const midNodes = useMemo(
+    () => (apiSubject && selectedBig ? sortNodes(apiSubject, selectedBig.name, selectedBig.children) : []),
+    [apiSubject, selectedBig],
+  )
+  const selectedMid = useMemo(
+    () => (isMath ? (selectedBig?.children.find((n) => n.name === cas.mid) ?? null) : null),
+    [isMath, selectedBig, cas.mid],
+  )
+  const smallNodes = useMemo(
+    () => (apiSubject && selectedMid ? sortNodes(apiSubject, selectedMid.name, selectedMid.children) : []),
+    [apiSubject, selectedMid],
   )
 
   if (!label) return <Navigate to="/admin/problems/math" replace />
-  const isMath = subject === 'math'
 
-  const visible = isMath ? mathRows.length : ENGLISH_PROBLEMS.length
-  const pending = (isMath ? mathRows : ENGLISH_PROBLEMS).filter((p) => p.status === 'pending').length
+  const rows = data?.content ?? []
+  const total = data?.totalElements ?? 0
+  const totalPages = data?.totalPages ?? 0
 
-  // 캐스케이더 조작 시에도 선택 해제 (프로토타입: applySubject 가 항상 선택을 리셋)
   const selectCas = (next: CasSel) => {
     setCas(next)
+    setPage(0)
     setSelectedId(null)
   }
-  const toggleRow = (id: number) => setSelectedId((prev) => (prev === id ? null : id))
+  const toggleRow = (id: string) => setSelectedId((prev) => (prev === id ? null : id))
 
-  const preview = selectedId != null ? getPreview(selectedId) : null
+  const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1
+  const rangeEnd = Math.min((page + 1) * PAGE_SIZE, total)
+
+  // 페이지 버튼 윈도우 (최대 5개)
+  const pageButtons: number[] = []
+  const windowStart = Math.max(0, Math.min(page - 2, totalPages - 5))
+  for (let i = windowStart; i < Math.min(windowStart + 5, totalPages); i++) pageButtons.push(i)
+
+  const previewPath = detail
+    ? [detail.unitLarge, detail.unitMid, detail.skillNode].filter(Boolean).join(' › ')
+    : ''
 
   return (
     <section className="view">
       <div className="page-head">
         <div>
           <h2 className="section-title" style={{ marginBottom: 4 }}>{label} 문제 목록</h2>
-          <p className="page-sub">전체 {visible}문제 · 검수 대기 {pending}건</p>
+          <p className="page-sub">전체 {total.toLocaleString()}문제</p>
         </div>
       </div>
 
-      {/* 분류 필터: 대분류 › 중분류 › 소분류 — 수학 전용 */}
-      {isMath && <Cascader sel={cas} onChange={selectCas} />}
+      {/* 분류 캐스케이드 — 수학: 대분류›중분류›소분류(3단) · 영어: 영역›유형(2단) */}
+      <div className="cascader" style={isMath ? undefined : { gridTemplateColumns: '1fr 1fr' }}>
+        <div className="card cas-col">
+          <div className="cas-head">{isMath ? '대분류' : '영역'}</div>
+          <ul className="cas-list">
+            <li className={clsx(cas.big === null && 'on')} onClick={() => selectCas(EMPTY_CAS)}>
+              전체
+            </li>
+            {bigNodes.map((n) => (
+              <li
+                key={n.name}
+                className={clsx(cas.big === n.name && 'on')}
+                onClick={() => selectCas({ big: cas.big === n.name ? null : n.name, mid: null, small: null })}
+              >
+                {n.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="card cas-col">
+          <div className="cas-head">{isMath ? '중분류' : '유형'}</div>
+          <ul className="cas-list">
+            {cas.big ? (
+              midNodes.map((n) => (
+                <li
+                  key={n.name}
+                  className={clsx(cas.mid === n.name && 'on')}
+                  onClick={() => selectCas({ ...cas, mid: cas.mid === n.name ? null : n.name, small: null })}
+                >
+                  {n.name}
+                </li>
+              ))
+            ) : (
+              <li className="cas-empty">{isMath ? '대분류를 선택하세요' : '영역을 선택하세요'}</li>
+            )}
+          </ul>
+        </div>
+        {isMath && (
+          <div className="card cas-col">
+            <div className="cas-head">소분류</div>
+            <ul className="cas-list">
+              {cas.big && cas.mid ? (
+                smallNodes.map((n) => (
+                  <li
+                    key={n.name}
+                    className={clsx(cas.small === n.name && 'on')}
+                    onClick={() => selectCas({ ...cas, small: cas.small === n.name ? null : n.name })}
+                  >
+                    {n.name}
+                  </li>
+                ))
+              ) : (
+                <li className="cas-empty">중분류를 선택하세요</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className={clsx('list-layout', selectedId != null && 'open')}>
         <div className="card">
           <div className="toolbar">
             <div className="search-box">
               <IcoSearch />
-              <input type="text" placeholder="문제 제목, ID로 검색" />
+              <input
+                type="text"
+                placeholder="문제 ID, 발문으로 검색"
+                value={qInput}
+                onChange={(e) => setQInput(e.target.value)}
+              />
             </div>
-            <select className="select">
-              <option>전체 상태</option>
-              <option>게시 중</option>
-              <option>검수 대기</option>
-              <option>비공개</option>
+            <select
+              className="select"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value as '' | ProblemStatus)
+                setPage(0)
+              }}
+            >
+              <option value="">전체 상태</option>
+              <option value="ACTIVE">게시 중</option>
+              <option value="INACTIVE">비공개</option>
             </select>
-            <select className="select">
-              <option>전체 난이도</option>
-              <option>쉬움</option>
-              <option>보통</option>
-              <option>어려움</option>
-            </select>
+            {isMath && (
+              <select
+                className="select"
+                value={difficulty}
+                onChange={(e) => {
+                  setDifficulty(e.target.value as '' | Difficulty)
+                  setPage(0)
+                }}
+              >
+                <option value="">전체 난이도</option>
+                <option value="BASIC">쉬움 (2점)</option>
+                <option value="NORMAL">보통 (3점)</option>
+                <option value="ADVANCED">어려움 (4점)</option>
+              </select>
+            )}
             <div className="spacer" />
             <div className="toolbar-pg">
-              <span className="info num">1–{visible} / {visible}건</span>
+              <span className="info num">
+                {rangeStart}–{rangeEnd} / {total.toLocaleString()}건
+              </span>
               <div className="pages">
-                <button>‹</button>
-                <button className="on num">1</button>
-                <button className="num">2</button>
-                <button className="num">3</button>
-                <button className="num">4</button>
-                <span style={{ alignSelf: 'center', color: 'var(--color-muted)' }}>…</span>
-                <button className="num">1606</button>
-                <button>›</button>
+                <button disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+                {pageButtons.map((p) => (
+                  <button key={p} className={clsx('num', p === page && 'on')} onClick={() => setPage(p)}>
+                    {p + 1}
+                  </button>
+                ))}
+                <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>›</button>
               </div>
             </div>
           </div>
 
-          {isMath ? (
-            /* 수학 문제 목록: ID · 대단원 · 중단원 · 소단원 · 점수 · 렌더타입 · 상태 · 풀이 수 · 등록일 */
-            <div className="table-wrap">
-              <table>
-                <thead>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                {isMath ? (
                   <tr>
-                    <th style={{ width: 110 }}>ID</th>
-                    <th style={{ width: 160 }}>대단원</th>
-                    <th style={{ width: 220 }} className="col-mid">중단원</th>
-                    <th style={{ width: 220 }}>소단원</th>
+                    <th style={{ width: 150 }}>ID</th>
+                    <th style={{ width: 150 }}>대단원</th>
+                    <th style={{ width: 210 }} className="col-mid">중단원</th>
+                    <th style={{ width: 210 }}>소단원</th>
                     <th style={{ width: 70 }}>점수</th>
-                    <th style={{ width: 112 }} className="col-render">렌더타입</th>
                     <th style={{ width: 120 }}>상태</th>
-                    <th style={{ width: 90, textAlign: 'right' }} className="col-solves">풀이 수</th>
                     <th style={{ width: 120 }} className="col-date">등록일</th>
                     <th style={{ width: 80 }} />
                   </tr>
-                </thead>
-                <tbody>
-                  {mathRows.map((p) => (
-                    <tr
-                      key={p.id}
-                      className={clsx(selectedId === p.id && 'selected')}
-                      onClick={() => toggleRow(p.id)}
-                    >
-                      <td className="num" style={{ color: 'var(--color-muted)' }}>#{p.id}</td>
-                      <td className="strong">{p.big}</td>
-                      <td className="col-mid">{p.mid}</td>
-                      <td>{p.small}</td>
-                      <td className="num">{p.score}점</td>
-                      <td className="col-render"><span className="badge neutral">{p.render}</span></td>
-                      <td><span className={`badge ${p.status}`}>{STATUS_LABEL[p.status]}</span></td>
-                      <td className="num col-solves" style={{ textAlign: 'right' }}>{p.solves.toLocaleString()}</td>
-                      <td className="num col-date">{p.date}</td>
-                      <td><button className="btn btn-ghost btn-sm">상세</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* 영어 문제 목록 */
-            <div className="table-wrap">
-              <table>
-                <thead>
+                ) : (
                   <tr>
-                    <th style={{ width: 110 }}>ID</th>
-                    <th>문제</th>
-                    <th style={{ width: 90 }}>난이도</th>
+                    <th style={{ width: 210 }}>ID</th>
+                    <th style={{ width: 180 }}>영역</th>
+                    <th style={{ width: 160 }}>유형</th>
+                    <th style={{ width: 70 }}>점수</th>
                     <th style={{ width: 120 }}>상태</th>
-                    <th style={{ width: 90, textAlign: 'right' }} className="col-solves">풀이 수</th>
                     <th style={{ width: 120 }} className="col-date">등록일</th>
                     <th style={{ width: 80 }} />
                   </tr>
-                </thead>
-                <tbody>
-                  {ENGLISH_PROBLEMS.map((p) => (
-                    <tr
-                      key={p.id}
-                      className={clsx(selectedId === p.id && 'selected')}
-                      onClick={() => toggleRow(p.id)}
-                    >
-                      <td className="num" style={{ color: 'var(--color-muted)' }}>#{p.id}</td>
-                      <td className="strong">
-                        {p.title}
-                        <span className="sub">{p.sub}</span>
-                      </td>
-                      <td><span className={`diff d${p.diff}`}>{DIFF_LABEL[p.diff]}</span></td>
-                      <td><span className={`badge ${p.status}`}>{STATUS_LABEL[p.status]}</span></td>
-                      <td className="num col-solves" style={{ textAlign: 'right' }}>{p.solves.toLocaleString()}</td>
-                      <td className="num col-date">{p.date}</td>
-                      <td><button className="btn btn-ghost btn-sm">상세</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                )}
+              </thead>
+              <tbody>
+                {rows.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={clsx(selectedId === p.id && 'selected')}
+                    onClick={() => toggleRow(p.id)}
+                  >
+                    <td className="num" style={{ color: 'var(--color-muted)' }}>{p.id}</td>
+                    <td className="strong">{p.unitLarge}</td>
+                    {isMath && <td className="col-mid">{p.unitMid}</td>}
+                    <td>
+                      {p.skillNode}
+                      {!isMath && EN_TYPE_LABEL[p.skillNode] && (
+                        <span className="sub">{EN_TYPE_LABEL[p.skillNode]}</span>
+                      )}
+                    </td>
+                    <td className="num">{p.points}점</td>
+                    <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
+                    <td className="num col-date">{formatDate(p.createdAt)}</td>
+                    <td><button className="btn btn-ghost btn-sm">상세</button></td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ color: 'var(--color-muted)', textAlign: 'center', padding: 32 }}>
+                      조건에 맞는 문제가 없어요
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* 문제 미리보기 (500px) */}
@@ -193,88 +380,57 @@ export default function ProblemListPage() {
               <div>
                 <div className="card-title">문제 미리보기</div>
                 <div className="card-sub">
-                  {preview
-                    ? `#${selectedId} · ${preview.path}`
+                  {detail
+                    ? `${detail.id} · ${previewPath}`
                     : selectedId != null
-                      ? '미리보기가 등록되지 않은 문제예요'
+                      ? '불러오는 중…'
                       : '문제를 선택하세요'}
                 </div>
               </div>
             </div>
-            {preview && (
-              <div className="pv-body">
-                <div className="pv-question"><KatexText text={preview.q} /></div>
-                {preview.passage && <div className="pv-passage">{preview.passage}</div>}
-                <div className="pv-score">[{preview.score}]</div>
-                <div className="pv-choices">
-                  {preview.choices.map((c, i) => (
-                    <span key={i} className="choice">
-                      <span className="choice-num">{i + 1}</span>
-                      <span><KatexText text={c} /></span>
-                    </span>
-                  ))}
+            {detail && (
+              <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
+                {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
+                <div className="pv-question">
+                  <ExamText text={detail.question} /> [{detail.points}점]
                 </div>
+                {detail.passage && (
+                  /* lang="en" — 브라우저 하이픈 분철(hyphens: auto) 활성화 조건 */
+                  <div className="pv-passage" lang={detail.subject === 'ENGLISH' ? 'en' : undefined}>
+                    <ExamText text={detail.passage} />
+                  </div>
+                )}
+                {Object.keys(detail.glossary).length > 0 && (
+                  <div className="pv-glossary">
+                    {Object.entries(detail.glossary)
+                      .map(([word, meaning], i) => `${'*'.repeat(i + 1)} ${word}: ${meaning}`)
+                      .join('   ')}
+                  </div>
+                )}
+                {detail.choices.length > 0 && (
+                  <div className="pv-choices">
+                    {detail.choices.map((c, i) => {
+                      const correct = detail.answerNumber === i + 1
+                      return (
+                        <span key={i} className={clsx('choice', correct && 'correct')}>
+                          {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
+                          <span className="choice-num">
+                            {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                          </span>
+                          <span><ExamText text={c} /></span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {detail.choices.length === 0 && (
+                  <div className="pv-score">단답형 · 정답 <ExamText text={detail.answerText} /></div>
+                )}
               </div>
             )}
           </div>
         </aside>
       </div>
     </section>
-  )
-}
-
-function Cascader({ sel, onChange }: { sel: CasSel; onChange: (next: CasSel) => void }) {
-  const toggleBig = (v: string) =>
-    onChange({ big: sel.big === v ? null : v, mid: null, small: null })
-  const toggleMid = (v: string) => onChange({ ...sel, mid: sel.mid === v ? null : v, small: null })
-  const toggleSmall = (v: string) => onChange({ ...sel, small: sel.small === v ? null : v })
-
-  return (
-    <div className="cascader">
-      <div className="card cas-col">
-        <div className="cas-head">대분류</div>
-        <ul className="cas-list">
-          <li
-            className={clsx(sel.big === null && 'on')}
-            onClick={() => onChange({ big: null, mid: null, small: null })}
-          >
-            전체
-          </li>
-          {Object.keys(UNITS).map((k) => (
-            <li key={k} className={clsx(sel.big === k && 'on')} onClick={() => toggleBig(k)}>
-              {k}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="card cas-col">
-        <div className="cas-head">중분류</div>
-        <ul className="cas-list">
-          {sel.big ? (
-            Object.keys(UNITS[sel.big]).map((k) => (
-              <li key={k} className={clsx(sel.mid === k && 'on')} onClick={() => toggleMid(k)}>
-                {k}
-              </li>
-            ))
-          ) : (
-            <li className="cas-empty">대분류를 선택하세요</li>
-          )}
-        </ul>
-      </div>
-      <div className="card cas-col">
-        <div className="cas-head">소분류</div>
-        <ul className="cas-list">
-          {sel.big && sel.mid ? (
-            UNITS[sel.big][sel.mid].map((k) => (
-              <li key={k} className={clsx(sel.small === k && 'on')} onClick={() => toggleSmall(k)}>
-                {k}
-              </li>
-            ))
-          ) : (
-            <li className="cas-empty">중분류를 선택하세요</li>
-          )}
-        </ul>
-      </div>
-    </div>
   )
 }

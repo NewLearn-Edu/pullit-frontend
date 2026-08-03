@@ -46,3 +46,89 @@ export async function importProblemFile(file: File): Promise<ProblemImportResult
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 문제 목록 · 상세 · 분류 필터
+// ---------------------------------------------------------------------------
+
+export type ApiSubject = 'MATH' | 'ENGLISH'
+export type ProblemStatus = 'ACTIVE' | 'INACTIVE'
+export type Difficulty = 'BASIC' | 'NORMAL' | 'ADVANCED'
+
+export interface ProblemListItem {
+  id: string
+  unitLarge: string | null
+  unitMid: string | null
+  skillNode: string
+  points: number
+  renderCode: string
+  difficulty: Difficulty | null
+  status: ProblemStatus
+  createdAt: string
+}
+
+export interface ProblemPage {
+  content: ProblemListItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+/** 분류 캐스케이드 트리 — 수학 3단(대·중·소분류) · 영어 2단(영역·유형) */
+export interface FilterNode {
+  name: string
+  count: number
+  children: FilterNode[]
+}
+
+export interface ProblemDetail {
+  id: string
+  subject: ApiSubject
+  unitLarge: string | null
+  unitMid: string | null
+  skillNode: string
+  points: number
+  renderCode: string
+  question: string
+  passage: string | null
+  choices: string[]
+  answerNumber: number
+  answerText: string
+  explanation: string
+  difficulty: Difficulty | null
+  status: ProblemStatus
+  /** 지문 하단 단어 주석 (예: { mandate: "명령" }) — 수능 "* 단어: 뜻" 렌더링용 */
+  glossary: Record<string, string>
+}
+
+export interface ProblemListParams {
+  subject: ApiSubject
+  unitLarge?: string
+  unitMid?: string
+  skillNode?: string
+  status?: ProblemStatus
+  difficulty?: Difficulty
+  q?: string
+  page?: number
+  size?: number
+}
+
+export async function fetchProblems(params: ProblemListParams): Promise<ProblemPage> {
+  const { data } = await adminApi.get<BaseResponse<ProblemPage>>('/api/admin/problems', { params })
+  return data.data
+}
+
+export async function fetchProblemFilters(subject: ApiSubject): Promise<FilterNode[]> {
+  const { data } = await adminApi.get<BaseResponse<FilterNode[]>>('/api/admin/problems/filters', {
+    params: { subject },
+  })
+  return data.data
+}
+
+export async function fetchProblemDetail(id: string): Promise<ProblemDetail> {
+  const { data } = await adminApi.get<BaseResponse<ProblemDetail>>(
+    `/api/admin/problems/${encodeURIComponent(id)}`,
+  )
+  return data.data
+}
