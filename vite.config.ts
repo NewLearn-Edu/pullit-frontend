@@ -16,6 +16,14 @@ export default defineConfig({
         background_color: '#FFFFFF',
         display: 'standalone',
         start_url: '/',
+        icons: [
+          {
+            src: '/logo_pullit_favicon.png',
+            sizes: '200x200',
+            type: 'image/png',
+            purpose: 'any',
+          },
+        ],
       },
     }),
   ],
