@@ -19,7 +19,7 @@ export default function MembersPage() {
       setMe(result)
       setMeLoaded(true)
     })
-    fetchAdminUsers()
+    fetchAdminUsers('ADMIN')
       .then((list) => {
         setAdmins(list)
         setListState('done')
@@ -78,19 +78,17 @@ export default function MembersPage() {
                   <th style={{ width: 160 }}>이름</th>
                   <th>이메일</th>
                   <th style={{ width: 140 }}>가입일</th>
-                  <th style={{ width: 100 }}>권한</th>
+                  <th style={{ width: 120, textAlign: 'center' }}>권한</th>
                 </tr>
               </thead>
               <tbody>
                 {admins.map((a) => (
                   <tr key={a.id}>
-                    <td className="strong">
-                      {displayName(a.name, a.nickname)}
-                      {me?.id === a.id && <span className="badge neutral" style={{ marginLeft: 8 }}>나</span>}
-                    </td>
+                    <td className="strong">{displayName(a.name, a.nickname)}</td>
                     <td>{a.email ?? '—'}</td>
                     <td className="num">{a.createdAt?.slice(0, 10) ?? '—'}</td>
-                    <td>
+                    {/* 전역 td 말줄임 (text-overflow: ellipsis) 이 배지 뒤에 "…" 를 만들어 해제 */}
+                    <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
                       <span className="badge live">관리자</span>
                     </td>
                   </tr>

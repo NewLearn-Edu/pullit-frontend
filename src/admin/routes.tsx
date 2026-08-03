@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage'
 import ProblemListPage from './pages/ProblemListPage'
 import ProblemUploadPage from './pages/ProblemUploadPage'
 import MembersPage from './pages/MembersPage'
+import AllMembersPage from './pages/AllMembersPage'
 import './admin.css'
 
 /**
@@ -42,6 +43,7 @@ export default function AdminRoutes() {
         <Route path="problems/:subject" element={<ProblemListPage />} />
         <Route path="upload/:subject" element={<ProblemUploadPage />} />
         <Route path="members" element={<MembersPage />} />
+        <Route path="members/all" element={<AllMembersPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>

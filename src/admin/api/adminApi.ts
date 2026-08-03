@@ -163,17 +163,30 @@ export async function fetchProblemDetail(id: string): Promise<ProblemDetail> {
 // 관리자 계정
 // ---------------------------------------------------------------------------
 
+export type UserRole = 'USER' | 'PAID_USER' | 'ADMIN'
+
 export interface AdminUser {
   id: number
   name: string | null
   nickname: string | null
   email: string | null
-  role: 'USER' | 'ADMIN'
+  role: UserRole
   createdAt: string
 }
 
-/** 관리자(ADMIN) 계정 목록 — users 테이블 실데이터 */
-export async function fetchAdminUsers(): Promise<AdminUser[]> {
-  const { data } = await adminApi.get<BaseResponse<AdminUser[]>>('/api/admin/users')
+/** 회원 목록 — role 지정 시 해당 권한만 (예: 'ADMIN'), 미지정 시 전체 */
+export async function fetchAdminUsers(role?: UserRole): Promise<AdminUser[]> {
+  const { data } = await adminApi.get<BaseResponse<AdminUser[]>>('/api/admin/users', {
+    params: role ? { role } : undefined,
+  })
+  return data.data
+}
+
+/** 회원 권한 변경 */
+export async function updateUserRole(userId: number, role: UserRole): Promise<AdminUser> {
+  const { data } = await adminApi.patch<BaseResponse<AdminUser>>(
+    `/api/admin/users/${userId}/role`,
+    { role },
+  )
   return data.data
 }

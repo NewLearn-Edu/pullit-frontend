@@ -92,7 +92,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
         </button>
         <button
           className={clsx('rail-item', isMember && 'active')}
-          onClick={() => navigate('/admin/members')}
+          onClick={() => navigate('/admin/members/all')}
         >
           <span className="rico"><IcoMember /></span>
           <span>회원</span>
@@ -132,7 +132,11 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
         {isMember && (
           <>
             <div className="nav-label">회원</div>
-            <NavLink to="/admin/members" className={navClass}>
+            <NavLink to="/admin/members/all" className={navClass}>
+              <span className="ico"><IcoMember /></span>
+              전체 회원
+            </NavLink>
+            <NavLink to="/admin/members" end className={navClass}>
               <span className="ico"><IcoMember /></span>
               관리자 계정
             </NavLink>
