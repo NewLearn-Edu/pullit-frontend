@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchAdminUsers,
   updateUserRole,
@@ -30,6 +30,9 @@ export default function AllMembersPage() {
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
   // 권한 선택 드롭다운이 열려있는 대상 userId (null = 닫힘)
   const [editingId, setEditingId] = useState<number | null>(null)
+  // 드롭다운 안에서 hover 중인 항목 (권한별 배지색 하이라이트용)
+  const [hoveredRole, setHoveredRole] = useState<UserRole | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchAdminUsers()
@@ -40,8 +43,23 @@ export default function AllMembersPage() {
       .catch(() => setState('error'))
   }, [])
 
+  // 드롭다운 밖 클릭 시 닫기
+  useEffect(() => {
+    if (editingId == null) return
+    const handler = (e: Event) => {
+      const target = e.target as HTMLElement
+      // 드롭다운 내부 · 배지 버튼 클릭은 무시 (배지는 자체 토글 처리)
+      if (dropdownRef.current?.contains(target)) return
+      if (target.closest?.('[data-role-badge]')) return
+      setEditingId(null)
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [editingId])
+
   const handleRoleSelect = async (user: AdminUser, next: UserRole) => {
     setEditingId(null)
+    setHoveredRole(null)
     if (next === user.role) return
 
     const name = user.name ?? user.nickname ?? '회원'
@@ -106,36 +124,72 @@ export default function AllMembersPage() {
                         position: 'relative',
                       }}
                     >
-                      {editingId === u.id ? (
-                        // 클릭 시 유저/관리자 선택 드롭다운
-                        <span style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            className="badge neutral"
-                            style={{ cursor: 'pointer', border: 'none' }}
-                            onClick={() => handleRoleSelect(u, 'USER')}
-                          >
-                            유저
-                          </button>
-                          <button
-                            type="button"
-                            className="badge live"
-                            style={{ cursor: 'pointer', border: 'none' }}
-                            onClick={() => handleRoleSelect(u, 'ADMIN')}
-                          >
-                            관리자
-                          </button>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className={ROLE_BADGE[u.role]}
-                          style={{ cursor: 'pointer', border: 'none' }}
-                          onClick={() => setEditingId(u.id)}
-                          title="클릭해서 권한 변경"
+                      {/* 배지는 항상 표시 · 클릭 시 아래로 드롭다운 메뉴 */}
+                      <button
+                        type="button"
+                        data-role-badge
+                        className={ROLE_BADGE[u.role]}
+                        style={{ cursor: 'pointer', border: 'none' }}
+                        onClick={() => setEditingId(editingId === u.id ? null : u.id)}
+                        title="클릭해서 권한 변경"
+                      >
+                        {ROLE_LABEL[u.role]}
+                      </button>
+
+                      {editingId === u.id && (
+                        <div
+                          ref={dropdownRef}
+                          className="card"
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(50% + 18px)',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 30,
+                            minWidth: 120,
+                            padding: 6,
+                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)',
+                          }}
                         >
-                          {ROLE_LABEL[u.role]}
-                        </button>
+                          {(['USER', 'ADMIN'] as const).map((r) => {
+                            const hovered = hoveredRole === r
+                            return (
+                              <button
+                                key={r}
+                                type="button"
+                                style={{
+                                  display: 'flex',
+                                  width: '100%',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: '9px 12px',
+                                  border: 'none',
+                                  borderRadius: 8,
+                                  cursor: 'pointer',
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  transition: 'background 0.12s, color 0.12s',
+                                  // hover 시 해당 권한의 연한 배지색으로
+                                  background: hovered
+                                    ? r === 'ADMIN'
+                                      ? 'var(--color-accent-soft)'
+                                      : 'var(--hidden-bg)'
+                                    : 'none',
+                                  color: hovered
+                                    ? r === 'ADMIN'
+                                      ? 'var(--green-text)'
+                                      : 'var(--color-muted)'
+                                    : 'var(--color-fg)',
+                                }}
+                                onMouseEnter={() => setHoveredRole(r)}
+                                onMouseLeave={() => setHoveredRole(null)}
+                                onClick={() => handleRoleSelect(u, r)}
+                              >
+                                {ROLE_LABEL[r]}
+                              </button>
+                            )
+                          })}
+                        </div>
                       )}
                     </td>
                   </tr>
