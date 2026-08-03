@@ -1,10 +1,12 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import axios from 'axios'
 import clsx from 'clsx'
 import { RichText } from '../components/RichText'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
+import { importProblemFile, type ProblemImportResult } from '../api/adminApi'
 
 const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어' }
 
@@ -23,9 +25,12 @@ export default function ProblemUploadPage() {
 
   const [items, setItems] = useState<UploadItem[]>([])
   const [idx, setIdx] = useState(0)
+  const [file, setFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState('')
   const [filePath, setFilePath] = useState('')
   const [over, setOver] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState<ProblemImportResult | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   if (!label) return <Navigate to="/admin/upload/math" replace />
@@ -49,11 +54,28 @@ export default function ProblemUploadPage() {
       }
       setItems(parsed as UploadItem[])
       setIdx(0)
+      setFile(file)
+      setResult(null)
       setFileName(file.name)
       const code = file.name.replace(/\.(jsonl|json)$/i, '')
       setFilePath(codeToPath(code) ?? '단원 자동 인식 실패 — 파일명이 2022_x_x_x 형식인지 확인해주세요')
     }
     reader.readAsText(file)
+  }
+
+  const onUpload = async () => {
+    if (!file || uploading) return
+    setUploading(true)
+    try {
+      const r = await importProblemFile(file)
+      setResult(r)
+      toast(`업로드 완료 · 신규 ${r.inserted.toLocaleString()} · 갱신 ${r.updated.toLocaleString()}${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`)
+    } catch (e) {
+      const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
+      toast(serverMsg ?? '업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const onDrop = (e: DragEvent) => {
@@ -65,6 +87,8 @@ export default function ProblemUploadPage() {
 
   const reset = () => {
     setItems([])
+    setFile(null)
+    setResult(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -122,11 +146,31 @@ export default function ProblemUploadPage() {
             <button className="btn btn-ghost" onClick={reset}>다른 파일</button>
             <button
               className="btn btn-primary"
-              onClick={() => toast(`${items.length.toLocaleString()}문항 업로드가 접수됐어요 · 검수 대기로 등록됩니다`)}
+              disabled={uploading}
+              onClick={onUpload}
             >
-              업로드하기
+              {uploading ? '업로드 중…' : '업로드하기'}
             </button>
           </div>
+
+          {result && (
+            <div className="card upl-summary">
+              <span className="badge neutral">DB 저장 완료</span>
+              <div className="t">
+                <b>
+                  총 {result.total.toLocaleString()}문항 · 신규 {result.inserted.toLocaleString()} · 갱신 {result.updated.toLocaleString()}
+                  {result.inactiveCount > 0 && ` · 비노출 ${result.inactiveCount.toLocaleString()}`}
+                  {result.failed > 0 && ` · 실패 ${result.failed.toLocaleString()}`}
+                </b>
+                {result.errors.length > 0 && (
+                  <span>
+                    {result.errors.slice(0, 5).map((er) => `${er.line}행 ${er.problemId ?? ''}: ${er.reason}`).join(' · ')}
+                    {result.failed > result.errors.length && ' …'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="card">
             <div className="viewer-head">
