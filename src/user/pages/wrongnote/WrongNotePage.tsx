@@ -39,7 +39,7 @@ export default function WrongNotePage() {
 
   return (
     <div className={styles.page}>
-      <UserNav active="wrongNote" credit={CREDIT} />
+      <UserNav active="wrongNote" />
 
       <main className={styles.main}>
         {/* 모바일 상단 헤더 */}

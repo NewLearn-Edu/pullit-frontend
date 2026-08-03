@@ -78,21 +78,33 @@
   color: inherit;
 }
 
-// 사이드바 하단 크레딧 필
-.creditPill {
+// 사이드바 하단 영역 (어드민 버튼 + 크레딧 필)
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin-top: auto;
+}
+
+// 어드민 콘솔 진입 버튼 (ADMIN 권한만 노출)
+.adminButton {
   display: inline-flex;
   align-items: center;
   gap: $space-sm;
-  margin-top: auto;
   padding: $space-md $space-lg;
   border-radius: $radius-btn-lg;
   background: $color-surface;
   font-size: $fs-body-sm;
   font-weight: $fw-semibold;
-  color: $color-foreground;
-}
+  color: $color-body;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
 
-.creditSpark { color: $color-primary; }
+  @include hover {
+    background: $color-line;
+    color: $color-foreground;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 하단 네비게이션 바 (< 1024px)

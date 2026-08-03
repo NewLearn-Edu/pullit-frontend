@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { useAuthStore } from '@/stores/authStore'
 import styles from './styles/UserNav.module.scss'
 
 export type UserNavKey = 'recommend' | 'free' | 'wrongNote' | 'report' | 'my'
 
 interface UserNavProps {
   active: UserNavKey
-  credit?: number
 }
 
 /**
@@ -15,7 +15,9 @@ interface UserNavProps {
  * - iPad · 모바일: 하단 네비 바 (추천 · 자유 문제 · 리포트 — 시안 175)
  * 자유 문제 · 리포트 · 마이페이지는 아직 페이지 없음 (POC 시각만).
  */
-export function UserNav({ active, credit = 5 }: UserNavProps) {
+export function UserNav({ active }: UserNavProps) {
+  const role = useAuthStore((s) => s.role)
+
   return (
     <>
       {/* 데스크탑 사이드바 */}
@@ -28,11 +30,17 @@ export function UserNav({ active, credit = 5 }: UserNavProps) {
           <NavItem icon={<DocIcon />} label="자유 문제" active={active === 'free'} />
           <NavItem to="/wrong-note" icon={<BookmarkIcon />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem icon={<ChartIcon />} label="리포트" active={active === 'report'} />
+          {/* 마이페이지 → /login 이동은 인증 붙은 뒤 "토큰 없을 때만" 조건 분기 예정 */}
           <NavItem icon={<PersonIcon />} label="마이페이지" active={active === 'my'} />
         </nav>
-        <span className={styles.creditPill}>
-          <span className={styles.creditSpark}>✦</span> 크레딧 {credit}
-        </span>
+        <div className={styles.footer}>
+          {/* ADMIN 권한일 때만 노출 · 어드민 콘솔 진입 */}
+          {role === 'admin' && (
+            <Link to="/admin" className={styles.adminButton}>
+              <GearIcon /> 어드민
+            </Link>
+          )}
+        </div>
       </aside>
 
       {/* iPad · 모바일 하단 네비 */}
@@ -124,6 +132,15 @@ function ChartIcon() {
       <path d="M5 21V13" />
       <path d="M12 21V7" />
       <path d="M19 21V3" />
+    </svg>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z" />
     </svg>
   )
 }

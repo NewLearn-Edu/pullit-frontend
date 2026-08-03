@@ -56,7 +56,7 @@ export default function HomePage() {
   return (
     <div className={styles.page}>
       {/* 공용 네비게이션 · 데스크탑 사이드바 + 모바일 하단 바 */}
-      <UserNav active="recommend" credit={CREDIT} />
+      <UserNav active="recommend" />
 
       <main className={styles.main}>
         {/* 모바일 · iPad 상단 헤더 */}
