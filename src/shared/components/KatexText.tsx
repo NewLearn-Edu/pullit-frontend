@@ -22,6 +22,13 @@ const enlargeSetOps = (tex: string) => tex.replace(/\\(cup|cap)\b/g, '\\mathbin{
  */
 const emboldenDelims = (html: string) =>
   html.replace(/>([[\]∣|])</g, '><span class="katex-delim-bold">$1</span><')
+
+/**
+ * 인라인 수식의 분수를 지면 크기로 — KaTeX 는 문장 속 \frac 을 축소형(textstyle)으로
+ * 그리는데, 수능 해설지는 문장 안 분수도 큰 형태라 \dfrac 으로 승격.
+ * (\dfrac 이 이미 쓰인 곳은 매칭되지 않아 그대로)
+ */
+const displaySizeFractions = (tex: string) => tex.replace(/\\frac\b/g, '\\dfrac')
 export function KatexText({ text }: { text: string }) {
   const parts = useMemo(() => parse(text), [text])
   return (
@@ -34,8 +41,12 @@ export function KatexText({ text }: { text: string }) {
             </span>
           )
         }
+        const source =
+          p.type === 'inline'
+            ? displaySizeFractions(enlargeSetOps(p.value))
+            : enlargeSetOps(p.value)
         const html = emboldenDelims(
-          katex.renderToString(enlargeSetOps(p.value), {
+          katex.renderToString(source, {
             throwOnError: false,
             displayMode: p.type === 'block',
           }),
