@@ -21,7 +21,6 @@ export default function LoginPage() {
     <div className={styles.page}>
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />
-        <p className={styles.subtitle}>로그인하면 풀이 기록과 크레딧을 안전하게 저장해요.</p>
 
         <div className={styles.buttons}>
           <button
@@ -47,7 +46,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <p className={styles.note}>가입 시 +5 크레딧 · 초대코드는 자동 매칭됩니다.</p>
+        <p className={styles.note}>하루 3문제 1등급 가능해.</p>
       </div>
     </div>
   )

@@ -39,13 +39,6 @@ $color-naver: #03C75A;
   @include tablet-up { width: 148px; }
 }
 
-.subtitle {
-  margin: $space-xl 0 0;
-  font-size: $fs-body;
-  color: $color-body;
-  text-align: center;
-}
-
 // 소셜 버튼 스택
 .buttons {
   display: flex;
