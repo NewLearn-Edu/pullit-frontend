@@ -2,7 +2,7 @@ import { useRef, useState, type DragEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
-import { RichText } from '../components/RichText'
+import { ExamText } from '@/shared/components/ExamText'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
@@ -10,12 +10,19 @@ import { importProblemFile, type ProblemImportResult } from '../api/adminApi'
 
 const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어' }
 
+/** 배점 미리보기 — 임포터와 동일 규칙 (수학 difficulty 매핑 · 영어 2점) */
+const POINTS_BY_DIFFICULTY: Record<string, number> = { basic: 2, normal: 3, advanced: 4 }
+
 interface UploadItem {
   id?: string | number
+  subject?: string
   question?: string
+  passage?: string
   choices?: string[]
   answer_no?: number
+  answer_text?: string
   explanation?: string
+  difficulty?: string
 }
 
 export default function ProblemUploadPage() {
@@ -186,30 +193,57 @@ export default function ProblemUploadPage() {
                 </button>
               </div>
             </div>
-            <div className="pv-body vw-body">
-              <div className="pv-question"><RichText text={item?.question ?? ''} /></div>
-              <div className="pv-choices">
-                {(item?.choices ?? []).map((c, i) => {
-                  const correct = item?.answer_no === i + 1
-                  return (
-                    <span key={i} className={clsx('choice', correct && 'correct')}>
-                      {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
-                      <span className="choice-num">
-                        {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
-                      </span>
-                      <span><RichText text={c} /></span>
-                    </span>
-                  )
-                })}
-              </div>
-              {item?.answer_no != null && <div className="vw-answer">정답 {item.answer_no}번</div>}
-              {/* key={idx} — 문항 이동 시 해설 접힘 상태 초기화 (프로토타입과 동일) */}
-              <details key={idx} className="vw-expl">
-                <summary>해설 보기</summary>
-                <div className="pv-question vw-expl-body">
-                  <RichText text={item?.explanation || '해설이 없어요'} />
+            {/* 문제·해설을 목록 미리보기 모달과 동일한 500px 프레임으로 세로 배치 */}
+            <div className="upl-preview">
+              <div className="pv-device web">
+                <div className="pv-device-inner">
+                  <div className={clsx('pv-body', subject === 'english' && 'en')}>
+                    <div className="pv-question">
+                      <ExamText text={item?.question ?? ''} />
+                      {(() => {
+                        const points =
+                          subject === 'english' ? 2 : POINTS_BY_DIFFICULTY[item?.difficulty ?? '']
+                        return points ? <> [{points}점]</> : null
+                      })()}
+                    </div>
+                    {item?.passage && (
+                      <div className="pv-passage" lang={subject === 'english' ? 'en' : undefined}>
+                        <ExamText text={item.passage} />
+                      </div>
+                    )}
+                    {(item?.choices?.length ?? 0) > 0 && (
+                      <div className="pv-choices">
+                        {(item?.choices ?? []).map((c, i) => {
+                          const correct = item?.answer_no === i + 1
+                          return (
+                            <span key={i} className={clsx('choice', correct && 'correct')}>
+                              {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
+                              <span className="choice-num">
+                                {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                              </span>
+                              <span><ExamText text={c} /></span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </details>
+              </div>
+              <div className="pv-modal-explain">
+                <p className="pv-label">정답</p>
+                <div className="pv-explain-body">
+                  {(item?.choices?.length ?? 0) > 0 && item?.answer_no != null ? (
+                    String.fromCodePoint(0x245f + item.answer_no)
+                  ) : (
+                    <ExamText text={String(item?.answer_text ?? item?.answer_no ?? '-')} />
+                  )}
+                </div>
+                <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
+                <div className="pv-explain-body">
+                  <ExamText text={item?.explanation || '해설이 없어요'} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

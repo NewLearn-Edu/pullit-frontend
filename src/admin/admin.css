@@ -606,6 +606,17 @@
     background: var(--color-canvas);
   }
   .pv-modal-explain.fixed-375 { flex: 0 0 375px; } /* 모바일 — 해설 영역도 정확히 375px */
+
+  /* 업로드 검토 — 목록 미리보기 모달과 동일: 왼쪽 문제(500px) · 오른쪽 해설 */
+  .upl-preview {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  @media (max-width: 1080px) {
+    .upl-preview { flex-direction: column; }
+    .upl-preview .pv-modal-explain { width: 100%; }
+  }
   .pv-label {
     font-size: 12px; font-weight: 600; color: var(--color-muted);
     margin: 0 0 8px;
