@@ -7,8 +7,8 @@ import katex from 'katex'
  * 예: "log₂ 8 의 값" · "$\\log_2 8$ 의 값" · "$$g(x) = f(x)+1$$"
  */
 
-/** 세로로 큰 인라인 수식(분수·적분·시그마 등) — 포함된 줄에 위아래 여백이 필요 */
-const TALL_MATH = /\\[dct]?frac|\\int|\\o?i+nt|\\sum|\\prod|\\binom|\\begin\{|\\displaystyle|\\overset|\\underset|\\stackrel/
+/** 세로로 큰 인라인 수식(분수·적분·시그마·근호·극한 등) — 포함된 줄에 위아래 여백이 필요 */
+const TALL_MATH = /\\[dct]?frac|\\int|\\o?i+nt|\\sum|\\prod|\\binom|\\begin\{|\\displaystyle|\\overset|\\underset|\\stackrel|\\sqrt|\\lim|\\overline/
 
 /**
  * 합집합(∪)·교집합(∩) 확대 — 수능 지면은 대문자 높이로 크게 조판한다.
@@ -31,6 +31,23 @@ const emboldenDelims = (html: string) =>
 const displaySizeFractions = (tex: string) => tex.replace(/\\frac\b/g, '\\dfrac')
 export function KatexText({ text }: { text: string }) {
   const parts = useMemo(() => parse(text), [text])
+
+  // 줄 전체가 수식 하나로 된 줄(해설의 = 등식 스택 등)은 크기와 무관하게
+  // 위아래 간격이 필요 — 개행 인접 여부로 판별. "$수식$이다." 처럼 짧은
+  // 한글 꼬리(≤8자)가 붙은 줄도 같은 취급. 개행 문맥이 아예 없는
+  // 단독 수식(선택지 값 등)은 제외해 기존 레이아웃 유지
+  const isOwnLine = (i: number) => {
+    const prev = parts[i - 1]
+    const next = parts[i + 1]
+    const prevNl = prev?.type === 'text' && /\n[ \t]*$/.test(prev.value)
+    const nextNl = next?.type === 'text' && /^[가-힣.,·()!?\s]{0,8}\n/.test(next.value)
+    const nextLastTail =
+      next?.type === 'text' &&
+      i + 1 === parts.length - 1 &&
+      /^[가-힣.,·()!?\s]{0,8}$/.test(next.value)
+    return (prevNl || !prev) && (nextNl || nextLastTail || !next) && (prevNl || nextNl)
+  }
+
   return (
     <span>
       {parts.map((p, i) => {
@@ -59,9 +76,10 @@ export function KatexText({ text }: { text: string }) {
             className={
               p.type === 'block'
                 ? 'katex-block block my-md overflow-x-auto text-center'
-                : TALL_MATH.test(p.value)
-                  ? // 큰 수식이 든 줄만 위아래 간격 확보 — tailwind .inline(display:inline)과
-                    // 충돌하면 패딩이 줄 높이에 반영되지 않으므로 katex-tall 단독 사용
+                : TALL_MATH.test(p.value) || isOwnLine(i)
+                  ? // 큰 수식이 든 줄·수식 단독 줄만 위아래 간격 확보 — tailwind
+                    // .inline(display:inline)과 충돌하면 패딩이 줄 높이에 반영되지
+                    // 않으므로 katex-tall 단독 사용
                     'katex-tall'
                   : 'inline'
             }
