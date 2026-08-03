@@ -7,9 +7,8 @@ import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { GradeMark } from '@/user/components/quiz/GradeMark'
-import { GuessCheckPopup } from '@/user/components/quiz/GuessCheckPopup'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
-import { KatexText } from '@/shared/components/KatexText'
+import { ExamText } from '@/shared/components/ExamText'
 import {
   getProblemsBySkillNode,
   getProblemsByEnglishType,
@@ -75,8 +74,6 @@ export default function TasteQuizPage() {
   const [resizing, setResizing] = useState(false)
   // 채점 상태 · 문제 헤더에 ○/사선 오버레이 표시용
   const [grading, setGrading] = useState<'none' | 'correct' | 'wrong'>('none')
-  // 10초 안에 정답 맞힘 → "찍은 거 같은데" 확인 팝업
-  const [guessCheckOpen, setGuessCheckOpen] = useState(false)
 
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const startAt = useRef<number>(Date.now())
@@ -89,7 +86,6 @@ export default function TasteQuizPage() {
     setPanelOpen(false)
     setPanelTab('explanation')
     setGrading('none')
-    setGuessCheckOpen(false)
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current)
       advanceTimerRef.current = null
@@ -173,22 +169,10 @@ export default function TasteQuizPage() {
     const effectiveCorrect = correct && !peeked
     setGrading(effectiveCorrect ? 'correct' : 'wrong')
 
-    if (effectiveCorrect && elapsedSec < 10) {
-      advanceTimerRef.current = window.setTimeout(() => {
-        setGuessCheckOpen(true)
-      }, 500)
-    } else {
-      advanceTimerRef.current = window.setTimeout(() => {
-        goNext()
-      }, 1100)
-    }
-  }
-
-  const handleGuessResponse = () => {
-    setGuessCheckOpen(false)
+    // 채점 마크 잔상 시간 후 자동 다음 문제
     advanceTimerRef.current = window.setTimeout(() => {
       goNext()
-    }, 250)
+    }, 1100)
   }
 
   // 선택한 과목의 문제만 풀고 완주 (2026-07-31 플로우 변경 · 과목 선택 페이지 도입)
@@ -315,7 +299,7 @@ export default function TasteQuizPage() {
                           {choiceNo}
                         </button>
                         <span className={styles.choiceValue}>
-                          <KatexText text={answerText} />
+                          <ExamText text={answerText} />
                         </span>
                       </div>
                     )
@@ -372,13 +356,6 @@ export default function TasteQuizPage() {
           resizing={resizing}
         />
       </div>
-
-      <GuessCheckPopup
-        open={guessCheckOpen}
-        elapsedSec={elapsedSec}
-        onSolved={handleGuessResponse}
-        onGuessed={handleGuessResponse}
-      />
     </div>
   )
 }
@@ -393,21 +370,21 @@ function ProblemBody({ problem }: { problem: Problem }) {
   return (
     <div className={styles.problemBody}>
       <div>
-        <KatexText text={problem.bodyText} />
+        <ExamText text={problem.bodyText} />
         {!hasConditions && !hasQuestion && pointsBadge}
       </div>
       {hasConditions && (
         <div className={styles.conditionsBox}>
           {problem.conditions!.map((c, i) => (
-            <div key={i}>
-              <KatexText text={c} />
+            <div key={i} className="pv-box-item">
+              <ExamText text={c} />
             </div>
           ))}
         </div>
       )}
       {hasQuestion && (
         <div>
-          <KatexText text={problem.question!} />
+          <ExamText text={problem.question!} />
           {pointsBadge}
         </div>
       )}
