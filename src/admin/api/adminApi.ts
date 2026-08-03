@@ -190,3 +190,23 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<Ad
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 대시보드
+// ---------------------------------------------------------------------------
+
+export interface DashboardStats {
+  totalUsers: number
+  todayUsers: number
+  totalProblems: number
+  /** attempts 미구현 — 백엔드가 0 고정 반환 (풀이기록 도메인 구축 시 실데이터) */
+  todaySolved: number
+}
+
+/** 대시보드 상단 KPI 통계 */
+export async function fetchDashboardStats(): Promise<DashboardStats> {
+  const { data } = await adminApi.get<BaseResponse<DashboardStats>>(
+    '/api/admin/dashboard/stats',
+  )
+  return data.data
+}

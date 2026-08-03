@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { StatCard } from '../components/StatCard'
+import { fetchDashboardStats, type DashboardStats } from '../api/adminApi'
 
 const RANKING = [
   { rank: 1, up: true, name: '2026 수능 대비 미적분 킬러 모음 #14', pct: '+380%', hot: true },
@@ -15,15 +17,29 @@ const TODOS = [
   { ico: '🖼️', bg: 'var(--color-accent-soft)', title: '이미지 누락 문제', sub: '지문 이미지 재업로드 필요', count: 2, hot: false },
 ]
 
+/** 숫자 표시 · 로딩 중엔 — */
+const fmt = (n: number | undefined) => (n == null ? '—' : n.toLocaleString())
+
 export default function DashboardPage() {
   const navigate = useNavigate()
+
+  // 상단 KPI · GET /api/admin/dashboard/stats 실데이터
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  useEffect(() => {
+    fetchDashboardStats()
+      .then(setStats)
+      .catch(() => setStats(null))
+  }, [])
+
+  const today = new Date()
+  const dateLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 기준`
 
   return (
     <section className="view">
       <div className="page-head">
         <div>
           <h1 className="page-title">대시보드</h1>
-          <p className="page-sub">2026년 7월 24일 기준 · 오전 10시 50분 업데이트</p>
+          <p className="page-sub">{dateLabel}</p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/admin/upload/math')}>
           + 문제 업로드
@@ -31,10 +47,16 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid-stats">
-        <StatCard label="전체 문제" value="12,847" delta="▲ 214 이번 주" tone="good" />
-        <StatCard label="오늘 업로드" value="36" delta="▲ 12% 어제 대비" tone="good" />
-        <StatCard label="검수 대기" value="18" valueColor="var(--color-primary)" delta="3건 지연 중" tone="up" />
-        <StatCard label="오늘 풀이 수" value="4,203" delta="— 어제와 비슷" tone="flat" />
+        <StatCard label="전체 회원수" value={fmt(stats?.totalUsers)} delta="누적 가입 기준" tone="flat" />
+        <StatCard
+          label="오늘 가입 수"
+          value={fmt(stats?.todayUsers)}
+          valueColor={stats && stats.todayUsers > 0 ? 'var(--color-primary)' : undefined}
+          delta="오늘 00시 이후"
+          tone={stats && stats.todayUsers > 0 ? 'good' : 'flat'}
+        />
+        <StatCard label="전체 문제 수" value={fmt(stats?.totalProblems)} delta="문제 은행 적재 기준" tone="flat" />
+        <StatCard label="오늘 풀린 문제수" value={fmt(stats?.todaySolved)} delta="풀이기록 연동 예정" tone="flat" />
       </div>
 
       <div className="grid-two">
