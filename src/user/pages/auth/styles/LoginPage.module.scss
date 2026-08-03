@@ -1,0 +1,98 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// LoginPage · 가입 및 로그인 (단독 페이지 · 리디자인 2026-08-03)
+// -----------------------------------------------------------------------------
+// 사이드바 없는 풀스크린 흰 배경 · 중앙에 로고 + 소셜 버튼만.
+// -----------------------------------------------------------------------------
+
+// 소셜 브랜드 컬러 (공식 가이드)
+$color-kakao: #FEE500;
+$color-kakao-text: rgba(0, 0, 0, 0.85);
+$color-naver: #03C75A;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: $space-xl $space-lg;
+  background: $color-canvas;
+}
+
+// 중앙 컨텐츠 컬럼
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+// 풀잇 워드마크 로고
+.logo {
+  width: 128px;
+  height: auto;
+
+  @include tablet-up { width: 148px; }
+}
+
+.subtitle {
+  margin: $space-xl 0 0;
+  font-size: $fs-body;
+  color: $color-body;
+  text-align: center;
+}
+
+// 소셜 버튼 스택
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  width: 100%;
+  margin-top: $space-xxl;
+}
+
+.socialButton {
+  @include button-reset;
+  @include flex-center;
+  height: 54px;
+  border-radius: $radius-btn-md;
+  font-size: $fs-body;
+  font-weight: $fw-semibold;
+  transition: opacity 150ms ease, background-color 150ms ease;
+
+  @include hover { opacity: 0.9; }
+  &:active { opacity: 0.85; }
+}
+
+.kakao {
+  background: $color-kakao;
+  color: $color-kakao-text;
+}
+
+.naver {
+  background: $color-naver;
+  color: #fff;
+}
+
+.google {
+  background: $color-canvas;
+  color: $color-foreground;
+  border: 1px solid $color-line;
+
+  @include hover {
+    opacity: 1;
+    background: $color-surface;
+  }
+}
+
+// 하단 안내 문구
+.note {
+  margin: $space-xl 0 0;
+  font-size: $fs-body-sm;
+  color: $color-muted;
+  text-align: center;
+}

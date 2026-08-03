@@ -1,12 +1,18 @@
 import axios from 'axios'
+import { getAccessToken } from '@/user/api/authApi'
 
 /** 백엔드 API 클라이언트 — VITE_API_BASE_URL 미설정 시 로컬 백엔드 기본값 */
 export const adminApi = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
 })
 
-// TODO: 어드민 로그인 연동 시 JWT Authorization 헤더 인터셉터 추가
-// (백엔드 /api/admin/** 은 ROLE_ADMIN 토큰 필요)
+// 로그인되어 있으면 JWT 를 자동 첨부 (배포 환경 /api/admin/** 은 ROLE_ADMIN 토큰 필수.
+// 로컬은 ADMIN_OPEN=true 로 토큰 없이도 허용)
+adminApi.interceptors.request.use((config) => {
+  const token = getAccessToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 export interface ImportLineError {
   line: number

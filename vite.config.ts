@@ -24,6 +24,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    // 로컬 개발 포트 고정 (dev 서버 전용 — 프로덕션 빌드/nginx 배포에는 영향 없음)
+    port: 3000,
+  },
+  preview: {
+    port: 3000,
+  },
   css: {
     modules: {
       // CSS Modules 클래스명에 파일명 포함 (네이버 방식) · dev/prod 동일

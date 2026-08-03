@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LandingPage from './user/pages/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
+import LoginPage from './user/pages/auth/LoginPage'
+import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
@@ -21,6 +23,8 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/wrong-note" element={<WrongNotePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
