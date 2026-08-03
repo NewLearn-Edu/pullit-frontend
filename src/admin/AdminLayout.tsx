@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
+import { fetchMe, type MeResult } from '@/user/api/authApi'
 import { ToastProvider, useToast } from './components/toast'
 import { ProblemKpi } from './components/ProblemKpi'
 import {
@@ -53,12 +54,19 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const navigate = useNavigate()
   const toast = useToast()
 
-  // 레일 섹션: 대시보드 = home, 목록·업로드 = problem
+  // 현재 로그인 사용자 (GET /api/users/me) · 비로그인·오류 시 null → 폴백 표시
+  const [me, setMe] = useState<MeResult | null>(null)
+  useEffect(() => {
+    fetchMe().then(setMe)
+  }, [])
+  const meName = me?.name ?? me?.nickname ?? '관리자'
+
+  // 레일 섹션: 대시보드 = home, 목록·업로드 = problem, 회원 = member
   const isProblem = pathname.includes('/problems/') || pathname.includes('/upload/')
+  const isMember = pathname.includes('/members')
   const isList = pathname.includes('/problems/')
 
   const soonMenus = [
-    { name: '회원', ico: <IcoMember /> },
     { name: '통계', ico: <IcoStats /> },
     { name: '설정', ico: <IcoSettings /> },
   ]
@@ -69,7 +77,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
     <>
       <nav className="rail">
         <button
-          className={clsx('rail-item', !isProblem && 'active')}
+          className={clsx('rail-item', !isProblem && !isMember && 'active')}
           onClick={() => navigate('/admin')}
         >
           <span className="rico"><IcoHome /></span>
@@ -81,6 +89,13 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
         >
           <span className="rico"><IcoProblem /></span>
           <span>문제</span>
+        </button>
+        <button
+          className={clsx('rail-item', isMember && 'active')}
+          onClick={() => navigate('/admin/members')}
+        >
+          <span className="rico"><IcoMember /></span>
+          <span>회원</span>
         </button>
         {soonMenus.map(({ name, ico }) => (
           <button
@@ -107,11 +122,21 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
           pullit <small>admin</small>
         </div>
 
-        {!isProblem && (
+        {!isProblem && !isMember && (
           <NavLink to="/admin" end className={navClass}>
             <span className="ico"><IcoDashboard /></span>
             대시보드
           </NavLink>
+        )}
+
+        {isMember && (
+          <>
+            <div className="nav-label">회원</div>
+            <NavLink to="/admin/members" className={navClass}>
+              <span className="ico"><IcoMember /></span>
+              관리자 계정
+            </NavLink>
+          </>
         )}
 
         {isProblem && (
@@ -138,11 +163,12 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
           </>
         )}
 
+        {/* 현재 로그인 사용자 · /api/users/me 실데이터 (비로그인 시 폴백 "관리자") */}
         <div className="sidebar-foot">
-          <span className="avatar">YK</span>
+          <span className="avatar">{meName.charAt(0)}</span>
           <div className="who">
-            <b>유이현</b>
-            <span>관리자</span>
+            <b>{meName}</b>
+            <span>{me?.role === 'ADMIN' ? '관리자' : me ? '회원' : '미로그인'}</span>
           </div>
         </div>
       </aside>

@@ -139,3 +139,34 @@ export async function getValidAccessToken(): Promise<string | null> {
     return null
   }
 }
+
+// ---------------------------------------------------------------------------
+// 내 정보
+// ---------------------------------------------------------------------------
+
+export interface MeResult {
+  id: number
+  name: string | null
+  nickname: string | null
+  email: string | null
+  role: 'USER' | 'ADMIN'
+  creditBalance: number
+}
+
+/**
+ * 내 정보 조회 (GET /api/users/me).
+ * 비로그인·토큰 만료·오류 시 null — 호출부에서 폴백 처리.
+ */
+export async function fetchMe(): Promise<MeResult | null> {
+  const token = await getValidAccessToken()
+  if (!token) return null
+  try {
+    const { data } = await axios.get<BaseResponse<MeResult>>(
+      `${API_BASE}/api/users/me`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    return data.data
+  } catch {
+    return null
+  }
+}
