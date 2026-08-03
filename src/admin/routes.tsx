@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
+import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { fetchMe } from '@/user/api/authApi'
 import AdminLayout from './AdminLayout'
 import DashboardPage from './pages/DashboardPage'
 import ProblemListPage from './pages/ProblemListPage'
@@ -10,11 +11,29 @@ import './admin.css'
 /**
  * /admin/* 전체 라우트. App.tsx 에서 React.lazy 로 로드되므로
  * 어드민 코드·CSS는 유저 번들에 포함되지 않는다.
+ *
+ * 진입 가드 — /api/users/me 로 실검증:
+ * - 비로그인 · 토큰 만료/불량 → /login
+ * - 로그인했지만 ADMIN 아님 → /home
  */
 export default function AdminRoutes() {
-  const role = useAuthStore((s) => s.role)
-  // 권한 가드 — 로그인 연동 전에는 authStore 스텁(admin)이라 항상 통과
-  if (role !== 'admin') return <Navigate to="/" replace />
+  const [status, setStatus] = useState<'checking' | 'allowed'>('checking')
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    let alive = true
+    fetchMe().then((me) => {
+      if (!alive) return
+      if (!me) navigate('/login', { replace: true })
+      else if (me.role !== 'ADMIN') navigate('/home', { replace: true })
+      else setStatus('allowed')
+    })
+    return () => {
+      alive = false
+    }
+  }, [navigate])
+
+  if (status !== 'allowed') return null
 
   return (
     <Routes>
