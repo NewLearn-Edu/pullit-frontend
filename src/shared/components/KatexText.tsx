@@ -49,7 +49,9 @@ export function KatexText({ text }: { text: string }) {
               p.type === 'block'
                 ? 'katex-block block my-md overflow-x-auto text-center'
                 : TALL_MATH.test(p.value)
-                  ? 'inline katex-tall' // 큰 수식이 든 줄만 위아래 간격 확보 (CSS)
+                  ? // 큰 수식이 든 줄만 위아래 간격 확보 — tailwind .inline(display:inline)과
+                    // 충돌하면 패딩이 줄 높이에 반영되지 않으므로 katex-tall 단독 사용
+                    'katex-tall'
                   : 'inline'
             }
             dangerouslySetInnerHTML={{ __html: html }}

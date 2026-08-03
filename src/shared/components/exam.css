@@ -25,3 +25,21 @@
 .katex-delim-bold {
   font-weight: 700;
 }
+
+/* ── KaTeX 조판 보정 (문제·해설·학생 화면 공통) ──────────────────
+   KaTeX 기본(1.21em)은 한글 본문보다 커서 줄이 튐 → 본문 크기에 맞춤 */
+.katex {
+  font-size: 1.02em;
+}
+
+/* 블록 수식($$) — 수능 지면은 본문 한 줄 높이만큼 띄운다.
+   overflow-x:auto 가 세로 스크롤바까지 만들지 않게 세로는 숨김 (패딩으로 글리프 여유).
+   span 셀렉터는 tailwind 유틸(my-md)보다 우선순위 확보용 */
+span.katex-block {
+  margin: 18px 0;
+  padding: 3px 0;
+  overflow-y: hidden;
+}
+.katex-display {
+  margin: 0;
+}
