@@ -158,3 +158,22 @@ export async function fetchProblemDetail(id: string): Promise<ProblemDetail> {
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 관리자 계정
+// ---------------------------------------------------------------------------
+
+export interface AdminUser {
+  id: number
+  name: string | null
+  nickname: string | null
+  email: string | null
+  role: 'USER' | 'ADMIN'
+  createdAt: string
+}
+
+/** 관리자(ADMIN) 계정 목록 — users 테이블 실데이터 */
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  const { data } = await adminApi.get<BaseResponse<AdminUser[]>>('/api/admin/users')
+  return data.data
+}
