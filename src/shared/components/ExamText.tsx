@@ -154,7 +154,7 @@ function toAlignedTex(rows: string[]): string {
   const body = [
     hasAnchor ? anchored : `&${rows[0]}`,
     ...rows.slice(1).map((r) => (r.startsWith('=') ? `&${r}` : `&\\quad ${r}`)),
-  ].join(' \\\\[6pt] ')
+  ].join(' \\\\[10pt] ')
   return `\\begin{aligned}${body}\\end{aligned}`
 }
 
@@ -292,7 +292,7 @@ function ExplainPara({ para }: { para: string }) {
         }
       }
       // 그 외 환경(array 증감표·cases 등)은 구조 보존 — 행간만 주입
-      const spaced = m.tex.replace(/\\\\(?!\[)/g, '\\\\[6pt]')
+      const spaced = m.tex.replace(/\\\\(?!\[)/g, '\\\\[10pt]')
       nodes.push(
         <div key={key++} className="exam-explain-line">
           <KatexText text={`$$${spaced}$$`} />
