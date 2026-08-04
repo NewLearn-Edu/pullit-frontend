@@ -15,7 +15,9 @@ import axios from 'axios'
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
-const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY ?? ''
+// REST 키는 인가 URL 로 브라우저에 그대로 노출되는 공개 값 (시크릿 아님).
+// 빌드 환경에 env 가 없어도 로그인이 동작하도록 기본값 내장 — env 로 오버라이드 가능
+const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY ?? 'd2465542ba74a81bb52ce10bbb9164c5'
 
 const ACCESS_TOKEN_KEY = 'pullit_access_token'
 const REFRESH_TOKEN_KEY = 'pullit_refresh_token'
