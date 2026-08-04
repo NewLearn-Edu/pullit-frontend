@@ -64,11 +64,9 @@ export function MathExplainLayout({ text }: { text: string }) {
           b.rows ? (
             <ExamTable key={i} rows={b.rows} />
           ) : (
-            splitParas(b.text ?? '').map((para, j) => (
-              <div key={`${i}-${j}`} className="exam-explain-p">
-                <ExplainPara para={para} />
-              </div>
-            ))
+            // 영역(exam-explain-p) 분할은 ExplainPara 가 담당 — 빈 줄·마커에 더해
+            // $$ 가운데 식(+이어지는 꼬리) 뒤에서도 영역을 끊는다
+            splitParas(b.text ?? '').map((para, j) => <ExplainPara key={`${i}-${j}`} para={para} />)
           ),
         )}
       </div>
@@ -279,7 +277,23 @@ function ExplainPara({ para }: { para: string }) {
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
-  const nodes: ReactNode[] = []
+  // 영역(exam-explain-p) 그룹 — $$ 가운데 식(+이어지는 꼬리) 뒤에서 영역을 끊는다
+  const groups: ReactNode[][] = []
+  let nodes: ReactNode[] = []
+  const breakArea = () => {
+    if (nodes.length) {
+      groups.push(nodes)
+      nodes = []
+    }
+  }
+  // $$ 식에 이어지는 줄 판정 — 같은 영역에 묶는다:
+  // · "(단,$C$는 적분상수)" · "이다." 같은 짧은 꼬리
+  // · "$a = 0$" 같은 짧은 결과식 (인라인 수식 줄 — 식 아래 왼쪽에 붙음)
+  const isConnector = (ln: string | undefined): ln is string => {
+    if (!ln || ln.length > 30 || PARA_START.test(ln)) return false
+    const mm = matchMathOnly(ln)
+    return mm ? !mm.isBlock : true
+  }
   let i = 0
   let key = 0
   while (i < lines.length) {
@@ -292,6 +306,15 @@ function ExplainPara({ para }: { para: string }) {
         if (rows.length >= 2) {
           nodes.push(<EquationChain key={key++} segs={rows} tail={m.tail} fromBlock />)
           i++
+          for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+            nodes.push(
+              <div key={key++} className="exam-explain-line">
+                <ExamText text={lines[i]} />
+              </div>,
+            )
+            i++
+          }
+          breakArea()
           continue
         }
       }
@@ -309,6 +332,15 @@ function ExplainPara({ para }: { para: string }) {
           </div>,
         )
       i++
+      for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+        nodes.push(
+          <div key={key++} className="exam-explain-line">
+            <ExamText text={lines[i]} />
+          </div>,
+        )
+        i++
+      }
+      breakArea()
       continue
     }
     if (m) {
@@ -331,6 +363,17 @@ function ExplainPara({ para }: { para: string }) {
       if (rows.length >= 2) {
         nodes.push(<EquationChain key={key++} segs={rows} tail={tail} fromBlock={m.isBlock} />)
         i = j
+        if (m.isBlock) {
+          for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+            nodes.push(
+              <div key={key++} className="exam-explain-line">
+                <ExamText text={lines[i]} />
+              </div>,
+            )
+            i++
+          }
+          breakArea()
+        }
         continue
       }
       // = 없는 단일 수식 줄 — $$ 는 display 유지, $ 는 문장 줄
@@ -347,6 +390,17 @@ function ExplainPara({ para }: { para: string }) {
         </div>,
       )
       i++
+      if (m.isBlock) {
+        for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+          nodes.push(
+            <div key={key++} className="exam-explain-line">
+              <ExamText text={lines[i]} />
+            </div>,
+          )
+          i++
+        }
+        breakArea()
+      }
       continue
     }
     // 문장 끝에 긴 = 체인 수식이 붙은 줄 — 수식을 떼어 그리디 줄바꿈으로.
@@ -376,7 +430,16 @@ function ExplainPara({ para }: { para: string }) {
     )
     i++
   }
-  return <>{nodes}</>
+  breakArea()
+  return (
+    <>
+      {groups.map((g, gi) => (
+        <div key={gi} className="exam-explain-p">
+          {g}
+        </div>
+      ))}
+    </>
+  )
 }
 
 /** 증감표 등 마크다운 표 렌더 */
