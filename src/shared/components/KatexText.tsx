@@ -42,9 +42,40 @@ const emboldenDelims = (html: string) => {
 /**
  * 인라인 수식의 분수를 지면 크기로 — KaTeX 는 문장 속 \frac 을 축소형(textstyle)으로
  * 그리는데, 수능 지면은 문장 안 분수도 큰 형태라 \dfrac 으로 승격.
- * (\dfrac 이 이미 쓰인 곳은 매칭되지 않아 그대로 · 파이썬 렌더러와 동일 규칙)
+ * 단, 지수·아래첨자(^·_) 안의 분수(a^{1/2} 등)는 승격하면 거대해지므로 제외.
  */
-const displaySizeFractions = (tex: string) => tex.replace(/\\frac\b/g, '\\dfrac')
+const displaySizeFractions = (tex: string): string => {
+  let out = ''
+  let i = 0
+  let depth = 0
+  const scriptDepths: number[] = [] // ^{…}·_{…} 그룹이 열린 brace 깊이 스택
+  while (i < tex.length) {
+    const c = tex[i]
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      while (scriptDepths.length && depth < scriptDepths[scriptDepths.length - 1]) {
+        scriptDepths.pop()
+      }
+    } else if (c === '^' || c === '_') {
+      let k = i + 1
+      while (tex[k] === ' ') k++
+      if (tex[k] === '{') scriptDepths.push(depth + 1)
+    }
+    if (tex.startsWith('\\frac', i) && !/[a-zA-Z]/.test(tex[i + 5] ?? '')) {
+      // 스크립트 그룹 안이거나, ^·_ 바로 뒤(중괄호 없는 형태)면 승격하지 않음
+      let k = out.length - 1
+      while (k >= 0 && out[k] === ' ') k--
+      const inScript = scriptDepths.length > 0 || out[k] === '^' || out[k] === '_'
+      out += inScript ? '\\frac' : '\\dfrac'
+      i += 5
+      continue
+    }
+    out += c
+    i++
+  }
+  return out
+}
 
 /**
  * KaTeX 렌더 + 파싱 실패 폴백.
