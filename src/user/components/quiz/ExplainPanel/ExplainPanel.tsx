@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import type { Problem } from '@/user/data/mockProblems'
-import { ExamText } from '@/shared/components/ExamText'
+import { MathExplainRender } from '@/shared/components/ExamRender'
 import styles from './styles/ExplainPanel.module.scss'
 
 interface ExplainPanelProps {
@@ -119,7 +119,7 @@ function Section({ title, body }: { title: string; body: string }) {
     <div>
       <p className={styles.sectionTitle}>{title}</p>
       <div className={styles.sectionBody}>
-        <ExamText text={body} />
+        <MathExplainRender text={body} />
       </div>
     </div>
   )

@@ -8,7 +8,7 @@ import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { GradeMark } from '@/user/components/quiz/GradeMark'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
-import { ExamText } from '@/shared/components/ExamText'
+import { MathProblemRender } from '@/shared/components/ExamRender'
 import {
   getProblemsBySkillNode,
   getProblemsByEnglishType,
@@ -299,7 +299,7 @@ export default function TasteQuizPage() {
                           {choiceNo}
                         </button>
                         <span className={styles.choiceValue}>
-                          <ExamText text={answerText} />
+                          <MathProblemRender text={answerText} />
                         </span>
                       </div>
                     )
@@ -370,21 +370,21 @@ function ProblemBody({ problem }: { problem: Problem }) {
   return (
     <div className={styles.problemBody}>
       <div>
-        <ExamText text={problem.bodyText} />
+        <MathProblemRender text={problem.bodyText} />
         {!hasConditions && !hasQuestion && pointsBadge}
       </div>
       {hasConditions && (
         <div className={styles.conditionsBox}>
           {problem.conditions!.map((c, i) => (
             <div key={i} className="pv-box-item">
-              <ExamText text={c} />
+              <MathProblemRender text={c} />
             </div>
           ))}
         </div>
       )}
       {hasQuestion && (
         <div>
-          <ExamText text={problem.question!} />
+          <MathProblemRender text={problem.question!} />
           {pointsBadge}
         </div>
       )}
