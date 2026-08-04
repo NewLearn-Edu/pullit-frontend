@@ -4,7 +4,7 @@
 
 /* 주어진 문장 · (가)(나)(다) 조건 박스 — 수능 지면의 실선 테두리 박스 */
 .pv-box {
-  border: 1.5px solid currentColor;
+  border: 1px solid currentColor;
   border-radius: 2px;
   padding: 12px 16px;
   margin: 16px 0;

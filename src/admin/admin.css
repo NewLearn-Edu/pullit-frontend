@@ -459,7 +459,8 @@
      내부 타이포는 em 으로 상속돼 같은 비율로 줄어든다 (해설과 동일 방식) */
   .pv-body {
     padding-top: 4px;
-    font-size: clamp(14px, calc(9.333px + 1.3333cqw), 16px);
+    /* 해설(exam-explain-scale)과 동일한 반응형 크기: 500px=15px ~ 350px=13px */
+    font-size: clamp(13px, calc(8.333px + 1.3333cqw), 15px);
   }
   /* 풀잇 문제 렌더링 스펙: KoPubWorld Batang 16px / 500 / lh 1.85 / #120c0b */
   .pv-question {

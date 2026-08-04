@@ -21,10 +21,23 @@ const enlargeSetOps = (tex: string) => tex.replace(/\\(cup|cap)\b/g, '\\mathbin{
 
 /**
  * 절댓값(|)·대괄호([ ]) 획 보강 — KaTeX 기본이 수능 지면보다 가늘어 볼드 글리프로 교체.
- * 렌더된 HTML 의 단일 글리프 텍스트 노드만 감싸므로 다른 기호에는 영향 없음.
+ * KaTeX 가 이웃 글리프를 한 span 으로 합치는 경우("2∣" 등)에도 놓치지 않도록
+ * 텍스트 노드 안의 막대·대괄호를 개별로 감싼다 (태그 속성은 >…< 밖이라 안전).
  */
-const emboldenDelims = (html: string) =>
-  html.replace(/>([[\]∣|])</g, '><span class="katex-delim-bold">$1</span><')
+const emboldenDelims = (html: string) => {
+  // 시각 렌더 파트(katex-html)에만 적용 — 앞쪽 MathML/annotation(원본 TeX
+  // 보존·접근성)까지 감싸면 복사·스크린리더가 오염된다
+  const idx = html.indexOf('class="katex-html"')
+  if (idx === -1) return html
+  return (
+    html.slice(0, idx) +
+    html
+      .slice(idx)
+      .replace(/>([^<]*[∣|[\]][^<]*)</g, (_, text: string) =>
+        `>${text.replace(/([∣|[\]])/g, '<span class="katex-delim-bold">$1</span>')}<`,
+      )
+  )
+}
 
 /**
  * 인라인 수식의 분수를 지면 크기로 — KaTeX 는 문장 속 \frac 을 축소형(textstyle)으로
