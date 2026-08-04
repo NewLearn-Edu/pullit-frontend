@@ -1,9 +1,11 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { clearTokens, getRefreshToken, getValidAccessToken, refreshTokens } from '@/user/api/authApi'
 
-/** 백엔드 API 클라이언트 — VITE_API_BASE_URL 미설정 시 로컬 백엔드 기본값 */
+/** 백엔드 API 클라이언트 — 로컬은 localhost:8080, 배포는 같은 도메인(/api 프록시) */
 export const adminApi = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ??
+    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : ''),
 })
 
 // 로그인되어 있으면 JWT 를 자동 첨부 (배포 환경 /api/admin/** 은 ROLE_ADMIN 토큰 필수.
