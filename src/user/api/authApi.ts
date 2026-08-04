@@ -14,10 +14,12 @@ import axios from 'axios'
  * - 보안 > Client Secret 은 "사용 안 함" 유지 (프론트 교환 방식이므로)
  */
 
-// 로컬 개발은 localhost:8080, 배포는 같은 도메인 상대경로(/api → nginx 프록시)
+// 로컬 개발은 localhost:8080, 배포는 백엔드 도메인(api-dev)
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ??
-  (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '')
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:8080'
+    : 'https://api-dev.pullit.co.kr')
 // REST 키는 인가 URL 로 브라우저에 그대로 노출되는 공개 값 (시크릿 아님).
 // 빌드 환경에 env 가 없어도 로그인이 동작하도록 기본값 내장 — env 로 오버라이드 가능
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY ?? 'd2465542ba74a81bb52ce10bbb9164c5'

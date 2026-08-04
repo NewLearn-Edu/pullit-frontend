@@ -1,11 +1,13 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { clearTokens, getRefreshToken, getValidAccessToken, refreshTokens } from '@/user/api/authApi'
 
-/** 백엔드 API 클라이언트 — 로컬은 localhost:8080, 배포는 같은 도메인(/api 프록시) */
+/** 백엔드 API 클라이언트 — 로컬은 localhost:8080, 배포는 백엔드 도메인(api-dev) */
 export const adminApi = axios.create({
   baseURL:
     import.meta.env.VITE_API_BASE_URL ??
-    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : ''),
+    (window.location.hostname === 'localhost'
+      ? 'http://localhost:8080'
+      : 'https://api-dev.pullit.co.kr'),
 })
 
 // 로그인되어 있으면 JWT 를 자동 첨부 (배포 환경 /api/admin/** 은 ROLE_ADMIN 토큰 필수.
