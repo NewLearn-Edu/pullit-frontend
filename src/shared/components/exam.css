@@ -27,6 +27,16 @@
   margin: 4px 0; /* 4+4 = 8px — 내부 줄바꿈 시 줄 사이도 8px */
 }
 
+/* ── 해설 반응형 폰트 — 컨테이너 폭 500px=15px(최대) ~ 350px=13px(최소),
+   사이 구간은 선형 보간. 수식(em)·줄높이(unitless)가 같은 비율로 따라 준다 */
+.exam-explain-root {
+  container-type: inline-size;
+}
+.exam-explain-scale {
+  /* size = 8.333px + 1.3333% × 컨테이너폭 → 350px→13px · 500px→15px */
+  font-size: clamp(13px, calc(8.333px + 1.3333cqw), 15px);
+}
+
 /* ── 해설 레이아웃 — 영역 대비가 핵심 ───────────────────────────
    · 영역(문단) 안 줄들은 촘촘하게 (4+4=8px + 줄높이) — 한 덩어리로 읽힘
    · 영역 사이는 크게 (28+4+4=36px) — 구역이 한눈에 나뉨
@@ -52,7 +62,7 @@
   padding: 3px 0; /* overflow 클리핑에 글리프 안 잘리게만 유지 */
 }
 .exam-explain-p .katex-display {
-  margin: 1em 0; /* 줄 여백(13px)과 합쳐 display 블록 위아래 ≈28px */
+  margin: 20px 0; /* 줄 여백(4px)과 합쳐 수식 영역 위아래 = 24px */
 }
 /* 분수·lim 등 세로로 큰 수식이 든 줄 — 촘촘한 영역 안에서도 위아래 숨통 */
 .exam-explain-p .katex-tall {

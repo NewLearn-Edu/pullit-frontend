@@ -56,19 +56,23 @@ export function ExamText({
 export function MathExplainLayout({ text }: { text: string }) {
   const blocks = splitMarkdownTables(String(text ?? ''))
   return (
-    <>
-      {blocks.map((b, i) =>
-        b.rows ? (
-          <ExamTable key={i} rows={b.rows} />
-        ) : (
-          splitParas(b.text ?? '').map((para, j) => (
-            <div key={`${i}-${j}`} className="exam-explain-p">
-              <ExplainPara para={para} />
-            </div>
-          ))
-        ),
-      )}
-    </>
+    // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
+    // 내부(exam-explain-scale) 폰트가 13~15px 로 유동적으로 줄어든다
+    <div className="exam-explain-root">
+      <div className="exam-explain-scale">
+        {blocks.map((b, i) =>
+          b.rows ? (
+            <ExamTable key={i} rows={b.rows} />
+          ) : (
+            splitParas(b.text ?? '').map((para, j) => (
+              <div key={`${i}-${j}`} className="exam-explain-p">
+                <ExplainPara para={para} />
+              </div>
+            ))
+          ),
+        )}
+      </div>
+    </div>
   )
 }
 
