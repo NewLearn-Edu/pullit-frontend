@@ -218,6 +218,7 @@
   .main { flex: 1; min-width: 0; padding: 28px 32px 64px; }
   .main-inner { max-width: 1040px; margin: 0 auto; }
   .main-inner.wide { max-width: 1600px; }   /* 문제 목록 뷰 (프로토타입 :has(#view-list.on)) */
+  .main-inner.mid { max-width: 1140px; }    /* 업로드 검토 — 문제(524)+간격(28)+해설(524)+카드 패딩 */
 
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
   .page-title { font-size: 24px; font-weight: 600; color: var(--color-fg); letter-spacing: -0.02em; }
@@ -613,6 +614,10 @@
     gap: 28px;
     align-items: flex-start;
   }
+  /* 웹: 해설도 문제 프레임과 같은 폭 고정 (flex:1 이면 남은 폭만 받아 좁아짐)
+     패드: 모달처럼 남은 폭 채움 (디바이더 드래그 연동) · 모바일: fixed-375 가 담당 */
+  .upl-preview.web .pv-modal-explain { flex: 0 0 524px; }
+  .upl-preview.pad .pv-modal-explain { flex: 1; min-width: 0; }
   @media (max-width: 1080px) {
     .upl-preview { flex-direction: column; }
     .upl-preview .pv-modal-explain { width: 100%; }
@@ -621,6 +626,9 @@
     font-size: 12px; font-weight: 600; color: var(--color-muted);
     margin: 0 0 8px;
   }
+  /* 정답 원문자·값은 본문(15px)보다 크게 — 뒤에 선언된 .pv-explain-body 의
+     15px 를 이기도록 복합 셀렉터로 우선순위 확보 */
+  .pv-explain-body.pv-explain-answer { font-size: 18px; }
   /* 해설 본문 — 맛보기 해설 패널과 동일하게 Pretendard (문제 본문의 바탕체와 구분) */
   .pv-explain-body {
     font-family: var(--font-sans);

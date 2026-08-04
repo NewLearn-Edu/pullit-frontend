@@ -65,6 +65,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const isProblem = pathname.includes('/problems/') || pathname.includes('/upload/')
   const isMember = pathname.includes('/members')
   const isList = pathname.includes('/problems/')
+  const isUpload = pathname.includes('/upload/')
 
   const soonMenus = [
     { name: '통계', ico: <IcoStats /> },
@@ -178,7 +179,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
       </aside>
 
       <main className="main">
-        <div className={clsx('main-inner', isList && 'wide')}>
+        <div className={clsx('main-inner', isList && 'wide', isUpload && 'mid')}>
           {isProblem && <ProblemKpi />}
           <Outlet />
         </div>

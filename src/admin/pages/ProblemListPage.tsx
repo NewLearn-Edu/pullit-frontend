@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
-import { ExamText } from '@/shared/components/ExamText'
+import {
+  EnglishExplainRender,
+  EnglishProblemRender,
+  MathExplainRender,
+  MathProblemRender,
+} from '@/shared/components/ExamRender'
 import { IcoSearch } from '../components/icons'
 import {
   fetchProblemDetail,
@@ -115,6 +120,9 @@ export default function ProblemListPage() {
   }
 
   const isMath = subject === 'math'
+  // 본문 렌더러 — 과목·용도별 4종 중 선택 (공용 ExamRender 만 사용)
+  const ProblemRender = detail?.subject === 'ENGLISH' ? EnglishProblemRender : MathProblemRender
+  const ExplainRender = detail?.subject === 'ENGLISH' ? EnglishExplainRender : MathExplainRender
 
   // 과목 전환: 필터·선택 전부 초기화
   useEffect(() => {
@@ -449,12 +457,11 @@ export default function ProblemListPage() {
                   <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
                     {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
                     <div className="pv-question">
-                      <ExamText text={detail.question} /> [{detail.points}점]
+                      <ProblemRender text={detail.question} /> [{detail.points}점]
                     </div>
                     {detail.passage && (
-                      /* lang="en" — 브라우저 하이픈 분철(hyphens: auto) 활성화 조건 */
-                      <div className="pv-passage" lang={detail.subject === 'ENGLISH' ? 'en' : undefined}>
-                        <ExamText text={detail.passage} />
+                      <div className="pv-passage">
+                        <ProblemRender text={detail.passage} />
                       </div>
                     )}
                     {Object.keys(detail.glossary).length > 0 && (
@@ -474,7 +481,7 @@ export default function ProblemListPage() {
                               <span className="choice-num">
                                 {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
                               </span>
-                              <span><ExamText text={c} /></span>
+                              <span><ProblemRender text={c} /></span>
                             </span>
                           )
                         })}
@@ -487,16 +494,16 @@ export default function ProblemListPage() {
                 {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
                 <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
                   <p className="pv-label">정답</p>
-                  <div className="pv-explain-body">
+                  <div className="pv-explain-body pv-explain-answer">
                     {detail.choices.length > 0 ? (
                       String.fromCodePoint(0x245f + detail.answerNumber)
                     ) : (
-                      <ExamText text={detail.answerText} />
+                      <ExplainRender text={detail.answerText} />
                     )}
                   </div>
                   <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
                   <div className="pv-explain-body">
-                    <ExamText text={detail.explanation} />
+                    <ExplainRender text={detail.explanation} />
                   </div>
                 </div>
               </div>

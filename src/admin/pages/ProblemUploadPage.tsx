@@ -1,8 +1,13 @@
-import { useRef, useState, type DragEvent } from 'react'
+import { useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
-import { ExamText } from '@/shared/components/ExamText'
+import {
+  EnglishExplainRender,
+  EnglishProblemRender,
+  MathExplainRender,
+  MathProblemRender,
+} from '@/shared/components/ExamRender'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
@@ -39,6 +44,25 @@ export default function ProblemUploadPage() {
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<ProblemImportResult | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // 검토 디바이스 프레임 — 목록 미리보기 모달과 동일 (웹/패드-드래그/모바일 375)
+  const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
+  const [padWidth, setPadWidth] = useState(524)
+  const startPadDrag = (e: ReactMouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = padWidth
+    const onMove = (ev: MouseEvent) => {
+      // 내부 문제 영역(프레임 패딩 24px 제외)이 350~500px 을 오가는 범위
+      setPadWidth(Math.min(524, Math.max(374, startWidth + ev.clientX - startX)))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   if (!label) return <Navigate to="/admin/upload/math" replace />
 
@@ -100,6 +124,9 @@ export default function ProblemUploadPage() {
   }
 
   const item = items[idx]
+  // 본문 렌더러 — 과목·용도별 4종 중 선택 (공용 ExamRender 만 사용)
+  const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
+  const ExplainRender = subject === 'english' ? EnglishExplainRender : MathExplainRender
 
   return (
     <section className="view">
@@ -185,6 +212,13 @@ export default function ProblemUploadPage() {
                 문항 {idx + 1} / {items.length}{item?.id ? ` · ${item.id}` : ''}
               </div>
               <div className="viewer-nav">
+                <div className="seg pv-device-seg">
+                  {([['web', '웹'], ['pad', '패드'], ['mobile', '모바일']] as const).map(([key, tabLabel]) => (
+                    <button key={key} className={clsx(device === key && 'on')} onClick={() => setDevice(key)}>
+                      {tabLabel}
+                    </button>
+                  ))}
+                </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => idx > 0 && setIdx(idx - 1)}>
                   ‹ 이전
                 </button>
@@ -193,13 +227,16 @@ export default function ProblemUploadPage() {
                 </button>
               </div>
             </div>
-            {/* 문제·해설을 목록 미리보기 모달과 동일한 500px 프레임으로 세로 배치 */}
-            <div className="upl-preview">
-              <div className="pv-device web">
+            {/* 문제·해설을 목록 미리보기 모달과 동일한 프레임·디바이스 토글로 배치 */}
+            <div className={clsx('upl-preview', device)}>
+              <div
+                className={clsx('pv-device', device)}
+                style={device === 'pad' ? { width: padWidth } : undefined}
+              >
                 <div className="pv-device-inner">
                   <div className={clsx('pv-body', subject === 'english' && 'en')}>
                     <div className="pv-question">
-                      <ExamText text={item?.question ?? ''} />
+                      <ProblemRender text={item?.question ?? ''} />
                       {(() => {
                         const points =
                           subject === 'english' ? 2 : POINTS_BY_DIFFICULTY[item?.difficulty ?? '']
@@ -207,8 +244,8 @@ export default function ProblemUploadPage() {
                       })()}
                     </div>
                     {item?.passage && (
-                      <div className="pv-passage" lang={subject === 'english' ? 'en' : undefined}>
-                        <ExamText text={item.passage} />
+                      <div className="pv-passage">
+                        <ProblemRender text={item.passage} />
                       </div>
                     )}
                     {(item?.choices?.length ?? 0) > 0 && (
@@ -221,7 +258,7 @@ export default function ProblemUploadPage() {
                               <span className="choice-num">
                                 {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
                               </span>
-                              <span><ExamText text={c} /></span>
+                              <span><ProblemRender text={c} /></span>
                             </span>
                           )
                         })}
@@ -230,18 +267,20 @@ export default function ProblemUploadPage() {
                   </div>
                 </div>
               </div>
-              <div className="pv-modal-explain">
+              {/* 패드: 가운데 디바이더 드래그로 좌우 폭 조절 */}
+              {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
+              <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
                 <p className="pv-label">정답</p>
-                <div className="pv-explain-body">
+                <div className="pv-explain-body pv-explain-answer">
                   {(item?.choices?.length ?? 0) > 0 && item?.answer_no != null ? (
                     String.fromCodePoint(0x245f + item.answer_no)
                   ) : (
-                    <ExamText text={String(item?.answer_text ?? item?.answer_no ?? '-')} />
+                    <ExplainRender text={String(item?.answer_text ?? item?.answer_no ?? '-')} />
                   )}
                 </div>
                 <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
                 <div className="pv-explain-body">
-                  <ExamText text={item?.explanation || '해설이 없어요'} />
+                  <ExplainRender text={item?.explanation || '해설이 없어요'} />
                 </div>
               </div>
             </div>
