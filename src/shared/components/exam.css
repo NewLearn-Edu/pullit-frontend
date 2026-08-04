@@ -17,13 +17,91 @@
 
 /* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보.
    긴 수식은 KaTeX 가 .base 단위로 줄바꿈하는데 줄끼리 붙어 한 덩어리로 보임 →
-   간격은 .base 의 세로 마진이 담당 (한 줄짜리도 2+5=7px 로 기존과 동일) */
+   간격은 .base 의 세로 마진이 담당.
+   ★ 수식 줄 리듬 통일: 줄 하나당 위아래 8px (등식 스택 .katex-eqline 과 동일) */
 .katex-tall {
   display: inline-block;
-  padding: 2px 0;
+  padding: 4px 0; /* 패딩은 KaTeX 내부 음수 오프셋과 무관하게 확실히 박스를 키움 */
 }
 .katex-tall .katex .base {
-  margin: 5px 0;
+  margin: 4px 0; /* 4+4 = 8px — 내부 줄바꿈 시 줄 사이도 8px */
+}
+
+/* ── 해설 레이아웃 — 영역 대비가 핵심 ───────────────────────────
+   · 영역(문단) 안 줄들은 촘촘하게 (4+4=8px + 줄높이) — 한 덩어리로 읽힘
+   · 영역 사이는 크게 (28+4+4=36px) — 구역이 한눈에 나뉨
+   · display 수식 = 위아래 ≈19px (줄 4 + 수식 자체 1em) */
+.exam-explain-p {
+  margin: 0 0 28px;
+}
+.exam-explain-p:last-child {
+  margin-bottom: 0;
+}
+.exam-explain-line {
+  margin: 4px 0;
+}
+
+/* 해설 수식 크기 — 검수 도구(MathJax)처럼 본문과 같은 크기.
+   수식이 본문보다 크면 등식이 한 줄에 못 들어가 불필요하게 접히고
+   밀도가 무너진다 (350~500px 수용력의 핵심) */
+.exam-explain-p .katex {
+  font-size: 1.1em; /* 본문보다 한 단계 큰 정도 — 가독성과 350px 수용력 균형 */
+}
+.exam-explain-p span.katex-block {
+  margin: 0;
+  padding: 3px 0; /* overflow 클리핑에 글리프 안 잘리게만 유지 */
+}
+.exam-explain-p .katex-display {
+  margin: 1em 0; /* 줄 여백(13px)과 합쳐 display 블록 위아래 ≈28px */
+}
+/* 분수·lim 등 세로로 큰 수식이 든 줄 — 촘촘한 영역 안에서도 위아래 숨통 */
+.exam-explain-p .katex-tall {
+  padding: 8px 0;
+}
+.exam-explain-p .katex-tall .katex .base {
+  margin: 0;
+}
+
+/* 등식 체인 폭 실측 노드 — 렌더 폰트 컨텍스트는 유지하되 화면에 안 보이게 */
+.exam-measure {
+  position: absolute;
+  visibility: hidden;
+  height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* 해설 증감표 (마크다운 파이프 표) — 수능 해설지의 실선 표.
+   래퍼가 넘침 스크롤 담당 (표가 컨테이너보다 넓으면 테두리가 잘려 보임) */
+.exam-table-wrap {
+  overflow-x: auto;
+  margin: 14px 0;
+  padding: 1px; /* 테두리 1px 가 스크롤 클리핑에 잘리지 않게 */
+}
+/* 어드민 전역 table 규칙(width:100% · fixed · last-child 우측 정렬 ·
+   마지막 행 border 제거)이 덮치지 않도록 전부 명시적으로 재정의 */
+.exam-table {
+  width: auto;
+  table-layout: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: 1px solid currentColor; /* 바깥 테두리 보강 — 아래 선 잘림 방지 */
+  margin: 0 auto; /* 표 자체를 본문 가운데에 */
+  font-size: 0.95em;
+}
+/* td.exam-cell(+:last-child 조합)으로 어드민의 .admin-root 중첩 규칙보다
+   명시도를 높인다 — 마지막 열 우측 정렬·마지막 행 border 제거가 못 덮치게 */
+.exam-table td.exam-cell,
+.exam-table td.exam-cell:last-child,
+.exam-table tr:last-child td.exam-cell {
+  border: 1px solid currentColor;
+  padding: 4px 12px;
+  text-align: center;
+  vertical-align: middle;
+  min-width: 44px;
+  white-space: normal;
+  overflow: visible;
 }
 
 /* 절댓값(|)·대괄호([ ]) 볼드 글리프 — 수능 지면의 획 굵기 (KatexText 가 감쌈) */
