@@ -69,10 +69,16 @@ const EN_TYPE_LABEL: Record<string, string> = {
   '안내문 불일치': 'Notice Mismatch',
   '내용 불일치': 'Content Mismatch',
   목적: 'Purpose',
-  '어휘 의미': 'Vocabulary (Meaning)',
-  '어휘 쓰임': 'Vocabulary (Usage)',
   도표: 'Chart',
   '무관한 문장': 'Irrelevant Sentence',
+}
+
+// 어휘는 skill_node 한글명(어휘 의미/쓰임)만으론 원본 유형(voca01·03·04) 구분이 안 됨
+// — id 앞부분(2015_english_voca_03-S0001)에 원본 코드가 남아있어 여기서 파생
+function enTypeLabel(id: string, skillNode: string): string | undefined {
+  const vocaMatch = id.match(/_voca(?:_(\d+))?-/)
+  if (vocaMatch) return `Voca_${vocaMatch[1] ?? '01'}`
+  return EN_TYPE_LABEL[skillNode]
 }
 
 interface CasSel {
@@ -396,8 +402,8 @@ export default function ProblemListPage() {
                     {isMath && <td className="col-mid">{p.unitMid}</td>}
                     <td>
                       {p.skillNode}
-                      {!isMath && EN_TYPE_LABEL[p.skillNode] && (
-                        <span className="sub">{EN_TYPE_LABEL[p.skillNode]}</span>
+                      {!isMath && enTypeLabel(p.id, p.skillNode) && (
+                        <span className="sub">{enTypeLabel(p.id, p.skillNode)}</span>
                       )}
                     </td>
                     <td className="num">{p.points}점</td>
