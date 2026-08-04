@@ -227,8 +227,10 @@ export default function ProblemUploadPage() {
                 </button>
               </div>
             </div>
-            {/* 문제·해설을 목록 미리보기 모달과 동일한 프레임·디바이스 토글로 배치 */}
-            <div className={clsx('upl-preview', device)}>
+          </div>
+          {/* 문제·정답해설은 헤더 카드 밖 — 페이지 배경 위의 독립 카드 2개.
+              웹·모바일은 좌우로 벌리고, 패드는 붙여서 디바이더 드래그 */}
+          <div className={clsx('upl-preview', device)}>
               <div
                 className={clsx('pv-device', device)}
                 style={device === 'pad' ? { width: padWidth } : undefined}
@@ -284,7 +286,6 @@ export default function ProblemUploadPage() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       )}
     </section>

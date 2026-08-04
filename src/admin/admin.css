@@ -455,11 +455,16 @@
     .table-wrap { overflow-x: auto; }
     .table-wrap table { min-width: 640px; }
   }
-  .pv-body { padding-top: 4px; }
+  /* 문제 본문 반응형 폰트 — 컨테이너(문제 영역) 500px=16px ~ 350px=14px 선형.
+     내부 타이포는 em 으로 상속돼 같은 비율로 줄어든다 (해설과 동일 방식) */
+  .pv-body {
+    padding-top: 4px;
+    font-size: clamp(14px, calc(9.333px + 1.3333cqw), 16px);
+  }
   /* 풀잇 문제 렌더링 스펙: KoPubWorld Batang 16px / 500 / lh 1.85 / #120c0b */
   .pv-question {
     font-family: var(--font-batang);
-    font-size: 16px; font-weight: 500; line-height: 1.85;
+    font-size: 1em; font-weight: 500; line-height: 1.85;
     color: var(--pv-fg);
     word-break: keep-all; white-space: normal;
   }
@@ -480,13 +485,13 @@
        여러 줄 보기도 첫 줄 기준선에 정렬됨 */
     display: inline-flex; align-items: baseline; gap: 9px;
     font-family: var(--font-batang);
-    font-size: 16px; font-weight: 500; color: var(--pv-fg);
+    font-size: 1em; font-weight: 500; color: var(--pv-fg);
   }
   /* 수능 지면과 동일한 유니코드 원문자 (①~⑤) — 정답은 채운 원문자(❶) + primary */
   .choice-num {
     flex-shrink: 0;
     font-family: inherit;
-    font-size: 18px; font-weight: 500;
+    font-size: 1.125em; font-weight: 500;
     color: var(--pv-fg);
   }
   /* 서체는 지정하지 않는다 — 한글 컨텍스트는 부모(.pv-question 등)의 바탕체를 상속,
@@ -494,7 +499,7 @@
   .pv-passage {
     margin-top: 14px; padding: 14px 16px;
     background: var(--color-fill-soft); border-radius: var(--r-menu);
-    font-size: 15px; line-height: 1.85; color: var(--pv-fg);
+    font-size: 0.9375em; line-height: 1.85; color: var(--pv-fg);
     white-space: normal;
     text-align: justify; /* 수능 지면과 동일한 양쪽 정렬 */
   }
@@ -581,7 +586,7 @@
     flex-shrink: 0; max-width: 100%;
     border: 1px solid var(--color-line);
     border-radius: 12px;
-    padding: 20px 12px;
+    padding: 20px 24px;
     background: var(--color-canvas);
   }
   .pv-device.web { width: 524px; } /* 내부 문제 영역 500px */
@@ -600,7 +605,7 @@
   }
   .pv-divider:hover { background: var(--line-strong); }
   /* 문제 영역 — 맛보기 페이지와 동일 규칙: 최대 500px 고정, 프레임이 좁을 때만 350px 까지 축소 */
-  .pv-device-inner { width: 100%; max-width: 500px; min-width: 0; margin: 0 auto; }
+  .pv-device-inner { width: 100%; max-width: 500px; min-width: 0; margin: 0 auto; container-type: inline-size; }
   /* 해설 영역 — 문제 프레임과 동일한 stroke */
   .pv-modal-explain {
     flex: 1; min-width: 350px; /* 해설 영역은 어떤 배치에서도 350px 아래로 안 줄어듦 */
@@ -612,18 +617,30 @@
   .pv-modal-explain.fixed-375 { flex: 0 0 375px; } /* 모바일 — 해설 영역도 정확히 375px */
 
   /* 업로드 검토 — 목록 미리보기 모달과 동일: 왼쪽 문제(500px) · 오른쪽 해설 */
+  /* 업로드 검토 — 헤더 카드 밖, 페이지 배경 위의 독립 카드 2개 (문제 · 정답해설) */
   .upl-preview {
     display: flex;
     gap: 28px;
     align-items: flex-start;
+    margin-top: 16px;
   }
-  /* 웹: 해설도 문제 프레임과 같은 폭 고정 (flex:1 이면 남은 폭만 받아 좁아짐)
-     패드: 모달처럼 남은 폭 채움 (디바이더 드래그 연동) · 모바일: fixed-375 가 담당 */
+  /* 독립 카드 룩 — 테두리 대신 카드 섀도 */
+  .upl-preview .pv-device,
+  .upl-preview .pv-modal-explain {
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+  }
+  /* 웹·모바일: 두 카드를 좌우로 벌림 · 패드: 붙여서 디바이더 드래그 */
+  .upl-preview.web,
+  .upl-preview.mobile { justify-content: space-between; }
   .upl-preview.web .pv-modal-explain { flex: 0 0 524px; }
   .upl-preview.pad .pv-modal-explain { flex: 1; min-width: 350px; }
-  /* 공간이 모자라면 안쪽 최소폭(해설 350·문제 내부 374)을 지키기 위해
-     문제 프레임이 먼저 양보 — 그래도 안 되면 아래 미디어쿼리에서 세로 스택 */
+  /* 공간이 모자라면 안쪽 최소폭(해설 350)을 지키기 위해 문제 프레임이 먼저 양보 */
   .upl-preview.pad .pv-device { flex-shrink: 1; min-width: 422px; }
+  /* 모바일: 두 카드 각각 350px */
+  .upl-preview .pv-device.mobile { width: 350px; }
+  .upl-preview.mobile .pv-modal-explain { flex: 0 0 350px; min-width: 350px; }
   @media (max-width: 1220px) {
     .upl-preview { flex-direction: column; }
     .upl-preview .pv-modal-explain { width: 100%; min-width: 0; }
@@ -642,12 +659,9 @@
     color: var(--table-fg);
     white-space: pre-wrap; word-break: keep-all;
   }
+  /* 좁은 화면: 모달 본문 세로 스택 — 해설은 독립 카드라 패딩·테두리 유지 */
   @media (max-width: 1080px) {
     .pv-modal-body { flex-direction: column; }
-    .pv-modal-explain {
-      border-left: none; padding-left: 0;
-      border-top: 1px solid var(--color-line); padding-top: 20px;
-    }
   }
 
   /* 수식 조판 보정(.katex 크기·블록 여백·스크롤바 방지)은 공용 shared/components/exam.css 에 있음 */
@@ -700,8 +714,10 @@
   .upl-summary .t { flex: 1; min-width: 0; }
   .upl-summary .t b { display: block; font-size: 15px; font-weight: 600; color: var(--table-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .upl-summary .t span { font-size: 13px; color: var(--color-muted); }
-  .viewer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .viewer-nav { display: flex; gap: 8px; }
+  .viewer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+  .viewer-nav { display: flex; align-items: center; gap: 12px; }
+  /* 헤더 안 세그 — 모달용 부유 그림자 대신 차분한 트랙 스타일 */
+  .viewer-nav .pv-device-seg { margin: 0; box-shadow: none; background: var(--color-fill-hover); }
   .vw-body { max-width: 760px; }
   .pv-choices .choice.correct .choice-num { color: var(--color-primary); }
   .vw-answer { margin-top: 20px; font-size: 13px; font-weight: 600; color: var(--color-muted); }
