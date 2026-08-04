@@ -76,6 +76,86 @@ export async function loginWithKakaoCode(code: string): Promise<LoginResult> {
   return data.data
 }
 
+// ---------------------------------------------------------------------------
+// 네이버 · 구글 로그인 (인가코드 방식 · 토큰 교환은 백엔드가 대행)
+// ---------------------------------------------------------------------------
+// 카카오와 달리 네이버·구글 토큰 엔드포인트는 client_secret 필수(+네이버는 CORS 미지원)라
+// 브라우저 교환이 불가능하다. 콜백에서 받은 인가코드를 백엔드(/oauth/{provider}/code)로
+// 보내면 백엔드가 교환·검증 후 JWT를 발급한다.
+//
+// 콘솔 필수 설정:
+// - 네이버 개발자센터 > Callback URL 등록: {origin}/auth/naver/callback
+// - 구글 클라우드 콘솔 > 승인된 리디렉션 URI 등록: {origin}/auth/google/callback
+//   (Client Secret은 백엔드 환경변수에만 보관 — 프론트에 넣지 말 것)
+
+// Client ID는 인가 URL로 브라우저에 노출되는 공개 값 — 카카오 REST 키와 동일 패턴으로 기본값 내장
+const NAVER_CLIENT_ID = import.meta.env.VITE_NAVER_CLIENT_ID ?? 'ep_kin0ZmsQpv9EA7374'
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ??
+  '658149468916-ge7hf301nlkjvbgp23h1es5i07oqb8tl.apps.googleusercontent.com'
+
+const oauthCallbackUri = (provider: 'naver' | 'google') =>
+  `${window.location.origin}/auth/${provider}/callback`
+
+const stateKey = (provider: string) => `pullit_oauth_state_${provider}`
+
+/** CSRF 방지 state 생성·보관 — 콜백에서 consumeOauthState로 대조 */
+function newOauthState(provider: 'naver' | 'google'): string {
+  const state = crypto.randomUUID()
+  sessionStorage.setItem(stateKey(provider), state)
+  return state
+}
+
+/** 보관된 state 회수 (1회용 — 읽는 즉시 제거) */
+export function consumeOauthState(provider: 'naver' | 'google'): string | null {
+  const state = sessionStorage.getItem(stateKey(provider))
+  sessionStorage.removeItem(stateKey(provider))
+  return state
+}
+
+/** 네이버 인가 페이지로 이동 (로그인 버튼에서 호출) */
+export function startNaverLogin() {
+  const url =
+    'https://nid.naver.com/oauth2.0/authorize' +
+    '?response_type=code' +
+    `&client_id=${NAVER_CLIENT_ID}` +
+    `&redirect_uri=${encodeURIComponent(oauthCallbackUri('naver'))}` +
+    `&state=${newOauthState('naver')}`
+  window.location.href = url
+}
+
+/** 콜백에서 받은 네이버 인가코드로 로그인 완료 (교환·검증은 백엔드) */
+export async function loginWithNaverCode(code: string, state: string): Promise<LoginResult> {
+  const { data } = await axios.post<BaseResponse<LoginResult>>(
+    `${API_BASE}/api/auth/oauth/naver/code`,
+    { code, state },
+  )
+  saveTokens(data.data)
+  return data.data
+}
+
+/** 구글 인가 페이지로 이동 (로그인 버튼에서 호출) */
+export function startGoogleLogin() {
+  const url =
+    'https://accounts.google.com/o/oauth2/v2/auth' +
+    '?response_type=code' +
+    `&client_id=${GOOGLE_CLIENT_ID}` +
+    `&redirect_uri=${encodeURIComponent(oauthCallbackUri('google'))}` +
+    `&scope=${encodeURIComponent('openid email profile')}` +
+    `&state=${newOauthState('google')}`
+  window.location.href = url
+}
+
+/** 콜백에서 받은 구글 인가코드로 로그인 완료 (교환·검증은 백엔드) */
+export async function loginWithGoogleCode(code: string): Promise<LoginResult> {
+  const { data } = await axios.post<BaseResponse<LoginResult>>(
+    `${API_BASE}/api/auth/oauth/google/code`,
+    { code, redirectUri: oauthCallbackUri('google') },
+  )
+  saveTokens(data.data)
+  return data.data
+}
+
 export function saveTokens(result: LoginResult) {
   localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken)
   localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken)

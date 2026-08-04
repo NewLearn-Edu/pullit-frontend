@@ -5,6 +5,8 @@ import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import LoginPage from './user/pages/auth/LoginPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
+import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
+import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
@@ -25,6 +27,8 @@ export default function App() {
       <Route path="/wrong-note" element={<WrongNotePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
+      <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
+      <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
