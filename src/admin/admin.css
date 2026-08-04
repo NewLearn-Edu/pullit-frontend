@@ -572,6 +572,9 @@
     padding: 4px 24px 24px;
     overflow-y: auto;
   }
+  /* 창이 좁을 때 안쪽 최소폭(해설 350)을 지키도록 문제 프레임이 양보 */
+  .pv-modal-body .pv-device.web,
+  .pv-modal-body .pv-device.pad { flex-shrink: 1; min-width: 422px; }
   /* 디바이스 프레임 — 실서비스(맛보기) 레이아웃 규칙: 해설은 항상 오른쪽,
      문제 영역은 웹·패드 500px 고정 · 모바일(375 프레임)만 ~350px 로 축소 */
   .pv-device {
@@ -600,7 +603,7 @@
   .pv-device-inner { width: 100%; max-width: 500px; min-width: 0; margin: 0 auto; }
   /* 해설 영역 — 문제 프레임과 동일한 stroke */
   .pv-modal-explain {
-    flex: 1; min-width: 0;
+    flex: 1; min-width: 350px; /* 해설 영역은 어떤 배치에서도 350px 아래로 안 줄어듦 */
     border: 1px solid var(--color-line);
     border-radius: 12px;
     padding: 20px 24px;
@@ -617,10 +620,13 @@
   /* 웹: 해설도 문제 프레임과 같은 폭 고정 (flex:1 이면 남은 폭만 받아 좁아짐)
      패드: 모달처럼 남은 폭 채움 (디바이더 드래그 연동) · 모바일: fixed-375 가 담당 */
   .upl-preview.web .pv-modal-explain { flex: 0 0 524px; }
-  .upl-preview.pad .pv-modal-explain { flex: 1; min-width: 0; }
-  @media (max-width: 1080px) {
+  .upl-preview.pad .pv-modal-explain { flex: 1; min-width: 350px; }
+  /* 공간이 모자라면 안쪽 최소폭(해설 350·문제 내부 374)을 지키기 위해
+     문제 프레임이 먼저 양보 — 그래도 안 되면 아래 미디어쿼리에서 세로 스택 */
+  .upl-preview.pad .pv-device { flex-shrink: 1; min-width: 422px; }
+  @media (max-width: 1220px) {
     .upl-preview { flex-direction: column; }
-    .upl-preview .pv-modal-explain { width: 100%; }
+    .upl-preview .pv-modal-explain { width: 100%; min-width: 0; }
   }
   .pv-label {
     font-size: 12px; font-weight: 600; color: var(--color-muted);
