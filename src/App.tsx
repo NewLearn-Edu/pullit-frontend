@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import LandingPage from './user/pages/LandingPage'
+import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import LoginPage from './user/pages/auth/LoginPage'
