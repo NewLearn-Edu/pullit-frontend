@@ -52,6 +52,13 @@ export default {
           'Apple SD Gothic Neo',
           'sans-serif',
         ],
+        // 마케팅 랜딩 히어로 타이틀 전용
+        paperlogy: [
+          'Paperlogy',
+          'Pretendard Variable',
+          'Pretendard',
+          'sans-serif',
+        ],
       },
       fontSize: {
         h1: ['36px', { lineHeight: '54px', fontWeight: '700' }],

@@ -19,6 +19,15 @@
   font-display: swap;
 }
 
+/* Paperlogy · 마케팅 랜딩 히어로 타이틀 전용 (OFL · 로컬 배포 public/fonts) */
+@font-face {
+  font-family: 'Paperlogy';
+  src: url('/fonts/Paperlogy-7Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* KoPubWorld 폰트 · 문제·해설 본문에 사용 (교과서·시험지 스타일)
    출처: https://www.kopus.org/biz-electronic-font2/  · 로컬 배포 (public/fonts) */
 @font-face {
