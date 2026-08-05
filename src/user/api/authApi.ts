@@ -1,12 +1,17 @@
-import axios from 'axios'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
 
 /**
- * 카카오 로그인 (REST API 인가코드 방식 · SDK 불필요)
+ * 인증 API — httpOnly 쿠키 방식
  *
- * 흐름:
+ * JWT는 백엔드가 httpOnly 쿠키(Set-Cookie)로 발급·관리한다.
+ * 프론트는 토큰을 저장·전송하지 않고(withCredentials로 쿠키 자동 전송),
+ * access 만료로 401이 오면 쿠키 기반 재발급(refreshSession) 후 1회 재시도한다.
+ * 로그인 여부 판단은 fetchMe 성공 여부로 한다 (httpOnly 쿠키는 JS가 읽을 수 없음).
+ *
+ * 카카오 로그인 (REST API 인가코드 방식 · SDK 불필요)
  * 1. startKakaoLogin() — kauth 인가 페이지로 리다이렉트
  * 2. 카카오가 /auth/kakao/callback?code=... 로 돌려보냄
- * 3. loginWithKakaoCode(code) — 인가코드 → 카카오 access token 교환 → 백엔드 로그인 → JWT 저장
+ * 3. loginWithKakaoCode(code) — 인가코드 → 카카오 access token 교환 → 백엔드 로그인(쿠키 발급)
  *
  * 카카오 콘솔 필수 설정:
  * - 제품 설정 > 카카오 로그인 활성화
@@ -24,22 +29,39 @@ const API_BASE =
 // 빌드 환경에 env 가 없어도 로그인이 동작하도록 기본값 내장 — env 로 오버라이드 가능
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY ?? 'd2465542ba74a81bb52ce10bbb9164c5'
 
-const ACCESS_TOKEN_KEY = 'pullit_access_token'
-const REFRESH_TOKEN_KEY = 'pullit_refresh_token'
-
 const redirectUri = () => `${window.location.origin}/auth/kakao/callback`
-
-export interface LoginResult {
-  accessToken: string
-  refreshToken: string
-  tokenType: string
-}
 
 interface BaseResponse<T> {
   successCode: string
   message: string
   data: T
 }
+
+/** 백엔드 API 클라이언트 — httpOnly 인증 쿠키 자동 전송 + 401 시 재발급 후 1회 재시도 */
+export const api = axios.create({ baseURL: API_BASE, withCredentials: true })
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error?.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 401 &&
+      original &&
+      !original._retry &&
+      !original.url?.startsWith('/api/auth/') // 로그인·재발급·로그아웃 자체는 재시도 대상 아님
+    ) {
+      original._retry = true
+      try {
+        await refreshSession()
+        return api(original)
+      } catch {
+        /* refresh 도 만료 — 호출부에서 비로그인 처리 */
+      }
+    }
+    return Promise.reject(error)
+  },
+)
 
 /** 카카오 인가 페이지로 이동 (로그인 버튼에서 호출) */
 export function startKakaoLogin() {
@@ -51,9 +73,9 @@ export function startKakaoLogin() {
   window.location.href = url
 }
 
-/** 콜백에서 받은 인가코드로 로그인 완료 (카카오 토큰 교환 → 백엔드 JWT 발급) */
-export async function loginWithKakaoCode(code: string): Promise<LoginResult> {
-  // 1. 인가코드 → 카카오 access token
+/** 콜백에서 받은 인가코드로 로그인 완료 (카카오 토큰 교환 → 백엔드가 쿠키 발급) */
+export async function loginWithKakaoCode(code: string): Promise<void> {
+  // 1. 인가코드 → 카카오 access token (카카오 API에 쿠키가 실리지 않도록 기본 axios 사용)
   const tokenRes = await axios.post(
     'https://kauth.kakao.com/oauth/token',
     new URLSearchParams({
@@ -66,14 +88,8 @@ export async function loginWithKakaoCode(code: string): Promise<LoginResult> {
   )
   const kakaoAccessToken: string = tokenRes.data.access_token
 
-  // 2. 카카오 access token → 백엔드 로그인 (검증 + JWT 발급)
-  const { data } = await axios.post<BaseResponse<LoginResult>>(
-    `${API_BASE}/api/auth/oauth/kakao`,
-    { accessToken: kakaoAccessToken },
-  )
-
-  saveTokens(data.data)
-  return data.data
+  // 2. 카카오 access token → 백엔드 로그인 (검증 + httpOnly 쿠키 발급)
+  await api.post('/api/auth/oauth/kakao', { accessToken: kakaoAccessToken })
 }
 
 // ---------------------------------------------------------------------------
@@ -81,7 +97,7 @@ export async function loginWithKakaoCode(code: string): Promise<LoginResult> {
 // ---------------------------------------------------------------------------
 // 카카오와 달리 네이버·구글 토큰 엔드포인트는 client_secret 필수(+네이버는 CORS 미지원)라
 // 브라우저 교환이 불가능하다. 콜백에서 받은 인가코드를 백엔드(/oauth/{provider}/code)로
-// 보내면 백엔드가 교환·검증 후 JWT를 발급한다.
+// 보내면 백엔드가 교환·검증 후 httpOnly 쿠키를 발급한다.
 //
 // 콘솔 필수 설정:
 // - 네이버 개발자센터 > Callback URL 등록: {origin}/auth/naver/callback
@@ -124,14 +140,9 @@ export function startNaverLogin() {
   window.location.href = url
 }
 
-/** 콜백에서 받은 네이버 인가코드로 로그인 완료 (교환·검증은 백엔드) */
-export async function loginWithNaverCode(code: string, state: string): Promise<LoginResult> {
-  const { data } = await axios.post<BaseResponse<LoginResult>>(
-    `${API_BASE}/api/auth/oauth/naver/code`,
-    { code, state },
-  )
-  saveTokens(data.data)
-  return data.data
+/** 콜백에서 받은 네이버 인가코드로 로그인 완료 (교환·검증·쿠키 발급은 백엔드) */
+export async function loginWithNaverCode(code: string, state: string): Promise<void> {
+  await api.post('/api/auth/oauth/naver/code', { code, state })
 }
 
 /** 구글 인가 페이지로 이동 (로그인 버튼에서 호출) */
@@ -146,65 +157,23 @@ export function startGoogleLogin() {
   window.location.href = url
 }
 
-/** 콜백에서 받은 구글 인가코드로 로그인 완료 (교환·검증은 백엔드) */
-export async function loginWithGoogleCode(code: string): Promise<LoginResult> {
-  const { data } = await axios.post<BaseResponse<LoginResult>>(
-    `${API_BASE}/api/auth/oauth/google/code`,
-    { code, redirectUri: oauthCallbackUri('google') },
-  )
-  saveTokens(data.data)
-  return data.data
-}
-
-export function saveTokens(result: LoginResult) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken)
-  localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken)
-}
-
-export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
-}
-
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function clearTokens() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+/** 콜백에서 받은 구글 인가코드로 로그인 완료 (교환·검증·쿠키 발급은 백엔드) */
+export async function loginWithGoogleCode(code: string): Promise<void> {
+  await api.post('/api/auth/oauth/google/code', { code, redirectUri: oauthCallbackUri('google') })
 }
 
 // ---------------------------------------------------------------------------
-// 토큰 자동 갱신
+// 세션 재발급 · 로그아웃
 // ---------------------------------------------------------------------------
 
-/** JWT exp 클레임 기준 만료 여부 (10초 여유) — 파싱 실패 시 만료로 간주 */
-function isExpired(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now() + 10_000
-  } catch {
-    return true
-  }
-}
+let refreshPromise: Promise<void> | null = null
 
-let refreshPromise: Promise<LoginResult> | null = null
-
-/** 리프레시 토큰으로 재발급 — 동시에 여러 요청이 만료를 만나도 재발급은 1회로 합류 */
-export function refreshTokens(): Promise<LoginResult> {
+/** refresh 쿠키로 인증 쿠키 재발급 — 동시에 여러 401이 나도 재발급은 1회로 합류 */
+export function refreshSession(): Promise<void> {
   if (!refreshPromise) {
-    const refreshToken = getRefreshToken()
-    if (!refreshToken) return Promise.reject(new Error('no refresh token'))
     refreshPromise = axios
-      .post<BaseResponse<LoginResult>>(`${API_BASE}/api/auth/token`, { refreshToken })
-      .then(({ data }) => {
-        saveTokens(data.data)
-        return data.data
-      })
-      .catch((e) => {
-        clearTokens() // 리프레시도 만료 — 재로그인 필요
-        throw e
-      })
+      .post(`${API_BASE}/api/auth/token`, null, { withCredentials: true })
+      .then(() => undefined)
       .finally(() => {
         refreshPromise = null
       })
@@ -212,19 +181,9 @@ export function refreshTokens(): Promise<LoginResult> {
   return refreshPromise
 }
 
-/**
- * 유효한 액세스 토큰 확보 — 만료됐으면 선제 갱신 후 반환.
- * (만료 토큰을 서버로 보내지 않아 백엔드 경고 로그도 발생하지 않는다)
- */
-export async function getValidAccessToken(): Promise<string | null> {
-  const token = getAccessToken()
-  if (token && !isExpired(token)) return token
-  if (!getRefreshToken()) return null
-  try {
-    return (await refreshTokens()).accessToken
-  } catch {
-    return null
-  }
+/** 로그아웃 — 서버가 RefreshToken 무효화 + 인증 쿠키 삭제 */
+export async function logout(): Promise<void> {
+  await api.post('/api/auth/logout')
 }
 
 // ---------------------------------------------------------------------------
@@ -242,16 +201,12 @@ export interface MeResult {
 
 /**
  * 내 정보 조회 (GET /api/users/me).
- * 비로그인·토큰 만료·오류 시 null — 호출부에서 폴백 처리.
+ * 비로그인·세션 만료·오류 시 null — 호출부에서 폴백 처리.
+ * (401이면 인터셉터가 재발급 후 재시도하므로, null이면 refresh까지 만료된 상태)
  */
 export async function fetchMe(): Promise<MeResult | null> {
-  const token = await getValidAccessToken()
-  if (!token) return null
   try {
-    const { data } = await axios.get<BaseResponse<MeResult>>(
-      `${API_BASE}/api/users/me`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    )
+    const { data } = await api.get<BaseResponse<MeResult>>('/api/users/me')
     return data.data
   } catch {
     return null
