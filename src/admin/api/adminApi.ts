@@ -82,6 +82,12 @@ export interface ProblemListItem {
   difficulty: Difficulty | null
   status: ProblemStatus
   createdAt: string
+  /** 총 풀이 수 (연인원 — 재풀이 포함) */
+  attemptCount: number
+  /** 푼 유저 수 (순인원 — 유저당 1회) */
+  solverCount: number
+  /** 첫 시도 정답률 % (0~100) — 풀이 기록 없으면 null */
+  correctRate: number | null
 }
 
 export interface ProblemPage {
@@ -147,6 +153,69 @@ export async function fetchProblemDetail(id: string): Promise<ProblemDetail> {
   const { data } = await adminApi.get<BaseResponse<ProblemDetail>>(
     `/api/admin/problems/${encodeURIComponent(id)}`,
   )
+  return data.data
+}
+
+// ---------------------------------------------------------------------------
+// 맛보기 테스트 (trial test)
+// ---------------------------------------------------------------------------
+
+export interface TrialTestSetSummary {
+  setNo: number
+  count: number
+  /** 세트 안에 비노출(INACTIVE) 문항 수 — 도표·무관한 문장 등 미확정 유형 */
+  inactiveCount: number
+}
+
+/** 맛보기 그룹 = 원본 파일명 단위 (수학: 2022_1_1_1 · 영어: r12_blank 등) */
+export interface TrialTestGroup {
+  groupCode: string
+  unitLarge: string | null
+  unitMid: string | null
+  skillNode: string
+  totalCount: number
+  sets: TrialTestSetSummary[]
+}
+
+export interface TrialTestItem {
+  sequence: number
+  problem: ProblemListItem
+}
+
+export interface TrialTestImportResult {
+  subject: ApiSubject
+  groupCode: string
+  setNo: number
+  mappedCount: number
+  importResult: ProblemImportResult
+}
+
+/** 맛보기 세트 파일 1개 업로드 — 문항 업서트 + 파일명 기반 세트 매핑 등록 */
+export async function importTrialTestFile(file: File): Promise<TrialTestImportResult> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await adminApi.post<BaseResponse<TrialTestImportResult>>(
+    '/api/admin/trial-tests/import',
+    form,
+  )
+  return data.data
+}
+
+export async function fetchTrialTestGroups(subject: ApiSubject): Promise<TrialTestGroup[]> {
+  const { data } = await adminApi.get<BaseResponse<TrialTestGroup[]>>('/api/admin/trial-tests', {
+    params: { subject },
+  })
+  return data.data
+}
+
+export async function fetchTrialTestItems(
+  subject: ApiSubject,
+  groupCode: string,
+  setNo: number,
+): Promise<TrialTestItem[]> {
+  const { data } = await adminApi.get<BaseResponse<TrialTestItem[]>>('/api/admin/trial-tests/items', {
+    params: { subject, groupCode, setNo },
+  })
   return data.data
 }
 

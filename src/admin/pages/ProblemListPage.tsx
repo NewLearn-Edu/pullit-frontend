@@ -43,14 +43,13 @@ const NODE_ORDER: Record<string, string[]> = {
   'ENGLISH:기초 언어 능력': ['어휘 쓰임'],
 }
 
-function sortNodes(subject: ApiSubject, parent: string, nodes: FilterNode[]): FilterNode[] {
-  const order = NODE_ORDER[`${subject}:${parent}`]
-  if (!order) return nodes
-  return [...nodes].sort((a, b) => {
-    const ai = order.indexOf(a.name)
-    const bi = order.indexOf(b.name)
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-  })
+/** 교육과정 고정 목록 + 은행 트리 병합 — 은행에 문제가 없는 단원/영역도 항상 노출 (맛보기 페이지와 동일) */
+function fixedNodes(subject: ApiSubject, parent: string, treeNodes: FilterNode[]): FilterNode[] {
+  const names = NODE_ORDER[`${subject}:${parent}`]
+  if (!names) return treeNodes
+  return names.map(
+    (name) => treeNodes.find((n) => n.name === name) ?? { name, count: 0, children: [] },
+  )
 }
 
 const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.')
@@ -200,20 +199,23 @@ export default function ProblemListPage() {
     }
   }, [selectedId])
 
-  const bigNodes = useMemo(() => (apiSubject ? sortNodes(apiSubject, '', tree) : []), [apiSubject, tree])
-  const selectedBig = useMemo(() => tree.find((n) => n.name === cas.big) ?? null, [tree, cas.big])
-  const midNodes = useMemo(
-    () => (apiSubject && selectedBig ? sortNodes(apiSubject, selectedBig.name, selectedBig.children) : []),
-    [apiSubject, selectedBig],
+  // 대분류·중분류(영어: 영역·유형)는 교육과정 고정 목록으로 항상 전부 노출, 소분류만 은행 트리에서 파생
+  const bigNodes = useMemo(
+    () => (apiSubject ? fixedNodes(apiSubject, '', tree) : []),
+    [apiSubject, tree],
   )
-  const selectedMid = useMemo(
-    () => (isMath ? (selectedBig?.children.find((n) => n.name === cas.mid) ?? null) : null),
-    [isMath, selectedBig, cas.mid],
-  )
-  const smallNodes = useMemo(
-    () => (apiSubject && selectedMid ? sortNodes(apiSubject, selectedMid.name, selectedMid.children) : []),
-    [apiSubject, selectedMid],
-  )
+  const midNodes = useMemo(() => {
+    if (!apiSubject || !cas.big) return []
+    const treeBig = tree.find((n) => n.name === cas.big)
+    return fixedNodes(apiSubject, cas.big, treeBig?.children ?? [])
+  }, [apiSubject, tree, cas.big])
+  const smallNodes = useMemo(() => {
+    if (!isMath || !cas.big || !cas.mid) return []
+    const treeMid = tree
+      .find((n) => n.name === cas.big)
+      ?.children.find((n) => n.name === cas.mid)
+    return treeMid?.children ?? []
+  }, [isMath, tree, cas.big, cas.mid])
 
   if (!label) return <Navigate to="/admin/problems/math" replace />
 
@@ -369,12 +371,15 @@ export default function ProblemListPage() {
               <thead>
                 {isMath ? (
                   <tr>
+                    {/* 소단원만 유동 폭 — 전 컬럼 고정 px 면 남는 공간이 빈 영역으로 남아 헤더가 잘려 보임 */}
                     <th style={{ width: 150 }}>ID</th>
                     <th style={{ width: 150 }}>대단원</th>
                     <th style={{ width: 210 }} className="col-mid">중단원</th>
-                    <th style={{ width: 210 }}>소단원</th>
+                    <th>소단원</th>
                     <th style={{ width: 70 }}>점수</th>
                     <th style={{ width: 120 }}>상태</th>
+                    <th style={{ width: 90 }} className="col-solves">풀이 수</th>
+                    <th style={{ width: 90 }}>정답률</th>
                     <th style={{ width: 120 }} className="col-date">등록일</th>
                     <th style={{ width: 80 }} />
                   </tr>
@@ -382,9 +387,11 @@ export default function ProblemListPage() {
                   <tr>
                     <th style={{ width: 210 }}>ID</th>
                     <th style={{ width: 180 }}>영역</th>
-                    <th style={{ width: 160 }}>유형</th>
+                    <th>유형</th>
                     <th style={{ width: 70 }}>점수</th>
                     <th style={{ width: 120 }}>상태</th>
+                    <th style={{ width: 90 }} className="col-solves">풀이 수</th>
+                    <th style={{ width: 90 }}>정답률</th>
                     <th style={{ width: 120 }} className="col-date">등록일</th>
                     <th style={{ width: 80 }} />
                   </tr>
@@ -408,13 +415,21 @@ export default function ProblemListPage() {
                     </td>
                     <td className="num">{p.points}점</td>
                     <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
+                    {/* ?? 0 방어 — 구버전 백엔드(통계 필드 없음) 응답에도 페이지가 깨지지 않게 */}
+                    <td className="num col-solves">
+                      {(p.solverCount ?? 0).toLocaleString()}명
+                      {(p.attemptCount ?? 0) > (p.solverCount ?? 0) && (
+                        <span className="sub">총 {p.attemptCount.toLocaleString()}회</span>
+                      )}
+                    </td>
+                    <td className="num">{p.correctRate == null ? '–' : `${p.correctRate}%`}</td>
                     <td className="num col-date">{formatDate(p.createdAt)}</td>
                     <td><button className="btn btn-ghost btn-sm">상세</button></td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ color: 'var(--color-muted)', textAlign: 'center', padding: 32 }}>
+                    <td colSpan={isMath ? 10 : 9} style={{ color: 'var(--color-muted)', textAlign: 'center', padding: 32 }}>
                       조건에 맞는 문제가 없어요
                     </td>
                   </tr>

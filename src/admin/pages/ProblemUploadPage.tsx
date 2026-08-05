@@ -32,8 +32,7 @@ interface UploadItem {
 }
 
 export default function ProblemUploadPage() {
-  const { subject = '' } = useParams()
-  const label = SUBJECT_LABEL[subject]
+  const { subject: subjectParam = '' } = useParams()
   const toast = useToast()
 
   const [items, setItems] = useState<UploadItem[]>([])
@@ -45,6 +44,12 @@ export default function ProblemUploadPage() {
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<ProblemImportResult | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // 과목 자동 감지 — 단일 "문제 업로드" 메뉴 대응. 파일 rows 의 subject 필드 우선, URL 파라미터는 폴백
+  const detected =
+    items[0]?.subject === 'english' ? 'english' : items[0]?.subject === 'math' ? 'math' : null
+  const subject = detected ?? subjectParam
+  const label = SUBJECT_LABEL[subject]
 
   // 검토 디바이스 프레임 — 목록 미리보기 모달과 동일 (웹/패드-드래그/모바일 375)
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
@@ -67,7 +72,8 @@ export default function ProblemUploadPage() {
     window.addEventListener('mouseup', onUp)
   }
 
-  if (!label) return <Navigate to="/admin/upload/math" replace />
+  // 알 수 없는 과목 파라미터만 리다이렉트 — 파라미터 없는 /admin/upload 는 파일에서 과목 감지
+  if (subjectParam && !SUBJECT_LABEL[subjectParam]) return <Navigate to="/admin/upload" replace />
 
   const loadFile = (file: File) => {
     const reader = new FileReader()
@@ -135,7 +141,9 @@ export default function ProblemUploadPage() {
     <section className="view">
       <div className="page-head">
         <div>
-          <h2 className="section-title" style={{ marginBottom: 4 }}>{label} 문제 업로드</h2>
+          <h2 className="section-title" style={{ marginBottom: 4 }}>
+            {label ? `${label} 문제 업로드` : '문제 업로드'}
+          </h2>
           <p className="page-sub">JSON 파일을 올리면 파일명으로 단원이 자동 분류되고, 문제를 바로 검토할 수 있어요</p>
         </div>
       </div>

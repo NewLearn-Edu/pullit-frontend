@@ -61,11 +61,13 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   }, [])
   const meName = me?.name ?? me?.nickname ?? '관리자'
 
-  // 레일 섹션: 대시보드 = home, 목록·업로드 = problem, 회원 = member
-  const isProblem = pathname.includes('/problems/') || pathname.includes('/upload/')
+  // 레일 섹션: 대시보드 = home, 목록·업로드·맛보기 = problem, 회원 = member
+  const isProblem =
+    pathname.includes('/problems/') || pathname.includes('/upload') || pathname.includes('/trial-tests/')
   const isMember = pathname.includes('/members')
   const isList = pathname.includes('/problems/')
-  const isUpload = pathname.includes('/upload/')
+  const isTrial = pathname.includes('/trial-tests/')
+  const isUpload = pathname.includes('/upload')
 
   const soonMenus = [
     { name: '통계', ico: <IcoStats /> },
@@ -146,22 +148,28 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
 
         {isProblem && (
           <>
-            <div className="nav-label">수학 문제</div>
+            <div className="nav-label">문제</div>
             <NavLink to="/admin/problems/math" className={navClass}>
               <span className="ico"><IcoList /></span>
-              문제 목록
+              수학
             </NavLink>
-            <NavLink to="/admin/upload/math" className={navClass}>
-              <span className="ico"><IcoUpload /></span>
-              문제 업로드
-            </NavLink>
-
-            <div className="nav-label">영어 문제</div>
             <NavLink to="/admin/problems/english" className={navClass}>
               <span className="ico"><IcoList /></span>
-              문제 목록
+              영어
             </NavLink>
-            <NavLink to="/admin/upload/english" className={navClass}>
+
+            <div className="nav-label">맛보기 테스트</div>
+            <NavLink to="/admin/trial-tests/math" className={navClass}>
+              <span className="ico"><IcoList /></span>
+              수학
+            </NavLink>
+            <NavLink to="/admin/trial-tests/english" className={navClass}>
+              <span className="ico"><IcoList /></span>
+              영어
+            </NavLink>
+
+            <div className="nav-label">업로드</div>
+            <NavLink to="/admin/upload" className={navClass}>
               <span className="ico"><IcoUpload /></span>
               문제 업로드
             </NavLink>
@@ -179,7 +187,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
       </aside>
 
       <main className="main">
-        <div className={clsx('main-inner', isList && 'wide', isUpload && 'mid')}>
+        <div className={clsx('main-inner', (isList || isTrial) && 'wide', isUpload && 'mid')}>
           {isProblem && <ProblemKpi />}
           <Outlet />
         </div>
