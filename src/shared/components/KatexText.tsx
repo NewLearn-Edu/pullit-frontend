@@ -21,17 +21,63 @@ const enlargeSetOps = (tex: string) => tex.replace(/\\(cup|cap)\b/g, '\\mathbin{
 
 /**
  * 절댓값(|)·대괄호([ ]) 획 보강 — KaTeX 기본이 수능 지면보다 가늘어 볼드 글리프로 교체.
- * 렌더된 HTML 의 단일 글리프 텍스트 노드만 감싸므로 다른 기호에는 영향 없음.
+ * KaTeX 가 이웃 글리프를 한 span 으로 합치는 경우("2∣" 등)에도 놓치지 않도록
+ * 텍스트 노드 안의 막대·대괄호를 개별로 감싼다 (태그 속성은 >…< 밖이라 안전).
  */
-const emboldenDelims = (html: string) =>
-  html.replace(/>([[\]∣|])</g, '><span class="katex-delim-bold">$1</span><')
+const emboldenDelims = (html: string) => {
+  // 시각 렌더 파트(katex-html)에만 적용 — 앞쪽 MathML/annotation(원본 TeX
+  // 보존·접근성)까지 감싸면 복사·스크린리더가 오염된다
+  const idx = html.indexOf('class="katex-html"')
+  if (idx === -1) return html
+  return (
+    html.slice(0, idx) +
+    html
+      .slice(idx)
+      .replace(/>([^<]*[∣|[\]][^<]*)</g, (_, text: string) =>
+        `>${text.replace(/([∣|[\]])/g, '<span class="katex-delim-bold">$1</span>')}<`,
+      )
+  )
+}
 
 /**
  * 인라인 수식의 분수를 지면 크기로 — KaTeX 는 문장 속 \frac 을 축소형(textstyle)으로
  * 그리는데, 수능 지면은 문장 안 분수도 큰 형태라 \dfrac 으로 승격.
- * (\dfrac 이 이미 쓰인 곳은 매칭되지 않아 그대로 · 파이썬 렌더러와 동일 규칙)
+ * 지수·아래첨자(^·_) 안의 분수는 \\tfrac 으로 — 기본은 너무 작고 \\dfrac 은 거대.
  */
-const displaySizeFractions = (tex: string) => tex.replace(/\\frac\b/g, '\\dfrac')
+const displaySizeFractions = (tex: string): string => {
+  let out = ''
+  let i = 0
+  let depth = 0
+  const scriptDepths: number[] = [] // ^{…}·_{…} 그룹이 열린 brace 깊이 스택
+  while (i < tex.length) {
+    const c = tex[i]
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      while (scriptDepths.length && depth < scriptDepths[scriptDepths.length - 1]) {
+        scriptDepths.pop()
+      }
+    } else if (c === '^' || c === '_') {
+      let k = i + 1
+      while (tex[k] === ' ') k++
+      if (tex[k] === '{') scriptDepths.push(depth + 1)
+    }
+    if (tex.startsWith('\\frac', i) && !/[a-zA-Z]/.test(tex[i + 5] ?? '')) {
+      // 스크립트 그룹 안이거나, ^·_ 바로 뒤(중괄호 없는 형태)면 승격하지 않음
+      let k = out.length - 1
+      while (k >= 0 && out[k] === ' ') k--
+      const inScript = scriptDepths.length > 0 || out[k] === '^' || out[k] === '_'
+      // 지수 속 분수: 기본(\frac)은 깨알 크기, \dfrac 은 거대 → \tfrac(텍스트
+      // 크기 고정)으로 한 단계만 키워 수능 지면과 비슷한 가독성 확보
+      out += inScript ? '\\tfrac' : '\\dfrac'
+      i += 5
+      continue
+    }
+    out += c
+    i++
+  }
+  return out
+}
 
 /**
  * KaTeX 렌더 + 파싱 실패 폴백.
@@ -133,7 +179,12 @@ function BlockMath({ tex }: { tex: string }) {
   const scaleRef = useRef(1)
   const [scale, setScale] = useState(1)
 
-  const html = useMemo(() => emboldenDelims(renderWithFallback(enlargeSetOps(tex), true)), [tex])
+  const html = useMemo(
+    // displaySizeFractions: 블록 본문 분수는 이미 display 크기라 영향 없고,
+    // 지수·첨자 속 분수만 \tfrac 으로 키워진다 (깨알 크기 방지)
+    () => emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(tex)), true)),
+    [tex],
+  )
 
   useLayoutEffect(() => {
     scaleRef.current = 1

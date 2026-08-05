@@ -4,7 +4,7 @@
 
 /* 주어진 문장 · (가)(나)(다) 조건 박스 — 수능 지면의 실선 테두리 박스 */
 .pv-box {
-  border: 1.5px solid currentColor;
+  border: 1px solid currentColor;
   border-radius: 2px;
   padding: 12px 16px;
   margin: 16px 0;
@@ -33,8 +33,8 @@
   container-type: inline-size;
 }
 .exam-explain-scale {
-  /* size = 8.333px + 1.3333% × 컨테이너폭 → 350px→13px · 500px→15px */
-  font-size: clamp(13px, calc(8.333px + 1.3333cqw), 15px);
+  /* size = 7.167px + 1.6667% × 컨테이너폭 → 350px→13px · 500px→15.5px */
+  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
 }
 
 /* ── 해설 레이아웃 — 영역 대비가 핵심 ───────────────────────────
@@ -59,7 +59,7 @@
 }
 .exam-explain-p span.katex-block {
   margin: 0;
-  padding: 3px 0; /* overflow 클리핑에 글리프 안 잘리게만 유지 */
+  padding: 16px 0; /* 위아래 대칭 — 식 아래에도 같은 숨 고르기 (검수 도구 리듬) */
 }
 .exam-explain-p .katex-display {
   margin: 20px 0; /* 줄 여백(4px)과 합쳐 수식 영역 위아래 = 24px */

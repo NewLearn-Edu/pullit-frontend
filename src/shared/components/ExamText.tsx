@@ -83,8 +83,15 @@ const PARA_START =
 
 /** 빈 줄 우선, 이어서 영역 마커로 시작하는 줄에서 문단 분리 */
 function splitParas(text: string): string[] {
+  // 문장 중간에 파묻힌 케이스 마커("… = 128 (i) a = b²인 경우 …")는 마커 앞에서
+  // 줄을 끊어 line-start 마커로 승격 — 단, "(i), (ii)에 의하여" 같은 참조 표현은
+  // 마커 뒤에 공백이 없어 매칭되지 않음
+  const marked = text.replace(
+    /([^\n])[ \t]+(\((?:i{1,3}|iv|v|vi{0,3}|ix|x|ⅰ|ⅱ|ⅲ|ⅳ|ⅴ|ⅵ)\))[ \t]+/g,
+    '$1\n$2 ',
+  )
   const out: string[] = []
-  for (const rough of text.split(/\n[ \t]*\n+/)) {
+  for (const rough of marked.split(/\n[ \t]*\n+/)) {
     let cur: string[] = []
     for (const ln of rough.split('\n')) {
       if (cur.length > 0 && PARA_START.test(ln.trim())) {
@@ -268,11 +275,23 @@ function EquationChain({
  */
 function ExplainPara({ para }: { para: string }) {
   // 여러 줄에 걸친 $$…$$ 블록을 한 줄로 접어 독립시킨다 — 줄 단위 분해가
-  // 블록을 못 알아보고 원문을 노출하는 것 방지 (\begin{aligned} 멀티라인 등)
-  const normalized = para.replace(
-    /\$\$([\s\S]*?)\$\$/g,
-    (_, inner: string) => `\n$$${inner.replace(/\s*\n\s*/g, ' ').trim()}$$\n`,
-  )
+  // 블록을 못 알아보고 원문을 노출하는 것 방지 (\begin{aligned} 멀티라인 등).
+  // ★ $$ 블록을 먼저 자리표시자로 빼놓은 뒤 홑 $ 를 접어야 한다 — 안 그러면
+  //   홑 $ 접기가 한 블록의 닫는 $와 다음 블록의 여는 $를 짝으로 오인해
+  //   블록 사이 한글 문장까지 수식으로 삼킨다
+  const savedBlocks: string[] = []
+  const normalized = para
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, inner: string) => {
+      savedBlocks.push(`\n$$${inner.replace(/\s*\n\s*/g, ' ').trim()}$$\n`)
+      return `@@EXBLOCK${savedBlocks.length - 1}@@`
+    })
+    // 홑 $ 한 쌍이 여러 줄에 걸친 경우($\n\begin{aligned}…\n$)도 접는다
+    // — 환경이 들어있으면 display($$)로 승격
+    .replace(/\$([^$]*\n[^$]*)\$/g, (_, inner: string) => {
+      const folded = inner.replace(/\s*\n\s*/g, ' ').trim()
+      return /\\begin\{/.test(folded) ? `\n$$${folded}$$\n` : `$${folded}$`
+    })
+    .replace(/@@EXBLOCK(\d+)@@/g, (_, n: string) => savedBlocks[Number(n)])
   const lines = normalized
     .split('\n')
     .map((l) => l.trim())
@@ -286,8 +305,8 @@ function ExplainPara({ para }: { para: string }) {
       nodes = []
     }
   }
-  // $$ 식에 이어지는 줄 판정 — 같은 영역에 묶는다:
-  // · "(단,$C$는 적분상수)" · "이다." 같은 짧은 꼬리
+  // $$ 식에 이어지는 줄 판정 — 자격이 유지되는 동안 개수 제한 없이 묶는다:
+  // · "(단,$C$는 적분상수)" · "이다." · "$\cdots$㉠" 같은 짧은 꼬리
   // · "$a = 0$" 같은 짧은 결과식 (인라인 수식 줄 — 식 아래 왼쪽에 붙음)
   const isConnector = (ln: string | undefined): ln is string => {
     if (!ln || ln.length > 30 || PARA_START.test(ln)) return false
@@ -302,11 +321,24 @@ function ExplainPara({ para }: { para: string }) {
       if (/\\begin\{(aligned|gathered)\*?\}/.test(m.tex) && !/\\begin\{(?!aligned|gathered)/.test(m.tex)) {
         // aligned·gathered 는 행으로 해체해 폭 실측 그리디 재배치 —
         // 첫 행 A = B 조차 안 들어가면 A / = B 로 접는다 (스크롤 금지)
-        const rows = texToRows(unwrapAlignEnv(m.tex))
+        let rows = texToRows(unwrapAlignEnv(m.tex))
         if (rows.length >= 2) {
-          nodes.push(<EquationChain key={key++} segs={rows} tail={m.tail} fromBlock />)
-          i++
-          for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+          // 환경 블록 뒤로 이어지는 "$$= …$$"·"$= …$" 줄도 같은 등식 체인 —
+          // 데이터가 한 등식을 여러 블록으로 쪼갠 경우 병합 (꼬리 나오면 종료)
+          let tail = m.tail
+          let j = i + 1
+          while (j < lines.length && !tail.trim()) {
+            const n = matchMathOnly(lines[j])
+            if (!n || /\\begin\{/.test(n.tex)) break
+            const nRows = texToRows(n.tex)
+            if (!nRows.length || !nRows[0].startsWith('=')) break
+            rows = rows.concat(nRows)
+            tail = n.tail
+            j++
+          }
+          nodes.push(<EquationChain key={key++} segs={rows} tail={tail} fromBlock />)
+          i = j
+          while (isConnector(lines[i])) {
             nodes.push(
               <div key={key++} className="exam-explain-line">
                 <ExamText text={lines[i]} />
@@ -332,7 +364,7 @@ function ExplainPara({ para }: { para: string }) {
           </div>,
         )
       i++
-      for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+      while (isConnector(lines[i])) {
         nodes.push(
           <div key={key++} className="exam-explain-line">
             <ExamText text={lines[i]} />
@@ -364,7 +396,7 @@ function ExplainPara({ para }: { para: string }) {
         nodes.push(<EquationChain key={key++} segs={rows} tail={tail} fromBlock={m.isBlock} />)
         i = j
         if (m.isBlock) {
-          for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+          while (isConnector(lines[i])) {
             nodes.push(
               <div key={key++} className="exam-explain-line">
                 <ExamText text={lines[i]} />
@@ -391,7 +423,7 @@ function ExplainPara({ para }: { para: string }) {
       )
       i++
       if (m.isBlock) {
-        for (let f = 0; f < 2 && isConnector(lines[i]); f++) {
+        while (isConnector(lines[i])) {
           nodes.push(
             <div key={key++} className="exam-explain-line">
               <ExamText text={lines[i]} />

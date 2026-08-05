@@ -1,4 +1,5 @@
 import { ExamText, MathExplainLayout } from './ExamText'
+import { MathJaxExplainRender } from './ExamMathJax'
 
 /**
  * 수능 본문 렌더러 4종 — 모든 화면(어드민 미리보기·업로드 검토·학생 문제풀이·해설)은
@@ -14,8 +15,13 @@ export function MathProblemRender({ text }: { text: string }) {
   return <ExamText text={text} />
 }
 
-/** 수학 해설 본문 */
+/** 수학 해설 본문 — 검수 도구(파이썬 렌더러) 방식 그대로: HTML 규칙·CSS·MathJax */
 export function MathExplainRender({ text }: { text: string }) {
+  return <MathJaxExplainRender text={text} />
+}
+
+/** (비교용) 우리 KaTeX 조판 해설 — 업로드 검토의 엔진 토글에서만 사용 */
+export function MathExplainKatexRender({ text }: { text: string }) {
   return <MathExplainLayout text={text} />
 }
 
@@ -30,5 +36,5 @@ export function EnglishProblemRender({ text }: { text: string }) {
 
 /** 영어 해설 본문 — 파이썬 렌더러는 과목 구분 없이 동일 규칙 */
 export function EnglishExplainRender({ text }: { text: string }) {
-  return <MathExplainLayout text={text} />
+  return <MathJaxExplainRender text={text} />
 }

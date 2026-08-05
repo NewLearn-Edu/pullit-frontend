@@ -454,7 +454,7 @@ export default function ProblemListPage() {
               </button>
             </div>
             {detail && (
-              <div className="pv-modal-body">
+              <div className={clsx('pv-modal-body', device)}>
                 <div
                   className={clsx('pv-device', device)}
                   style={device === 'pad' ? { width: padWidth } : undefined}
