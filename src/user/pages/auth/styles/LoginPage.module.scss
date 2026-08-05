@@ -82,6 +82,19 @@ $color-naver: #03C75A;
   }
 }
 
+.apple {
+  background: #000;
+  color: #fff;
+}
+
+// 애플 팝업 로그인 실패 안내 (콜백 페이지가 없어 이 페이지에서 표시)
+.error {
+  margin: $space-md 0 0;
+  font-size: $fs-body-sm;
+  color: $color-danger;
+  text-align: center;
+}
+
 // 하단 안내 문구
 .note {
   margin: $space-xl 0 0;
