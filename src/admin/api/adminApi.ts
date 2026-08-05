@@ -1,5 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
-import { clearTokens, getRefreshToken, getValidAccessToken, refreshTokens } from '@/user/api/authApi'
+import { refreshSession } from '@/user/api/authApi'
 
 /** 백엔드 API 클라이언트 — 로컬은 localhost:8080, 배포는 백엔드 도메인(api-dev) */
 export const adminApi = axios.create({
@@ -8,36 +8,23 @@ export const adminApi = axios.create({
     (window.location.hostname === 'localhost'
       ? 'http://localhost:8080'
       : 'https://api-dev.pullit.co.kr'),
+  // 인증은 httpOnly 쿠키 자동 전송 (배포 환경 /api/admin/** 은 ROLE_ADMIN 필수.
+  // 로컬은 ADMIN_OPEN=true 로 쿠키 없이도 허용)
+  withCredentials: true,
 })
 
-// 로그인되어 있으면 JWT 를 자동 첨부 (배포 환경 /api/admin/** 은 ROLE_ADMIN 토큰 필수.
-// 로컬은 ADMIN_OPEN=true 로 토큰 없이도 허용).
-// 만료 토큰은 보내지 않고 선제 갱신 — 만료 상태로 서버에 닿는 일 자체를 없앤다
-adminApi.interceptors.request.use(async (config) => {
-  const token = await getValidAccessToken()
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
-// 안전망: 그래도 401 이면 리프레시 후 원요청 1회 재시도
+// access 쿠키 만료로 401 이면 refresh 쿠키로 재발급 후 원요청 1회 재시도
 adminApi.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error?.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
-    if (
-      axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
-      original &&
-      !original._retry &&
-      getRefreshToken()
-    ) {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && original && !original._retry) {
       original._retry = true
       try {
-        const { accessToken } = await refreshTokens()
-        original.headers.Authorization = `Bearer ${accessToken}`
+        await refreshSession()
         return adminApi(original)
       } catch {
-        clearTokens()
+        /* refresh 도 만료 — 어드민 가드(fetchMe)가 /login 으로 보낸다 */
       }
     }
     return Promise.reject(error)
