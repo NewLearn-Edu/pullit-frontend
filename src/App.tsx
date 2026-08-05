@@ -4,6 +4,7 @@ import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import LoginPage from './user/pages/auth/LoginPage'
+import SignupPromptPage from './user/pages/auth/SignupPromptPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
 import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/wrong-note" element={<WrongNotePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPromptPage />} />
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
