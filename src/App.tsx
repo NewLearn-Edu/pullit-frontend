@@ -11,6 +11,7 @@ import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
+import WeaknessResultPage from './user/pages/taste/WeaknessResultPage'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
 const AdminRoutes = lazy(() => import('./admin/routes'))
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
+      <Route path="/weakness" element={<WeaknessResultPage />} />
       <Route
         path="/admin/*"
         element={
