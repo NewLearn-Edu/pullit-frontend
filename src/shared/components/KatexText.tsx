@@ -42,7 +42,7 @@ const emboldenDelims = (html: string) => {
 /**
  * 인라인 수식의 분수를 지면 크기로 — KaTeX 는 문장 속 \frac 을 축소형(textstyle)으로
  * 그리는데, 수능 지면은 문장 안 분수도 큰 형태라 \dfrac 으로 승격.
- * 단, 지수·아래첨자(^·_) 안의 분수(a^{1/2} 등)는 승격하면 거대해지므로 제외.
+ * 지수·아래첨자(^·_) 안의 분수는 \\tfrac 으로 — 기본은 너무 작고 \\dfrac 은 거대.
  */
 const displaySizeFractions = (tex: string): string => {
   let out = ''
@@ -67,7 +67,9 @@ const displaySizeFractions = (tex: string): string => {
       let k = out.length - 1
       while (k >= 0 && out[k] === ' ') k--
       const inScript = scriptDepths.length > 0 || out[k] === '^' || out[k] === '_'
-      out += inScript ? '\\frac' : '\\dfrac'
+      // 지수 속 분수: 기본(\frac)은 깨알 크기, \dfrac 은 거대 → \tfrac(텍스트
+      // 크기 고정)으로 한 단계만 키워 수능 지면과 비슷한 가독성 확보
+      out += inScript ? '\\tfrac' : '\\dfrac'
       i += 5
       continue
     }
@@ -177,7 +179,12 @@ function BlockMath({ tex }: { tex: string }) {
   const scaleRef = useRef(1)
   const [scale, setScale] = useState(1)
 
-  const html = useMemo(() => emboldenDelims(renderWithFallback(enlargeSetOps(tex), true)), [tex])
+  const html = useMemo(
+    // displaySizeFractions: 블록 본문 분수는 이미 display 크기라 영향 없고,
+    // 지수·첨자 속 분수만 \tfrac 으로 키워진다 (깨알 크기 방지)
+    () => emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(tex)), true)),
+    [tex],
+  )
 
   useLayoutEffect(() => {
     scaleRef.current = 1

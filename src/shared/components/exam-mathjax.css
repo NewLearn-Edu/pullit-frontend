@@ -1,0 +1,62 @@
+/* 검수 도구(pullit-review-note layout.py) 해설 스타일 포팅 — MathJax 비교 렌더러용.
+   mm 단위는 화면용 px 로 환산 (1mm ≈ 3.78px, 검수 도구 화면 배율 기준 보정) */
+
+/* 반응형 폰트 — KaTeX 해설(.exam-explain-scale)과 동일 공식:
+   컨테이너 폭 500px=15.5px(최대) ~ 350px=13px(최소), 사이 구간 선형 보간.
+   MathJax 수식은 본문 대비 %크기라 폰트를 따라 같이 줄어든다 */
+.exam-mj-root {
+  container-type: inline-size;
+}
+
+.exam-mj {
+  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* .content p { margin:0 0 1.5mm } */
+.exam-mj p {
+  margin: 0 0 8px;
+}
+
+/* .math-display-block — 가운데 정렬 display 블록 */
+.exam-mj .math-display-block {
+  display: block;
+  text-align: center;
+  margin: 10px auto;
+  max-width: 100%;
+  break-inside: avoid;
+}
+
+/* .backtick-block — 조건 박스 */
+.exam-mj .backtick-block {
+  width: auto;
+  max-width: 94%;
+  border: 1.4px solid #2f455c;
+  background: #f8fafc;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 9px auto;
+  font-weight: 600;
+  text-align: center;
+  break-inside: avoid;
+}
+.exam-mj .backtick-block p {
+  margin: 0 0 4px;
+}
+.exam-mj .backtick-block p:last-child {
+  margin-bottom: 0;
+}
+
+/* mjx-container 보정 — 검수 도구와 동일 */
+.exam-mj mjx-container {
+  max-width: 100% !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.exam-mj mjx-container[display='true'] {
+  display: block !important;
+  margin: 6px auto !important;
+  text-align: center !important;
+}

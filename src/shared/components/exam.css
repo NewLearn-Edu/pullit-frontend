@@ -59,7 +59,7 @@
 }
 .exam-explain-p span.katex-block {
   margin: 0;
-  padding: 16px 0 3px; /* 위 16px 여유 · 아래는 클리핑 방지용 3px */
+  padding: 16px 0; /* 위아래 대칭 — 식 아래에도 같은 숨 고르기 (검수 도구 리듬) */
 }
 .exam-explain-p .katex-display {
   margin: 20px 0; /* 줄 여백(4px)과 합쳐 수식 영역 위아래 = 24px */

@@ -660,6 +660,16 @@
     font-size: 12px; font-weight: 600; color: var(--color-muted);
     margin: 0 0 8px;
   }
+  /* 해설 엔진 비교 토글 (임시 검증용) */
+  .upl-engine-toggle {
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 11px; font-weight: 600;
+    color: var(--color-body);
+    background: var(--color-fill-hover);
+    border-radius: var(--r-pill);
+  }
+  .upl-engine-toggle:hover { color: var(--color-fg); }
   /* 정답 원문자·값은 본문(15px)보다 크게 — 뒤에 선언된 .pv-explain-body 의
      15px 를 이기도록 복합 셀렉터로 우선순위 확보 */
   .pv-explain-body.pv-explain-answer { font-size: 18px; }
@@ -668,7 +678,7 @@
     font-family: var(--font-sans);
     font-size: 15px; font-weight: 400; line-height: 1.8;
     color: var(--table-fg);
-    white-space: pre-wrap; word-break: keep-all;
+    word-break: keep-all;
   }
   /* 좁은 화면: 모달 본문 세로 스택 — 해설은 독립 카드라 패딩·테두리 유지 */
   @media (max-width: 1080px) {

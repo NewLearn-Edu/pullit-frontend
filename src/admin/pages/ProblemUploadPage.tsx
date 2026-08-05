@@ -8,6 +8,7 @@ import {
   MathExplainRender,
   MathProblemRender,
 } from '@/shared/components/ExamRender'
+import { MathExplainKatexRender } from '@/shared/components/ExamRender'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
@@ -47,6 +48,8 @@ export default function ProblemUploadPage() {
 
   // 검토 디바이스 프레임 — 목록 미리보기 모달과 동일 (웹/패드-드래그/모바일 375)
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
+  // 해설 엔진 비교 — mathjax(검수 도구 방식·기본) vs katex(우리 구 조판)
+  const [engine, setEngine] = useState<'katex' | 'mathjax'>('mathjax')
   const [padWidth, setPadWidth] = useState(524)
   const startPadDrag = (e: ReactMouseEvent) => {
     e.preventDefault()
@@ -280,9 +283,22 @@ export default function ProblemUploadPage() {
                     <ExplainRender text={String(item?.answer_text ?? item?.answer_no ?? '-')} />
                   )}
                 </div>
-                <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
+                <p className="pv-label" style={{ marginTop: 20 }}>
+                  해설
+                  <button
+                    className="upl-engine-toggle"
+                    onClick={() => setEngine(engine === 'katex' ? 'mathjax' : 'katex')}
+                    title="해설 렌더 엔진 전환 (비교용)"
+                  >
+                    {engine === 'katex' ? 'KaTeX' : 'MathJax'}
+                  </button>
+                </p>
                 <div className="pv-explain-body">
-                  <ExplainRender text={item?.explanation || '해설이 없어요'} />
+                  {engine === 'katex' ? (
+                    <MathExplainKatexRender text={item?.explanation || '해설이 없어요'} />
+                  ) : (
+                    <ExplainRender text={item?.explanation || '해설이 없어요'} />
+                  )}
                 </div>
               </div>
             </div>
