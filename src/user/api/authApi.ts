@@ -163,6 +163,103 @@ export async function loginWithGoogleCode(code: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 애플 로그인 (Apple JS 팝업 방식 · 토큰 교환은 백엔드가 대행)
+// ---------------------------------------------------------------------------
+// 애플은 이름·이메일 scope 요청 시 response_mode=form_post가 강제라 SPA 콜백 페이지가
+// POST를 받을 수 없다. 대신 Apple JS 팝업(usePopup)으로 code를 JS에서 직접 받아
+// 백엔드(/oauth/apple/code)로 보내면 백엔드가 교환·검증 후 httpOnly 쿠키를 발급한다.
+// (리다이렉트가 실제로 일어나진 않지만 redirectURI는 콘솔에 등록된 Return URL과 일치 필수)
+//
+// 콘솔 필수 설정 (developer.apple.com > Identifiers > Services ID):
+// - Domains: pullit.co.kr, dev.pullit.co.kr
+// - Return URLs: {origin}/auth/apple/callback (HTTPS만 가능 — localhost 테스트 불가)
+//
+// 주의: 이름은 최초 인가 1회만 내려온다 (재로그인 시 user 객체 없음) → 백엔드로 전달해 저장.
+
+// Services ID는 인가 요청에 노출되는 공개 값 — 다른 provider와 동일 패턴으로 기본값 내장
+const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID ?? 'com.newlearn.pullit.web'
+
+/** Apple JS SDK 전역 타입 (필요한 최소만 선언) */
+interface AppleSignInResponse {
+  authorization: { code: string; id_token: string; state?: string }
+  /** 최초 인가 1회만 포함 */
+  user?: { name?: { firstName?: string; lastName?: string }; email?: string }
+}
+declare global {
+  interface Window {
+    AppleID?: {
+      auth: {
+        init(config: {
+          clientId: string
+          scope: string
+          redirectURI: string
+          state: string
+          usePopup: boolean
+        }): void
+        signIn(): Promise<AppleSignInResponse>
+      }
+    }
+  }
+}
+
+let appleScriptPromise: Promise<void> | null = null
+
+/** Apple JS SDK 1회 로드 (실패 시 다음 시도에서 재로드) */
+function loadAppleScript(): Promise<void> {
+  if (window.AppleID) return Promise.resolve()
+  if (!appleScriptPromise) {
+    appleScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src =
+        'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/ko_KR/appleid.auth.js'
+      script.onload = () => resolve()
+      script.onerror = () => {
+        appleScriptPromise = null
+        reject(new Error('Apple JS 로드 실패'))
+      }
+      document.head.appendChild(script)
+    })
+  }
+  return appleScriptPromise
+}
+
+/** 애플 이름 조합 — 한글 성명은 붙여쓰기(김철수), 그 외는 이름 성 순서 */
+function composeAppleName(name?: { firstName?: string; lastName?: string }): string | null {
+  const firstName = name?.firstName ?? ''
+  const lastName = name?.lastName ?? ''
+  if (!firstName && !lastName) return null
+  const isHangul = /^[가-힣]*$/.test(firstName) && /^[가-힣]*$/.test(lastName)
+  return isHangul ? `${lastName}${firstName}` : `${firstName} ${lastName}`.trim()
+}
+
+/**
+ * 애플 로그인 전체 흐름 (로그인 버튼에서 호출)
+ * 팝업 → code 수신 → 백엔드 교환·검증·쿠키 발급까지 완료.
+ * 사용자가 팝업을 닫으면 { error: 'popup_closed_by_user' } 형태로 reject된다.
+ */
+export async function loginWithApple(): Promise<void> {
+  await loadAppleScript()
+  const appleRedirectUri = `${window.location.origin}/auth/apple/callback`
+  const state = crypto.randomUUID()
+  window.AppleID!.auth.init({
+    clientId: APPLE_CLIENT_ID,
+    scope: 'name email',
+    redirectURI: appleRedirectUri,
+    state,
+    usePopup: true,
+  })
+  const res = await window.AppleID!.auth.signIn()
+  if (res.authorization.state !== state) {
+    throw new Error('Apple 로그인 state 불일치')
+  }
+  await api.post('/api/auth/oauth/apple/code', {
+    code: res.authorization.code,
+    redirectUri: appleRedirectUri,
+    name: composeAppleName(res.user?.name),
+  })
+}
+
+// ---------------------------------------------------------------------------
 // 세션 재발급 · 로그아웃
 // ---------------------------------------------------------------------------
 
