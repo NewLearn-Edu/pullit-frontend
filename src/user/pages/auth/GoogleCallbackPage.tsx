@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { consumeOauthState, loginWithGoogleCode } from '@/user/api/authApi'
+import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 
 /**
  * 구글 로그인 콜백 — accounts.google.com이 ?code=&state= 로 돌려보내는 착지 페이지.
@@ -27,8 +28,11 @@ export default function GoogleCallbackPage() {
       return
     }
 
-    loginWithGoogleCode(code)
-      .then(() => navigate('/home', { replace: true }))
+    // 워밍업: 만료된 게스트 access 를 되살려 로그인 요청에 게스트 신원이 실리게 (승격 유실 방지)
+    warmUpSessionBeforeLogin()
+      .then(() => loginWithGoogleCode(code))
+      .then(finishLogin)
+      .then((to) => navigate(to, { replace: true }))
       .catch(() => setError('구글 로그인에 실패했어요. 다시 시도해주세요.'))
   }, [params, navigate])
 

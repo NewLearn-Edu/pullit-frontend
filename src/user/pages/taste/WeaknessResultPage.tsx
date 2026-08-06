@@ -6,6 +6,7 @@ import { MOCK_ENGLISH_TYPES } from '@/user/data/mockEnglishTypes'
 import { getProblemsByEnglishType, getProblemsBySkillNode, type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
+import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import markCorrect from '@/assets/result/mark-correct.svg'
 import markWrong from '@/assets/result/mark-wrong.svg'
 
@@ -36,22 +37,26 @@ interface Row {
 
 export default function WeaknessResultPage() {
   const navigate = useNavigate()
+  const isMember = useUserStore(selectIsMember)
   const {
     mathSkillNodeId,
     englishTypeId,
     mathResults,
     englishResults,
-    isMathComplete,
-    isEnglishComplete,
+    hasCompletedSession,
     totalEarnedPoints,
   } = useTasteStore()
 
+  // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
+  const hydrated = useTasteStore.persist?.hasHydrated?.() ?? true
+
   useEffect(() => {
-    // 완주하지 않은 접근은 시작 페이지로 (완료 페이지와 동일 가드)
-    if (!isMathComplete() || !isEnglishComplete()) {
+    // 완주하지 않은 접근은 시작 페이지로 (완료 페이지와 동일 가드 · 실제로 푼 과목만 검사)
+    if (!hydrated) return
+    if (!hasCompletedSession()) {
       navigate('/taste', { replace: true })
     }
-  }, [isMathComplete, isEnglishComplete, navigate])
+  }, [hydrated, hasCompletedSession, navigate])
 
   const mathProblems = useMemo(
     () => (mathSkillNodeId ? getProblemsBySkillNode(mathSkillNodeId) : []),
@@ -137,6 +142,8 @@ export default function WeaknessResultPage() {
               const elapsedSec = Math.round(result.elapsedMs / 1000)
               const recSec = problem?.tRecSec ?? 0
               const overTime = recSec > 0 && elapsedSec > recSec
+              // 서버 채점이 도착했으면 그것이 진실원 (로컬 채점은 목 데이터 기준)
+              const isCorrect = result.serverCorrect ?? result.correct
 
               return (
                 <div key={`${result.problemId}-${i}`} className="flex w-full items-center">
@@ -145,7 +152,7 @@ export default function WeaknessResultPage() {
                       {i + 1}번
                     </p>
                     {/* 채점 표시 — 정답은 동그라미, 오답은 대각선 사선 */}
-                    {result.correct ? (
+                    {isCorrect ? (
                       <img
                         src={markCorrect}
                         alt="정답"
@@ -185,7 +192,7 @@ export default function WeaknessResultPage() {
                     <p
                       className={clsx(
                         'whitespace-nowrap text-[16px]',
-                        result.correct ? 'text-[#121417]' : 'text-primary',
+                        isCorrect ? 'text-[#121417]' : 'text-primary',
                       )}
                     >
                       정답 {circled(problem?.answer ?? null)}
@@ -201,10 +208,10 @@ export default function WeaknessResultPage() {
       <footer className="flex w-full shrink-0 items-start justify-center px-[40px] pb-[48px] pt-[40px] max-md:px-lg max-md:pb-[calc(32px+env(safe-area-inset-bottom))] max-md:pt-xl">
         <button
           type="button"
-          onClick={() => navigate('/signup')}
+          onClick={() => navigate(isMember ? '/home' : '/signup')}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
-          완료
+          {isMember ? '홈으로' : '완료'}
         </button>
       </footer>
     </div>

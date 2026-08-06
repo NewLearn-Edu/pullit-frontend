@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   loginWithApple,
@@ -6,6 +6,9 @@ import {
   startKakaoLogin,
   startNaverLogin,
 } from '@/user/api/authApi'
+import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { selectIsMember, useUserStore } from '@/user/stores/userStore'
+import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import logoApple from '@/assets/auth/logo-apple.svg'
 import logoGoogle from '@/assets/auth/logo-google.svg'
@@ -26,14 +29,29 @@ import logoNaver from '@/assets/auth/logo-naver.svg'
  */
 export default function SignupPromptPage() {
   const navigate = useNavigate()
+  const isMember = useUserStore(selectIsMember)
   const [error, setError] = useState<string | null>(null)
+
+  // 이미 회원인데 가입 유도가 노출되는 상황 방지
+  useEffect(() => {
+    if (isMember) navigate('/home', { replace: true })
+  }, [isMember, navigate])
+
+  /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 보던 결과 화면으로 복귀 */
+  const withReturn = (startLogin: () => void) => () => {
+    setPostLoginRedirect('/weakness')
+    startLogin()
+  }
 
   // 애플만 팝업 방식이라 콜백 페이지 없이 이 화면에서 완료·이동까지 처리
   const handleAppleLogin = async () => {
     setError(null)
+    setPostLoginRedirect('/weakness')
     try {
+      await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
       await loginWithApple()
-      navigate('/home', { replace: true })
+      const to = await finishLogin()
+      navigate(to, { replace: true })
     } catch (e) {
       if ((e as { error?: string })?.error === 'popup_closed_by_user') return
       setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')
@@ -58,7 +76,7 @@ export default function SignupPromptPage() {
       <footer className="flex w-full shrink-0 flex-col items-center gap-md px-[40px] pb-[48px] pt-[40px] max-md:px-lg max-md:pb-[calc(32px+env(safe-area-inset-bottom))] max-md:pt-xl">
         <button
           type="button"
-          onClick={startKakaoLogin}
+          onClick={withReturn(startKakaoLogin)}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center gap-md rounded-[12px] bg-[#fee500] text-[16px] font-medium text-black transition-opacity hover:opacity-90 active:opacity-85"
         >
           <span className="flex size-[20px] items-center justify-center">
@@ -69,7 +87,7 @@ export default function SignupPromptPage() {
 
         <button
           type="button"
-          onClick={startNaverLogin}
+          onClick={withReturn(startNaverLogin)}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center gap-md rounded-[12px] bg-[#03c75a] text-[16px] font-medium text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
           <span className="flex size-[20px] items-center justify-center">
@@ -92,7 +110,7 @@ export default function SignupPromptPage() {
 
         <button
           type="button"
-          onClick={startGoogleLogin}
+          onClick={withReturn(startGoogleLogin)}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center gap-md rounded-[12px] border border-[#ebedf0] bg-white text-[15px] font-medium leading-[1.5] text-[#262626] transition-colors hover:bg-[#f7f8f9]"
         >
           <span className="flex size-[20px] items-center justify-center">

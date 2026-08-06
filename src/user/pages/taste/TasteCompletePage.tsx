@@ -2,17 +2,26 @@ import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AppHeader from '@/user/components/AppHeader'
 import { useTasteStore } from '@/user/stores/tasteStore'
+import { flushAttemptQueue } from '@/user/services/attemptQueue'
 
 export default function TasteCompletePage() {
   const navigate = useNavigate()
-  const { isMathComplete, isEnglishComplete, totalEarnedPoints } = useTasteStore()
+  const { hasCompletedSession, totalEarnedPoints } = useTasteStore()
+  // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
+  const hydrated = useTasteStore.persist?.hasHydrated?.() ?? true
 
   useEffect(() => {
-    // 완주 하지 않은 접근은 시작 페이지로
-    if (!isMathComplete() || !isEnglishComplete()) {
+    // 완주 하지 않은 접근은 시작 페이지로 (실제로 푼 과목만 검사)
+    if (!hydrated) return
+    if (!hasCompletedSession()) {
       navigate('/taste', { replace: true })
     }
-  }, [isMathComplete, isEnglishComplete, navigate])
+  }, [hydrated, hasCompletedSession, navigate])
+
+  // 풀이 중 전송 실패분 회수 — 완주 시점에 한 번 더 시도
+  useEffect(() => {
+    flushAttemptQueue()
+  }, [])
 
   const total = totalEarnedPoints()
 

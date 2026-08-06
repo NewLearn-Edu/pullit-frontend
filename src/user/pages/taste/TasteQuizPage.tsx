@@ -15,6 +15,9 @@ import {
   type Problem,
 } from '@/user/data/mockProblems'
 import { useTasteStore } from '@/user/stores/tasteStore'
+import { useUserStore } from '@/user/stores/userStore'
+import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
+import { enqueueAttempt, isRetryableAttemptError } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
 import styles from './styles/TasteQuizPage.module.scss'
 
@@ -34,7 +37,14 @@ export default function TasteQuizPage() {
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
-  const { mathSkillNodeId, englishTypeId, addResult } = useTasteStore()
+  const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTasteStore()
+  const ensureSession = useUserStore((s) => s.ensureSession)
+
+  // 홈에서 /taste 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
+  // ensureSession 은 single-flight 라 시작 페이지에서 이미 확보했으면 요청이 나가지 않는다.
+  useEffect(() => {
+    ensureSession()
+  }, [ensureSession])
 
   const problems = useMemo(() => {
     if (subject === 'math' && mathSkillNodeId) {
@@ -145,6 +155,35 @@ export default function TasteQuizPage() {
     setPanelOpen(true)
   }
 
+  /**
+   * 풀이 1건을 서버 원장에 남긴다 — 화면 진행을 절대 막지 않는다 (fire-and-forget).
+   * 실패분은 큐에 넣어 세션 확보·로그인·완료 화면 시점에 재전송한다.
+   */
+  const recordAttempt = (selectedChoice: number | null, elapsedMs: number) => {
+    const serverId = problem.serverId
+    if (!serverId) return // 서버 미매핑 목 문항 (영어 창작 데이터) — 저장 스킵
+
+    const req: AttemptSubmitRequest = {
+      problemId: serverId,
+      source: 'TRIAL',
+      // 무응답은 서버가 400(답 필수)을 던지므로 0 을 sentinel 로 보낸다.
+      // 정답 번호는 1~5 라 절대 일치하지 않아 오답으로 채점된다 (skipped 플래그는 백엔드 후속)
+      submittedNo: selectedChoice ?? 0,
+      timeSpentMs: Math.round(elapsedMs),
+    }
+
+    submitAttempt(req)
+      .then((res) =>
+        updateResult(subject as Subject, problem.id, {
+          attemptId: res.attemptId,
+          serverCorrect: res.isCorrect,
+        }),
+      )
+      .catch((error) => {
+        if (isRetryableAttemptError(error)) enqueueAttempt(req)
+      })
+  }
+
   const submitAndNext = () => {
     const correct = selected != null && selected === problem.answer
     const score = computeScore({
@@ -156,6 +195,7 @@ export default function TasteQuizPage() {
       peekedBeforeAnswer: peeked,
     })
 
+    const elapsedMs = Date.now() - startAt.current
     addResult(subject as Subject, {
       problemId: problem.id,
       selectedChoice: selected,
@@ -163,8 +203,9 @@ export default function TasteQuizPage() {
       earnedPoints: score.earnedPoints,
       timeoverFlag: score.timeoverFlag,
       peekedBeforeAnswer: peeked,
-      elapsedMs: Date.now() - startAt.current,
+      elapsedMs,
     })
+    recordAttempt(selected, elapsedMs)
 
     const effectiveCorrect = correct && !peeked
     setGrading(effectiveCorrect ? 'correct' : 'wrong')
@@ -186,12 +227,14 @@ export default function TasteQuizPage() {
   }
 
   const handleClose = () => {
-    if (window.confirm('중단하고 나가면 이 문제까지의 결과가 저장되지 않아요.')) {
+    // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
+    if (window.confirm('나가면 이 진단은 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
       navigate('/taste')
     }
   }
 
   const handleDontKnow = () => {
+    const elapsedMs = Date.now() - startAt.current
     addResult(subject as Subject, {
       problemId: problem.id,
       selectedChoice: null,
@@ -199,8 +242,9 @@ export default function TasteQuizPage() {
       earnedPoints: 0,
       timeoverFlag: overTime,
       peekedBeforeAnswer: false,
-      elapsedMs: Date.now() - startAt.current,
+      elapsedMs,
     })
+    recordAttempt(null, elapsedMs)
     setGrading('wrong')
     advanceTimerRef.current = window.setTimeout(() => {
       goNext()

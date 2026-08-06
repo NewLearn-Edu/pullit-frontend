@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { useAuthStore } from '@/stores/authStore'
+import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/UserNav.module.scss'
 
 export type UserNavKey = 'recommend' | 'free' | 'wrongNote' | 'report' | 'my'
@@ -16,7 +16,8 @@ interface UserNavProps {
  * 자유 문제 · 리포트 · 마이페이지는 아직 페이지 없음 (POC 시각만).
  */
 export function UserNav({ active }: UserNavProps) {
-  const role = useAuthStore((s) => s.role)
+  // 실제 세션 권한 — 이전 authStore 스텁(role:'admin' 하드코딩)은 모든 방문자에게 어드민 버튼을 노출했다
+  const isAdmin = useUserStore((s) => s.me?.role === 'ADMIN')
 
   return (
     <>
@@ -35,7 +36,7 @@ export function UserNav({ active }: UserNavProps) {
         </nav>
         <div className={styles.footer}>
           {/* ADMIN 권한일 때만 노출 · 어드민 콘솔 진입 */}
-          {role === 'admin' && (
+          {isAdmin && (
             <Link to="/admin" className={styles.adminButton}>
               <GearIcon /> 어드민
             </Link>

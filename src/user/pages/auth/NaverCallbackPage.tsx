@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { consumeOauthState, loginWithNaverCode } from '@/user/api/authApi'
+import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 
 /**
  * 네이버 로그인 콜백 — nid.naver.com이 ?code=&state= 로 돌려보내는 착지 페이지.
@@ -27,8 +28,11 @@ export default function NaverCallbackPage() {
       return
     }
 
-    loginWithNaverCode(code, state)
-      .then(() => navigate('/home', { replace: true }))
+    // 워밍업: 만료된 게스트 access 를 되살려 로그인 요청에 게스트 신원이 실리게 (승격 유실 방지)
+    warmUpSessionBeforeLogin()
+      .then(() => loginWithNaverCode(code, state))
+      .then(finishLogin)
+      .then((to) => navigate(to, { replace: true }))
       .catch(() => setError('네이버 로그인에 실패했어요. 다시 시도해주세요.'))
   }, [params, navigate])
 

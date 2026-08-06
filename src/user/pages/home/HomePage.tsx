@@ -5,6 +5,7 @@ import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { useMe } from '@/user/hooks/useMe'
 import styles from './styles/HomePage.module.scss'
 
 // POC 목 데이터 · 백엔드 연동 시 API 로 대체
@@ -32,7 +33,7 @@ const UNITS: Record<Subject, Array<{ cat: string; name: string }>> = {
   ],
 }
 
-const CREDIT = 5
+// 크레딧은 세션(useMe)에서 실데이터로 읽는다 — 게스트·회원 공통
 
 /**
  * 메인 홈 (Figma 173~175)
@@ -42,11 +43,17 @@ const CREDIT = 5
 export default function HomePage() {
   const navigate = useNavigate()
   const reset = useTasteStore((s) => s.reset)
+  const setLastSubject = useTasteStore((s) => s.setLastSubject)
+  const { me } = useMe()
+  const credit = me?.creditBalance ?? 0
+
   const [subject, setSubject] = useState<Subject>('math')
 
   // 추천 문제 풀기 · POC 는 맛보기 퀴즈 플로우로 진입
+  // (게스트 세션은 TasteQuizPage 마운트 방어 호출이 확보한다)
   const startQuiz = () => {
     reset()
+    setLastSubject(subject)
     navigate(`/taste/quiz/${subject}/0`)
   }
 
@@ -65,7 +72,7 @@ export default function HomePage() {
             풀잇
           </Link>
           <div className={styles.mobileHeaderRight}>
-            <CreditBadge credit={CREDIT} />
+            <CreditBadge credit={credit} />
             <span className={styles.avatarMuted}>
               <PersonIcon />
             </span>
@@ -78,7 +85,7 @@ export default function HomePage() {
             <p className={styles.headingEyebrow}>매일 3문제</p>
             <h1 className={styles.headingTitle}>약한 단원부터, 지금 바로 풀어.</h1>
           </div>
-          <CreditBadge credit={CREDIT} size="md" />
+          <CreditBadge credit={credit} size="md" />
         </div>
 
         {/* 과목 탭 */}

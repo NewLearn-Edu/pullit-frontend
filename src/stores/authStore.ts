@@ -1,3 +1,7 @@
+/**
+ * @deprecated 실제 세션 권한은 src/user/stores/userStore.ts (me.role) 가 담당한다.
+ * 이 스텁은 참조가 0건이며, 게스트 인증 도입(2026-08-06) 때 UserNav 가 userStore 로 이전됐다.
+ */
 import { create } from 'zustand'
 
 export type UserRole = 'admin' | 'student'

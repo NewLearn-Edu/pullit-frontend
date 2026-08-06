@@ -7,6 +7,12 @@
  */
 export interface Problem {
   id: number
+  /**
+   * 서버 problems 테이블의 실제 PK (예: 2022_1_1_1-S0252).
+   * 풀이 기록(POST /api/attempts)은 이 값으로 전송하며, 없으면 서버 저장을 건너뛴다.
+   * 유저용 문제 조회 API 가 생기면 목 데이터와 함께 제거될 임시 매핑.
+   */
+  serverId?: string
   subject: 'math' | 'english'
   skillNodeId?: string
   englishTypeId?: string
@@ -31,6 +37,7 @@ export interface Problem {
 const problemsMathSample: Problem[] = [
   {
     id: 1,
+    serverId: '2022_1_1_1-S0252',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 2,
@@ -51,6 +58,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 2,
+    serverId: '2022_1_1_1-S0235',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 3,
@@ -71,6 +79,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 3,
+    serverId: '2022_1_1_1-S0009',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 3,
@@ -88,6 +97,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 4,
+    serverId: '2022_1_1_1-S0269',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 4,

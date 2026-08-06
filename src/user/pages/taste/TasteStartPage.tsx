@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import AppHeader from '@/user/components/AppHeader'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { useUserStore } from '@/user/stores/userStore'
+import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import styles from './styles/TasteStartPage.module.scss'
 
 interface SubjectOption {
@@ -24,11 +26,32 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
 export default function TasteStartPage() {
   const navigate = useNavigate()
   const reset = useTasteStore((s) => s.reset)
+  const setLastSubject = useTasteStore((s) => s.setLastSubject)
+  const ensureSession = useUserStore((s) => s.ensureSession)
   const [selected, setSelected] = useState<Subject>('math')
+  const [pending, setPending] = useState(false)
+  const [sessionFailed, setSessionFailed] = useState(false)
 
-  const handleNext = () => {
+  /** 세션 확보 후 퀴즈로 — 실패해도 reset 하지 않아 기존 결과가 날아가지 않는다 */
+  const start = () => {
     reset()
+    setLastSubject(selected)
     navigate(`/taste/quiz/${selected}/0`)
+  }
+
+  const handleNext = async () => {
+    setPending(true)
+    setSessionFailed(false)
+    // 게스트 계정이 있어야 풀이가 서버에 쌓이고 가입 시 기록이 승계된다
+    const me = await ensureSession()
+    setPending(false)
+
+    if (!me) {
+      setSessionFailed(true)   // 진행 자체는 막지 않고 "그래도 시작" 을 열어준다
+      return
+    }
+    flushAttemptQueue()        // 이전 세션 미전송분 회수 (진행을 막지 않음)
+    start()
   }
 
   return (
@@ -73,9 +96,30 @@ export default function TasteStartPage() {
         </div>
 
         <div className={styles.footer}>
-          <button type="button" onClick={handleNext} className={styles.nextButton}>
-            다음
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={pending}
+            className={styles.nextButton}
+          >
+            {pending ? '준비 중…' : '다음'}
           </button>
+
+          {/* 세션 확보 실패 — 기록은 못 남기지만 진단 자체는 볼 수 있게 열어준다 */}
+          {sessionFailed && (
+            <div className="mt-md text-center">
+              <p className="text-body-sm text-body">
+                지금은 기록을 저장할 수 없어요. 결과는 볼 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={start}
+                className="mt-sm text-body-sm font-semibold text-primary underline"
+              >
+                그래도 시작하기
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

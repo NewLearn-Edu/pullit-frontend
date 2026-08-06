@@ -1,3 +1,6 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMe } from '@/user/hooks/useMe'
 import LandingNav from './LandingNav'
 import HeroSection from './HeroSection'
 import MarqueeStrip from './MarqueeStrip'
@@ -14,6 +17,15 @@ import screenshotReminder from '@/assets/landing/screenshot-reminder.png'
 
 /** 메인 랜딩 — Figma Landing Pages > Desktop-1920 (2032:4) 기준 */
 export default function LandingPage() {
+  const navigate = useNavigate()
+  // 조회 전용(loadMe) — 세션이 없어도 게스트를 만들지 않는다.
+  // 쿠키가 살아있는 재방문자(게스트·회원)는 마케팅 랜딩을 건너뛰고 홈으로.
+  const { me } = useMe()
+
+  useEffect(() => {
+    if (me) navigate('/home', { replace: true })
+  }, [me, navigate])
+
   return (
     <main className="min-h-dvh bg-black">
       <LandingNav />

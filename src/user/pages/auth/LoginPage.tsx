@@ -7,6 +7,7 @@ import {
   startKakaoLogin,
   startNaverLogin,
 } from '@/user/api/authApi'
+import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import logoImg from '@/assets/images/logo.png'
 import styles from './styles/LoginPage.module.scss'
 
@@ -25,8 +26,10 @@ export default function LoginPage() {
   const handleAppleLogin = async () => {
     setError(null)
     try {
+      await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
       await loginWithApple()
-      navigate('/home', { replace: true })
+      const to = await finishLogin()
+      navigate(to, { replace: true })
     } catch (e) {
       if ((e as { error?: string })?.error === 'popup_closed_by_user') return
       setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')

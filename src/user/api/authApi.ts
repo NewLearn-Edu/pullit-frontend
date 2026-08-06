@@ -279,6 +279,19 @@ export function refreshSession(): Promise<void> {
 }
 
 /** 로그아웃 — 서버가 RefreshToken 무효화 + 인증 쿠키 삭제 */
+/**
+ * 게스트 세션 발급 (POST /api/auth/guest · permitAll)
+ *
+ * 서버가 type=GUEST 유저를 만들고 access/refresh httpOnly 쿠키를 내려준다.
+ * 이미 유효한 쿠키가 실려 있으면 서버는 새 계정을 만들지 않고 기존 세션을 유지한다(멱등).
+ *
+ * 주의: refresh 쿠키 Path 가 /api/auth/token 이라 이 요청에는 실리지 않는다.
+ * 반드시 fetchMe() 로 세션 복구를 먼저 시도한 뒤 호출할 것 (userStore.ensureSession 참고).
+ */
+export async function createGuestSession(): Promise<void> {
+  await api.post('/api/auth/guest')
+}
+
 export async function logout(): Promise<void> {
   await api.post('/api/auth/logout')
 }
