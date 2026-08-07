@@ -28,6 +28,8 @@ export interface MapEdge {
   to: string
   /** true = 간접 단원 (점선) */
   indirect?: boolean
+  /** 간접 간선 출발 면 — 시안 경로 재현용 (기본 bottom) */
+  fromSide?: 'bottom' | 'right'
 }
 
 export const MATH_MAP_NODES: MapNode[] = [
@@ -80,9 +82,10 @@ export const MATH_MAP_EDGES: MapEdge[] = [
   { from: 'cond-prob', to: 'prob-dist' },
   { from: 'prob-dist', to: 'stat-est' },
   // 간접 단원 (점선 · 영역을 건너뛰는 연계 · 시안 벡터 3개와 일치)
+  // 점선은 타깃의 왼쪽 옆면으로 진입한다 — 아래 렌더러의 간접 라우팅 참고
   { from: 'exp-log-fn', to: 'derivative-use', indirect: true },
   { from: 'sine-cosine', to: 'derivative-use', indirect: true },
-  { from: 'induction', to: 'perm-comb', indirect: true },
+  { from: 'induction', to: 'perm-comb', indirect: true, fromSide: 'right' },
 ]
 
 /** 월드 좌표 경계 (여백 포함) — fit/클램프 계산용 */

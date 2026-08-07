@@ -195,6 +195,57 @@ export default function WeaknessMapPage() {
 
   const closeSheet = () => setSelectedId(null)
 
+  // 같은 타깃으로 들어가는 간접 점선이 여러 개면 진입 높이를 위아래로 분산 (겹침 방지)
+  const indirectEntryOffset = useMemo(() => {
+    const groups = new Map<string, typeof MATH_MAP_EDGES>()
+    MATH_MAP_EDGES.filter((e) => e.indirect).forEach((e) => {
+      const list = groups.get(e.to) ?? []
+      list.push(e)
+      groups.set(e.to, list)
+    })
+    const offsets = new Map<string, number>()
+    groups.forEach((list) => {
+      list.forEach((e, i) => {
+        offsets.set(`${e.from}-${e.to}`, (i - (list.length - 1) / 2) * 24)
+      })
+    })
+    return offsets
+  }, [])
+
+  // ── 시트 아래로 스와이프 닫기 ──────────────────────────────────────────
+  const [sheetDragY, setSheetDragY] = useState(0)
+  const [sheetDragging, setSheetDragging] = useState(false)
+  const sheetDrag = useRef<{ startY: number; id: number; active: boolean } | null>(null)
+  const sheetDragged = useRef(false) // 드래그 직후 버튼 click 오발동 방지
+
+  const onSheetPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation() // 캔버스 팬으로 전파 금지 (기존 동작 유지)
+    sheetDrag.current = { startY: e.clientY, id: e.pointerId, active: false }
+    sheetDragged.current = false
+  }
+
+  const onSheetPointerMove = (e: React.PointerEvent) => {
+    const d = sheetDrag.current
+    if (!d || e.pointerId !== d.id) return
+    const dy = e.clientY - d.startY
+    // 8px 넘게 내려야 드래그로 판정 — 버튼 탭과 구분
+    if (!d.active && dy > 8) {
+      d.active = true
+      sheetDragged.current = true
+      setSheetDragging(true)
+      ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+    }
+    if (d.active) setSheetDragY(Math.max(0, dy))
+  }
+
+  const onSheetPointerUp = (e: React.PointerEvent) => {
+    const d = sheetDrag.current
+    sheetDrag.current = null
+    setSheetDragging(false)
+    if (d?.active && e.clientY - d.startY > 96) closeSheet()
+    setSheetDragY(0)
+  }
+
   /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 */
   const path = useMemo(() => {
     if (!selected) return []
@@ -244,26 +295,50 @@ export default function WeaknessMapPage() {
                 height={MAP_BOUNDS.maxY}
                 aria-hidden
               >
-                {MATH_MAP_EDGES.map((edge, ei) => {
+                {MATH_MAP_EDGES.map((edge) => {
                   const from = MATH_MAP_NODES.find((n) => n.id === edge.from)!
                   const to = MATH_MAP_NODES.find((n) => n.id === edge.to)!
                   const sx = from.x + NODE_W / 2
                   const tx = to.x + NODE_W / 2
 
                   let d: string
-                  if (sx === tx) {
+                  if (edge.indirect) {
+                    // 간접 점선 — 타깃의 "왼쪽 옆면"으로 진입 (시안 라우팅)
+                    const entryY = to.y + NODE_H / 2 + (indirectEntryOffset.get(`${edge.from}-${edge.to}`) ?? 0)
+                    if (edge.fromSide === 'right') {
+                      // 오른쪽 면 출발 → 수평 → 수직 → 수평 진입 (수학적 귀납법 → 순열·조합)
+                      const sRight = from.x + NODE_W
+                      const sCy = from.y + NODE_H / 2
+                      const midX = to.x - NODE_W // 타깃 왼쪽 한 칸 옆 빈 공간에서 수직 이동
+                      d = roundedPath([
+                        [sRight, sCy],
+                        [midX, sCy],
+                        [midX, entryY],
+                        [to.x, entryY],
+                      ])
+                    } else {
+                      // 아래 면 출발 → 수직으로 타깃 행까지 → 수평 진입
+                      d = roundedPath([
+                        [sx, from.y + NODE_H],
+                        [sx, entryY],
+                        [to.x, entryY],
+                      ])
+                    }
+                  } else if (sx === tx) {
                     // 같은 열 — 세로 직선
                     d = `M ${sx} ${from.y + NODE_H} L ${tx} ${to.y}`
                   } else {
-                    // 피그마식 직교 엘보 — 행 사이 빈 레인(수평)을 지나도록 라우팅.
-                    // 위로 가는 간선은 소스 위쪽 레인, 아래로 가는 간선은 아래쪽 레인 사용
+                    // 분기·합류 — 행 사이 빈 레인을 지나는 직교 엘보
                     const goingDown = to.y >= from.y + NODE_H
                     const sy = goingDown ? from.y + NODE_H : from.y
                     const ty = goingDown ? to.y : to.y + NODE_H
-                    // 간접 간선끼리 같은 레인을 공유하면 겹쳐 보여 8px 씩 어긋나게
-                    const stagger = edge.indirect ? (ei % 3) * 8 : 0
-                    const lane = goingDown ? sy + 26 + stagger : sy - 26 - stagger
-                    d = elbowPath(sx, sy, tx, ty, lane)
+                    const lane = goingDown ? sy + 26 : sy - 26
+                    d = roundedPath([
+                      [sx, sy],
+                      [sx, lane],
+                      [tx, lane],
+                      [tx, ty],
+                    ])
                   }
 
                   // CSS scale 이 선까지 축소하므로 역보정 — 줌아웃해도 화면상 1.5px 유지
@@ -406,9 +481,21 @@ export default function WeaknessMapPage() {
         {selected && (
           <div
             ref={sheetRef}
-            className={styles.sheet}
-            onPointerDown={(e) => e.stopPropagation()}
+            className={clsx(styles.sheet, sheetDragging && styles.sheetDragging)}
+            style={{ '--drag-y': `${sheetDragY}px` } as React.CSSProperties}
+            onPointerDown={onSheetPointerDown}
+            onPointerMove={onSheetPointerMove}
+            onPointerUp={onSheetPointerUp}
+            onPointerCancel={onSheetPointerUp}
             onClick={(e) => e.stopPropagation()}
+            onClickCapture={(e) => {
+              // 드래그로 끝난 제스처의 잔여 click 무시 (문제 풀기 오발동 방지)
+              if (sheetDragged.current) {
+                e.preventDefault()
+                e.stopPropagation()
+                sheetDragged.current = false
+              }
+            }}
           >
             <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetHandleWrap}>
               <span className={styles.sheetHandle} />
@@ -465,23 +552,28 @@ export default function WeaknessMapPage() {
 }
 
 /**
- * 직교 엘보 경로 (피그마 커넥터 스타일) — 세로 → 수평 레인 → 세로, 모서리 라운드.
- * laneY: 수평 구간이 지나는 y (행 사이 빈 레인에 놓아 노드를 가로지르지 않게 한다)
+ * 직교 폴리라인 경로 (피그마 커넥터 스타일) — 꺾이는 모서리를 라운드(Q 커브) 처리.
+ * 반경은 인접 구간 길이의 절반까지 클램프.
  */
-function elbowPath(sx: number, sy: number, tx: number, ty: number, laneY: number, r = 14): string {
-  const dirX = tx > sx ? 1 : -1
-  const dirY1 = laneY > sy ? 1 : -1
-  const dirY2 = ty > laneY ? 1 : -1
-  const r1 = Math.min(r, Math.abs(laneY - sy), Math.abs(tx - sx) / 2)
-  const r2 = Math.min(r, Math.abs(ty - laneY), Math.abs(tx - sx) / 2)
-  return [
-    `M ${sx} ${sy}`,
-    `L ${sx} ${laneY - dirY1 * r1}`,
-    `Q ${sx} ${laneY} ${sx + dirX * r1} ${laneY}`,
-    `L ${tx - dirX * r2} ${laneY}`,
-    `Q ${tx} ${laneY} ${tx} ${laneY + dirY2 * r2}`,
-    `L ${tx} ${ty}`,
-  ].join(' ')
+function roundedPath(pts: Array<[number, number]>, r = 14): string {
+  if (pts.length < 2) return ''
+  let d = `M ${pts[0][0]} ${pts[0][1]}`
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1]
+    const [cx, cy] = pts[i]
+    const [nx, ny] = pts[i + 1]
+    const inLen = Math.hypot(cx - px, cy - py)
+    const outLen = Math.hypot(nx - cx, ny - cy)
+    const rr = Math.min(r, inLen / 2, outLen / 2)
+    const inX = cx - ((cx - px) / inLen) * rr
+    const inY = cy - ((cy - py) / inLen) * rr
+    const outX = cx + ((nx - cx) / outLen) * rr
+    const outY = cy + ((ny - cy) / outLen) * rr
+    d += ` L ${inX} ${inY} Q ${cx} ${cy} ${outX} ${outY}`
+  }
+  const [lx, ly] = pts[pts.length - 1]
+  d += ` L ${lx} ${ly}`
+  return d
 }
 
 /* --- 인라인 SVG 아이콘 --- */

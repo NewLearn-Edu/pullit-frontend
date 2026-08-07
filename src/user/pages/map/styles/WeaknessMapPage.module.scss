@@ -339,14 +339,23 @@ $red-tint: #fff1f2;
   background: $color-canvas;
   filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
   animation: sheetIn 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  // 아래로 스와이프 드래그 추종 (--drag-y) · 놓으면 제자리 복귀 트랜지션
+  transform: translateY(var(--drag-y, 0px));
+  transition: transform 200ms ease;
+  touch-action: none;
 
   @include desktop-up {
     left: 50%;
     right: auto;
     bottom: 0;
     width: 480px;
-    transform: translateX(-50%);
+    transform: translate(-50%, var(--drag-y, 0px));
   }
+}
+
+// 드래그 중에는 손가락을 1:1 로 따라가야 하므로 트랜지션 해제
+.sheetDragging {
+  transition: none;
 }
 
 @keyframes sheetIn {
