@@ -223,7 +223,7 @@ export default function WeaknessMapPage() {
         >
           {subject === 'math' ? (
             <>
-              {/* 간선 (노드 아래 레이어) */}
+              {/* 간선 (노드 아래 레이어) — 굵기는 줌 역보정으로 화면상 항상 일정 */}
               <svg
                 className={styles.edges}
                 width={MAP_BOUNDS.maxX}
@@ -241,11 +241,17 @@ export default function WeaknessMapPage() {
                     sx === tx && !edge.indirect
                       ? `M ${sx} ${sy} L ${tx} ${ty}`
                       : `M ${sx} ${sy} C ${sx} ${sy + 60}, ${tx} ${ty - 60}, ${tx} ${ty}`
+                  // CSS scale 이 선까지 축소하므로 역보정 — 줌아웃해도 화면상 1.5px 유지
+                  const w = 1.5 / view.scale
                   return (
                     <path
                       key={`${edge.from}-${edge.to}`}
                       d={d}
                       className={edge.indirect ? styles.edgeIndirect : styles.edgeMain}
+                      style={{
+                        strokeWidth: w,
+                        strokeDasharray: edge.indirect ? `${6 / view.scale} ${6 / view.scale}` : undefined,
+                      }}
                     />
                   )
                 })}
