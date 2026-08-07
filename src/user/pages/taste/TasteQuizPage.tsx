@@ -4,9 +4,6 @@ import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
-import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
-import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
-import { GradeMark } from '@/user/components/quiz/GradeMark'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { MathProblemRender } from '@/shared/components/ExamRender'
 import {
@@ -29,8 +26,12 @@ const SUBJECT_LABEL: Record<Subject, string> = {
 }
 
 /**
- * 맛보기 테스트 문제풀이 화면
+ * 맛보기 테스트 문제풀이 화면 (2026-08-07 플로우 변경)
  * 상단 2행 (네비 + 필기 툴바) 고정 · 아래는 문제카드 (필기 캔버스) · 보기 5개.
+ *
+ * 풀이 중에는 정답·해설 접근 불가 — 채점은 마지막 문제의 "채점하기"에서 일괄.
+ * 보기를 선택하면 하단에서 다음/채점하기 버튼이 올라오고, 선택 해제하면 내려간다.
+ * 해설은 결과 페이지(/weakness)의 문항별 "해설보기"로 확인한다.
  */
 export default function TasteQuizPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
@@ -68,56 +69,32 @@ export default function TasteQuizPage() {
 
   // 문제별 상태
   const [selected, setSelected] = useState<number | null>(null)
+  const [inputValue, setInputValue] = useState('') // 주관식(단답형) 입력값
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [peeked, setPeeked] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(false)
-  const [panelTab, setPanelTab] = useState<'answer' | 'explanation'>('explanation')
   const [tool, setTool] = useState<StrokeTool>('pen')
   const [color, setColor] = useState('#120C0B')
   const [size, setSize] = useState(0.35) // 0.1 ~ 1.0 슬라이더 값 · 도구별 픽셀 매핑은 DrawingCanvas
   const [allowFinger, setAllowFinger] = useState(false) // 아이패드 손바닥 걸침 방지 · 기본 펜만
   // 필기 도구 활성화 여부. 모바일 진입 시 DrawingToolbar 가 자동 false 로 세팅 (툴바 접힘 + canvas disabled)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
-  // 해설 패널 폭 (md+ 에서만 사용) · divider 로 드래그 조절
-  const [panelWidth, setPanelWidth] = useState(420)
-  // 드래그 중에는 width transition 을 꺼야 매끄러움
-  const [resizing, setResizing] = useState(false)
-  // 채점 상태 · 문제 헤더에 ○/사선 오버레이 표시용
-  const [grading, setGrading] = useState<'none' | 'correct' | 'wrong'>('none')
 
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const startAt = useRef<number>(Date.now())
-  const advanceTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     setSelected(null)
+    setInputValue('')
     setElapsedSec(0)
-    setPeeked(false)
-    setPanelOpen(false)
-    setPanelTab('explanation')
-    setGrading('none')
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current)
-      advanceTimerRef.current = null
-    }
     canvasRef.current?.clear()
     startAt.current = Date.now()
   }, [idx, subject])
 
   useEffect(() => {
-    return () => {
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    // 채점 완료 후에는 시간 정지 · 팝업·다음문제 진입 시 값 고정
-    if (grading !== 'none') return
     const timer = setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - startAt.current) / 1000))
     }, 1000)
     return () => clearInterval(timer)
-  }, [idx, subject, grading])
+  }, [idx, subject])
 
   // iOS Safari 콜아웃 (복사하기 · 선택 영역 찾기 …) 강제 차단
   useEffect(() => {
@@ -137,23 +114,15 @@ export default function TasteQuizPage() {
   if (!problem) return null
 
   const overTime = elapsedSec > problem.tMaxSec
+  const isLast = idx === problems.length - 1
 
-  const requestPeek = (tab: 'answer' | 'explanation') => {
-    let effectivePeeked = peeked
-    if (selected == null) {
-      const ok = window.confirm(
-        '아직 답을 선택하지 않았어요.\n지금 열면 오답 처리됩니다.\n계속할까요?',
-      )
-      if (!ok) return
-      setPeeked(true)
-      effectivePeeked = true
-    }
-    const correct =
-      selected != null && selected === problem.answer && !effectivePeeked
-    setGrading(correct ? 'correct' : 'wrong')
-    setPanelTab(tab)
-    setPanelOpen(true)
-  }
+  // 주관식(단답형) — 보기 없이 숫자 입력으로 답한다 (음수 허용)
+  const isShortAnswer = problem.choices.length === 0
+  const shortAnswerValue = /^-?\d+$/.test(inputValue.trim())
+    ? parseInt(inputValue.trim(), 10)
+    : null
+  /** 현재 문제의 답 (객관식 = 선택 번호 · 주관식 = 입력값) */
+  const answerValue = isShortAnswer ? shortAnswerValue : selected
 
   /**
    * 풀이 1건을 서버 원장에 남긴다 — 화면 진행을 절대 막지 않는다 (fire-and-forget).
@@ -162,6 +131,8 @@ export default function TasteQuizPage() {
   const recordAttempt = (selectedChoice: number | null, elapsedMs: number) => {
     const serverId = problem.serverId
     if (!serverId) return // 서버 미매핑 목 문항 (영어 창작 데이터) — 저장 스킵
+    // 주관식은 서버 채점(1~5 비교)과 맞지 않아 스킵 — 단답 채점은 백엔드 후속 과제
+    if (isShortAnswer) return
 
     const req: AttemptSubmitRequest = {
       problemId: serverId,
@@ -184,46 +155,41 @@ export default function TasteQuizPage() {
       })
   }
 
+  /** 다음/채점하기 — 답을 기록하고 진행. 채점 결과는 결과 페이지에서 일괄 공개 */
   const submitAndNext = () => {
-    const correct = selected != null && selected === problem.answer
+    if (answerValue == null) return
+    const correct = answerValue === problem.answer
     const score = computeScore({
       points: problem.points,
       correct,
       elapsedSec,
       tRecSec: problem.tRecSec,
       tMaxSec: problem.tMaxSec,
-      peekedBeforeAnswer: peeked,
+      peekedBeforeAnswer: false,
     })
 
     const elapsedMs = Date.now() - startAt.current
     addResult(subject as Subject, {
       problemId: problem.id,
-      selectedChoice: selected,
+      selectedChoice: answerValue,
       correct,
       earnedPoints: score.earnedPoints,
       timeoverFlag: score.timeoverFlag,
-      peekedBeforeAnswer: peeked,
+      peekedBeforeAnswer: false,
       elapsedMs,
     })
-    recordAttempt(selected, elapsedMs)
-
-    const effectiveCorrect = correct && !peeked
-    setGrading(effectiveCorrect ? 'correct' : 'wrong')
-
-    // 채점 마크 잔상 시간 후 자동 다음 문제
-    advanceTimerRef.current = window.setTimeout(() => {
-      goNext()
-    }, 1100)
+    recordAttempt(answerValue, elapsedMs)
+    goNext()
   }
 
-  // 선택한 과목의 문제만 풀고 완주 (2026-07-31 플로우 변경 · 과목 선택 페이지 도입)
+  // 선택한 과목의 문제만 풀고 완주 — 마지막 문제(채점하기)는 결과 페이지로 직행
   const goNext = () => {
     const nextIdx = idx + 1
     if (nextIdx < problems.length) {
       navigate(`/taste/quiz/${subject}/${nextIdx}`)
       return
     }
-    navigate('/taste/complete')
+    navigate('/weakness')
   }
 
   const handleClose = () => {
@@ -245,14 +211,8 @@ export default function TasteQuizPage() {
       elapsedMs,
     })
     recordAttempt(null, elapsedMs)
-    setGrading('wrong')
-    advanceTimerRef.current = window.setTimeout(() => {
-      goNext()
-    }, 1100)
+    goNext()
   }
-
-  const submitDisabled = selected == null && !peeked && !overTime
-  const submitLabel = overTime ? '시간초과 채점' : '채점하기'
 
   return (
     <div className={styles.page}>
@@ -260,11 +220,18 @@ export default function TasteQuizPage() {
         progress={{ current: idx + 1, total: problems.length }}
         subjectLabel={SUBJECT_LABEL[subject as Subject]}
         onClose={handleClose}
-        onPeekExplanation={() => requestPeek('explanation')}
-        onPeekAnswer={() => requestPeek('answer')}
-        onSubmit={submitAndNext}
-        submitDisabled={submitDisabled}
-        submitLabel={submitLabel}
+        progressRatio={(idx + 1) / problems.length}
+        rightExtra={
+          <button
+            type="button"
+            onClick={() => setDrawingEnabled(!drawingEnabled)}
+            aria-pressed={drawingEnabled}
+            aria-label={drawingEnabled ? '필기 도구 끄기' : '필기 도구 켜기'}
+            className={clsx(styles.penToggle, drawingEnabled && styles.penToggleActive)}
+          >
+            <PenToggleIcon />
+          </button>
+        }
       />
 
       <DrawingToolbar
@@ -285,25 +252,9 @@ export default function TasteQuizPage() {
       <div className={styles.content}>
         <main className={styles.main}>
           <section className={styles.problemCard}>
-            {/* 진행 바 · 현재 문제 위치 / 전체 (문제 1 부터 1칸 채워짐) */}
-            <div className={styles.progressWrap}>
-              <div className={styles.progressTrack}>
-                <div
-                  className={styles.progressFill}
-                  style={{ width: `${((idx + 1) / problems.length) * 100}%` }}
-                />
-              </div>
-            </div>
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>
-                {grading !== 'none' && (
-                  <GradeMark
-                    // key 로 매 채점마다 새 인스턴스 → 애니메이션 재시작
-                    key={`${idx}-${grading}`}
-                    type={grading}
-                  />
-                )}
               </div>
               <div className={styles.problemMeta}>
                 <div className={styles.problemTime}>
@@ -323,33 +274,26 @@ export default function TasteQuizPage() {
                 <ProblemBody problem={problem} />
               </div>
 
-              <div className={styles.choicesWrap}>
-                <div className={styles.choicesGrid}>
-                  {problem.choices.map((choice, i) => {
-                    const choiceNo = i + 1
-                    const active = selected === choiceNo
-                    const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
-                    return (
-                      <div key={choiceNo} className={styles.choiceCell}>
-                        <button
-                          type="button"
-                          onClick={() => setSelected(choiceNo)}
-                          aria-pressed={active}
-                          className={clsx(
-                            styles.choiceButton,
-                            active && styles.choiceButtonActive,
-                          )}
-                        >
-                          {choiceNo}
-                        </button>
-                        <span className={styles.choiceValue}>
-                          <MathProblemRender text={answerText} />
+              {/* 보기 — 시험지처럼 읽기 전용 (선택은 하단 고정 바에서 · 주관식은 보기 없음) */}
+              {!isShortAnswer && (
+                <div className={styles.choicesWrap}>
+                  <div className={styles.choicesGrid}>
+                    {problem.choices.map((choice, i) => {
+                      const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
+                      return (
+                        <span key={i} className={styles.choiceItem}>
+                          <span className={styles.choiceNum}>
+                            {String.fromCodePoint(0x2460 + i)}
+                          </span>
+                          <span className={styles.choiceValue}>
+                            <MathProblemRender text={answerText} />
+                          </span>
                         </span>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className={styles.spacer} />
 
@@ -365,42 +309,79 @@ export default function TasteQuizPage() {
               </div>
             </div>
 
-            <div className={styles.footer}>
-              <button
-                type="button"
-                onClick={handleDontKnow}
-                className={styles.dontKnowButton}
-              >
-                모르겠어요 · 넘어가기
-              </button>
-            </div>
           </section>
-
-          <ResizeDivider
-            show={panelOpen}
-            onStart={() => setResizing(true)}
-            onDrag={(dx) =>
-              setPanelWidth((w) => {
-                const next = w - dx
-                return Math.max(300, Math.min(800, next))
-              })
-            }
-            onEnd={() => setResizing(false)}
-          />
         </main>
+      </div>
 
-        <ExplainPanel
-          open={panelOpen}
-          onClose={() => setPanelOpen(false)}
-          tab={panelTab}
-          onTabChange={setPanelTab}
-          problem={problem}
-          revealed={selected != null || peeked}
-          width={panelWidth}
-          resizing={resizing}
-        />
+      {/* 하단 고정 답안 바 — 객관식 ①~⑤ / 주관식 숫자 입력 + 다음·모르겠어요 */}
+      <div className={styles.answerBar}>
+        {isShortAnswer ? (
+          <div className={styles.answerInputRow}>
+            <button
+              type="button"
+              aria-label="부호 전환"
+              // iOS 숫자 키패드에 마이너스가 없어 별도 ± 토글 제공
+              onClick={() =>
+                setInputValue((v) => (v.startsWith('-') ? v.slice(1) : v ? `-${v}` : '-'))
+              }
+              className={clsx(styles.answerSign, inputValue.startsWith('-') && styles.answerSignActive)}
+            >
+              ±
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="-?[0-9]*"
+              placeholder="정답 입력"
+              value={inputValue}
+              onChange={(e) => {
+                // 숫자 + 맨 앞 마이너스만 허용
+                const raw = e.target.value.replace(/[^0-9-]/g, '')
+                setInputValue(raw.replace(/(?!^)-/g, ''))
+              }}
+              className={styles.answerInput}
+            />
+          </div>
+        ) : (
+          <div className={styles.answerRow}>
+            {problem.choices.map((_, i) => {
+              const choiceNo = i + 1
+              const active = selected === choiceNo
+              return (
+                <button
+                  key={choiceNo}
+                  type="button"
+                  // 같은 번호 재탭 = 선택 해제 → 다음 버튼이 모르겠어요로 복귀
+                  onClick={() => setSelected(active ? null : choiceNo)}
+                  aria-pressed={active}
+                  className={clsx(styles.answerNum, active && styles.answerNumActive)}
+                >
+                  {String.fromCodePoint(0x2460 + i)}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {answerValue != null ? (
+          <button type="button" onClick={submitAndNext} className={styles.nextButton}>
+            {isLast ? '채점하기' : '다음'}
+          </button>
+        ) : (
+          <button type="button" onClick={handleDontKnow} className={styles.dontKnowButton}>
+            모르겠어요 · 넘어가기
+          </button>
+        )}
       </div>
     </div>
+  )
+}
+
+function PenToggleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
   )
 }
 

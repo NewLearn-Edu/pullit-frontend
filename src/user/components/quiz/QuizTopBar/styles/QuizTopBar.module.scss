@@ -174,3 +174,19 @@
     color: rgba(255, 255, 255, 0.40);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 진행 라인 — 바 하단 3px (문제 카드 진행바 대체 · 2026-08-07 UI 정리)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.progressLine {
+  width: 100%;
+  height: 3px;
+  background: $color-white-a10;
+}
+
+.progressLineFill {
+  height: 100%;
+  background: $color-primary;
+  transition: width 300ms ease;
+}

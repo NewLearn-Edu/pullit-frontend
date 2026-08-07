@@ -21,7 +21,7 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
 
 /**
  * 맛보기 진단 · 과목 선택 페이지 (Figma 2253-118)
- * 과목 하나를 골라 "다음" → 해당 과목 4문제 풀이 → 완주.
+ * 과목 하나를 골라 "다음" → 해당 과목 3문제 풀이 → 완주.
  */
 export default function TasteStartPage() {
   const navigate = useNavigate()

@@ -71,26 +71,9 @@
   flex-direction: column;
   overflow: hidden;
   background: $color-canvas;
-}
-
-// 진행 바 · 문제 카드 최상단 · 연속형 (참고: 대성마이맥 스타일)
-.progressWrap {
-  flex: none;
-  padding: $space-lg $space-lg 0;
-}
-
-.progressTrack {
-  height: 8px;
-  border-radius: $radius-full;
-  background: $color-line;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  border-radius: $radius-full;
-  background: $color-primary;
-  transition: width 400ms ease;
+  // 하단 고정 답안 바(answerBar) 높이만큼 카드 안쪽에서 확보
+  // — 흰 카드가 바까지 이어지고, 여백은 필기 공간으로 쓰인다
+  padding-bottom: calc(150px + env(safe-area-inset-bottom));
 }
 
 // 문제 카드 헤더 · 문제 N · 시간 정보
@@ -153,44 +136,44 @@
 .choicesGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-}
-
-.choiceCell {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
   gap: $space-sm;
-  padding: $space-md 0;
 }
 
-// 원형 숫자 버튼 · z-canvas-above 로 캔버스 위에 얹혀 클릭 가능
-.choiceButton {
-  @include button-reset;
-  position: relative;
-  z-index: $z-canvas-above;
-  display: flex;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  align-items: center;
+// 본문 보기 — 시험지처럼 읽기 전용 (선택은 하단 answerBar) · 캔버스 아래라 필기 가능
+.choiceItem {
+  display: inline-flex;
+  align-items: baseline; // 분수 보기도 원문자와 기준선 정렬 (수능 조판)
   justify-content: center;
-  border-radius: $radius-full;
-  border: 1.8px solid $color-foreground;
+  gap: 8px;
+  min-height: 44px;
+  padding: $space-md $space-sm;
+}
+
+// 리뷰 화면용 칩 — 정답/오답 스트로크 표시 (TasteReviewPage)
+.choiceChip {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: $space-md $space-sm;
+  border: 1.5px solid $color-line;
+  border-radius: $radius-btn-md;
   background: $color-canvas;
+}
+
+// 원문자 ①~⑤ — 문제 본문과 같은 서체·크기 (어드민 .choice-num 과 동일 규칙)
+.choiceNum {
+  flex-shrink: 0;
+  font-family: $font-batang;
+  font-size: 1.125em;
+  font-weight: $fw-medium;
   color: $color-foreground;
-  font-size: 13px;
-  font-weight: $fw-bold;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  // 원문자 글리프는 시각 중심이 낮아 baseline 정렬 시 내려앉음 — 광학 보정
+  position: relative;
+  top: -0.1em;
 }
 
-.choiceButtonActive {
-  border-color: $color-primary;
-  background: $color-primary;
-  color: #fff;
-}
-
-// 답 값 span · z-canvas 아래 · 캔버스가 위에 덮음 (필기 통과)
 .choiceValue {
   font-family: $font-batang;
   font-size: $fs-body;
@@ -210,38 +193,7 @@
   z-index: $z-canvas;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 모르겠어요 · 카드 최하단
-// ─────────────────────────────────────────────────────────────────────────────
-
-.footer {
-  padding: $space-md $space-lg;
-  border-top: 1px solid $color-line;
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.dontKnowButton {
-  @include button-reset;
-  display: flex;
-  width: 100%;
-  min-height: 40px;
-  align-items: center;
-  justify-content: center;
-  padding: $space-sm $space-md;
-  border: 1px dashed $color-line;
-  border-radius: $radius-btn-md;
-  background: $color-canvas;
-  color: $color-muted;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
-
-  @include hover {
-    border-color: $color-muted;
-    background: $color-surface;
-    color: $color-body;
-  }
-}
+// (모르겠어요 버튼은 하단 answerBar 로 이동 — 카드 footer 제거)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ProblemBody · 본문 · 조건 박스 · 배점 뱃지
@@ -275,4 +227,185 @@
   padding: $space-xl;
   border-radius: $radius-md;
   background: $color-surface;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 하단 고정 답안 바 — OMR 식 ①~⑤ + 다음/채점하기·모르겠어요 (2026-08-07)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.answerBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 350px; // 최소 지원 폭 — fixed 는 body min-width 를 안 따라감
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-lg calc(#{$space-md} + env(safe-area-inset-bottom));
+  background: $color-canvas;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 30;
+}
+
+// 액션 버튼과 같은 폭(100% · max 620)을 5칸으로 등분 — 네모 선택 박스
+.answerRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: $space-sm;
+  width: 100%;
+  max-width: 620px;
+}
+
+// 번호 선택 박스 — ①~⑤ 원문자 (바탕체) · 액션 버튼과 같은 radius
+.answerNum {
+  @include button-reset;
+  @include flex-center;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid $color-line;
+  background: $color-canvas;
+  font-family: $font-batang;
+  font-size: 22px;
+  font-weight: $fw-medium;
+  color: $color-foreground;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.answerNumActive {
+  border-color: $color-primary;
+  background: $color-primary;
+  color: #fff;
+}
+
+// 액션 슬롯 — 선택 전 모르겠어요 / 선택 후 다음·채점하기 (같은 높이라 점프 없음)
+.nextButton {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  max-width: 620px;
+  height: 52px;
+  border-radius: 12px;
+  background: #23272b;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
+}
+
+.dontKnowButton {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  max-width: 620px;
+  height: 52px;
+  border: 1px dashed $color-line;
+  border-radius: 12px;
+  background: $color-canvas;
+  color: $color-muted;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+
+  @include hover {
+    border-color: $color-muted;
+    background: $color-surface;
+    color: $color-body;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 해설 리뷰 화면 전용 — 정답/내 오답 보기 표시 (TasteReviewPage 에서 재사용)
+// 정답은 채운 원문자(❶~❺) + 검정 스트로크, 내 오답은 빨간 스트로크 + 틴트
+// ─────────────────────────────────────────────────────────────────────────────
+
+.choiceChipCorrect {
+  border-color: $color-foreground;
+}
+
+.choiceChipWrong {
+  border-color: $color-primary;
+  background: $color-weak-bg;
+
+  .choiceNum,
+  .choiceValue { color: $color-primary; }
+}
+
+// 상단 네비 펜 토글 — 필기 도구 켜기/끄기 (미니 스트립 대체 · 2026-08-07 UI 정리)
+.penToggle {
+  @include button-reset;
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  border: 1px solid $color-white-a10;
+  color: rgba(255, 255, 255, 0.75);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.penToggleActive {
+  background: #fff;
+  border-color: #fff;
+  color: $color-foreground;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 주관식(단답형) 입력 — 숫자 인풋 + ± 부호 토글 (2026-08-07)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.answerInputRow {
+  display: flex;
+  gap: $space-sm;
+  width: 100%;
+  max-width: 620px;
+}
+
+.answerSign {
+  @include button-reset;
+  @include flex-center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid $color-line;
+  background: $color-canvas;
+  font-size: 20px;
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.answerSignActive {
+  border-color: $color-primary;
+  background: $color-weak-bg;
+  color: $color-primary;
+}
+
+.answerInput {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 $space-lg;
+  border: 1.5px solid $color-line;
+  border-radius: 12px;
+  background: $color-canvas;
+  font-family: $font-batang;
+  font-size: 18px;
+  font-weight: $fw-medium;
+  text-align: center;
+  color: $color-foreground;
+  outline: none;
+
+  &::placeholder {
+    font-family: $font-sans;
+    font-size: $fs-body-sm;
+    color: $color-muted;
+  }
+
+  &:focus {
+    border-color: $color-primary;
+  }
 }

@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { getProblemsByEnglishType, getProblemsBySkillNode, type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
+import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import markCorrect from '@/assets/result/mark-correct.svg'
@@ -32,6 +33,9 @@ function circled(choice: number | null): string {
 interface Row {
   result: QuizItemResult
   problem: Problem | undefined
+  subject: 'math' | 'english'
+  /** 해설 리뷰 라우팅용 — 과목 내 문제 인덱스 */
+  reviewIdx: number
 }
 
 export default function WeaknessResultPage() {
@@ -48,6 +52,11 @@ export default function WeaknessResultPage() {
 
   // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
   const hydrated = useTasteStore.persist?.hasHydrated?.() ?? true
+
+  // 채점하기 → 결과 직행 플로우 변경으로, 전송 실패분 회수를 여기서 수행 (기존 완료 페이지 역할)
+  useEffect(() => {
+    flushAttemptQueue()
+  }, [])
 
   useEffect(() => {
     // 완주하지 않은 접근은 시작 페이지로 (완료 페이지와 동일 가드 · 실제로 푼 과목만 검사)
@@ -72,10 +81,14 @@ export default function WeaknessResultPage() {
       ...mathResults.map((result) => ({
         result,
         problem: mathProblems.find((p) => p.id === result.problemId),
+        subject: 'math' as const,
+        reviewIdx: mathProblems.findIndex((p) => p.id === result.problemId),
       })),
       ...englishResults.map((result) => ({
         result,
         problem: englishProblems.find((p) => p.id === result.problemId),
+        subject: 'english' as const,
+        reviewIdx: englishProblems.findIndex((p) => p.id === result.problemId),
       })),
     ],
     [mathResults, englishResults, mathProblems, englishProblems],
@@ -127,7 +140,7 @@ export default function WeaknessResultPage() {
 
           <div className="flex w-full flex-col">
             <div className="flex w-full items-center">
-              {['문항', '풀이 시간', '답안'].map((label) => (
+              {['문항', '풀이 시간', '답안', '해설'].map((label) => (
                 <div
                   key={label}
                   className="flex flex-1 items-center justify-center border-b border-[#f0f1f3] p-md"
@@ -137,7 +150,7 @@ export default function WeaknessResultPage() {
               ))}
             </div>
 
-            {rows.map(({ result, problem }, i) => {
+            {rows.map(({ result, problem, subject, reviewIdx }, i) => {
               const elapsedSec = Math.round(result.elapsedMs / 1000)
               const recSec = problem?.tRecSec ?? 0
               const overTime = recSec > 0 && elapsedSec > recSec
@@ -184,9 +197,13 @@ export default function WeaknessResultPage() {
                     )}
                   </div>
 
+                  {/* 주관식(보기 없음)은 번호 대신 값 그대로 표시 */}
                   <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch border-b border-[#f0f1f3] px-md py-lg">
                     <p className="whitespace-nowrap text-[16px] text-[#121417]">
-                      내답 {circled(result.selectedChoice)}
+                      내답{' '}
+                      {problem?.choices.length === 0
+                        ? result.selectedChoice ?? '-'
+                        : circled(result.selectedChoice)}
                     </p>
                     <p
                       className={clsx(
@@ -194,8 +211,28 @@ export default function WeaknessResultPage() {
                         isCorrect ? 'text-[#121417]' : 'text-primary',
                       )}
                     >
-                      정답 {circled(problem?.answer ?? null)}
+                      정답{' '}
+                      {problem
+                        ? problem.choices.length === 0
+                          ? problem.answer
+                          : circled(problem.answer)
+                        : '-'}
                     </p>
+                  </div>
+
+                  {/* 해설 — 문제 왼쪽 · 해설 오른쪽 리뷰 화면으로 이동 */}
+                  <div className="flex min-w-0 flex-1 items-center justify-center self-stretch border-b border-[#f0f1f3] px-md py-lg">
+                    {problem && reviewIdx >= 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/taste/review/${subject}/${reviewIdx}`)}
+                        className="whitespace-nowrap rounded-[8px] border border-[#e5e7ea] px-[12px] py-[8px] text-[14px] font-semibold text-[#23272b] transition-colors hover:bg-[#f8f8f8]"
+                      >
+                        해설보기
+                      </button>
+                    ) : (
+                      <span className="text-[14px] text-[#a6abb1]">-</span>
+                    )}
                   </div>
                 </div>
               )

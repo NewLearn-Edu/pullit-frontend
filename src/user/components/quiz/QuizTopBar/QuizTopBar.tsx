@@ -4,16 +4,21 @@ interface QuizTopBarProps {
   progress: { current: number; total: number }
   subjectLabel: string
   onClose: () => void
-  onPeekExplanation: () => void
-  onPeekAnswer: () => void
-  onSubmit: () => void
-  submitDisabled: boolean
-  submitLabel: string
+  /** 우측 액션 — 풀이 중에는 정답·해설 접근 금지라 미전달 (2026-08-07 플로우 변경) */
+  onPeekExplanation?: () => void
+  onPeekAnswer?: () => void
+  onSubmit?: () => void
+  submitDisabled?: boolean
+  submitLabel?: string
+  /** 우측 커스텀 액션 (예: 필기 토글) */
+  rightExtra?: React.ReactNode
+  /** 0~1 — 전달 시 바 하단에 진행 라인 표시 (문제 카드의 진행바 대체) */
+  progressRatio?: number
 }
 
 /**
  * 문제풀이 화면 최상단 네비게이션 바 (1행).
- * 왼쪽: 닫기. 가운데: 과목명 + 진행바. 오른쪽: 해설/정답/채점 액션.
+ * 왼쪽: 닫기. 가운데: 과목명 + 진행바. 우측 액션은 전달된 것만 렌더.
  * 타이머는 문제 카드 헤더로 이동됨 (2026-07-23 기획 변경).
  */
 export function QuizTopBar({
@@ -25,6 +30,8 @@ export function QuizTopBar({
   onSubmit,
   submitDisabled,
   submitLabel,
+  rightExtra,
+  progressRatio,
 }: QuizTopBarProps) {
   // 현재 문제 포함 남은 문제 수
   const remaining = Math.max(0, progress.total - progress.current + 1)
@@ -54,20 +61,35 @@ export function QuizTopBar({
           </span>
         </div>
 
-        {/* 우측: 해설 · 정답 · 채점하기 */}
+        {/* 우측: 전달된 액션만 (풀이 화면은 비움 — 정답·해설은 결과 페이지에서) */}
         <div className={styles.right}>
-          <PeekButton onClick={onPeekExplanation} label="해설" icon={<HintIcon />} />
-          <PeekButton onClick={onPeekAnswer} label="정답" icon={<KeyIcon />} />
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitDisabled}
-            className={styles.submitButton}
-          >
-            {submitLabel}
-          </button>
+          {onPeekExplanation && (
+            <PeekButton onClick={onPeekExplanation} label="해설" icon={<HintIcon />} />
+          )}
+          {onPeekAnswer && <PeekButton onClick={onPeekAnswer} label="정답" icon={<KeyIcon />} />}
+          {onSubmit && (
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={submitDisabled}
+              className={styles.submitButton}
+            >
+              {submitLabel}
+            </button>
+          )}
+          {rightExtra}
         </div>
       </div>
+
+      {/* 진행 라인 — 문제 카드에 있던 진행바를 바 하단으로 통합 (2026-08-07 UI 정리) */}
+      {progressRatio != null && (
+        <div className={styles.progressLine}>
+          <div
+            className={styles.progressLineFill}
+            style={{ width: `${Math.min(1, Math.max(0, progressRatio)) * 100}%` }}
+          />
+        </div>
+      )}
     </header>
   )
 }

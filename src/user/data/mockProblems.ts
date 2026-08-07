@@ -22,8 +22,8 @@ export interface Problem {
   bodyText: string // 본문 (KaTeX 지원)
   conditions?: string[] // 조건 (가), (나) 등 (KaTeX 지원)
   question?: string // 마지막 질문 문장
-  choices: string[] // 5개
-  answer: number // 1-5
+  choices: string[] // 객관식 5개 · 주관식(단답형)은 빈 배열
+  answer: number // 객관식 1-5 · 주관식은 정답값 자체 (음수 가능)
   explanation: {
     intent: string
     correctAnalysis: string
@@ -87,8 +87,9 @@ const problemsMathSample: Problem[] = [
     tMaxSec: 270,
     bodyText:
       '$$2^{-3} \\times (2^2 \\times 3^{-1})^2 \\div (2^{-2} \\times 3^{-3})$$의 값을 구하시오.',
-    choices: ['① $24$', '② $28$', '③ $32$', '④ $36$', '⑤ $40$'],
-    answer: 1,
+    // 주관식(단답형) — 원문이 "구하시오" 단답 유형이라 보기 없이 값 입력으로 전환 (2026-08-07)
+    choices: [],
+    answer: 24,
     explanation: {
       intent: '정수 지수의 지수법칙 · 사칙연산을 정확하게 적용하는 계산 능력을 확인합니다.',
       correctAnalysis:
@@ -206,18 +207,21 @@ export const MOCK_PROBLEMS: Problem[] = [
   ...problemsEnglishSample,
 ]
 
+/** 맛보기 세트 문항 수 — 정책 3문항 ("딱 3문제만 더 풀면", 성적 상승까지 3문제) */
+const TRIAL_PROBLEM_COUNT = 3
+
 /**
  * POC 목 데이터는 sn-exp-log-01 · en-blank 만 실제로 준비. 다른 skill_node · type 선택 시
- * 흐름을 끊지 않기 위해 수학 · 영어 각 과목의 문제 4개를 fallback 으로 반환.
+ * 흐름을 끊지 않기 위해 수학 · 영어 각 과목의 문제를 fallback 으로 반환.
  */
 export function getProblemsBySkillNode(skillNodeId: string): Problem[] {
   const matched = MOCK_PROBLEMS.filter((p) => p.skillNodeId === skillNodeId)
-  if (matched.length >= 4) return matched.slice(0, 4)
-  return MOCK_PROBLEMS.filter((p) => p.subject === 'math').slice(0, 4)
+  if (matched.length >= TRIAL_PROBLEM_COUNT) return matched.slice(0, TRIAL_PROBLEM_COUNT)
+  return MOCK_PROBLEMS.filter((p) => p.subject === 'math').slice(0, TRIAL_PROBLEM_COUNT)
 }
 
 export function getProblemsByEnglishType(typeId: string): Problem[] {
   const matched = MOCK_PROBLEMS.filter((p) => p.englishTypeId === typeId)
-  if (matched.length >= 4) return matched.slice(0, 4)
-  return MOCK_PROBLEMS.filter((p) => p.subject === 'english').slice(0, 4)
+  if (matched.length >= TRIAL_PROBLEM_COUNT) return matched.slice(0, TRIAL_PROBLEM_COUNT)
+  return MOCK_PROBLEMS.filter((p) => p.subject === 'english').slice(0, TRIAL_PROBLEM_COUNT)
 }

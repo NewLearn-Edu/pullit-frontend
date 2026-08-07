@@ -326,22 +326,8 @@ export function DrawingToolbar({
     </div>
   )
 
-  // 모바일에서 툴바 접힌 상태: 미니 스트립만 표시
-  if (isCompact && !drawingEnabled) {
-    return (
-      <div className={styles.miniStrip}>
-        <span className={styles.miniLabel}>문제만 풀이 중</span>
-        <button
-          type="button"
-          onClick={() => onDrawingEnabledChange(true)}
-          className={styles.miniPenButton}
-        >
-          <PenIcon />
-          필기 도구
-        </button>
-      </div>
-    )
-  }
+  // 필기 꺼짐 — 툴바 미노출. 켜기는 상단 네비의 펜 토글 (2026-08-07 UI 정리 · 미니 스트립 제거)
+  if (!drawingEnabled) return null
 
   // 손필기 토글 (터치 기기에서만)
   const fingerToggle = isTouch && (

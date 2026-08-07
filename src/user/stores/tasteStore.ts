@@ -86,8 +86,9 @@ export const useTasteStore = create<TasteState>()(
           lastSubject: null,
         }),
 
-      isMathComplete: () => get().mathResults.length >= 4,
-      isEnglishComplete: () => get().englishResults.length >= 4,
+      // 맛보기 세트 = 3문항 (정책 · mockProblems TRIAL_PROBLEM_COUNT 와 동일)
+      isMathComplete: () => get().mathResults.length >= 3,
+      isEnglishComplete: () => get().englishResults.length >= 3,
 
       /**
        * 완주 여부 — 실제 플로우는 과목 하나만 푼다.

@@ -1,1 +1,0 @@
-export { GradeMark } from './GradeMark'

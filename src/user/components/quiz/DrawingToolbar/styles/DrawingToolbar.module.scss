@@ -40,41 +40,6 @@
   border-top: 1px solid $color-line-dark;
 }
 
-// Row 3(모바일 접힘 상태) · 미니 스트립
-.miniStrip {
-  position: sticky;
-  top: 56px;
-  z-index: $z-toolbar;
-  display: flex;
-  height: 40px;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 $space-lg;
-  border-bottom: 1px solid $color-line-dark;
-  background: $color-canvas;
-}
-
-.miniLabel {
-  font-size: $fs-body-sm;
-  color: $color-muted;
-}
-
-.miniPenButton {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-xs $space-md;
-  border-radius: $radius-btn-sm;
-  background: $color-surface;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
-  transition: transform 100ms ease;
-
-  &:active { transform: scale(0.95); }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Row 1 - 좌측 · 우측
