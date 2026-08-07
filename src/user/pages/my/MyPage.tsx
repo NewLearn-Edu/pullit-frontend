@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
-import { CreditBadge } from '@/user/components/CreditBadge'
 import { logout } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
 
 /**
- * 마이페이지 (/my) — 뱅킹 앱 MY 문법 (2026-08-07 레퍼런스 확정):
- *   상단 브랜드 틴트 히어로 (프로필 + 요약 카드 + 퀵 액션)
- *   하단 흰 배경 섹션 리스트 (계정 정보 · 로그아웃)
- * - 회원: 계정 정보 박스 + 로그아웃
- * - 게스트: 가입 유도 카드 + 로그아웃(세션 종료)
+ * 마이페이지 (/my) — 뱅킹 앱 MY 타이포 문법 (2026-08-07 레퍼런스 확정):
+ *   라벨 400 / 값 700 대비 · 18px 큰 리스트 행 + 회색 박스 · 넉넉한 세로 리듬
+ * - 상단: 브랜드 틴트 히어로 (프로필 + 요약 카드 + 퀵 액션)
+ * - 하단: 흰 배경 섹션 (계정 정보 박스 · 로그아웃 행 · 게스트는 가입 유도 카드)
  */
 export default function MyPage() {
   const navigate = useNavigate()
@@ -46,21 +44,14 @@ export default function MyPage() {
       <UserNav active="my" />
 
       <main className={styles.main}>
-        {/* ── 브랜드 틴트 히어로 ─────────────────────────────── */}
+        {/* ── 히어로 (쿨그레이) ──────────────────────────────── */}
         <div className={styles.hero}>
-          <header className={styles.heroTop}>
-            <Link to="/home" className={styles.logo}>
-              풀잇
-            </Link>
-            <CreditBadge credit={me?.creditBalance ?? 0} />
-          </header>
-
-          {/* 프로필 */}
+          {/* 프로필 — 이름 굵게 + 배지, 보조 정보는 가는 캡션 */}
           <div className={styles.profile}>
             <span className={styles.avatar}>
               <PersonIcon />
             </span>
-            <div className={styles.profileNameWrap}>
+            <div className={styles.profileBody}>
               <div className={styles.profileNameRow}>
                 <h1 className={styles.profileName}>
                   {isGuest ? me?.nickname ?? '게스트' : `${me?.name ?? '이름 없음'} 님`}
@@ -75,7 +66,7 @@ export default function MyPage() {
             </div>
           </div>
 
-          {/* 요약 카드 — 크레딧 | 쌓인 오답 (오답은 홈 학습 상태와 동일한 POC 목값) */}
+          {/* 요약 카드 — 라벨 400 / 값 700 (오답은 홈과 동일한 POC 목값) */}
           <div className={styles.statCard}>
             <div className={styles.stat}>
               <span className={styles.statLabel}>크레딧</span>
@@ -112,39 +103,42 @@ export default function MyPage() {
 
         {/* ── 하단 섹션 (흰 배경) ────────────────────────────── */}
         <div className={styles.sections}>
-          {isGuest ? (
-            <section className={styles.guestCard}>
-              <div>
-                <h3 className={styles.guestTitle}>10초만에 가입하고 약점 기록 남기기</h3>
-                <p className={styles.guestDesc}>풀이 기록과 약점 진단이 계정에 저장돼요.</p>
+          {!isGuest && me && (
+            <section className={styles.section}>
+              <p className={styles.sectionLabel}>내 정보</p>
+              <h2 className={styles.rowTitle}>계정 정보</h2>
+              <div className={styles.infoBox}>
+                <InfoRow label="이름" value={me.name ?? '-'} />
+                <InfoRow label="이메일" value={me.email ?? '-'} />
+                <InfoRow label="전화번호" value={me.phoneNumber ?? '-'} />
+                <InfoRow
+                  label="생년월일"
+                  value={me.birthDate ? me.birthDate.split('-').join('.') : '-'}
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className={styles.guestButton}
-              >
-                가입하기
-              </button>
             </section>
-          ) : (
-            me && (
-              <section>
-                <h2 className={styles.sectionLabel}>계정 정보</h2>
-                <div className={styles.infoBox}>
-                  <InfoRow label="이름" value={me.name ?? '-'} />
-                  <InfoRow label="이메일" value={me.email ?? '-'} />
-                  <InfoRow label="전화번호" value={me.phoneNumber ?? '-'} />
-                  <InfoRow
-                    label="생년월일"
-                    value={me.birthDate ? me.birthDate.split('-').join('.') : '-'}
-                  />
-                </div>
-              </section>
-            )
           )}
 
-          <section>
-            <h2 className={styles.sectionLabel}>계정 관리</h2>
+          {/* 게스트 — 가입 유도 (레퍼런스 하단 AI 카드 문법) */}
+          {isGuest && (
+            <button
+              type="button"
+              onClick={() => navigate('/signup')}
+              className={styles.promoCard}
+            >
+              <span className={styles.promoIcon}>
+                <SparkIcon />
+              </span>
+              <span className={styles.promoBody}>
+                <span className={styles.promoCaption}>지금까지 푼 기록 그대로</span>
+                <span className={styles.promoTitle}>10초만에 가입하고 약점 저장하기!</span>
+              </span>
+              <ChevronRightIcon />
+            </button>
+          )}
+
+          <section className={styles.section}>
+            <p className={styles.sectionLabel}>계정 관리</p>
             <button
               type="button"
               onClick={handleLogout}
@@ -204,6 +198,18 @@ function ChartIcon() {
       <path d="M5 21V13" />
       <path d="M12 21V7" />
       <path d="M19 21V3" />
+    </svg>
+  )
+}
+
+function SparkIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v4" />
+      <path d="M12 17v4" />
+      <path d="M3 12h4" />
+      <path d="M17 12h4" />
+      <path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z" />
     </svg>
   )
 }
