@@ -35,6 +35,8 @@ export default defineConfig({
   server: {
     // 로컬 개발 포트 고정 (dev 서버 전용 — 프로덕션 빌드/nginx 배포에는 영향 없음)
     port: 3000,
+    // 같은 와이파이의 폰·태블릿에서 맥 IP(http://172.16.x.x:3000)로 접속 허용
+    host: true,
   },
   preview: {
     port: 3000,
