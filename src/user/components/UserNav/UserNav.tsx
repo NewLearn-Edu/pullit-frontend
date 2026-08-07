@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/UserNav.module.scss'
 
-export type UserNavKey = 'recommend' | 'free' | 'wrongNote' | 'report' | 'my'
+export type UserNavKey = 'recommend' | 'map' | 'wrongNote' | 'report' | 'my'
 
 interface UserNavProps {
   active: UserNavKey
@@ -28,7 +28,7 @@ export function UserNav({ active }: UserNavProps) {
         </Link>
         <nav className={styles.nav}>
           <NavItem to="/home" icon={<HomeIcon />} label="추천" active={active === 'recommend'} />
-          <NavItem icon={<DocIcon />} label="자유 문제" active={active === 'free'} />
+          <NavItem to="/weakness-map" icon={<MapIcon />} label="약점 지도" active={active === 'map'} />
           <NavItem to="/wrong-note" icon={<BookmarkIcon />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem icon={<ChartIcon />} label="리포트" active={active === 'report'} />
           <NavItem to="/my" icon={<PersonIcon />} label="마이페이지" active={active === 'my'} />
@@ -51,10 +51,13 @@ export function UserNav({ active }: UserNavProps) {
         >
           <HomeIcon />홈
         </Link>
-        <button type="button" className={clsx(styles.bottomItem, active === 'free' && styles.bottomItemActive)}>
+        <Link
+          to="/weakness-map"
+          className={clsx(styles.bottomItem, active === 'map' && styles.bottomItemActive)}
+        >
           <MapIcon />
           약점 지도
-        </button>
+        </Link>
         <button type="button" className={clsx(styles.bottomItem, active === 'report' && styles.bottomItemActive)}>
           <ChartIcon />
           학습 기록
@@ -103,16 +106,6 @@ function HomeIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 10.5 12 3l9 7.5" />
       <path d="M5 9.5V21h14V9.5" />
-    </svg>
-  )
-}
-
-function DocIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="3" width="14" height="18" rx="2" />
-      <path d="M9 8h6" />
-      <path d="M9 12h6" />
     </svg>
   )
 }

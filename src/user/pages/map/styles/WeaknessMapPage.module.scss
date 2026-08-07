@@ -1,0 +1,480 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// WeaknessMapPage · 약점 지도 (Figma 2370-9041 · 2536-2709)
+//   피그마식 캔버스 — 도트 그리드 · 팬/줌 · 노드 카드 4상태 · 바텀시트
+// -----------------------------------------------------------------------------
+
+$ink: #121417;
+$gray-100: #f0f1f3;
+$gray-200: #e5e7ea;
+$gray-500: #80858b;
+$red-tint: #fff1f2;
+
+.page {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: $color-canvas;
+}
+
+.canvasWrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: none; // 팬·핀치를 직접 처리
+  // 도트 그리드 — 화면 고정 (피그마 배경 질감)
+  background-image: radial-gradient(#dcdee1 1.5px, transparent 1.5px);
+  background-size: 28px 28px;
+
+  // 하단 네비(64px)에 가리지 않게 컨트롤 여백은 각 요소에서 처리
+}
+
+// ── 캔버스 월드 ──────────────────────────────────────────────────────────────
+
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.worldAnimated {
+  transition: transform 420ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edgeMain {
+  fill: none;
+  stroke: #c4c9ce;
+  stroke-width: 1.5;
+}
+
+.edgeIndirect {
+  fill: none;
+  stroke: #c4c9ce;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 5;
+}
+
+// ── 노드 카드 (207×99 · 시안 고정 규격) ─────────────────────────────────────
+
+.node {
+  @include button-reset;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 207px;
+  padding: 12px;
+  border-radius: 19px;
+  text-align: left;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+
+  @include hover { transform: translateY(-2px); }
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 22px;
+}
+
+.nodeCat {
+  font-size: 10px;
+  font-weight: $fw-bold;
+}
+
+.badgeWeak,
+.badgeLocked {
+  padding: 5px 8px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $fw-bold;
+}
+
+.badgeWeak {
+  background: $color-primary;
+  color: #fff;
+}
+
+.badgeLocked {
+  background: $gray-200;
+  color: $gray-500;
+}
+
+.nodeBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 5px;
+  width: 100%;
+}
+
+.nodeName {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: $fw-bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nodeScore {
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: $fw-semibold;
+}
+
+.track {
+  display: block;
+  margin-top: 5px;
+  width: 100%;
+  height: 5px;
+  border-radius: $radius-full;
+  background: $gray-200;
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: $radius-full;
+}
+
+// 상태별 색
+.nodeWeak {
+  background: $red-tint;
+  border: 1px solid $color-primary;
+  .nodeCat { color: $gray-500; }
+  .nodeBody { color: $ink; }
+  .fill { background: $color-primary; }
+}
+
+.nodeDone {
+  background: $color-canvas;
+  border: 1px solid #23272b;
+  .nodeCat { color: $gray-500; }
+  .nodeBody { color: $ink; }
+  .fill { background: #23272b; }
+}
+
+.nodeLocked {
+  background: $gray-100;
+  border: 1px solid $gray-200;
+  .nodeCat,
+  .nodeBody { color: $gray-500; }
+}
+
+// 선택 — 진단완료는 검정, 미진단은 진회색으로 반전 + NodeMap-selected 그림자
+.nodeSelected {
+  filter: drop-shadow(0 13px 14px rgba(116, 116, 116, 0.2));
+
+  &.nodeDone {
+    background: #23272b;
+    border-color: #23272b;
+    .nodeCat,
+    .nodeBody { color: #fff; }
+    .track { background: $gray-500; }
+    .fill { background: #fff; }
+  }
+
+  &.nodeLocked {
+    background: #a6abb1;
+    border-color: $gray-500;
+    .nodeCat,
+    .nodeBody { color: #fff; }
+    .track { background: $gray-200; }
+  }
+}
+
+// ── 플로팅 헤더 ──────────────────────────────────────────────────────────────
+
+.header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  padding: $space-md 12px;
+  pointer-events: none; // 캔버스 팬을 막지 않게 — 자식만 클릭 가능
+
+  > * { pointer-events: auto; }
+}
+
+.headerIcons {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.iconCircle {
+  @include button-reset;
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  background: $color-canvas;
+  color: $ink;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+// ── 범례 · 줌 컨트롤 ─────────────────────────────────────────────────────────
+
+.legend {
+  position: absolute;
+  left: 20px;
+  bottom: 84px; // 하단 네비 위
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+
+  @include desktop-up { bottom: 20px; }
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: #000;
+}
+
+.swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.swatchWeak {
+  background: $red-tint;
+  border: 1px solid $color-primary;
+}
+
+.swatchDone {
+  background: $color-canvas;
+  border: 1px solid $ink;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.swatchLocked {
+  background: $gray-100;
+  border: 1px solid $gray-200;
+}
+
+.controls {
+  position: absolute;
+  right: 20px;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+
+  @include desktop-up { bottom: 20px; }
+}
+
+.controlButton {
+  @include button-reset;
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid $gray-200;
+  background: $color-canvas;
+  color: $ink;
+  font-size: 20px;
+  font-weight: $fw-medium;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.08));
+
+  @include hover { background: #f8f8f8; }
+}
+
+.emptyState {
+  position: absolute;
+  inset: 0;
+  @include flex-center;
+  font-size: $fs-body;
+  color: $gray-500;
+  pointer-events: none;
+}
+
+// ── 노드 상세 바텀시트 (Figma 2536-3075) ─────────────────────────────────────
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 64px; // 하단 네비 위에서 시작
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: $color-canvas;
+  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
+  animation: sheetIn 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+
+  @include desktop-up {
+    left: 50%;
+    right: auto;
+    bottom: 0;
+    width: 480px;
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes sheetIn {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@include desktop-up {
+  @keyframes sheetIn {
+    from { transform: translate(-50%, 24px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+}
+
+.sheetHandleWrap {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.sheetHandle {
+  display: block;
+  width: 42px;
+  height: 5px;
+  border-radius: $radius-full;
+  background: $gray-200;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: $fw-semibold;
+  color: $ink;
+}
+
+.sheetStats {
+  display: flex;
+  padding: $space-lg 0;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.sheetStat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  border-right: 1px solid $gray-200;
+}
+
+.sheetStatLast {
+  border-right: none;
+}
+
+.sheetStatLabel {
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: #5e6368;
+}
+
+.sheetStatValue {
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $ink;
+}
+
+.sheetSection {
+  margin: 0;
+  font-size: 18px;
+  font-weight: $fw-semibold;
+  color: $ink;
+}
+
+.pathBox {
+  display: flex;
+  flex-direction: column;
+  padding: $space-lg;
+  border: 1px solid $gray-200;
+  border-radius: 12px;
+}
+
+.pathItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.pathLine {
+  display: block;
+  width: 2px;
+  height: 22px;
+  margin-left: 4px;
+  background: $gray-200;
+}
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: $fs-body-sm;
+  font-weight: $fw-bold;
+  color: $ink;
+}
+
+.pathDot {
+  display: block;
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: $radius-full;
+  background: $gray-200;
+}
+
+.pathDotCurrent {
+  background: #23272b;
+}
+
+.sheetButton {
+  @include button-reset;
+  @include flex-center;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
+}

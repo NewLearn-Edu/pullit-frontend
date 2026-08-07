@@ -4,6 +4,7 @@ import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import MyPage from './user/pages/my/MyPage'
+import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
 import SignupInfoPage from './user/pages/auth/SignupInfoPage'
@@ -13,6 +14,7 @@ import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
+import TasteReviewPage from './user/pages/taste/TasteReviewPage'
 import WeaknessResultPage from './user/pages/taste/WeaknessResultPage'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
@@ -30,6 +32,7 @@ export default function App() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/wrong-note" element={<WrongNotePage />} />
       <Route path="/my" element={<MyPage />} />
+      <Route path="/weakness-map" element={<WeaknessMapPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPromptPage />} />
       <Route path="/signup/info" element={<SignupInfoPage />} />
@@ -39,6 +42,7 @@ export default function App() {
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
+      <Route path="/taste/review/:subject/:index" element={<TasteReviewPage />} />
       <Route path="/weakness" element={<WeaknessResultPage />} />
       <Route
         path="/admin/*"
