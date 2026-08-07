@@ -39,18 +39,49 @@ $color-naver: #03C75A;
   @include tablet-up { width: 148px; }
 }
 
+// 카카오 버튼을 가리키는 소구 말풍선 — "빠른 가입 = 약점 확인" 상기
+.bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 56px 0 0;   // 로고와 버튼 그룹 사이 호흡 — 로고가 독립적으로 보이도록 넉넉히
+  padding: 10px 18px;
+  background: $color-canvas;
+  border: 1px solid $color-line;
+  border-radius: $radius-full;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+
+  // 꼬리 — 테두리를 이어받은 회전 사각형이 버튼 쪽을 가리킨다
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: $color-canvas;
+    border-right: 1px solid $color-line;
+    border-bottom: 1px solid $color-line;
+    transform: translateX(-50%) rotate(45deg);
+  }
+}
+
 // 소셜 버튼 스택
 .buttons {
   display: flex;
   flex-direction: column;
   gap: $space-md;
   width: 100%;
-  margin-top: $space-xxl;
+  margin-top: $space-lg;
 }
 
 .socialButton {
   @include button-reset;
   @include flex-center;
+  gap: 8px;
   height: 54px;
   border-radius: $radius-btn-md;
   font-size: $fs-body;
@@ -59,6 +90,19 @@ $color-naver: #03C75A;
 
   @include hover { opacity: 0.9; }
   &:active { opacity: 0.85; }
+}
+
+// 브랜드 로고 (카카오 말풍선 · 네이버 N · 구글 G · 애플) — 가입 유도 페이지와 동일 에셋
+.socialIcon {
+  @include flex-center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+
+  img {
+    width: 18px;
+    height: auto;
+  }
 }
 
 .kakao {
@@ -93,6 +137,20 @@ $color-naver: #03C75A;
   font-size: $fs-body-sm;
   color: $color-danger;
   text-align: center;
+}
+
+// 가입 없이 맛보기로 — SSO 버튼과 경쟁하지 않는 보조 텍스트 액션
+.guestLink {
+  @include button-reset;
+  margin-top: $space-lg;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-muted;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 150ms ease;
+
+  @include hover { color: $color-body; }
 }
 
 // 하단 안내 문구

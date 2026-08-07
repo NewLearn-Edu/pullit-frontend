@@ -9,6 +9,10 @@ import {
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import logoImg from '@/assets/images/logo.png'
+import logoApple from '@/assets/auth/logo-apple.svg'
+import logoGoogle from '@/assets/auth/logo-google.svg'
+import logoKakao from '@/assets/auth/logo-kakao.svg'
+import logoNaver from '@/assets/auth/logo-naver.svg'
 import styles from './styles/LoginPage.module.scss'
 
 /**
@@ -41,12 +45,21 @@ export default function LoginPage() {
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />
 
+        {/* 카카오 버튼을 가리키는 소구 말풍선 */}
+        <p className={styles.bubble}>
+          <span aria-hidden>⚡</span>
+          10초만에 가입 후 약점보기
+        </p>
+
         <div className={styles.buttons}>
           <button
             type="button"
             onClick={startKakaoLogin}
             className={clsx(styles.socialButton, styles.kakao)}
           >
+            <span className={styles.socialIcon}>
+              <img src={logoKakao} alt="" />
+            </span>
             카카오로 계속하기
           </button>
           <button
@@ -54,6 +67,10 @@ export default function LoginPage() {
             onClick={startNaverLogin}
             className={clsx(styles.socialButton, styles.naver)}
           >
+            <span className={styles.socialIcon}>
+              {/* 원본 에셋이 상하 반전 상태로 내보내져 렌더 시 되돌린다 (가입 유도 페이지와 동일) */}
+              <img src={logoNaver} alt="" style={{ transform: 'scaleY(-1)' }} />
+            </span>
             네이버로 계속하기
           </button>
           <button
@@ -61,6 +78,9 @@ export default function LoginPage() {
             onClick={startGoogleLogin}
             className={clsx(styles.socialButton, styles.google)}
           >
+            <span className={styles.socialIcon}>
+              <img src={logoGoogle} alt="" />
+            </span>
             Google로 계속하기
           </button>
           <button
@@ -68,11 +88,23 @@ export default function LoginPage() {
             onClick={handleAppleLogin}
             className={clsx(styles.socialButton, styles.apple)}
           >
+            <span className={styles.socialIcon}>
+              <img src={logoApple} alt="" />
+            </span>
             Apple로 계속하기
           </button>
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
+
+        {/* 가입 없이 맛보기 진입 — 게스트 세션으로 약점 진단까지 가능 */}
+        <button
+          type="button"
+          onClick={() => navigate('/taste')}
+          className={styles.guestLink}
+        >
+          비회원으로 약점보기
+        </button>
 
         <p className={styles.note}>하루 3문제 1등급 가능해.</p>
       </div>

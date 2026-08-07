@@ -10,8 +10,15 @@ import { consumePostLoginRedirect } from '@/user/utils/postLoginRedirect'
  * 3) 복귀 경로 결정 — 맛보기에서 왔으면 보던 결과 화면으로, 아니면 홈
  */
 export async function finishLogin(): Promise<string> {
-  await useUserStore.getState().loadMe(true)
+  const me = await useUserStore.getState().loadMe(true)
   await flushAttemptQueue().catch(() => {})
+
+  // 프로필 미완성 회원(신규 가입·게스트 승격 직후)은 추가 정보 화면부터.
+  // 복귀 경로는 소비하지 않고 남겨둬 프로필 완료 후 이어서 사용한다
+  if (me?.type === 'USER' && (!me.phoneNumber || !me.birthDate)) {
+    return '/signup/info'
+  }
+
   const back = consumePostLoginRedirect()
   return back ?? '/home'
 }

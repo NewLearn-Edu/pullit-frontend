@@ -19,12 +19,13 @@ import axios, { type InternalAxiosRequestConfig } from 'axios'
  * - 보안 > Client Secret 은 "사용 안 함" 유지 (프론트 교환 방식이므로)
  */
 
-// 로컬 개발은 localhost:8080, 배포는 백엔드 도메인(api-dev)
+// 로컬 개발은 접속한 호스트의 8080 (localhost 또는 같은 와이파이의 맥 IP), 배포는 백엔드 도메인(api-dev)
+const isLocalHost = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(
+  window.location.hostname,
+)
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ??
-  (window.location.hostname === 'localhost'
-    ? 'http://localhost:8080'
-    : 'https://api-dev.pullit.co.kr')
+  (isLocalHost ? `http://${window.location.hostname}:8080` : 'https://api-dev.pullit.co.kr')
 // REST 키는 인가 URL 로 브라우저에 그대로 노출되는 공개 값 (시크릿 아님).
 // 빌드 환경에 env 가 없어도 로그인이 동작하도록 기본값 내장 — env 로 오버라이드 가능
 const KAKAO_REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY ?? 'd2465542ba74a81bb52ce10bbb9164c5'
@@ -309,6 +310,51 @@ export interface MeResult {
   /** GUEST = 미가입 게스트 — 맛보기 저장 시 비로그인이면 게스트 계정이 생성된다 */
   type: 'GUEST' | 'USER'
   creditBalance: number
+  /** 회원인데 null 이면 추가 정보 입력(/signup/info)이 필요하다 */
+  phoneNumber: string | null
+  birthDate: string | null
+}
+
+export interface ProfileCompleteRequest {
+  /** 이름 — 구글(프로필명)·애플(최초 1회)은 SSO 값이 부정확할 수 있어 직접 입력 */
+  name: string
+  birthDate: string // YYYY-MM-DD
+  phoneNumber: string // 010-0000-0000
+  agreeTerms: boolean
+  agreePrivacy: boolean
+}
+
+/**
+ * 가입 추가 정보 입력 (이름 · 생년월일 · 전화번호 · 필수 약관) — 연령 게이트.
+ * 전화번호는 SMS 인증(confirmPhoneCode)을 마친 번호여야 한다 (미인증 시 400 U016).
+ * 만 14세 미만이면 서버가 계정을 즉시 파기하고 403(U010) 을 반환한다.
+ */
+export async function completeProfile(req: ProfileCompleteRequest): Promise<void> {
+  await api.post('/api/users/me/profile', req)
+}
+
+/** 전화번호 인증번호 SMS 발송 (60초 쿨다운 — 초과 시 429 U012) */
+export async function requestPhoneCode(phoneNumber: string): Promise<void> {
+  await api.post('/api/users/me/phone/verification', { phoneNumber })
+}
+
+/**
+ * 인증번호 검증 결과 (3분 유효 · 5회 시도 제한).
+ * duplicated 면 이 번호로 이미 가입한 다른 계정이 있음 — provider 로 기존 소셜 로그인 유도.
+ * provider 정보는 번호 소유를 증명(인증 통과)한 응답에만 실려온다.
+ */
+export type PhoneVerifyResult = {
+  duplicated: boolean
+  provider: 'KAKAO' | 'NAVER' | 'GOOGLE' | 'APPLE' | null
+  providerName: string | null
+}
+
+export async function confirmPhoneCode(phoneNumber: string, code: string): Promise<PhoneVerifyResult> {
+  const { data } = await api.post<BaseResponse<PhoneVerifyResult>>(
+    '/api/users/me/phone/verification/confirm',
+    { phoneNumber, code },
+  )
+  return data.data
 }
 
 /**

@@ -9,12 +9,20 @@ export default function LandingNav() {
           <Link to="/" aria-label="풀잇 홈">
             <img src={logoNav} alt="풀잇" className="h-[28px] w-[56px]" />
           </Link>
-          <Link
-            to="/taste"
-            className="flex items-center justify-center rounded-[8px] bg-primary px-[20px] py-[12px] text-[16px] font-semibold text-white transition-colors hover:bg-primary-hover"
-          >
-            무료로 약점 확인하기
-          </Link>
+          <div className="flex items-center gap-[12px] max-md:gap-md">
+            <Link
+              to="/login"
+              className="flex items-center justify-center rounded-[8px] bg-white px-[20px] py-[12px] text-[16px] font-semibold text-foreground transition-colors hover:bg-white/85"
+            >
+              로그인
+            </Link>
+            <Link
+              to="/taste"
+              className="flex items-center justify-center rounded-[8px] bg-primary px-[20px] py-[12px] text-[16px] font-semibold text-white transition-colors hover:bg-primary-hover"
+            >
+              무료로 약점 확인하기
+            </Link>
+          </div>
         </div>
       </div>
     </nav>
