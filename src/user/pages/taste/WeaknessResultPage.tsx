@@ -2,7 +2,6 @@ import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
-import { MOCK_ENGLISH_TYPES } from '@/user/data/mockEnglishTypes'
 import { getProblemsByEnglishType, getProblemsBySkillNode, type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
@@ -88,8 +87,8 @@ export default function WeaknessResultPage() {
       list.length === 0 ? 1 : list.filter((r) => r.correct).length / list.length
     const mathName =
       MOCK_SKILL_NODES.find((n) => n.id === mathSkillNodeId)?.name ?? '수학'
-    const englishName =
-      MOCK_ENGLISH_TYPES.find((t) => t.id === englishTypeId)?.name ?? '영어'
+    // POC 는 영어 유형이 빈칸(en-blank)으로 고정 — 유형 선택이 열리면 englishAbilities 데이터로 대체
+    const englishName = englishTypeId === 'en-blank' ? '빈칸' : '영어'
     return rate(mathResults) <= rate(englishResults) ? mathName : englishName
   }, [mathResults, englishResults, mathSkillNodeId, englishTypeId])
 

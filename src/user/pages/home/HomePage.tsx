@@ -7,27 +7,31 @@ import { CreditBadge } from '@/user/components/CreditBadge'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
+import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
 import graphLock from '@/assets/home/graph-lock.png'
 import rowLock from '@/assets/home/row-lock.svg'
 import styles from './styles/HomePage.module.scss'
 
 // ── POC 목 데이터 · 백엔드 연동 시 API 로 대체 ────────────────────────────────
 
-/** 대분류 칩 (2022 교육과정) */
+/** 상단 칩 — 수학: 대분류 (2022 교육과정) · 영어: 독해 능력 4분류 */
 const CATS: Record<Subject, string[]> = {
   math: ['대수', '미적분 I', '확률과 통계'],
-  english: ['유형'],
+  english: ENGLISH_ABILITIES.map((a) => a.name),
 }
 
 interface SubUnit {
   name: string
-  /** 진단 완료된 약점 단원만 점수 보유 — 나머지는 잠금 */
+  /** 진단 완료 시 점수 보유 — 없으면 잠금 */
   score?: number
+  /** 약점 판정 (빨간 행 + 약점 라벨) */
+  weak?: boolean
 }
 
-const SUBUNITS: Record<string, SubUnit[]> = {
+/** 진단 점수 목 (칩 이름 → 소단원/유형별) — 진단 API 연동 시 이 상수만 교체 */
+const MOCK_SCORES: Record<string, SubUnit[]> = {
   대수: [
-    { name: '지수와 로그', score: 68 },
+    { name: '지수와 로그', score: 68, weak: true },
     { name: '지수함수와 로그함수' },
     { name: '삼각함수' },
     { name: '사인법칙과 코사인법칙' },
@@ -47,13 +51,13 @@ const SUBUNITS: Record<string, SubUnit[]> = {
     { name: '확률의 뜻과 활용' },
     { name: '조건부확률' },
   ],
-  유형: [
-    { name: '빈칸 추론', score: 62 },
-    { name: '주제 추론' },
-    { name: '제목 추론' },
-    { name: '요약문 완성' },
-  ],
+  // 영어 4개 능력 — 유형 목록은 englishAbilities 단일 원천에서 파생
+  ...Object.fromEntries(
+    ENGLISH_ABILITIES.map((a) => [a.name, a.types.map((name) => ({ name }))]),
+  ),
 }
+// 디자인 목값: 내용 파악의 주제만 진단 완료 (82점 · 약점 아님)
+MOCK_SCORES['내용 파악'][0] = { name: '주제', score: 82 }
 
 /**
  * 메인 홈 (Figma PI-PAGE-04 · 2431-17022 · 2026-08-07 개편)
@@ -95,7 +99,7 @@ export default function HomePage() {
     navigate(`/taste/quiz/${subject}/0`)
   }
 
-  const subUnits = SUBUNITS[cat] ?? []
+  const subUnits = MOCK_SCORES[cat] ?? []
 
   return (
     <div className={styles.page}>
@@ -145,7 +149,7 @@ export default function HomePage() {
 
           {/* 약점 그래프 카드 — 진단 전에는 잠금 오버레이 */}
           <div className={styles.graphCard}>
-            <RadarChart labels={SUBUNITS[cat]?.map((u) => u.name) ?? []} />
+            <RadarChart labels={subUnits.map((u) => u.name)} />
             <div className={styles.graphOverlay}>
               <button type="button" aria-label="도움말" className={styles.helpChip}>
                 ?
@@ -161,34 +165,34 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 소단원 리스트 */}
+          {/* 소단원(수학) / 유형(영어) 리스트 — 약점·진단완료·잠금 3단계 */}
           <section className={styles.subCard}>
             <div className={styles.subHead}>
-              <h2 className={styles.subTitle}>소단원</h2>
+              <h2 className={styles.subTitle}>{subject === 'math' ? '소단원' : '유형'}</h2>
               <span className={styles.subCount}>{subUnits.length}개</span>
             </div>
             <div className={styles.subList}>
-              {subUnits.map((u) =>
-                u.score != null ? (
-                  <button
-                    key={u.name}
-                    type="button"
-                    onClick={startQuiz}
-                    className={clsx(styles.subRow, styles.subRowWeak)}
-                  >
-                    <span className={styles.subName}>{u.name}</span>
+              {subUnits.map((u) => (
+                <button
+                  key={u.name}
+                  type="button"
+                  onClick={startQuiz}
+                  className={clsx(
+                    styles.subRow,
+                    u.score != null && (u.weak ? styles.subRowWeak : styles.subRowDone),
+                  )}
+                >
+                  <span className={styles.subName}>{u.name}</span>
+                  {u.score != null ? (
                     <span className={styles.subRight}>
-                      <span className={styles.weakLabel}>약점</span>
+                      {u.weak && <span className={styles.weakLabel}>약점</span>}
                       <span className={styles.score}>{u.score}점</span>
                     </span>
-                  </button>
-                ) : (
-                  <button key={u.name} type="button" onClick={startQuiz} className={styles.subRow}>
-                    <span className={styles.subName}>{u.name}</span>
+                  ) : (
                     <img src={rowLock} alt="잠김" className={styles.rowLock} />
-                  </button>
-                ),
-              )}
+                  )}
+                </button>
+              ))}
             </div>
           </section>
         </div>
