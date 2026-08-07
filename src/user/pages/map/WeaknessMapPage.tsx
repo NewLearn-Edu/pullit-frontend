@@ -66,20 +66,27 @@ export default function WeaknessMapPage() {
     return scored.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))[0] ?? MATH_MAP_NODES[0]
   }, [])
 
-  /** 특정 월드 좌표(노드 중심)를 뷰포트 중앙에 놓는 view 계산 */
-  const centerOn = useCallback((node: MapNode, scale: number): View => {
+  /**
+   * 특정 월드 좌표(노드 중심)를 뷰포트 중앙에 놓는 view 계산.
+   * bottomInset — 바텀시트 높이만큼 빼고 "보이는 영역"의 중앙에 놓는다
+   * (시트가 노드를 가리는 문제 방지).
+   */
+  const centerOn = useCallback((node: MapNode, scale: number, bottomInset = 0): View => {
     const rect = containerRef.current?.getBoundingClientRect()
     const vw = rect?.width ?? window.innerWidth
     const vh = rect?.height ?? window.innerHeight
+    const visibleH = Math.max(vh - bottomInset, vh * 0.3) // 시트가 과하게 커도 최소 30% 확보
     const cx = node.x + NODE_W / 2
     const cy = node.y + NODE_H / 2
-    return { x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale }
+    return { x: vw / 2 - cx * scale, y: visibleH / 2 - cy * scale, scale }
   }, [])
+
+  const sheetRef = useRef<HTMLDivElement>(null)
 
   const focusNode = useCallback(
     (node: MapNode, scale: number) => {
       setAnimated(true)
-      setView(centerOn(node, scale))
+      setView(centerOn(node, scale, sheetRef.current?.offsetHeight ?? 0))
     },
     [centerOn],
   )
@@ -90,6 +97,13 @@ export default function WeaknessMapPage() {
     // centerOn 은 ref 기반이라 마운트 후 1회면 충분
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
+  useEffect(() => {
+    if (!selected) return
+    const raf = requestAnimationFrame(() => focusNode(selected, FOCUS_SCALE))
+    return () => cancelAnimationFrame(raf)
+  }, [selected, focusNode])
 
   // ── 팬 · 핀치 (pointer events) ─────────────────────────────────────────
   const pointers = useRef(new Map<number, { x: number; y: number }>())
@@ -175,8 +189,8 @@ export default function WeaknessMapPage() {
 
   const handleNodeClick = (node: MapNode) => {
     if (gesture.current.moved) return // 드래그 후 클릭 오발동 방지
-    setSelectedId(node.id)
-    focusNode(node, FOCUS_SCALE)
+    // 같은 노드 재탭 = 선택 해제 (시트 닫힘) · 포커스는 시트 높이 측정 후 effect 에서
+    setSelectedId((cur) => (cur === node.id ? null : node.id))
   }
 
   const closeSheet = () => setSelectedId(null)
@@ -380,6 +394,7 @@ export default function WeaknessMapPage() {
         {/* 노드 상세 바텀시트 */}
         {selected && (
           <div
+            ref={sheetRef}
             className={styles.sheet}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
