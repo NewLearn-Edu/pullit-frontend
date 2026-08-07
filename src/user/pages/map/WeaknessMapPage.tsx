@@ -244,17 +244,28 @@ export default function WeaknessMapPage() {
                 height={MAP_BOUNDS.maxY}
                 aria-hidden
               >
-                {MATH_MAP_EDGES.map((edge) => {
+                {MATH_MAP_EDGES.map((edge, ei) => {
                   const from = MATH_MAP_NODES.find((n) => n.id === edge.from)!
                   const to = MATH_MAP_NODES.find((n) => n.id === edge.to)!
                   const sx = from.x + NODE_W / 2
-                  const sy = from.y + NODE_H
                   const tx = to.x + NODE_W / 2
-                  const ty = to.y
-                  const d =
-                    sx === tx && !edge.indirect
-                      ? `M ${sx} ${sy} L ${tx} ${ty}`
-                      : `M ${sx} ${sy} C ${sx} ${sy + 60}, ${tx} ${ty - 60}, ${tx} ${ty}`
+
+                  let d: string
+                  if (sx === tx) {
+                    // 같은 열 — 세로 직선
+                    d = `M ${sx} ${from.y + NODE_H} L ${tx} ${to.y}`
+                  } else {
+                    // 피그마식 직교 엘보 — 행 사이 빈 레인(수평)을 지나도록 라우팅.
+                    // 위로 가는 간선은 소스 위쪽 레인, 아래로 가는 간선은 아래쪽 레인 사용
+                    const goingDown = to.y >= from.y + NODE_H
+                    const sy = goingDown ? from.y + NODE_H : from.y
+                    const ty = goingDown ? to.y : to.y + NODE_H
+                    // 간접 간선끼리 같은 레인을 공유하면 겹쳐 보여 8px 씩 어긋나게
+                    const stagger = edge.indirect ? (ei % 3) * 8 : 0
+                    const lane = goingDown ? sy + 26 + stagger : sy - 26 - stagger
+                    d = elbowPath(sx, sy, tx, ty, lane)
+                  }
+
                   // CSS scale 이 선까지 축소하므로 역보정 — 줌아웃해도 화면상 1.5px 유지
                   const w = 1.5 / view.scale
                   return (
@@ -451,6 +462,26 @@ export default function WeaknessMapPage() {
       </div>
     </div>
   )
+}
+
+/**
+ * 직교 엘보 경로 (피그마 커넥터 스타일) — 세로 → 수평 레인 → 세로, 모서리 라운드.
+ * laneY: 수평 구간이 지나는 y (행 사이 빈 레인에 놓아 노드를 가로지르지 않게 한다)
+ */
+function elbowPath(sx: number, sy: number, tx: number, ty: number, laneY: number, r = 14): string {
+  const dirX = tx > sx ? 1 : -1
+  const dirY1 = laneY > sy ? 1 : -1
+  const dirY2 = ty > laneY ? 1 : -1
+  const r1 = Math.min(r, Math.abs(laneY - sy), Math.abs(tx - sx) / 2)
+  const r2 = Math.min(r, Math.abs(ty - laneY), Math.abs(tx - sx) / 2)
+  return [
+    `M ${sx} ${sy}`,
+    `L ${sx} ${laneY - dirY1 * r1}`,
+    `Q ${sx} ${laneY} ${sx + dirX * r1} ${laneY}`,
+    `L ${tx - dirX * r2} ${laneY}`,
+    `Q ${tx} ${laneY} ${tx} ${laneY + dirY2 * r2}`,
+    `L ${tx} ${ty}`,
+  ].join(' ')
 }
 
 /* --- 인라인 SVG 아이콘 --- */
