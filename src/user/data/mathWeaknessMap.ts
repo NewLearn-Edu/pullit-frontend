@@ -79,10 +79,10 @@ export const MATH_MAP_EDGES: MapEdge[] = [
   { from: 'prob-meaning', to: 'cond-prob' },
   { from: 'cond-prob', to: 'prob-dist' },
   { from: 'prob-dist', to: 'stat-est' },
-  // 간접 단원 (점선 · 영역을 건너뛰는 연계)
+  // 간접 단원 (점선 · 영역을 건너뛰는 연계 · 시안 벡터 3개와 일치)
   { from: 'exp-log-fn', to: 'derivative-use', indirect: true },
-  { from: 'induction', to: 'diff-coef', indirect: true },
-  { from: 'diff-coef', to: 'perm-comb', indirect: true },
+  { from: 'sine-cosine', to: 'derivative-use', indirect: true },
+  { from: 'induction', to: 'perm-comb', indirect: true },
 ]
 
 /** 월드 좌표 경계 (여백 포함) — fit/클램프 계산용 */
