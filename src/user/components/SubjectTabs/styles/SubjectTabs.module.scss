@@ -19,6 +19,16 @@
   width: 240px;
 }
 
+// 알약형 (홈 헤더 · Figma 2431-17022) — 내용 폭, 2px 트랙, 33px 탭
+.tabsPill {
+  width: fit-content;
+  flex-shrink: 0;
+  padding: 2px;
+  gap: 4px;
+  border-radius: 38px;
+  background: #e5e7ea; // black/200
+}
+
 .tab {
   @include button-reset;
   @include flex-center;
@@ -33,6 +43,16 @@
   .tabsCompact & {
     height: 40px;
     font-size: $fs-body-sm;
+  }
+
+  .tabsPill & {
+    flex: 0 0 auto;
+    height: 33px;
+    padding: 0 16px;
+    border-radius: 28px;
+    font-size: $fs-body;
+    font-weight: $fw-bold;
+    white-space: nowrap;
   }
 }
 

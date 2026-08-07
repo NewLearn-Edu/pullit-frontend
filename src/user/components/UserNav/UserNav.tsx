@@ -31,8 +31,7 @@ export function UserNav({ active }: UserNavProps) {
           <NavItem icon={<DocIcon />} label="자유 문제" active={active === 'free'} />
           <NavItem to="/wrong-note" icon={<BookmarkIcon />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem icon={<ChartIcon />} label="리포트" active={active === 'report'} />
-          {/* 마이페이지 → /login 이동은 인증 붙은 뒤 "토큰 없을 때만" 조건 분기 예정 */}
-          <NavItem icon={<PersonIcon />} label="마이페이지" active={active === 'my'} />
+          <NavItem to="/my" icon={<PersonIcon />} label="마이페이지" active={active === 'my'} />
         </nav>
         <div className={styles.footer}>
           {/* ADMIN 권한일 때만 노출 · 어드민 콘솔 진입 */}
@@ -44,22 +43,21 @@ export function UserNav({ active }: UserNavProps) {
         </div>
       </aside>
 
-      {/* iPad · 모바일 하단 네비 */}
+      {/* iPad · 모바일 하단 네비 (Figma 2431-17022 — 홈 · 약점 지도 · 학습 기록) */}
       <nav className={styles.bottomNav} aria-label="메인 메뉴">
         <Link
           to="/home"
           className={clsx(styles.bottomItem, active === 'recommend' && styles.bottomItemActive)}
         >
-          <HomeIcon />
-          추천 문제
+          <HomeIcon />홈
         </Link>
         <button type="button" className={clsx(styles.bottomItem, active === 'free' && styles.bottomItemActive)}>
-          <DocIcon />
-          자유 문제
+          <MapIcon />
+          약점 지도
         </button>
         <button type="button" className={clsx(styles.bottomItem, active === 'report' && styles.bottomItemActive)}>
           <ChartIcon />
-          리포트
+          학습 기록
         </button>
       </nav>
     </>
@@ -133,6 +131,15 @@ function ChartIcon() {
       <path d="M5 21V13" />
       <path d="M12 21V7" />
       <path d="M19 21V3" />
+    </svg>
+  )
+}
+
+function MapIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
     </svg>
   )
 }
