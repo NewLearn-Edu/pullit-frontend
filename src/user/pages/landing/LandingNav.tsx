@@ -3,7 +3,7 @@ import logoNav from '@/assets/landing/logo-nav.svg'
 
 export default function LandingNav() {
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex flex-col items-center justify-center bg-[rgba(18,20,23,0.2)] backdrop-blur-md">
+    <nav className="fixed inset-x-0 top-0 z-50 flex min-w-[350px] flex-col items-center justify-center bg-[rgba(18,20,23,0.2)] backdrop-blur-md">
       <div className="w-full max-w-[1280px]">
         <div className="flex items-center justify-between px-[40px] py-[16px] max-md:px-lg">
           <Link to="/" aria-label="풀잇 홈">

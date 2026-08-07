@@ -116,6 +116,8 @@
   left: 0;
   right: 0;
   bottom: 0;
+  // fixed 는 뷰포트 기준이라 body 의 min-width 를 안 따라감 — 350px 바닥 별도 지정
+  min-width: 350px;
   z-index: $z-header;
   height: 64px;
   padding-bottom: env(safe-area-inset-bottom);

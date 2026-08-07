@@ -41,8 +41,9 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $space-md;
-  padding: $space-md $space-lg;
+  gap: $space-sm;
+  // 최소 지원 폭 350px 에서 크레딧 + 토글 + 아이콘 2개가 모두 들어가야 함
+  padding: $space-md 12px;
 
   @include desktop-up {
     max-width: 660px;
@@ -96,10 +97,16 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   color: $ink;
 }
 
-// 대분류 칩
+// 대분류 칩 — 350px 에서 다 안 들어가면 가로 스크롤 (잘림 방지)
 .chips {
   display: flex;
   gap: $space-sm;
+  margin: 0 (-$space-lg);
+  padding: 0 $space-lg;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
 }
 
 .chip {
@@ -205,11 +212,13 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   width: 100%;
   max-width: 620px;
   height: 56px;
+  padding: 0 $space-md;
   border-radius: $radius-btn-md;
   background: $color-primary;
   color: #fff;
   font-size: $fs-body;
   font-weight: $fw-bold;
+  white-space: nowrap; // 350px 에서도 줄바꿈 금지
   transition: background 150ms ease;
 
   @include hover { background: $color-primary-hover; }
@@ -281,6 +290,12 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 .subRowWeak {
   background: $red-tint;
+}
+
+// 진단 완료 · 약점 아님 — 흰 배경 + 보더 (Figma 2504-21486)
+.subRowDone {
+  background: $color-canvas;
+  border: 1px solid #e5e7ea; // black/200
 }
 
 .subName {

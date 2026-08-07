@@ -86,6 +86,8 @@
   body {
     @apply bg-canvas text-foreground;
     margin: 0;
+    /* 최소 지원 폭 350px (팀 확정) — 그 아래 뷰포트에서는 축소 대신 가로 스크롤 */
+    min-width: 350px;
     min-height: 100vh;
     min-height: 100dvh;
     overscroll-behavior-y: none;
