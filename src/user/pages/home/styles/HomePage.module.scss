@@ -229,28 +229,20 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 소단원 리스트 카드
+// 소단원(수학)/유형(영어) 리스트 — 개별 카드 행 (Figma 2605-5698)
+//   진단완료: 흰 카드 + 메타 + 점수(약점은 빨강) · 풀기: 흰 카드 + 빨간 버튼 · 잠김: 회색
 // ─────────────────────────────────────────────────────────────────────────────
 
-.subCard {
+.subSection {
   display: flex;
   flex-direction: column;
   gap: $space-lg;
-  margin: 0 (-$space-lg);
-  padding: $space-lg $space-lg calc($space-lg + 8px);
-  border-radius: 20px 20px 0 0;
-  background: $color-canvas;
-
-  @include desktop-up {
-    margin: 0;
-    border-radius: 20px;
-  }
+  padding-bottom: 20px;
 }
 
 .subHead {
   display: flex;
   align-items: center;
-  gap: $space-xs;
   padding: 0 $space-sm;
 }
 
@@ -258,16 +250,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   margin: 0;
   font-size: 18px;
   font-weight: $fw-semibold;
-  color: $ink;
-}
-
-.subCount {
-  padding: $space-xs $space-md;
-  border-radius: $radius-full;
-  background: $row-gray;
-  font-size: $fs-body-sm;
-  font-weight: $fw-bold;
-  color: $row-text;
+  color: #121417;
 }
 
 .subList {
@@ -282,52 +265,66 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   align-items: center;
   justify-content: space-between;
   gap: $space-md;
-  min-height: 42px;
-  padding: $space-lg;
-  border-radius: 14px;
-  background: $row-gray;
+  width: 100%;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: $color-canvas;
   text-align: left;
   transition: opacity 150ms ease;
 
   @include hover { opacity: 0.85; }
 }
 
-.subRowWeak {
-  background: $red-tint;
+.subRowLocked {
+  background: $row-gray;
+  cursor: default;
+
+  .subName { color: #80858b; }
+  @include hover { opacity: 1; }
 }
 
-// 진단 완료 · 약점 아님 — 흰 배경 + 보더 (Figma 2504-21486)
-.subRowDone {
-  background: $color-canvas;
-  border: 1px solid #e5e7ea; // black/200
+.subBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .subName {
-  flex: 1;
-  min-width: 0;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $row-text;
-}
-
-.subRight {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-}
-
-.weakLabel {
-  padding: 2px $space-sm;
-  border-radius: $radius-full;
-  font-size: $fs-caption;
-  font-weight: $fw-medium;
-  color: $color-primary;
-}
-
-.score {
   font-size: $fs-body;
   font-weight: $fw-bold;
   color: #121417;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subMeta {
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: #a6abb1;
+}
+
+.score {
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: $fw-semibold;
+  color: #121417;
+}
+
+.scoreWeak {
+  color: $color-primary;
+}
+
+// 풀기 버튼 칩 — 행 전체가 클릭 영역이라 시각 요소만
+.solveChip {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
 }
 
 .rowLock {

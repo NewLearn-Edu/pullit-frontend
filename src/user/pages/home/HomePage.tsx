@@ -23,16 +23,19 @@ const CATS: Record<Subject, string[]> = {
 
 interface SubUnit {
   name: string
-  /** 진단 완료 시 점수 보유 — 없으면 잠금 */
+  /** 진단 완료 시 점수 보유 — 없으면 풀기 대기/잠금 */
   score?: number
-  /** 약점 판정 (빨간 행 + 약점 라벨) */
+  /** 약점 판정 — 점수를 빨간색으로 강조 */
   weak?: boolean
+  /** 진단 완료 행의 메타 ("24분 | 정답 2문제") */
+  minutes?: number
+  correct?: number
 }
 
 /** 진단 점수 목 (칩 이름 → 소단원/유형별) — 진단 API 연동 시 이 상수만 교체 */
 const MOCK_SCORES: Record<string, SubUnit[]> = {
   대수: [
-    { name: '지수와 로그', score: 68, weak: true },
+    { name: '지수와 로그', score: 68, weak: true, minutes: 24, correct: 2 },
     { name: '지수함수와 로그함수' },
     { name: '삼각함수' },
     { name: '사인법칙과 코사인법칙' },
@@ -58,7 +61,7 @@ const MOCK_SCORES: Record<string, SubUnit[]> = {
   ),
 }
 // 디자인 목값: 내용 파악의 주제만 진단 완료 (82점 · 약점 아님)
-MOCK_SCORES['내용 파악'][0] = { name: '주제', score: 82 }
+MOCK_SCORES['내용 파악'][0] = { name: '주제', score: 82, minutes: 18, correct: 3 }
 
 /**
  * 메인 홈 (Figma PI-PAGE-04 · 2431-17022 · 2026-08-07 개편)
@@ -172,34 +175,47 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 소단원(수학) / 유형(영어) 리스트 — 약점·진단완료·잠금 3단계 */}
-          <section className={styles.subCard}>
+          {/* 소단원(수학) / 유형(영어) 리스트 — 진단완료·풀기·잠금 3단계 (Figma 2605-5698) */}
+          <section className={styles.subSection}>
             <div className={styles.subHead}>
               <h2 className={styles.subTitle}>{subject === 'math' ? '소단원' : '유형'}</h2>
-              <span className={styles.subCount}>{subUnits.length}개</span>
             </div>
             <div className={styles.subList}>
-              {subUnits.map((u) => (
-                <button
-                  key={u.name}
-                  type="button"
-                  onClick={startQuiz}
-                  className={clsx(
-                    styles.subRow,
-                    u.score != null && (u.weak ? styles.subRowWeak : styles.subRowDone),
-                  )}
-                >
-                  <span className={styles.subName}>{u.name}</span>
-                  {u.score != null ? (
-                    <span className={styles.subRight}>
-                      {u.weak && <span className={styles.weakLabel}>약점</span>}
-                      <span className={styles.score}>{u.score}점</span>
-                    </span>
-                  ) : (
+              {/* 순서대로 진행 — 진단 안 된 첫 항목만 풀 수 있고 나머지는 잠김 */}
+              {subUnits.map((u, i) => {
+                const firstUnsolved = subUnits.findIndex((x) => x.score == null)
+                if (u.score != null) {
+                  return (
+                    <button key={u.name} type="button" onClick={startQuiz} className={styles.subRow}>
+                      <span className={styles.subBody}>
+                        <span className={styles.subName}>{u.name}</span>
+                        {u.minutes != null && (
+                          <span className={styles.subMeta}>
+                            {u.minutes}분 | 정답 {u.correct}문제
+                          </span>
+                        )}
+                      </span>
+                      <span className={clsx(styles.score, u.weak && styles.scoreWeak)}>
+                        {u.score}점
+                      </span>
+                    </button>
+                  )
+                }
+                if (i === firstUnsolved) {
+                  return (
+                    <button key={u.name} type="button" onClick={startQuiz} className={styles.subRow}>
+                      <span className={styles.subName}>{u.name}</span>
+                      <span className={styles.solveChip}>풀기</span>
+                    </button>
+                  )
+                }
+                return (
+                  <div key={u.name} className={clsx(styles.subRow, styles.subRowLocked)}>
+                    <span className={styles.subName}>{u.name}</span>
                     <img src={rowLock} alt="잠김" className={styles.rowLock} />
-                  )}
-                </button>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           </section>
         </div>
