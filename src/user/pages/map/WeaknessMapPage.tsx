@@ -67,26 +67,35 @@ export default function WeaknessMapPage() {
   }, [])
 
   /**
-   * 특정 월드 좌표(노드 중심)를 뷰포트 중앙에 놓는 view 계산.
-   * bottomInset — 바텀시트 높이만큼 빼고 "보이는 영역"의 중앙에 놓는다
-   * (시트가 노드를 가리는 문제 방지).
+   * 특정 월드 좌표(노드 중심)를 "보이는 영역"의 중앙에 놓는 view 계산.
+   * 패널이 가리는 만큼 제외 — 모바일은 바텀시트 높이(bottom), 웹은 우측 패널 폭(right).
    */
-  const centerOn = useCallback((node: MapNode, scale: number, bottomInset = 0): View => {
-    const rect = containerRef.current?.getBoundingClientRect()
-    const vw = rect?.width ?? window.innerWidth
-    const vh = rect?.height ?? window.innerHeight
-    const visibleH = Math.max(vh - bottomInset, vh * 0.3) // 시트가 과하게 커도 최소 30% 확보
-    const cx = node.x + NODE_W / 2
-    const cy = node.y + NODE_H / 2
-    return { x: vw / 2 - cx * scale, y: visibleH / 2 - cy * scale, scale }
-  }, [])
+  const centerOn = useCallback(
+    (node: MapNode, scale: number, inset: { bottom?: number; right?: number } = {}): View => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      const vw = rect?.width ?? window.innerWidth
+      const vh = rect?.height ?? window.innerHeight
+      const visibleW = Math.max(vw - (inset.right ?? 0), vw * 0.3)
+      const visibleH = Math.max(vh - (inset.bottom ?? 0), vh * 0.3)
+      const cx = node.x + NODE_W / 2
+      const cy = node.y + NODE_H / 2
+      return { x: visibleW / 2 - cx * scale, y: visibleH / 2 - cy * scale, scale }
+    },
+    [],
+  )
 
   const sheetRef = useRef<HTMLDivElement>(null)
+  /** 팀 기준 데스크탑 분기 (1281~) — 시트가 우측 패널로 배치되는 구간 */
+  const isDesktop = () => window.matchMedia('(min-width: 1281px)').matches
 
   const focusNode = useCallback(
     (node: MapNode, scale: number) => {
       setAnimated(true)
-      setView(centerOn(node, scale, sheetRef.current?.offsetHeight ?? 0))
+      const el = sheetRef.current
+      const inset = isDesktop()
+        ? { right: (el?.offsetWidth ?? 0) + 40 } // 패널 폭 + 우측 여백
+        : { bottom: el?.offsetHeight ?? 0 }
+      setView(centerOn(node, scale, inset))
     },
     [centerOn],
   )
@@ -220,6 +229,7 @@ export default function WeaknessMapPage() {
 
   const onSheetPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation() // 캔버스 팬으로 전파 금지 (기존 동작 유지)
+    if (isDesktop()) return // 웹은 우측 고정 패널 — 스와이프 닫기 없음
     sheetDrag.current = { startY: e.clientY, id: e.pointerId, active: false }
     sheetDragged.current = false
   }
@@ -455,9 +465,9 @@ export default function WeaknessMapPage() {
           </div>
         </div>
 
-        {/* 우하단 줌 컨트롤 */}
+        {/* 우하단 줌 컨트롤 — 웹에서 우측 패널이 열리면 왼쪽으로 밀림 */}
         <div
-          className={styles.controls}
+          className={clsx(styles.controls, selected && styles.controlsShifted)}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
@@ -499,6 +509,10 @@ export default function WeaknessMapPage() {
           >
             <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetHandleWrap}>
               <span className={styles.sheetHandle} />
+            </button>
+            {/* 웹(우측 패널) 전용 닫기 버튼 — 모바일은 핸들·스와이프로 닫음 */}
+            <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetClose}>
+              ×
             </button>
             <h2 className={styles.sheetTitle}>{selected.name}</h2>
             <div className={styles.sheetStats}>

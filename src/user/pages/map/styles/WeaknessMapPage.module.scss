@@ -299,6 +299,14 @@ $red-tint: #fff1f2;
   @include desktop-up { bottom: 20px; }
 }
 
+// 웹에서 우측 패널(400px + 여백 20×2)이 열리면 컨트롤을 그 왼쪽으로
+.controlsShifted {
+  @include desktop-up {
+    right: 460px;
+    transition: right 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+}
+
 .controlButton {
   @include button-reset;
   @include flex-center;
@@ -344,12 +352,20 @@ $red-tint: #fff1f2;
   transition: transform 200ms ease;
   touch-action: none;
 
+  // 웹 — 바텀시트 대신 우측 고정 패널 (스와이프·드래그 없음)
   @include desktop-up {
-    left: 50%;
-    right: auto;
-    bottom: 0;
-    width: 480px;
-    transform: translate(-50%, var(--drag-y, 0px));
+    left: auto;
+    top: 20px;
+    right: 20px;
+    bottom: 20px;
+    width: 400px;
+    padding: 24px 20px;
+    border-radius: 20px;
+    overflow-y: auto;
+    transform: none;
+    transition: none;
+    filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.12));
+    animation: sheetInSide 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 }
 
@@ -363,11 +379,9 @@ $red-tint: #fff1f2;
   to { transform: translateY(0); opacity: 1; }
 }
 
-@include desktop-up {
-  @keyframes sheetIn {
-    from { transform: translate(-50%, 24px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
-  }
+@keyframes sheetInSide {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 
 .sheetHandleWrap {
@@ -375,6 +389,29 @@ $red-tint: #fff1f2;
   @include flex-center;
   width: 100%;
   padding: 4px 0;
+
+  @include desktop-up { display: none; } // 웹은 우측 패널 — 핸들 대신 × 버튼
+}
+
+// 웹 전용 닫기 버튼
+.sheetClose {
+  @include button-reset;
+  display: none;
+
+  @include desktop-up {
+    @include flex-center;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-full;
+    font-size: 20px;
+    color: $gray-500;
+    transition: background-color 150ms ease;
+
+    @include hover { background: $gray-100; }
+  }
 }
 
 .sheetHandle {
