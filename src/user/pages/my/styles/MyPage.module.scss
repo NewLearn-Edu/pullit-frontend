@@ -1,23 +1,23 @@
-@use 'sass:color';
 @use 'styles/tokens' as *;
 @use 'styles/mixins' as *;
 
 // -----------------------------------------------------------------------------
-// MyPage · 마이페이지 — 뱅킹 앱 MY 타이포 문법 (2026-08-07 레퍼런스 확정)
-//   대비 원칙: 라벨·캡션 400 회색 / 값·이름 700 진한색 — 중간 굵기 남발 금지
-//   상단: 브랜드 틴트 히어로 (모바일 풀블리드) · 하단: 흰 배경 + 큰 행/회색 박스
+// MyPage · 마이페이지 (Figma 2627-2336 · 2026-08-09 개편)
+//   회색 페이지 위 흰 카드 3종 — 프로필 · 학습 통계 · 메뉴 리스트 + 로그아웃 링크
 // -----------------------------------------------------------------------------
 
-// 히어로 배경 — 홈과 동일한 쿨그레이 (핑크 틴트는 과해서 제외 · 2026-08-07)
-$hero-tint: #f0f1f3; // black/100
-$row-gray: #f5f6f8;   // 레퍼런스 회색 박스 (쿨그레이)
-$ink: #121417;        // 값·이름
-$caption: #848b92;    // 라벨·캡션
+// 시안 팔레트 (로컬 정의 — 시안 변수명 주석)
+$bg: #f0f1f3;         // black/100 · 페이지 배경
+$line: #ececec;       // line · 카드 보더/구분선
+$ink: #171211;        // text/primary
+$sub: #626262;        // text/secondary
+$disabled: #b0b8c1;   // text/disabled
+$red-tint: #fff1f2;   // red/100 · 아바타 배경
 
 .page {
   display: flex;
   min-height: 100dvh;
-  background: $color-canvas;
+  background: $bg;
 }
 
 .main {
@@ -25,102 +25,107 @@ $caption: #848b92;    // 라벨·캡션
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: 96px; // 하단 네비에 가리지 않게 (모바일)
+  gap: 20px;
+  padding: 16px 16px calc(40px + 96px); // 하단 네비에 가리지 않게 (모바일)
 
   @include desktop-up {
-    max-width: 680px;
+    max-width: 620px;
     margin: 0 auto;
     width: 100%;
-    padding: $space-xxl 48px 96px;
+    padding: $space-xxl 16px 40px;
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 브랜드 틴트 히어로
+// 프로필 카드
 // ─────────────────────────────────────────────────────────────────────────────
 
-.hero {
+.profileCard {
   display: flex;
   flex-direction: column;
-  padding: 28px $space-lg $space-xl;
-  background: $hero-tint;
-
-  @include desktop-up {
-    border-radius: $radius-card;
-    padding: $space-xl;
-  }
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $color-canvas;
 }
 
-// 프로필 — 이름 22px 700, 캡션 14px 400
-.profile {
+.profileInfo {
   display: flex;
   align-items: center;
-  gap: $space-md;
+  gap: 16px;
 }
 
 .avatar {
   @include flex-center;
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: $radius-full;
-  background: $color-canvas;
-  color: $color-primary;
+  background: $red-tint;
+  font-size: 28px;
 }
 
-.profileBody {
+.userDetails {
   min-width: 0;
-}
-
-.profileNameRow {
   display: flex;
-  align-items: center;
-  gap: $space-sm;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.profileName {
+.userName {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: $fw-bold;
-  letter-spacing: -0.3px;
   color: $ink;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.typeBadge {
-  flex-shrink: 0;
-  padding: 3px 10px;
-  border-radius: $radius-full;
-  background: $color-primary;
-  color: #fff;
-  font-size: 13px;
-  font-weight: $fw-semibold;
-}
-
-.typeBadgeGuest {
-  background: $color-canvas;
-  color: $caption;
-}
-
-.profileSub {
-  margin: 6px 0 0;
+.userEmail {
+  margin: 0;
   font-size: $fs-body-sm;
   font-weight: $fw-normal;
-  color: $caption;
+  color: $sub;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-// 요약 카드 — 라벨 14px 400 위 / 값 26px 700 아래 + 단위 16px 400
-.statCard {
+.editButton {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 10px;
+  background: #f8f8f8;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $sub;
+  transition: background 150ms ease;
+
+  @include hover { background: $bg; }
+}
+
+// 게스트 — 가입 유도 CTA 로 강조
+.signupButton {
+  background: $color-primary;
+  color: #fff;
+
+  @include hover { background: $color-primary-hover; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 학습 통계 카드
+// ─────────────────────────────────────────────────────────────────────────────
+
+.statsCard {
   display: flex;
   align-items: center;
-  margin-top: 24px;
-  padding: 24px;
-  border-radius: $radius-card;
+  padding: 16px;
+  border: 1px solid $line;
+  border-radius: 16px;
   background: $color-canvas;
 }
 
@@ -128,201 +133,109 @@ $caption: #848b92;    // 라벨·캡션
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .statLabel {
-  font-size: $fs-body-sm;
-  font-weight: $fw-normal;
-  color: $caption;
+  font-size: 13px;
+  font-weight: $fw-medium;
+  color: $sub;
 }
 
 .statValue {
-  font-size: 26px;
+  font-size: 18px;
   font-weight: $fw-bold;
-  letter-spacing: -0.3px;
   color: $ink;
+}
 
-  em {
-    margin-left: 2px;
-    font-size: $fs-body;
-    font-weight: $fw-normal;
-    font-style: normal;
-    color: $ink;
-  }
+.statValueRed {
+  color: $color-primary;
 }
 
 .statDivider {
+  flex-shrink: 0;
   width: 1px;
-  align-self: stretch;
-  margin: 0 24px;
-  background: #e5e7ea;
+  height: 32px;
+  background: $line;
 }
 
-// 퀵 액션 카드 — 아이콘 3열, 라벨 14px 500
-.actionCard {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 12px;
-  padding: 20px 0;
-  border-radius: $radius-card;
+// ─────────────────────────────────────────────────────────────────────────────
+// 메뉴 섹션 (학습 관리 · 계정)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.menuSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.menuLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: $fw-bold;
+  color: $sub;
+}
+
+.menuCard {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px;
+  border: 1px solid $line;
+  border-radius: 16px;
   background: $color-canvas;
 }
 
-.action {
+.menuItem {
   @include button-reset;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0;
-  font-size: $fs-body-sm;
+  justify-content: space-between;
+  gap: $space-md;
+  width: 100%;
+  padding: 16px 0;
+  border-bottom: 1px solid $line;
+  font-size: $fs-body;
   font-weight: $fw-medium;
   color: $ink;
+  text-align: left;
   transition: opacity 150ms ease;
 
   @include hover { opacity: 0.7; }
 }
 
+.menuItemLast {
+  border-bottom: none;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 하단 섹션 (흰 배경) — 레퍼런스 리듬: 섹션 라벨 → 큰 행 → 회색 박스
+// 로그아웃 · 버전
 // ─────────────────────────────────────────────────────────────────────────────
 
-.sections {
+.footerActions {
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  padding: 36px $space-lg 0;
-
-  @include desktop-up {
-    padding: 36px 0 0;
-  }
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-}
-
-// 섹션 라벨 — 15px 400 회색 (레퍼런스 "뱅킹관리")
-.sectionLabel {
-  margin: 0 0 20px;
-  font-size: 15px;
-  font-weight: $fw-normal;
-  color: $caption;
-}
-
-// 큰 행 타이틀 — 19px 600 (레퍼런스 "이체한도")
-.rowTitle {
-  margin: 0 0 14px;
-  font-size: 19px;
-  font-weight: $fw-semibold;
-  letter-spacing: -0.2px;
-  color: $ink;
-}
-
-// 회색 라운드 박스 — 라벨 400 회색 / 값 700 진한색 우측 정렬
-.infoBox {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px;
-  border-radius: $radius-card;
-  background: $row-gray;
-}
-
-.infoRow {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $space-lg;
+  gap: 12px;
+  padding-top: 12px;
 }
 
-.infoLabel {
-  flex-shrink: 0;
-  font-size: $fs-body;
-  font-weight: $fw-normal;
-  color: $caption;
-}
-
-.infoValue {
-  font-size: 17px;
-  font-weight: $fw-bold;
-  letter-spacing: -0.2px;
-  color: $ink;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-// 링크 행 (로그아웃) — 19px 600 + 우측 chevron (레퍼런스 "출금계좌 >")
-.linkRow {
+.logoutLink {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 2px 0;
-  font-size: 19px;
-  font-weight: $fw-semibold;
-  letter-spacing: -0.2px;
-  color: $ink;
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: $disabled;
+  text-decoration: underline;
   transition: color 150ms ease;
 
-  svg { color: $ink; }
-
-  @include hover {
-    color: $color-danger;
-    svg { color: $color-danger; }
-  }
+  @include hover { color: $color-danger; }
 
   &:disabled { opacity: 0.5; }
 }
 
-// 게스트 가입 유도 — 레퍼런스 하단 AI 카드 문법 (보더 라운드 + 아이콘 + 캡션/타이틀)
-.promoCard {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 22px 20px;
-  border: 1px solid #e5e7ea;
-  border-radius: $radius-card;
-  background: $color-canvas;
-  text-align: left;
-  transition: background 150ms ease;
-
-  @include hover { background: $row-gray; }
-
-  > svg { color: $caption; }
-}
-
-.promoIcon {
-  @include flex-center;
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: $radius-full;
-  background: color.mix($color-primary, #fff, 8%);
-  color: $color-primary;
-}
-
-.promoBody {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.promoCaption {
-  font-size: $fs-body-sm;
+.version {
+  font-size: $fs-caption;
   font-weight: $fw-normal;
-  color: $caption;
-}
-
-.promoTitle {
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  color: $ink;
+  color: $disabled;
 }

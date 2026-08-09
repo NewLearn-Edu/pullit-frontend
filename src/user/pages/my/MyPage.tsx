@@ -7,11 +7,15 @@ import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
 
+/** 학습 통계 목 — 진단/기록 API 연동 시 교체 (Figma 2627-2336 예시값) */
+const MOCK_STATS = { solved: 128, accuracy: 76, streak: 5 }
+
+const APP_VERSION = 'v1.0.0'
+
 /**
- * 마이페이지 (/my) — 뱅킹 앱 MY 타이포 문법 (2026-08-07 레퍼런스 확정):
- *   라벨 400 / 값 700 대비 · 18px 큰 리스트 행 + 회색 박스 · 넉넉한 세로 리듬
- * - 상단: 브랜드 틴트 히어로 (프로필 + 요약 카드 + 퀵 액션)
- * - 하단: 흰 배경 섹션 (계정 정보 박스 · 로그아웃 행 · 게스트는 가입 유도 카드)
+ * 마이페이지 (/my · Figma 2627-2336)
+ * 프로필 카드 + 학습 통계 + 메뉴 리스트(학습 관리·계정) + 로그아웃.
+ * 리포트·크레딧 내역·설정·공지·고객센터는 페이지 준비 전 (POC 시각만).
  */
 export default function MyPage() {
   const navigate = useNavigate()
@@ -44,180 +48,117 @@ export default function MyPage() {
       <UserNav active="my" />
 
       <main className={styles.main}>
-        {/* ── 히어로 (쿨그레이) ──────────────────────────────── */}
-        <div className={styles.hero}>
-          {/* 프로필 — 이름 굵게 + 배지, 보조 정보는 가는 캡션 */}
-          <div className={styles.profile}>
-            <span className={styles.avatar}>
-              <PersonIcon />
-            </span>
-            <div className={styles.profileBody}>
-              <div className={styles.profileNameRow}>
-                <h1 className={styles.profileName}>
-                  {isGuest ? me?.nickname ?? '게스트' : `${me?.name ?? '이름 없음'} 님`}
-                </h1>
-                <span className={clsx(styles.typeBadge, isGuest && styles.typeBadgeGuest)}>
-                  {isGuest ? '게스트' : '회원'}
-                </span>
-              </div>
-              <p className={styles.profileSub}>
+        {/* 프로필 카드 */}
+        <section className={styles.profileCard}>
+          <div className={styles.profileInfo}>
+            <span className={styles.avatar}>🦊</span>
+            <div className={styles.userDetails}>
+              <p className={styles.userName}>
+                {isGuest ? me?.nickname ?? '게스트' : me?.name ?? '이름 없음'}
+              </p>
+              <p className={styles.userEmail}>
                 {isGuest ? '가입하면 푼 기록이 그대로 저장돼요' : me?.email ?? ''}
               </p>
             </div>
           </div>
-
-          {/* 요약 카드 — 라벨 400 / 값 700 (오답은 홈과 동일한 POC 목값) */}
-          <div className={styles.statCard}>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>크레딧</span>
-              <span className={styles.statValue}>
-                {me?.creditBalance ?? 0}
-                <em>개</em>
-              </span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>쌓인 오답</span>
-              <span className={styles.statValue}>
-                2<em>문제</em>
-              </span>
-            </div>
-          </div>
-
-          {/* 퀵 액션 */}
-          <div className={styles.actionCard}>
-            <button type="button" onClick={() => navigate('/home')} className={styles.action}>
-              <PencilIcon />
-              문제 풀기
-            </button>
-            <button type="button" onClick={() => navigate('/wrong-note')} className={styles.action}>
-              <BookmarkIcon />
-              오답노트
-            </button>
-            <button type="button" className={styles.action}>
-              <ChartIcon />
-              리포트
-            </button>
-          </div>
-        </div>
-
-        {/* ── 하단 섹션 (흰 배경) ────────────────────────────── */}
-        <div className={styles.sections}>
-          {!isGuest && me && (
-            <section className={styles.section}>
-              <p className={styles.sectionLabel}>내 정보</p>
-              <h2 className={styles.rowTitle}>계정 정보</h2>
-              <div className={styles.infoBox}>
-                <InfoRow label="이름" value={me.name ?? '-'} />
-                <InfoRow label="이메일" value={me.email ?? '-'} />
-                <InfoRow label="전화번호" value={me.phoneNumber ?? '-'} />
-                <InfoRow
-                  label="생년월일"
-                  value={me.birthDate ? me.birthDate.split('-').join('.') : '-'}
-                />
-              </div>
-            </section>
-          )}
-
-          {/* 게스트 — 가입 유도 (레퍼런스 하단 AI 카드 문법) */}
-          {isGuest && (
+          {isGuest ? (
             <button
               type="button"
               onClick={() => navigate('/signup')}
-              className={styles.promoCard}
+              className={clsx(styles.editButton, styles.signupButton)}
             >
-              <span className={styles.promoIcon}>
-                <SparkIcon />
-              </span>
-              <span className={styles.promoBody}>
-                <span className={styles.promoCaption}>지금까지 푼 기록 그대로</span>
-                <span className={styles.promoTitle}>10초만에 가입하고 약점 저장하기!</span>
-              </span>
-              <ChevronRightIcon />
+              10초만에 가입하기
+            </button>
+          ) : (
+            // 프로필 편집 화면은 준비 전 — POC 시각만
+            <button type="button" className={styles.editButton}>
+              프로필 편집
             </button>
           )}
+        </section>
 
-          <section className={styles.section}>
-            <p className={styles.sectionLabel}>계정 관리</p>
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={signingOut}
-              className={styles.linkRow}
-            >
-              {signingOut ? '로그아웃 중…' : '로그아웃'}
-              <ChevronRightIcon />
-            </button>
-          </section>
+        {/* 학습 통계 */}
+        <section className={styles.statsCard}>
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>풀은 문제</span>
+            <span className={styles.statValue}>{MOCK_STATS.solved}개</span>
+          </div>
+          <span className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>정답률</span>
+            <span className={styles.statValue}>{MOCK_STATS.accuracy}%</span>
+          </div>
+          <span className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>연속 학습</span>
+            <span className={clsx(styles.statValue, styles.statValueRed)}>
+              {MOCK_STATS.streak}일
+            </span>
+          </div>
+        </section>
+
+        {/* 학습 관리 */}
+        <section className={styles.menuSection}>
+          <p className={styles.menuLabel}>학습 관리</p>
+          <div className={styles.menuCard}>
+            <MenuItem label="학습 리포트" />
+            <MenuItem label="오답 노트" onClick={() => navigate('/wrong-note')} />
+            <MenuItem label="크레딧 내역" last />
+          </div>
+        </section>
+
+        {/* 계정 */}
+        <section className={styles.menuSection}>
+          <p className={styles.menuLabel}>계정</p>
+          <div className={styles.menuCard}>
+            <MenuItem label="설정" />
+            <MenuItem label="공지사항" />
+            <MenuItem label="고객센터" last />
+          </div>
+        </section>
+
+        {/* 로그아웃 · 버전 */}
+        <div className={styles.footerActions}>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={signingOut}
+            className={styles.logoutLink}
+          >
+            {signingOut ? '로그아웃 중…' : '로그아웃'}
+          </button>
+          <span className={styles.version}>{APP_VERSION}</span>
         </div>
       </main>
     </div>
   )
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function MenuItem({
+  label,
+  onClick,
+  last,
+}: {
+  label: string
+  onClick?: () => void
+  last?: boolean
+}) {
   return (
-    <div className={styles.infoRow}>
-      <span className={styles.infoLabel}>{label}</span>
-      <span className={styles.infoValue}>{value}</span>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsx(styles.menuItem, last && styles.menuItemLast)}
+    >
+      {label}
+      <ChevronIcon />
+    </button>
   )
 }
 
-/* --- 인라인 SVG 아이콘 --- */
-
-function PersonIcon() {
+function ChevronIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
-    </svg>
-  )
-}
-
-function PencilIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
-  )
-}
-
-function BookmarkIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3h12v18l-6-4-6 4V3z" />
-    </svg>
-  )
-}
-
-function ChartIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 21V13" />
-      <path d="M12 21V7" />
-      <path d="M19 21V3" />
-    </svg>
-  )
-}
-
-function SparkIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v4" />
-      <path d="M12 17v4" />
-      <path d="M3 12h4" />
-      <path d="M17 12h4" />
-      <path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z" />
-    </svg>
-  )
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m9 6 6 6-6 6" />
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b0b8c1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m9 5 7 7-7 7" />
     </svg>
   )
 }
