@@ -515,8 +515,9 @@ export default function WeaknessMapPage() {
               </>
             )}
 
+            {/* 미진단(잠김) 단원은 첫 진단 유도, 진단된 단원은 계속 풀기 */}
             <button type="button" onClick={startQuiz} className={styles.sheetButton}>
-              문제 풀기
+              {selected.state === 'locked' ? '약점 진단하기' : '문제 풀기'}
             </button>
           </div>
         )}
