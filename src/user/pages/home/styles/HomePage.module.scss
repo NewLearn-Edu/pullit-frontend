@@ -57,6 +57,10 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   align-items: center;
   gap: $space-sm;
+
+  // 웹은 사이드바에 오답노트·마이페이지가 있어 중복 — 숨김
+  // (display:none 이면 space-between 균형이 깨져 토글이 오른쪽으로 밀림 → 자리만 유지)
+  @include desktop-up { visibility: hidden; }
 }
 
 .iconCircle {
