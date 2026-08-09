@@ -150,7 +150,7 @@ span.katex-block {
 }
 
 .exam-blocks .xb-p {
-  margin: 12px 0;
+  margin: 10px 0;
 }
 
 .exam-blocks .xb-p:first-child {
@@ -166,9 +166,9 @@ span.katex-block {
   margin: 6px 0 14px;
 }
 
-/* (i)(ii)(iii) 케이스 분기 */
+/* (i)(ii)(iii) 케이스 분기 — 각 케이스 위에 여백을 넉넉히 줘 구획감 부여 */
 .exam-blocks .xb-case {
-  margin: 12px 0;
+  margin: 26px 0 12px;
 }
 
 .exam-blocks .xb-case-label {
