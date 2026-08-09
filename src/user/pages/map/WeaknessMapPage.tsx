@@ -5,6 +5,7 @@ import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
+import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import {
@@ -228,40 +229,8 @@ export default function WeaknessMapPage() {
     return offsets
   }, [])
 
-  // ── 시트 아래로 스와이프 닫기 ──────────────────────────────────────────
-  const [sheetDragY, setSheetDragY] = useState(0)
-  const [sheetDragging, setSheetDragging] = useState(false)
-  const sheetDrag = useRef<{ startY: number; id: number; active: boolean } | null>(null)
-  const sheetDragged = useRef(false) // 드래그 직후 버튼 click 오발동 방지
-
-  const onSheetPointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation() // 캔버스 팬으로 전파 금지 (기존 동작 유지)
-    if (isDesktop()) return // 웹은 우측 고정 패널 — 스와이프 닫기 없음
-    sheetDrag.current = { startY: e.clientY, id: e.pointerId, active: false }
-    sheetDragged.current = false
-  }
-
-  const onSheetPointerMove = (e: React.PointerEvent) => {
-    const d = sheetDrag.current
-    if (!d || e.pointerId !== d.id) return
-    const dy = e.clientY - d.startY
-    // 8px 넘게 내려야 드래그로 판정 — 버튼 탭과 구분
-    if (!d.active && dy > 8) {
-      d.active = true
-      sheetDragged.current = true
-      setSheetDragging(true)
-      ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
-    }
-    if (d.active) setSheetDragY(Math.max(0, dy))
-  }
-
-  const onSheetPointerUp = (e: React.PointerEvent) => {
-    const d = sheetDrag.current
-    sheetDrag.current = null
-    setSheetDragging(false)
-    if (d?.active && e.clientY - d.startY > 96) closeSheet()
-    setSheetDragY(0)
-  }
+  // 시트 아래로 스와이프 닫기 (공용 훅) — 웹은 우측 고정 패널이라 제스처 제외
+  const sheetDragGesture = useSheetDrag(closeSheet, { disabled: isDesktop })
 
   /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 */
   const path = useMemo(() => {
@@ -494,21 +463,9 @@ export default function WeaknessMapPage() {
         {selected && (
           <div
             ref={sheetRef}
-            className={clsx(styles.sheet, sheetDragging && styles.sheetDragging)}
-            style={{ '--drag-y': `${sheetDragY}px` } as React.CSSProperties}
-            onPointerDown={onSheetPointerDown}
-            onPointerMove={onSheetPointerMove}
-            onPointerUp={onSheetPointerUp}
-            onPointerCancel={onSheetPointerUp}
+            {...sheetDragGesture.sheetProps}
+            className={clsx(styles.sheet, sheetDragGesture.dragging && styles.sheetDragging)}
             onClick={(e) => e.stopPropagation()}
-            onClickCapture={(e) => {
-              // 드래그로 끝난 제스처의 잔여 click 무시 (문제 풀기 오발동 방지)
-              if (sheetDragged.current) {
-                e.preventDefault()
-                e.stopPropagation()
-                sheetDragged.current = false
-              }
-            }}
           >
             <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetHandleWrap}>
               <span className={styles.sheetHandle} />

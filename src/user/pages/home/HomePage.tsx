@@ -6,6 +6,7 @@ import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import { useMe } from '@/user/hooks/useMe'
+import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
 import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
 import graphLock from '@/assets/home/graph-lock.png'
@@ -91,6 +92,10 @@ export default function HomePage() {
   const [subject, setSubject] = useState<Subject>('math')
   const [cat, setCat] = useState(CATS.math[0])
   const [infoOpen, setInfoOpen] = useState(false) // 약점 그래프 예시 안내 (? 버튼)
+  // 인포 시트 아래로 스와이프 닫기 — 웹은 중앙 다이얼로그라 제스처 제외
+  const infoDrag = useSheetDrag(() => setInfoOpen(false), {
+    disabled: () => window.matchMedia('(min-width: 1281px)').matches,
+  })
 
   const changeSubject = (s: Subject) => {
     setSubject(s)
@@ -224,7 +229,11 @@ export default function HomePage() {
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
       {infoOpen && (
         <div className={styles.infoDim} onClick={() => setInfoOpen(false)}>
-          <div className={styles.infoSheet} onClick={(e) => e.stopPropagation()}>
+          <div
+            {...infoDrag.sheetProps}
+            className={clsx(styles.infoSheet, infoDrag.dragging && styles.infoSheetDragging)}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               aria-label="닫기"
