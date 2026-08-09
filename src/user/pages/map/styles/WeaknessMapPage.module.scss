@@ -67,6 +67,11 @@ $red-tint: #fff1f2;
   stroke-dasharray: 5 5;
 }
 
+// 약점 노드에서 나가는 간선 — 빨간 강조 (영어 시안 2370-9311)
+.edgeWeak {
+  stroke: $color-primary;
+}
+
 // ── 노드 카드 (207×99 · 시안 고정 규격) ─────────────────────────────────────
 
 .node {
@@ -325,15 +330,6 @@ $red-tint: #fff1f2;
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.08));
 
   @include hover { background: #f8f8f8; }
-}
-
-.emptyState {
-  position: absolute;
-  inset: 0;
-  @include flex-center;
-  font-size: $fs-body;
-  color: $gray-500;
-  pointer-events: none;
 }
 
 // ── 노드 상세 바텀시트 (Figma 2536-3075) ─────────────────────────────────────

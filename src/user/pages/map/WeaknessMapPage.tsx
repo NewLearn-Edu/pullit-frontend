@@ -15,6 +15,7 @@ import {
   NODE_W,
   type MapNode,
 } from '@/user/data/mathWeaknessMap'
+import { ENGLISH_MAP_EDGES, ENGLISH_MAP_NODES } from '@/user/data/englishWeaknessMap'
 import styles from './styles/WeaknessMapPage.module.scss'
 
 const MIN_SCALE = 0.3
@@ -55,16 +56,20 @@ export default function WeaknessMapPage() {
   const viewRef = useRef(view)
   viewRef.current = view
 
+  // 과목별 그래프 (수학 2370-9041 · 영어 2370-9311)
+  const nodes = subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES
+  const edges = subject === 'math' ? MATH_MAP_EDGES : ENGLISH_MAP_EDGES
+
   const selected = useMemo(
-    () => MATH_MAP_NODES.find((n) => n.id === selectedId) ?? null,
-    [selectedId],
+    () => nodes.find((n) => n.id === selectedId) ?? null,
+    [nodes, selectedId],
   )
 
   /** 약점 점수가 가장 낮은 노드 = 첫 포커스 대상 */
   const weakest = useMemo(() => {
-    const scored = MATH_MAP_NODES.filter((n) => n.score != null)
-    return scored.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))[0] ?? MATH_MAP_NODES[0]
-  }, [])
+    const scored = nodes.filter((n) => n.score != null)
+    return scored.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))[0] ?? nodes[0]
+  }, [nodes])
 
   /**
    * 특정 월드 좌표(노드 중심)를 "보이는 영역"의 중앙에 놓는 view 계산.
@@ -100,12 +105,14 @@ export default function WeaknessMapPage() {
     [centerOn],
   )
 
-  // 첫 진입 — 줌아웃 + 가장 약한 노드 중앙 (애니메이션 없이 즉시)
+  // 첫 진입·과목 전환 — 선택 해제 + 줌아웃 상태로 그 과목의 가장 약한 노드 중앙
   useEffect(() => {
+    setSelectedId(null)
+    setAnimated(false)
     setView(centerOn(weakest, INITIAL_SCALE))
-    // centerOn 은 ref 기반이라 마운트 후 1회면 충분
+    // weakest 는 nodes(과목)에서 파생 — 과목이 바뀔 때만 재실행되면 충분
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [subject])
 
   // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
   useEffect(() => {
@@ -259,21 +266,21 @@ export default function WeaknessMapPage() {
   /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 */
   const path = useMemo(() => {
     if (!selected) return []
-    const main = MATH_MAP_EDGES.filter((e) => !e.indirect)
+    const main = edges.filter((e) => !e.indirect)
     const prev = main.find((e) => e.to === selected.id)?.from
     const next = main.find((e) => e.from === selected.id)?.to
-    const name = (id?: string) => MATH_MAP_NODES.find((n) => n.id === id)?.name
+    const name = (id?: string) => nodes.find((n) => n.id === id)?.name
     return [
       { name: name(prev), current: false },
       { name: selected.name, current: true },
       { name: name(next), current: false },
     ].filter((p): p is { name: string; current: boolean } => !!p.name)
-  }, [selected])
+  }, [selected, nodes, edges])
 
   const startQuiz = () => {
     reset()
-    setLastSubject('math')
-    navigate('/taste/quiz/math/0')
+    setLastSubject(subject)
+    navigate(`/taste/quiz/${subject}/0`)
   }
 
   return (
@@ -296,8 +303,7 @@ export default function WeaknessMapPage() {
           className={clsx(styles.world, animated && styles.worldAnimated)}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         >
-          {subject === 'math' ? (
-            <>
+          <>
               {/* 간선 (노드 아래 레이어) — 굵기는 줌 역보정으로 화면상 항상 일정 */}
               <svg
                 className={styles.edges}
@@ -305,9 +311,9 @@ export default function WeaknessMapPage() {
                 height={MAP_BOUNDS.maxY}
                 aria-hidden
               >
-                {MATH_MAP_EDGES.map((edge) => {
-                  const from = MATH_MAP_NODES.find((n) => n.id === edge.from)!
-                  const to = MATH_MAP_NODES.find((n) => n.id === edge.to)!
+                {edges.map((edge) => {
+                  const from = nodes.find((n) => n.id === edge.from)!
+                  const to = nodes.find((n) => n.id === edge.to)!
                   const sx = from.x + NODE_W / 2
                   const tx = to.x + NODE_W / 2
 
@@ -357,7 +363,10 @@ export default function WeaknessMapPage() {
                     <path
                       key={`${edge.from}-${edge.to}`}
                       d={d}
-                      className={edge.indirect ? styles.edgeIndirect : styles.edgeMain}
+                      className={clsx(
+                        edge.indirect ? styles.edgeIndirect : styles.edgeMain,
+                        from.state === 'weak' && styles.edgeWeak,
+                      )}
                       style={{
                         strokeWidth: w,
                         strokeDasharray: edge.indirect ? `${6 / view.scale} ${6 / view.scale}` : undefined,
@@ -368,7 +377,7 @@ export default function WeaknessMapPage() {
               </svg>
 
               {/* 노드 */}
-              {MATH_MAP_NODES.map((node) => (
+              {nodes.map((node) => (
                 <button
                   key={node.id}
                   type="button"
@@ -404,13 +413,7 @@ export default function WeaknessMapPage() {
                 </button>
               ))}
             </>
-          ) : null}
         </div>
-
-        {/* 영어 — 준비 중 */}
-        {subject === 'english' && (
-          <div className={styles.emptyState}>영어 약점 지도는 준비 중이에요</div>
-        )}
 
         {/* 상단 플로팅 헤더 — 캔버스 팬/선택해제와 분리 */}
         <header
