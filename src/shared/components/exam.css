@@ -136,3 +136,59 @@ span.katex-block {
 .katex-display {
   margin: 0;
 }
+
+/* ============================================================================
+   블록 스키마 해설 (ExplainBlocksRender · 2026-08-09 B안 포맷)
+   ========================================================================== */
+
+.exam-blocks {
+  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', serif);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.85;
+  color: var(--pv-fg, #120c0b);
+}
+
+.exam-blocks .xb-p {
+  margin: 12px 0;
+}
+
+.exam-blocks .xb-p:first-child {
+  margin-top: 0;
+}
+
+/* lead 문단은 바로 아래 수식을 이끈다 — 밀착 */
+.exam-blocks .xb-lead {
+  margin-bottom: 2px;
+}
+
+.exam-blocks .xb-math .katex-block {
+  margin: 6px 0 14px;
+}
+
+/* (i)(ii)(iii) 케이스 분기 */
+.exam-blocks .xb-case {
+  margin: 12px 0;
+}
+
+.exam-blocks .xb-case-label {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.exam-blocks .xb-case-body {
+  padding-left: 14px;
+}
+
+/* 마무리(conclusion) — 얇은 구분선으로 답 도출부 구획 */
+.exam-blocks .xb-conclusion {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line, #e8e4e2);
+}
+
+.exam-blocks .xb-note {
+  margin: 10px 0;
+  font-size: 13px;
+  color: #8a8582;
+}

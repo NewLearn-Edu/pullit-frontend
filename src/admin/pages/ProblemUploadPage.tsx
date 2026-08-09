@@ -9,6 +9,7 @@ import {
   MathProblemRender,
 } from '@/shared/components/ExamRender'
 import { MathExplainKatexRender } from '@/shared/components/ExamRender'
+import { ExplainBlocksRender, type ExplainBlock } from '@/shared/components/ExamBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
@@ -27,7 +28,8 @@ interface UploadItem {
   choices?: string[]
   answer_no?: number
   answer_text?: string
-  explanation?: string
+  /** 구 포맷 = 마크다운 문자열 · 신 포맷(2026-08-09~) = 블록 배열 */
+  explanation?: string | ExplainBlock[]
   difficulty?: string
 }
 
@@ -293,16 +295,25 @@ export default function ProblemUploadPage() {
                 </div>
                 <p className="pv-label" style={{ marginTop: 20 }}>
                   해설
-                  <button
-                    className="upl-engine-toggle"
-                    onClick={() => setEngine(engine === 'katex' ? 'mathjax' : 'katex')}
-                    title="해설 렌더 엔진 전환 (비교용)"
-                  >
-                    {engine === 'katex' ? 'KaTeX' : 'MathJax'}
-                  </button>
+                  {/* 블록 스키마(배열)는 전용 렌더러 고정 — 엔진 토글은 구 문자열 포맷 비교용 */}
+                  {Array.isArray(item?.explanation) ? (
+                    <span className="upl-engine-toggle" title="블록 스키마 해설 (B안 포맷)">
+                      블록
+                    </span>
+                  ) : (
+                    <button
+                      className="upl-engine-toggle"
+                      onClick={() => setEngine(engine === 'katex' ? 'mathjax' : 'katex')}
+                      title="해설 렌더 엔진 전환 (비교용)"
+                    >
+                      {engine === 'katex' ? 'KaTeX' : 'MathJax'}
+                    </button>
+                  )}
                 </p>
                 <div className="pv-explain-body">
-                  {engine === 'katex' ? (
+                  {Array.isArray(item?.explanation) ? (
+                    <ExplainBlocksRender blocks={item.explanation} />
+                  ) : engine === 'katex' ? (
                     <MathExplainKatexRender text={item?.explanation || '해설이 없어요'} />
                   ) : (
                     <ExplainRender text={item?.explanation || '해설이 없어요'} />
