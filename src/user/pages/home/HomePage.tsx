@@ -9,6 +9,7 @@ import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
 import graphLock from '@/assets/home/graph-lock.png'
+import graphExample from '@/assets/home/graph-example.png'
 import rowLock from '@/assets/home/row-lock.svg'
 import styles from './styles/HomePage.module.scss'
 
@@ -86,6 +87,7 @@ export default function HomePage() {
 
   const [subject, setSubject] = useState<Subject>('math')
   const [cat, setCat] = useState(CATS.math[0])
+  const [infoOpen, setInfoOpen] = useState(false) // 약점 그래프 예시 안내 (? 버튼)
 
   const changeSubject = (s: Subject) => {
     setSubject(s)
@@ -151,7 +153,12 @@ export default function HomePage() {
           <div className={styles.graphCard}>
             <RadarChart labels={subUnits.map((u) => u.name)} />
             <div className={styles.graphOverlay}>
-              <button type="button" aria-label="도움말" className={styles.helpChip}>
+              <button
+                type="button"
+                aria-label="약점 그래프 안내"
+                onClick={() => setInfoOpen(true)}
+                className={styles.helpChip}
+              >
                 ?
               </button>
               <div className={styles.graphOverlayBody}>
@@ -197,6 +204,34 @@ export default function HomePage() {
           </section>
         </div>
       </main>
+
+      {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
+      {infoOpen && (
+        <div className={styles.infoDim} onClick={() => setInfoOpen(false)}>
+          <div className={styles.infoSheet} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={() => setInfoOpen(false)}
+              className={styles.infoHandleWrap}
+            >
+              <span className={styles.infoHandle} />
+            </button>
+            <h2 className={styles.infoTitle}>약점 그래프 예시</h2>
+            <p className={styles.infoDesc}>
+              소단원(유형)을 다 풀면 결과가 이렇게 보여,
+              <br />
+              빨간색으로 표시된 부분부터 먼저 잡으면 돼
+            </p>
+            <div className={styles.infoCard}>
+              <img src={graphExample} alt="약점 그래프 예시" className={styles.infoImage} />
+            </div>
+            <button type="button" onClick={() => setInfoOpen(false)} className={styles.infoClose}>
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
