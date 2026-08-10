@@ -5,9 +5,14 @@ import { fetchMe, type MeResult } from '@/user/api/authApi'
 import { ToastProvider, useToast } from './components/toast'
 import { ProblemKpi } from './components/ProblemKpi'
 import {
+  IcoAdmin,
+  IcoCredit,
   IcoDashboard,
+  IcoEnglish,
+  IcoEnglishTest,
   IcoHome,
-  IcoList,
+  IcoMath,
+  IcoMathTest,
   IcoMember,
   IcoMoon,
   IcoProblem,
@@ -64,7 +69,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   // 레일 섹션: 대시보드 = home, 목록·업로드·맛보기 = problem, 회원 = member
   const isProblem =
     pathname.includes('/problems/') || pathname.includes('/upload') || pathname.includes('/trial-tests/')
-  const isMember = pathname.includes('/members')
+  const isMember = pathname.includes('/members') || pathname.includes('/credits')
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
   const isUpload = pathname.includes('/upload')
@@ -140,8 +145,14 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
               전체 회원
             </NavLink>
             <NavLink to="/admin/members" end className={navClass}>
-              <span className="ico"><IcoMember /></span>
+              <span className="ico"><IcoAdmin /></span>
               관리자 계정
+            </NavLink>
+
+            <div className="nav-label">크레딧</div>
+            <NavLink to="/admin/credits" className={navClass}>
+              <span className="ico"><IcoCredit /></span>
+              크레딧 관리
             </NavLink>
           </>
         )}
@@ -150,22 +161,22 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
           <>
             <div className="nav-label">문제</div>
             <NavLink to="/admin/problems/math" className={navClass}>
-              <span className="ico"><IcoList /></span>
+              <span className="ico"><IcoMath /></span>
               수학
             </NavLink>
             <NavLink to="/admin/problems/english" className={navClass}>
-              <span className="ico"><IcoList /></span>
+              <span className="ico"><IcoEnglish /></span>
               영어
             </NavLink>
 
             <div className="nav-label">맛보기 테스트</div>
             <NavLink to="/admin/trial-tests/math" className={navClass}>
-              <span className="ico"><IcoList /></span>
-              수학
+              <span className="ico"><IcoMathTest /></span>
+              수학 테스트
             </NavLink>
             <NavLink to="/admin/trial-tests/english" className={navClass}>
-              <span className="ico"><IcoList /></span>
-              영어
+              <span className="ico"><IcoEnglishTest /></span>
+              영어 테스트
             </NavLink>
 
             <div className="nav-label">업로드</div>
