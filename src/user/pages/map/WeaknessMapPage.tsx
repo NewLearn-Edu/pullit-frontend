@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
@@ -107,7 +107,8 @@ export default function WeaknessMapPage() {
   )
 
   // 첫 진입·과목 전환 — 선택 해제 + 줌아웃 상태로 그 과목의 가장 약한 노드 중앙
-  useEffect(() => {
+  // useLayoutEffect: 페인트 전에 중앙 정렬 — useEffect 면 (0,0) 프레임이 먼저 보여 깜빡인다
+  useLayoutEffect(() => {
     setSelectedId(null)
     setAnimated(false)
     setView(centerOn(weakest, INITIAL_SCALE))
