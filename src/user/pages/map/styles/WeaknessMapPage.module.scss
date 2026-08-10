@@ -188,6 +188,15 @@ $red-tint: #fff1f2;
 // 선택 — 진단완료는 검정, 미진단은 진회색으로 반전 + NodeMap-selected 그림자
 .nodeSelected {
   filter: drop-shadow(0 13px 14px rgba(116, 116, 116, 0.2));
+  // 살짝 떠오른 뒤(lift) 공중에서 두둥실(float) — transform 은 애니메이션이 점유
+  animation:
+    node-lift 220ms ease-out both,
+    node-float 2.4s ease-in-out 220ms infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    transform: translateY(-7px);
+  }
 
   &.nodeDone {
     background: #23272b;
@@ -523,4 +532,15 @@ $red-tint: #fff1f2;
   transition: opacity 150ms ease;
 
   @include hover { opacity: 0.9; }
+}
+
+// 선택 노드 플로팅 — 이륙 후 무한 부유
+@keyframes node-lift {
+  from { transform: translateY(0); }
+  to { transform: translateY(-7px); }
+}
+
+@keyframes node-float {
+  0%, 100% { transform: translateY(-7px); }
+  50% { transform: translateY(-13px); }
 }
