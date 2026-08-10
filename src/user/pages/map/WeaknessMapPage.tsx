@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
@@ -52,6 +54,32 @@ export default function WeaknessMapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: INITIAL_SCALE })
   const [animated, setAnimated] = useState(false) // 포커스 이동 중에만 transform 트랜지션
+  // 피그마식 핸드 툴 — 스페이스 누르는 동안 grab 커서 + 노드 클릭 무시
+  const [spaceHeld, setSpaceHeld] = useState(false)
+  const [panning, setPanning] = useState(false)
+  const spaceRef = useRef(false)
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || e.repeat) return
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
+      e.preventDefault() // 스페이스 스크롤 방지
+      spaceRef.current = true
+      setSpaceHeld(true)
+    }
+    const up = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return
+      spaceRef.current = false
+      setSpaceHeld(false)
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
 
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef(view)
@@ -133,6 +161,7 @@ export default function WeaknessMapPage() {
     gesture.current.moved = false
     gesture.current.lastDist = 0
     setAnimated(false)
+    setPanning(true)
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -167,6 +196,7 @@ export default function WeaknessMapPage() {
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId)
     gesture.current.lastDist = 0
+    if (pointers.current.size === 0) setPanning(false)
   }
 
   /** 화면 좌표 (px,py) 를 고정점으로 배율 factor 적용 */
@@ -207,6 +237,7 @@ export default function WeaknessMapPage() {
 
   const handleNodeClick = (node: MapNode) => {
     if (gesture.current.moved) return // 드래그 후 클릭 오발동 방지
+    if (spaceRef.current) return // 핸드 툴 중엔 선택 없이 팬만
     // 같은 노드 재탭 = 선택 해제 (시트 닫힘) · 포커스는 시트 높이 측정 후 effect 에서
     setSelectedId((cur) => (cur === node.id ? null : node.id))
   }
@@ -233,18 +264,16 @@ export default function WeaknessMapPage() {
   // 시트 아래로 스와이프 닫기 (공용 훅) — 웹은 우측 고정 패널이라 제스처 제외
   const sheetDragGesture = useSheetDrag(closeSheet, { disabled: isDesktop })
 
-  /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 */
+  /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 (점·텍스트가 각 단원 상태 반영) */
   const path = useMemo(() => {
     if (!selected) return []
     const main = edges.filter((e) => !e.indirect)
     const prev = main.find((e) => e.to === selected.id)?.from
     const next = main.find((e) => e.from === selected.id)?.to
-    const name = (id?: string) => nodes.find((n) => n.id === id)?.name
-    return [
-      { name: name(prev), current: false },
-      { name: selected.name, current: true },
-      { name: name(next), current: false },
-    ].filter((p): p is { name: string; current: boolean } => !!p.name)
+    const byId = (id?: string) => nodes.find((n) => n.id === id)
+    return [byId(prev), selected, byId(next)]
+      .filter((n): n is MapNode => !!n)
+      .map((n) => ({ name: n.name, state: n.state, current: n.id === selected.id }))
   }, [selected, nodes, edges])
 
   const startQuiz = () => {
@@ -258,14 +287,17 @@ export default function WeaknessMapPage() {
       <UserNav active="map" />
 
       <div
-        className={styles.canvasWrap}
+        className={clsx(
+          styles.canvasWrap,
+          spaceHeld && (panning ? styles.handGrabbing : styles.handGrab),
+        )}
         ref={containerRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClick={() => {
-          if (!gesture.current.moved) closeSheet() // 빈 캔버스 탭 = 선택 해제
+          if (!gesture.current.moved && !spaceRef.current) closeSheet() // 빈 캔버스 탭 = 선택 해제
         }}
       >
         {/* 캔버스 (팬/줌 대상) */}
@@ -400,7 +432,7 @@ export default function WeaknessMapPage() {
               onClick={() => navigate('/wrong-note')}
               className={styles.iconCircle}
             >
-              <BookmarkIcon />
+              <WrongNoteIcon />
             </button>
             <button
               type="button"
@@ -408,7 +440,7 @@ export default function WeaknessMapPage() {
               onClick={() => navigate('/my')}
               className={styles.iconCircle}
             >
-              <PersonIcon />
+              <ProfileIcon size={18} />
             </button>
           </div>
         </header>
@@ -475,7 +507,11 @@ export default function WeaknessMapPage() {
             <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetClose}>
               ×
             </button>
-            <h2 className={styles.sheetTitle}>{selected.name}</h2>
+            <div className={styles.sheetTitleRow}>
+              <h2 className={styles.sheetTitle}>{selected.name}</h2>
+              {selected.state === 'weak' && <span className={styles.sheetBadgeWeak}>약점</span>}
+              {selected.state === 'locked' && <span className={styles.sheetBadgeLocked}>잠김</span>}
+            </div>
             <div className={styles.sheetStats}>
               <div className={styles.sheetStat}>
                 <span className={styles.sheetStatLabel}>푼 문제</span>
@@ -506,8 +542,14 @@ export default function WeaknessMapPage() {
                   {path.map((p, i) => (
                     <div key={p.name} className={styles.pathItem}>
                       {i > 0 && <span className={styles.pathLine} />}
-                      <span className={styles.pathRow}>
-                        <i className={clsx(styles.pathDot, p.current && styles.pathDotCurrent)} />
+                      <span className={clsx(styles.pathRow, !p.current && p.state === 'locked' && styles.pathRowLocked)}>
+                        <i
+                          className={clsx(
+                            styles.pathDot,
+                            p.current && styles.pathDotCurrent,
+                            !p.current && p.state !== 'locked' && styles.pathDotDone,
+                          )}
+                        />
                         {p.name}
                       </span>
                     </div>
@@ -554,22 +596,7 @@ function roundedPath(pts: Array<[number, number]>, r = 14): string {
 
 /* --- 인라인 SVG 아이콘 --- */
 
-function PersonIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
-    </svg>
-  )
-}
 
-function BookmarkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3h12v18l-6-4-6 4V3z" />
-    </svg>
-  )
-}
 
 function CrosshairIcon() {
   return (

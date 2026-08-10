@@ -32,6 +32,17 @@ $red-tint: #fff1f2;
   // 하단 네비(64px)에 가리지 않게 컨트롤 여백은 각 요소에서 처리
 }
 
+// 피그마식 핸드 툴 — 스페이스 홀드 중 grab, 드래그 중 grabbing (자식 커서까지 통일)
+.handGrab,
+.handGrab * {
+  cursor: grab !important;
+}
+
+.handGrabbing,
+.handGrabbing * {
+  cursor: grabbing !important;
+}
+
 // ── 캔버스 월드 ──────────────────────────────────────────────────────────────
 
 .world {
@@ -198,6 +209,17 @@ $red-tint: #fff1f2;
     transform: translateY(-7px);
   }
 
+  // 약점 — 레드 채움 반전 (Figma 2536-1595)
+  &.nodeWeak {
+    background: $color-primary;
+    border-color: $color-primary;
+    .nodeCat,
+    .nodeBody { color: #fff; }
+    .badgeWeak { background: #ff8fa3; } // red/300
+    .track { background: #ff8fa3; }
+    .fill { background: #fff; }
+  }
+
   &.nodeDone {
     background: #23272b;
     border-color: #23272b;
@@ -250,7 +272,7 @@ $red-tint: #fff1f2;
   height: 32px;
   border-radius: $radius-full;
   background: $color-canvas;
-  color: $ink;
+  color: #a6abb1; // 디자인 헤더 아이콘 톤 (black/400, 2626-3051)
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -431,10 +453,37 @@ $red-tint: #fff1f2;
   background: $gray-200;
 }
 
+.sheetTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .sheetTitle {
   margin: 0;
   font-size: 20px;
   font-weight: $fw-semibold;
+  color: $ink;
+}
+
+// 제목 옆 상태 배지 — 약점(레드) · 잠김(회색, 2561-3316)
+.sheetBadgeWeak,
+.sheetBadgeLocked {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $fw-bold;
+}
+
+.sheetBadgeWeak {
+  background: $color-primary;
+  color: #fff;
+}
+
+.sheetBadgeLocked {
+  background: #f0f1f3;
   color: $ink;
 }
 
@@ -518,6 +567,17 @@ $red-tint: #fff1f2;
 
 .pathDotCurrent {
   background: #23272b;
+}
+
+// 진단된 단원 — 흰 원 + 검정 스트로크
+.pathDotDone {
+  background: $color-canvas;
+  border: 1.5px solid #23272b;
+}
+
+// 잠긴 단원 — 텍스트도 살짝 회색
+.pathRowLocked {
+  color: #aeaeae;
 }
 
 .sheetButton {
