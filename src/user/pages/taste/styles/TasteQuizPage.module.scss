@@ -31,6 +31,14 @@
     -webkit-tap-highlight-color: transparent !important;
   }
 
+  // 주관식 입력창은 예외 — iOS·iPadOS Safari 는 user-select:none 인 input 에
+  // 캐럿을 못 잡아 탭 즉시 포커스가 풀린다 (갤럭시 크롬도 동일 증상)
+  input,
+  textarea {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+
   // 브라우저 기본 focus outline 완전 제거 (호버·hover:bg 로 시각 피드백 충분)
   button:focus,
   button:focus-visible {
@@ -235,9 +243,11 @@
 
 .answerBar {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 0;
+  width: 100%;
+  max-width: 500px; // 문제 카드(problemCard)와 같은 폭 안에 정렬
   min-width: 350px; // 최소 지원 폭 — fixed 는 body min-width 를 안 따라감
   display: flex;
   flex-direction: column;
@@ -249,16 +259,15 @@
   z-index: 30;
 }
 
-// 액션 버튼과 같은 폭(100% · max 620)을 5칸으로 등분 — 네모 선택 박스
+// 액션 버튼과 같은 폭(바 내부 100%)을 5칸으로 등분 — 네모 선택 박스
 .answerRow {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: $space-sm;
   width: 100%;
-  max-width: 620px;
 }
 
-// 번호 선택 박스 — ①~⑤ 원문자 (바탕체) · 액션 버튼과 같은 radius
+// 번호 선택 박스 — 1~5 일반 숫자 · 액션 버튼과 같은 radius
 .answerNum {
   @include button-reset;
   @include flex-center;
@@ -266,9 +275,9 @@
   border-radius: 12px;
   border: 1.5px solid $color-line;
   background: $color-canvas;
-  font-family: $font-batang;
-  font-size: 22px;
-  font-weight: $fw-medium;
+  font-size: 18px;
+  font-weight: $fw-semibold;
+  font-variant-numeric: tabular-nums;
   color: $color-foreground;
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
@@ -284,7 +293,6 @@
   @include button-reset;
   @include flex-center;
   width: 100%;
-  max-width: 620px;
   height: 52px;
   border-radius: 12px;
   background: #23272b;
@@ -300,7 +308,6 @@
   @include button-reset;
   @include flex-center;
   width: 100%;
-  max-width: 620px;
   height: 52px;
   border: 1px dashed $color-line;
   border-radius: 12px;
@@ -315,6 +322,74 @@
     background: $color-surface;
     color: $color-body;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 모르겠어요 확인 팝업 — 딤 + 센터 카드 (취소 · 확인)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.confirmDim {
+  position: fixed;
+  inset: 0;
+  z-index: 50; // answerBar(30) 위
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-lg;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.confirmCard {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 16px;
+  background: $color-canvas;
+  padding: $space-xl $space-lg $space-lg;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.confirmTitle {
+  margin: 0;
+  text-align: center;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.confirmActions {
+  display: flex;
+  gap: $space-sm;
+  margin-top: $space-xl;
+}
+
+.confirmCancel {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  background: $color-surface;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-body;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-line; }
+}
+
+.confirmOk {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  background: #23272b;
+  font-size: $fs-body-sm;
+  font-weight: $fw-bold;
+  color: #fff;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -353,35 +428,13 @@
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 주관식(단답형) 입력 — 숫자 인풋 + ± 부호 토글 (2026-08-07)
+// 주관식(단답형) 입력 — 숫자 인풋 (2026-08-07)
 // ─────────────────────────────────────────────────────────────────────────────
 
 .answerInputRow {
   display: flex;
   gap: $space-sm;
   width: 100%;
-  max-width: 620px;
-}
-
-.answerSign {
-  @include button-reset;
-  @include flex-center;
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  border: 1.5px solid $color-line;
-  background: $color-canvas;
-  font-size: 20px;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
-}
-
-.answerSignActive {
-  border-color: $color-primary;
-  background: $color-weak-bg;
-  color: $color-primary;
 }
 
 .answerInput {
@@ -392,7 +445,7 @@
   border: 1.5px solid $color-line;
   border-radius: 12px;
   background: $color-canvas;
-  font-family: $font-batang;
+  font-family: $font-sans;
   font-size: 18px;
   font-weight: $fw-medium;
   text-align: center;
@@ -400,12 +453,12 @@
   outline: none;
 
   &::placeholder {
-    font-family: $font-sans;
     font-size: $fs-body-sm;
     color: $color-muted;
   }
 
+  // 프라이머리(레드)는 에러처럼 보여서 다크 톤 — 채점하기 버튼과 같은 계열
   &:focus {
-    border-color: $color-primary;
+    border-color: #23272b;
   }
 }

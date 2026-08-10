@@ -8,8 +8,7 @@ import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
-import markCorrect from '@/assets/result/mark-correct.svg'
-import markWrong from '@/assets/result/mark-wrong.svg'
+import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) */
 function formatShort(totalSec: number): string {
@@ -33,6 +32,23 @@ function circled(choice: number | null): string {
 
 /** 서버 skill_node("지수와 로그") ↔ 표기명("지수·로그") 느슨 매칭 */
 const normalize = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, '')
+
+/**
+ * 채점 마크 — 정답 동그라미 · 오답 빗금이 펜으로 긋듯 그려진다.
+ * delayMs 로 문항 순서대로 스태거 (선생님이 위에서부터 채점하는 느낌)
+ */
+function GradeMark({ correct, delayMs }: { correct: boolean; delayMs: number }) {
+  const style = { '--delay': `${delayMs}ms` } as React.CSSProperties
+  return correct ? (
+    <svg viewBox="0 0 51 51" className={markStyles.mark} style={style} role="img" aria-label="정답">
+      <circle cx="25.5" cy="25.5" r="24.5" className={markStyles.correctCircle} />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 51 51" className={markStyles.mark} style={style} role="img" aria-label="오답">
+      <line x1="43" y1="8" x2="8" y2="43" className={markStyles.wrongLine} />
+    </svg>
+  )
+}
 
 interface Row {
   result: QuizItemResult
@@ -211,17 +227,7 @@ export default function WeaknessResultPage() {
                     <p className="whitespace-nowrap text-[16px] font-bold text-[#121417]">
                       {i + 1}번
                     </p>
-                    {isCorrect ? (
-                      <img
-                        src={markCorrect}
-                        alt="정답"
-                        className="pointer-events-none absolute left-1/2 top-1/2 size-[48px] -translate-x-1/2 -translate-y-1/2"
-                      />
-                    ) : (
-                      <span className="pointer-events-none absolute left-1/2 top-1/2 flex size-[34px] -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                        <img src={markWrong} alt="오답" className="w-[48px] rotate-[135deg]" />
-                      </span>
-                    )}
+                    <GradeMark correct={isCorrect} delayMs={300 + i * 350} />
                   </div>
 
                   <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch px-sm py-lg">

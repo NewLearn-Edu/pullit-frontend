@@ -77,13 +77,38 @@ export default function TasteQuizPage() {
   const [allowFinger, setAllowFinger] = useState(false) // 아이패드 손바닥 걸침 방지 · 기본 펜만
   // 필기 도구 활성화 여부. 모바일 진입 시 DrawingToolbar 가 자동 false 로 세팅 (툴바 접힘 + canvas disabled)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
+  // 모르겠어요·넘어가기 확인 팝업
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
 
   const canvasRef = useRef<DrawingCanvasHandle>(null)
+  const answerBarRef = useRef<HTMLDivElement>(null)
   const startAt = useRef<number>(Date.now())
+
+  // 가상 키보드가 열리면 하단 답안 바를 키보드 위로 올린다.
+  // iOS·iPadOS(웹앱 standalone 포함)와 안드로이드 크롬 모두 키보드가 열려도
+  // position:fixed 는 레이아웃 뷰포트 기준이라 바가 키보드 뒤에 가려진다.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onViewportChange = () => {
+      const bar = answerBarRef.current
+      if (!bar) return
+      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      // 가로 센터링(translateX -50%)을 유지한 채 세로만 보정
+      bar.style.transform = `translate(-50%, -${overlap}px)`
+    }
+    vv.addEventListener('resize', onViewportChange)
+    vv.addEventListener('scroll', onViewportChange)
+    return () => {
+      vv.removeEventListener('resize', onViewportChange)
+      vv.removeEventListener('scroll', onViewportChange)
+    }
+  }, [])
 
   useEffect(() => {
     setSelected(null)
     setInputValue('')
+    setSkipConfirmOpen(false)
     setElapsedSec(0)
     canvasRef.current?.clear()
     startAt.current = Date.now()
@@ -97,12 +122,19 @@ export default function TasteQuizPage() {
   }, [idx, subject])
 
   // iOS Safari 콜아웃 (복사하기 · 선택 영역 찾기 …) 강제 차단
+  // 주관식 입력창은 예외 — selectstart 를 막으면 캐럿이 못 잡혀 포커스가 즉시 풀린다
   useEffect(() => {
+    const isEditable = (t: EventTarget | null) =>
+      t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')
     const clearSelection = () => {
+      if (isEditable(document.activeElement)) return
       const sel = window.getSelection()
       if (sel && sel.rangeCount > 0) sel.removeAllRanges()
     }
-    const preventSelect = (e: Event) => e.preventDefault()
+    const preventSelect = (e: Event) => {
+      if (isEditable(e.target)) return
+      e.preventDefault()
+    }
     document.addEventListener('selectionchange', clearSelection)
     document.addEventListener('selectstart', preventSelect)
     return () => {
@@ -199,7 +231,9 @@ export default function TasteQuizPage() {
     }
   }
 
-  const handleDontKnow = () => {
+  /** 모르겠어요 확정 — 무응답 오답으로 기록하고 진행 */
+  const confirmDontKnow = () => {
+    setSkipConfirmOpen(false)
     const elapsedMs = Date.now() - startAt.current
     addResult(subject as Subject, {
       problemId: problem.id,
@@ -313,31 +347,22 @@ export default function TasteQuizPage() {
         </main>
       </div>
 
-      {/* 하단 고정 답안 바 — 객관식 ①~⑤ / 주관식 숫자 입력 + 다음·모르겠어요 */}
-      <div className={styles.answerBar}>
+      {/* 하단 고정 답안 바 — 객관식 1~5 / 주관식 숫자 입력 + 다음·모르겠어요 */}
+      <div ref={answerBarRef} className={styles.answerBar}>
         {isShortAnswer ? (
           <div className={styles.answerInputRow}>
-            <button
-              type="button"
-              aria-label="부호 전환"
-              // iOS 숫자 키패드에 마이너스가 없어 별도 ± 토글 제공
-              onClick={() =>
-                setInputValue((v) => (v.startsWith('-') ? v.slice(1) : v ? `-${v}` : '-'))
-              }
-              className={clsx(styles.answerSign, inputValue.startsWith('-') && styles.answerSignActive)}
-            >
-              ±
-            </button>
             <input
               type="text"
               inputMode="numeric"
               pattern="-?[0-9]*"
-              placeholder="정답 입력"
+              placeholder="정답 입력 (-999~999)"
               value={inputValue}
               onChange={(e) => {
-                // 숫자 + 맨 앞 마이너스만 허용
+                // 숫자 + 맨 앞 마이너스만 허용 · 정답 범위 -999~999 라 숫자부는 3자리까지
                 const raw = e.target.value.replace(/[^0-9-]/g, '')
-                setInputValue(raw.replace(/(?!^)-/g, ''))
+                const normalized = raw.replace(/(?!^)-/g, '')
+                const sign = normalized.startsWith('-') ? '-' : ''
+                setInputValue(sign + normalized.replace('-', '').slice(0, 3))
               }}
               className={styles.answerInput}
             />
@@ -356,7 +381,7 @@ export default function TasteQuizPage() {
                   aria-pressed={active}
                   className={clsx(styles.answerNum, active && styles.answerNumActive)}
                 >
-                  {String.fromCodePoint(0x2460 + i)}
+                  {choiceNo}
                 </button>
               )
             })}
@@ -367,11 +392,41 @@ export default function TasteQuizPage() {
             {isLast ? '채점하기' : '다음'}
           </button>
         ) : (
-          <button type="button" onClick={handleDontKnow} className={styles.dontKnowButton}>
+          <button
+            type="button"
+            onClick={() => setSkipConfirmOpen(true)}
+            className={styles.dontKnowButton}
+          >
             모르겠어요 · 넘어가기
           </button>
         )}
       </div>
+
+      {/* 모르겠어요 확인 팝업 — 무응답은 오답으로 기록되니 한 번 확인 */}
+      {skipConfirmOpen && (
+        <div className={styles.confirmDim} onClick={() => setSkipConfirmOpen(false)}>
+          <div
+            role="alertdialog"
+            aria-label="모르는 문제 확인"
+            className={styles.confirmCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className={styles.confirmTitle}>모르는 문제야?</p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                onClick={() => setSkipConfirmOpen(false)}
+                className={styles.confirmCancel}
+              >
+                취소
+              </button>
+              <button type="button" onClick={confirmDontKnow} className={styles.confirmOk}>
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
