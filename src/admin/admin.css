@@ -762,6 +762,28 @@
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
   .toast .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent); }
 
+  /* ============ Credit ============ */
+  /* 유저 앱 CreditBadge 와 같은 ✦ 마크 — 숫자 왼쪽에 붙는 강조 글리프 */
+  .credit-mark { color: var(--color-primary); margin-right: 4px; }
+
+  .cr-overlay {
+    position: fixed; inset: 0; z-index: 120;
+    background: rgba(22, 15, 14, .38);
+    display: grid; place-items: center;
+    animation: pa-view-in .18s ease both;
+  }
+  .cr-modal { width: min(420px, calc(100vw - 32px)); padding: 22px; }
+  .cr-field { display: block; margin-bottom: 12px; }
+  .cr-field span { display: block; font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 6px; }
+  .cr-field input {
+    width: 100%; height: 38px; padding: 0 12px;
+    border: 1px solid var(--color-line); border-radius: var(--r-compact);
+    background: var(--color-canvas); color: var(--color-fg); font-size: 14px; outline: none;
+  }
+  .cr-field input:focus { border-color: var(--line-strong); }
+  .cr-error { margin: -6px 0 12px; font-size: 12.5px; color: var(--color-primary); font-weight: 600; }
+  .cr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
   /* ============ View entrance ============ */
   .view { display: block; animation: pa-view-in .35s cubic-bezier(.2, .8, .3, 1) both; }
 

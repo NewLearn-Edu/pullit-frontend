@@ -8,6 +8,7 @@ import ProblemUploadPage from './pages/ProblemUploadPage'
 import TrialTestPage from './pages/TrialTestPage'
 import MembersPage from './pages/MembersPage'
 import AllMembersPage from './pages/AllMembersPage'
+import CreditsPage from './pages/CreditsPage'
 import './admin.css'
 
 /**
@@ -47,6 +48,7 @@ export default function AdminRoutes() {
         <Route path="trial-tests/:subject" element={<TrialTestPage />} />
         <Route path="members" element={<MembersPage />} />
         <Route path="members/all" element={<AllMembersPage />} />
+        <Route path="credits" element={<CreditsPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>

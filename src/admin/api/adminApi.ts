@@ -272,6 +272,93 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<Ad
 }
 
 // ---------------------------------------------------------------------------
+// 크레딧
+// ---------------------------------------------------------------------------
+
+export type CreditTransactionType = 'GRANT' | 'DEDUCT'
+
+export interface CreditStats {
+  totalBalance: number
+  holderCount: number
+  totalUsers: number
+}
+
+export interface CreditUser {
+  userId: number
+  name: string | null
+  nickname: string | null
+  email: string | null
+  phoneNumber: string | null
+  creditBalance: number
+  createdAt: string
+}
+
+export interface CreditTransaction {
+  id: number
+  userId: number
+  userName: string | null
+  type: CreditTransactionType
+  amount: number
+  balanceAfter: number
+  reason: string
+  actorName: string | null
+  createdAt: string
+}
+
+interface Paged<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export type CreditUserPage = Paged<CreditUser>
+export type CreditTransactionPage = Paged<CreditTransaction>
+
+export async function fetchCreditStats(): Promise<CreditStats> {
+  const { data } = await adminApi.get<BaseResponse<CreditStats>>('/api/admin/credits/stats')
+  return data.data
+}
+
+/** 회원별 크레딧 잔액 — q 는 이름·닉네임·이메일·전화번호 부분 일치 */
+export async function fetchCreditUsers(params: {
+  q?: string
+  page?: number
+  size?: number
+}): Promise<CreditUserPage> {
+  const { data } = await adminApi.get<BaseResponse<CreditUserPage>>('/api/admin/credits/users', {
+    params,
+  })
+  return data.data
+}
+
+/** 크레딧 증감 이력 — userId 지정 시 해당 회원 것만 */
+export async function fetchCreditTransactions(params: {
+  userId?: number
+  page?: number
+  size?: number
+}): Promise<CreditTransactionPage> {
+  const { data } = await adminApi.get<BaseResponse<CreditTransactionPage>>(
+    '/api/admin/credits/transactions',
+    { params },
+  )
+  return data.data
+}
+
+/** 크레딧 수동 지급·차감 — amount 는 항상 양수, 방향은 type 이 갖는다 */
+export async function adjustCredit(
+  userId: number,
+  body: { type: CreditTransactionType; amount: number; reason: string },
+): Promise<CreditTransaction> {
+  const { data } = await adminApi.post<BaseResponse<CreditTransaction>>(
+    `/api/admin/credits/users/${userId}`,
+    body,
+  )
+  return data.data
+}
+
+// ---------------------------------------------------------------------------
 // 대시보드
 // ---------------------------------------------------------------------------
 
