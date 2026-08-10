@@ -30,3 +30,57 @@ export async function submitAttempt(req: AttemptSubmitRequest): Promise<AttemptS
   const { data } = await api.post<BaseResponse<AttemptSubmitResponse>>('/api/attempts', req)
   return data.data
 }
+
+/** 오답노트 항목 — 마지막 시도가 오답인 문제 (정답·해설은 미포함) */
+export interface WrongNoteItem {
+  problemId: string
+  subject: 'MATH' | 'ENGLISH'
+  unitLarge: string | null
+  unitMid: string | null
+  skillNode: string | null
+  points: number | null
+  renderCode: string | null
+  difficulty: string | null
+  question: string | null
+  passage: string | null
+  choices: string[]
+  answerType: string | null
+  glossary: Record<string, string>
+  wrongCount: number
+  lastWrongAt: string
+}
+
+/** 오답노트 조회 (과목별 · 맛보기 오답 포함) */
+export async function fetchWrongNotes(subject: 'math' | 'english'): Promise<WrongNoteItem[]> {
+  const { data } = await api.get<BaseResponse<WrongNoteItem[]>>('/api/attempts/wrong-notes', {
+    params: { subject: subject.toUpperCase() },
+  })
+  return data.data
+}
+
+/** 오답노트에서 문제 제거 — wrong_notes 행 삭제 */
+export async function deleteWrongNote(problemId: string): Promise<void> {
+  await api.delete(`/api/attempts/wrong-notes/${encodeURIComponent(problemId)}`)
+}
+
+/** 오답노트 삭제 취소 — 풀이 원장에서 재계산해 행 복원 (멱등) */
+export async function restoreWrongNote(problemId: string): Promise<void> {
+  await api.post(`/api/attempts/wrong-notes/${encodeURIComponent(problemId)}/restore`)
+}
+
+/** 유저×skill_node 누적 점수 — 맞춘 배점/푼 배점 ×100 (RETRY 제외) */
+export interface SkillScore {
+  skillNode: string
+  unitLarge: string | null
+  earnedPoints: number
+  totalPoints: number
+  score: number
+  weak: boolean
+}
+
+export async function fetchSkillScores(subject: 'math' | 'english'): Promise<SkillScore[]> {
+  const { data } = await api.get<BaseResponse<SkillScore[]>>('/api/attempts/skill-scores', {
+    params: { subject: subject.toUpperCase() },
+  })
+  return data.data
+}

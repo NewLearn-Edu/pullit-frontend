@@ -58,7 +58,14 @@ export function UserNav({ active }: UserNavProps) {
           <MapIcon />
           약점 지도
         </Link>
-        <button type="button" className={clsx(styles.bottomItem, active === 'report' && styles.bottomItemActive)}>
+        <button
+          type="button"
+          // 오답노트는 학습 기록 섹션 소속 — 하단 네비에서는 학습 기록을 활성 표시 (시안 2632-7566)
+          className={clsx(
+            styles.bottomItem,
+            (active === 'report' || active === 'wrongNote') && styles.bottomItemActive,
+          )}
+        >
           <ChartIcon />
           학습 기록
         </button>

@@ -1,0 +1,328 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// WrongNoteDetailPage · 오답노트 상세 (Figma 2653-16311)
+//   회색 배경 서브 페이지 — 뒤로가기 · 단원 타이틀 · 오답 카드 · 하단 전체 풀기
+// -----------------------------------------------------------------------------
+
+$bg: #f0f1f3;
+$ink: #160f0e;
+$sub: #80858b;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: $bg;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: $space-md 12px;
+}
+
+.back {
+  @include button-reset;
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-full;
+  color: $ink;
+
+  @include hover { background: rgba(0, 0, 0, 0.05); }
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 $space-lg calc(100px + env(safe-area-inset-bottom)); // 하단 고정 버튼 확보
+
+  @include desktop-up {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+}
+
+.title {
+  margin: $space-md 0 0;
+  padding: 0 $space-xs;
+  font-size: 22px;
+  font-weight: $fw-bold;
+  color: $ink;
+}
+
+.countRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $space-lg;
+  padding: 0 $space-xs;
+}
+
+.count {
+  margin: 0;
+  font-size: $fs-body;
+  font-weight: $fw-semibold;
+  color: $ink;
+}
+
+// ── 정렬 드롭다운 ────────────────────────────────────────────────────────────
+
+.sort {
+  position: relative;
+}
+
+.sortButton {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: #565c63;
+}
+
+.sortMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 6px;
+  border-radius: 12px;
+  background: $color-canvas;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.sortItem,
+.sortItemActive {
+  @include button-reset;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: $fw-medium;
+  color: #40464c;
+
+  @include hover { background: #f4f5f7; }
+}
+
+.sortItemActive {
+  font-weight: $fw-bold;
+  color: $ink;
+  background: #f4f5f7;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-top: $space-lg;
+}
+
+// ── 오답 카드 — 미리보기(고정 높이·잘림) 위 + 정보 바 아래 (레퍼런스 구조) ──────
+
+.card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #e6e8eb;
+  background: $color-canvas;
+}
+
+// 문제 미리보기 영역 — 넘치는 본문은 잘리고 맨 아래만 살짝 흰색으로 사라진다
+.cardPreview {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+  // background: #f4f5f7; // 연회색 존 시안 — 보류
+}
+
+.cardProblem {
+  position: absolute;
+  inset: 0;
+  padding: 18px 16px 0;
+  font-family: $font-batang;
+  font-size: 15px;
+  font-weight: $fw-medium;
+  line-height: 1.7;
+  color: $ink;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cardPassage {
+  margin-top: 8px;
+}
+
+// 위에서 아래로 밝아지는 검정 틴트 — 미리보기 전체를 살짝 가라앉힌다
+.cardTint {
+  position: absolute;
+  inset: 0;
+  // background: linear-gradient(
+  //   180deg,
+  //   rgba(0, 0, 0, 0.24) 0%,
+  //   rgba(0, 0, 0, 0.16) 40%,
+  //   rgba(0, 0, 0, 0.07) 70%,
+  //   rgba(0, 0, 0, 0) 100%
+  // );
+  // background: rgba(0, 0, 0, 0.12); // 단색 검정 + 오파시티 — 텍스트까지 어두워져 보류
+  pointer-events: none;
+}
+
+// 잘리는 경계만 은은하게 — 본문 대부분은 그대로 보인다
+.cardFade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  // 잘림 경계를 흰색으로 — 카드 배경에 녹아든다
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
+  pointer-events: none;
+}
+
+// 우상단 오답 횟수 칩
+.wrongChip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: $radius-full;
+  background: #f0f1f3;
+  font-size: $fs-caption;
+  font-weight: $fw-semibold;
+  color: #40464c;
+}
+
+// 하단 정보 바 — 구분선 아래 문제 정보 + 다시 풀기
+.cardInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid #eef0f2;
+}
+
+.cardMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardNo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: $fw-bold;
+  color: $ink;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 오답노트 담김 토글 — 채움 = 담김, 빈 아이콘 = 제외됨 (재진입 시 목록 반영)
+.noteToggle {
+  @include button-reset;
+  @include flex-center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: -8px;
+  border-radius: $radius-full;
+  color: $color-primary;
+
+  @include hover { background: rgba(0, 0, 0, 0.04); }
+}
+
+.cardSub {
+  margin: 0;
+  font-size: $fs-caption;
+  font-weight: $fw-normal;
+  color: $sub;
+}
+
+.retryButton {
+  @include button-reset;
+  flex: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: #f2f4f6;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: #40464c;
+  transition: background 150ms ease;
+
+  @include hover { background: #e9ebee; }
+}
+
+// 토스트 — 하단 중앙, 2.4초 자동 소멸
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(110px + env(safe-area-inset-bottom));
+  z-index: 30;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: $radius-full;
+  background: rgba(22, 15, 14, 0.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+  animation: toast-in 200ms ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+// ── 하단 고정 전체 풀기 ──────────────────────────────────────────────────────
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 350px; // 최소 지원 폭 — fixed 는 body min-width 를 안 따라감
+  display: flex;
+  justify-content: center;
+  padding: $space-md $space-lg calc(#{$space-lg} + env(safe-area-inset-bottom));
+  background: $bg;
+}
+
+.solveAllButton {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  max-width: 620px;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
+}
