@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { deleteWrongNote, fetchWrongNotes, restoreWrongNote, type WrongNoteItem } from '@/user/api/attemptApi'
 import { findWrongUnit, formatWrongAt, type WrongUnitRow } from '@/user/services/wrongNotes'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
@@ -173,7 +174,7 @@ export default function WrongNoteDetailPage() {
                   onClick={() => toggleWrongNote(item.problemId)}
                   className={styles.noteToggle}
                 >
-                  <BookmarkIcon filled={!excluded.has(item.problemId)} />
+                  <WrongNoteIcon size={20} filled={!excluded.has(item.problemId)} />
                 </button>
                 <div className={styles.cardMeta}>
                   <p className={styles.cardNo}>
@@ -227,13 +228,6 @@ function difficultyLabel(difficulty: string): string {
   return DIFFICULTY_LABEL[difficulty.toLowerCase()] ?? difficulty
 }
 
-function BookmarkIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3h12v18l-6-4-6 4V3z" />
-    </svg>
-  )
-}
 
 function ChevronDownIcon() {
   return (

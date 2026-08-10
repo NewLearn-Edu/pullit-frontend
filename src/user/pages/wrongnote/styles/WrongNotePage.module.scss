@@ -63,7 +63,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   height: 32px;
   border-radius: $radius-full;
   background: $color-canvas;
-  color: $ink;
+  color: #a6abb1; // 디자인 헤더 아이콘 톤 (black/400, 2626-3051)
   transition: opacity 150ms ease;
 
   @include hover { opacity: 0.7; }

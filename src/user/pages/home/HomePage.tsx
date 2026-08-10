@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
@@ -127,7 +129,7 @@ export default function HomePage() {
               onClick={() => navigate('/wrong-note')}
               className={styles.iconCircle}
             >
-              <BookmarkIcon />
+              <WrongNoteIcon />
             </button>
             <button
               type="button"
@@ -135,7 +137,7 @@ export default function HomePage() {
               onClick={() => navigate('/my')}
               className={styles.iconCircle}
             >
-              <PersonIcon />
+              <ProfileIcon size={18} />
             </button>
           </div>
         </header>
@@ -310,19 +312,4 @@ function RadarChart({ labels }: { labels: string[] }) {
 
 /* --- 인라인 SVG 아이콘 --- */
 
-function PersonIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
-    </svg>
-  )
-}
 
-function BookmarkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3h12v18l-6-4-6 4V3z" />
-    </svg>
-  )
-}

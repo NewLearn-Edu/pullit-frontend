@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/UserNav.module.scss'
+import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { HomeIcon, MapIcon, ProfileIcon, ReportIcon } from '@/user/components/icons/NavIcons'
 
 export type UserNavKey = 'recommend' | 'map' | 'wrongNote' | 'report' | 'my'
 
@@ -11,8 +13,8 @@ interface UserNavProps {
 
 /**
  * 학생 서비스 공용 네비게이션.
- * - 데스크탑: 좌측 사이드바 (추천 · 자유 문제 · 오답노트 · 리포트 · 마이페이지 + 크레딧)
- * - iPad · 모바일: 하단 네비 바 (추천 · 자유 문제 · 리포트 — 시안 175)
+ * - 데스크탑: 좌측 사이드바 (홈 · 약점 지도 · 오답노트 · 리포트 · 마이페이지)
+ * - iPad · 모바일: 하단 네비 바 (홈 · 약점 지도 · 학습 기록)
  * 자유 문제 · 리포트 · 마이페이지는 아직 페이지 없음 (POC 시각만).
  */
 export function UserNav({ active }: UserNavProps) {
@@ -27,11 +29,11 @@ export function UserNav({ active }: UserNavProps) {
           풀잇
         </Link>
         <nav className={styles.nav}>
-          <NavItem to="/home" icon={<HomeIcon />} label="추천" active={active === 'recommend'} />
-          <NavItem to="/weakness-map" icon={<MapIcon />} label="약점 지도" active={active === 'map'} />
-          <NavItem to="/wrong-note" icon={<BookmarkIcon />} label="오답노트" active={active === 'wrongNote'} />
-          <NavItem icon={<ChartIcon />} label="리포트" active={active === 'report'} />
-          <NavItem to="/my" icon={<PersonIcon />} label="마이페이지" active={active === 'my'} />
+          <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
+          <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
+          <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
+          <NavItem icon={<ReportIcon filled={active === 'report'} />} label="리포트" active={active === 'report'} />
+          <NavItem to="/my" icon={<ProfileIcon filled={active === 'my'} />} label="마이페이지" active={active === 'my'} />
         </nav>
         <div className={styles.footer}>
           {/* ADMIN 권한일 때만 노출 · 어드민 콘솔 진입 */}
@@ -49,13 +51,13 @@ export function UserNav({ active }: UserNavProps) {
           to="/home"
           className={clsx(styles.bottomItem, active === 'recommend' && styles.bottomItemActive)}
         >
-          <HomeIcon />홈
+          <HomeIcon filled={active === 'recommend'} />홈
         </Link>
         <Link
           to="/weakness-map"
           className={clsx(styles.bottomItem, active === 'map' && styles.bottomItemActive)}
         >
-          <MapIcon />
+          <MapIcon filled={active === 'map'} />
           약점 지도
         </Link>
         <button
@@ -66,7 +68,7 @@ export function UserNav({ active }: UserNavProps) {
             (active === 'report' || active === 'wrongNote') && styles.bottomItemActive,
           )}
         >
-          <ChartIcon />
+          <ReportIcon filled={active === 'report' || active === 'wrongNote'} />
           학습 기록
         </button>
       </nav>
@@ -108,41 +110,9 @@ function NavItem({
 
 /* --- 인라인 SVG 아이콘 --- */
 
-function HomeIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V21h14V9.5" />
-    </svg>
-  )
-}
 
-function BookmarkIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 3h12v18l-6-4-6 4V3z" />
-    </svg>
-  )
-}
 
-function ChartIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 21V13" />
-      <path d="M12 21V7" />
-      <path d="M19 21V3" />
-    </svg>
-  )
-}
 
-function MapIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  )
-}
 
 function GearIcon() {
   return (
@@ -153,11 +123,3 @@ function GearIcon() {
   )
 }
 
-function PersonIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
-    </svg>
-  )
-}
