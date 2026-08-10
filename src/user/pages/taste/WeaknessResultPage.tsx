@@ -35,17 +35,29 @@ const normalize = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, ''
 
 /**
  * 채점 마크 — 정답 동그라미 · 오답 빗금이 펜으로 긋듯 그려진다.
+ * 완벽한 원 대신 살짝 삐뚤한 손그림 베지어 + 시작점을 지나치는 오버슛.
  * delayMs 로 문항 순서대로 스태거 (선생님이 위에서부터 채점하는 느낌)
  */
+const CIRCLE_D =
+  'M 27.8 4.6 C 16.2 2.6 4.9 11.4 4.2 23.6 C 3.5 36.4 13.5 47.3 25.9 47.6 ' +
+  'C 38.4 47.9 47.9 37.8 47.6 25.4 C 47.3 13.4 38.9 4.9 27.9 5.3 C 23.4 5.5 19.6 7.1 16.4 9.7'
+const SLASH_D = 'M 42.8 7.4 C 35.6 16.2 21.8 30.8 8.4 43.6'
+
 function GradeMark({ correct, delayMs }: { correct: boolean; delayMs: number }) {
   const style = { '--delay': `${delayMs}ms` } as React.CSSProperties
-  return correct ? (
-    <svg viewBox="0 0 51 51" className={markStyles.mark} style={style} role="img" aria-label="정답">
-      <circle cx="25.5" cy="25.5" r="24.5" className={markStyles.correctCircle} />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 51 51" className={markStyles.mark} style={style} role="img" aria-label="오답">
-      <line x1="43" y1="8" x2="8" y2="43" className={markStyles.wrongLine} />
+  return (
+    <svg
+      viewBox="0 0 51 51"
+      className={markStyles.mark}
+      style={style}
+      role="img"
+      aria-label={correct ? '정답' : '오답'}
+    >
+      <path
+        d={correct ? CIRCLE_D : SLASH_D}
+        pathLength={100}
+        className={clsx(markStyles.stroke, !correct && markStyles.strokeFast)}
+      />
     </svg>
   )
 }
@@ -202,7 +214,7 @@ export default function WeaknessResultPage() {
 
           <div className="flex w-full flex-col overflow-hidden rounded-[12px] border border-[#f0f1f3]">
             <div className="flex w-full items-center bg-[#f8f8f8]">
-              {['문항', '답안', '풀이 시간', '배점', '결과'].map((label) => (
+              {['문항', '답안', '풀이 시간', '점수', '결과'].map((label) => (
                 <div key={label} className="flex flex-1 items-center justify-center p-md">
                   <p className="whitespace-nowrap text-[13px] text-[#80858b]">{label}</p>
                 </div>
@@ -214,67 +226,82 @@ export default function WeaknessResultPage() {
               const recSec = problem?.tRecSec ?? 0
               const overTime = recSec > 0 && elapsedSec > recSec
               const isCorrect = result.serverCorrect ?? result.correct
-              // 배점 표기 — 정답은 감점 반영 획득 점수, 오답은 원 배점
-              const points = isCorrect ? result.earnedPoints : problem?.points ?? 0
+              const basePoints = problem?.points ?? 0
+              const earned = isCorrect ? result.earnedPoints : 0
               const shortAnswer = problem?.choices.length === 0
+              const myAnswer = shortAnswer
+                ? result.selectedChoice ?? '-'
+                : circled(result.selectedChoice)
+              const correctAnswer = problem
+                ? shortAnswer
+                  ? problem.answer
+                  : circled(problem.answer)
+                : '-'
 
               return (
                 <div
                   key={`${result.problemId}-${i}`}
-                  className="flex w-full items-center border-t border-[#f0f1f3]"
+                  className="flex min-h-[76px] w-full items-center border-t border-[#f0f1f3] py-md"
                 >
-                  <div className="relative flex min-w-0 flex-1 items-center justify-center self-stretch px-sm py-lg">
+                  <div className="relative flex min-w-0 flex-1 items-center justify-center self-stretch px-sm">
                     <p className="whitespace-nowrap text-[16px] font-bold text-[#121417]">
                       {i + 1}번
                     </p>
                     <GradeMark correct={isCorrect} delayMs={300 + i * 350} />
                   </div>
 
-                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch px-sm py-lg">
-                    <p className="whitespace-nowrap text-[14px] text-[#121417]">
-                      내답{' '}
-                      <span className="font-semibold">
-                        {shortAnswer ? result.selectedChoice ?? '-' : circled(result.selectedChoice)}
-                      </span>
-                    </p>
-                    <p
-                      className={clsx(
-                        'whitespace-nowrap text-[13px]',
-                        isCorrect ? 'text-[#80858b]' : 'text-primary',
+                  {/* 답안 — 내 답만 크게 · 정답 보조줄은 틀렸을 때만 */}
+                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
+                    <p className="whitespace-nowrap text-[16px] font-medium text-[#121417]">
+                      {/* 원기호는 글리프가 작게 그려져서 20px 로 보정 */}
+                      {shortAnswer ? (
+                        myAnswer
+                      ) : (
+                        <span className="text-[20px] leading-none">{myAnswer}</span>
                       )}
-                    >
-                      정답{' '}
-                      {problem
-                        ? shortAnswer
-                          ? problem.answer
-                          : circled(problem.answer)
-                        : '-'}
                     </p>
+                    {!isCorrect && (
+                      <p className="flex items-center gap-[4px] whitespace-nowrap text-[15px] font-medium text-primary">
+                        정답
+                        {shortAnswer ? (
+                          <span>{correctAnswer}</span>
+                        ) : (
+                          <span className="text-[20px] leading-none">{correctAnswer}</span>
+                        )}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center self-stretch px-sm py-lg">
+                  {/* 풀이 시간 — 권장 보조줄은 초과했을 때만 (빨간 시간의 이유) */}
+                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
                     <p
                       className={clsx(
-                        'whitespace-nowrap text-[16px] font-semibold',
+                        'whitespace-nowrap text-[15px] font-semibold tabular-nums',
                         overTime ? 'text-primary' : 'text-[#121417]',
                       )}
                     >
                       {formatShort(elapsedSec)}
                     </p>
-                    {recSec > 0 && (
-                      <p className="whitespace-nowrap text-[12px] text-[#a6abb1]">
+                    {overTime && (
+                      <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
                         권장 {formatShort(recSec)}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex min-w-0 flex-1 items-center justify-center self-stretch px-sm py-lg">
-                    <p className="whitespace-nowrap text-[15px] font-bold text-[#121417]">
-                      {Number.isInteger(points) ? points : points.toFixed(1)}점
+                  {/* 점수 — 획득 점수만 크게 · 배점 보조줄은 만점이 아닐 때만 */}
+                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
+                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-[#121417]">
+                      {Number.isInteger(earned) ? earned : earned.toFixed(1)}점
                     </p>
+                    {earned < basePoints && (
+                      <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
+                        배점 {basePoints}점
+                      </p>
+                    )}
                   </div>
 
-                  <div className="flex min-w-0 flex-1 items-center justify-center self-stretch px-sm py-lg">
+                  <div className="flex min-w-0 flex-1 items-center justify-center px-sm">
                     {problem && reviewIdx >= 0 ? (
                       <button
                         type="button"
