@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
@@ -32,6 +32,47 @@ function circled(choice: number | null): string {
 
 /** 서버 skill_node("지수와 로그") ↔ 표기명("지수·로그") 느슨 매칭 */
 const normalize = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, '')
+
+/**
+ * 점수 카운트업 — 채점이 끝나면 0 → 점수로 도르륵 오른다 (easeOutCubic).
+ * 서버 누적 점수가 뒤늦게 도착해 target 이 바뀌면 현재 표시값에서 이어서 굴린다.
+ */
+function useCountUp(target: number, delay = 300, duration = 900): number {
+  const [display, setDisplay] = useState(0)
+  const displayRef = useRef(0)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      displayRef.current = target
+      setDisplay(target)
+      return
+    }
+    const from = displayRef.current
+    if (from === target) return
+
+    let raf = 0
+    let startAt: number | null = null
+    const tick = (now: number) => {
+      if (startAt === null) startAt = now
+      const t = Math.min(1, (now - startAt) / duration)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const value = Math.round(from + (target - from) * eased)
+      displayRef.current = value
+      setDisplay(value)
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    // 첫 굴림은 채점 마크와 타이밍을 맞추고, 이후 갱신은 즉시 이어 굴린다
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(tick)
+    }, from === 0 ? delay : 0)
+    return () => {
+      clearTimeout(timer)
+      cancelAnimationFrame(raf)
+    }
+  }, [target, delay, duration])
+
+  return display
+}
 
 /**
  * 채점 마크 — 정답 동그라미 · 오답 빗금이 펜으로 긋듯 그려진다.
@@ -166,29 +207,76 @@ export default function WeaknessResultPage() {
 
   const score = skillScore?.score ?? local
   const weak = skillScore?.weak ?? score < 70
+  // 채점 마크(300ms 시작 · 문항당 350ms 스태거 · 원 그리기 600ms)가 모두 끝난 뒤 점수를 굴린다
+  const marksDoneMs = 300 + Math.max(0, rows.length - 1) * 350 + 700
+  const displayScore = useCountUp(score, marksDoneMs)
+
+  // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
+  const [stamped, setStamped] = useState(false)
+  useEffect(() => {
+    if (!weak) {
+      setStamped(false)
+      return
+    }
+    const timer = window.setTimeout(() => setStamped(true), marksDoneMs + 950)
+    return () => clearTimeout(timer)
+  }, [weak, marksDoneMs])
 
   const correctCount = rows.filter(({ result }) => result.serverCorrect ?? result.correct).length
   const totalSec = Math.round(rows.reduce((s, { result }) => s + result.elapsedMs, 0) / 1000)
+
+  // 풀이 시간 — 채점이 끝난 뒤 점수와 동시에 도르륵
+  const displayTotalSec = useCountUp(totalSec, marksDoneMs)
+
+  // 정답 수 — 채점 마크에서 동그라미가 쳐지는 순간마다 +1
+  const [displayCorrect, setDisplayCorrect] = useState(0)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayCorrect(correctCount)
+      return
+    }
+    setDisplayCorrect(0)
+    const timers: number[] = []
+    let counted = 0
+    rows.forEach(({ result }, i) => {
+      if (!(result.serverCorrect ?? result.correct)) return
+      counted += 1
+      const next = counted
+      // 원이 거의 다 그려지는 시점(시작 300ms + 스태거 + 450ms)에 카운트
+      timers.push(window.setTimeout(() => setDisplayCorrect(next), 300 + i * 350 + 450))
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [rows, correctCount])
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
       <OnboardingHeader onClose={() => navigate('/home')} />
 
-      <main className="flex w-full flex-1 flex-col items-center gap-[28px] px-[40px] py-[24px] pb-[120px] max-md:gap-xl max-md:px-lg">
+      <main
+        className={clsx(
+          'flex w-full flex-1 flex-col items-center gap-[28px] px-[40px] py-[24px] pb-[120px] max-md:gap-xl max-md:px-lg',
+          stamped && markStyles.shake,
+        )}
+      >
         {/* 단원명 + 약점 뱃지 + 누적 점수 */}
         <div className="flex w-full max-w-[620px] items-center justify-between gap-md">
           <div className="flex min-w-0 items-center gap-sm">
             <h1 className="truncate text-[24px] font-bold text-[#171211] max-md:text-[22px]">
               {unitName}
             </h1>
-            {weak && (
-              <span className="shrink-0 rounded-full bg-[#fff1f2] px-[10px] py-[4px] text-[12px] font-semibold text-primary">
+            {weak && stamped && (
+              <span
+                className={clsx(
+                  'shrink-0 rounded-full bg-[#fff1f2] px-[10px] py-[4px] text-[12px] font-semibold text-primary',
+                  markStyles.stamp,
+                )}
+              >
                 약점
               </span>
             )}
           </div>
-          <p className="shrink-0 text-[32px] font-bold text-[#121417] max-md:text-[28px]">
-            {score}점
+          <p className="shrink-0 text-[32px] font-bold tabular-nums text-[#121417] max-md:text-[28px]">
+            {displayScore}점
           </p>
         </div>
 
@@ -196,14 +284,14 @@ export default function WeaknessResultPage() {
         <div className="flex w-full max-w-[620px] gap-md">
           <div className="flex flex-1 flex-col gap-md rounded-[12px] bg-[#f8f8f8] p-[20px] max-md:p-lg">
             <p className="text-[12px] font-medium text-[#80858b]">정답 수</p>
-            <p className="text-[24px] font-bold text-[#121417] max-md:text-[22px]">
-              {correctCount}/{rows.length}
+            <p className="text-[24px] font-bold tabular-nums text-[#121417] max-md:text-[22px]">
+              {displayCorrect}/{rows.length}
             </p>
           </div>
           <div className="flex flex-1 flex-col gap-md rounded-[12px] bg-[#f8f8f8] p-[20px] max-md:p-lg">
             <p className="text-[12px] font-medium text-[#80858b]">풀이 시간</p>
-            <p className="text-[24px] font-bold text-[#121417] max-md:text-[22px]">
-              {formatSummary(totalSec)}
+            <p className="text-[24px] font-bold tabular-nums text-[#121417] max-md:text-[22px]">
+              {formatSummary(displayTotalSec)}
             </p>
           </div>
         </div>

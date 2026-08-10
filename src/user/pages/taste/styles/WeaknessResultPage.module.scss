@@ -38,10 +38,65 @@
   }
 }
 
+// -----------------------------------------------------------------------------
+// 약점 도장 — 점수 카운트업이 끝난 직후 위에서 쿵 찍히고 화면이 살짝 흔들린다
+// -----------------------------------------------------------------------------
+
+.stamp {
+  transform-origin: center;
+  animation: stamp-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(3) rotate(-14deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.9) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.06) rotate(-7deg);
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+  }
+}
+
+// 도장이 닿는 순간(140ms 뒤)부터 본문이 잘게 흔들린다
+.shake {
+  animation: stamp-shake 350ms ease-out 140ms;
+}
+
+@keyframes stamp-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-3px, 1px);
+  }
+  40% {
+    transform: translate(3px, -1px);
+  }
+  60% {
+    transform: translate(-2px, 1px);
+  }
+  80% {
+    transform: translate(1px, 0);
+  }
+}
+
 // 모션 최소화 설정 시 즉시 표시
 @media (prefers-reduced-motion: reduce) {
   .stroke {
     animation: none;
     stroke-dashoffset: 0;
+  }
+
+  .stamp,
+  .shake {
+    animation: none;
   }
 }
