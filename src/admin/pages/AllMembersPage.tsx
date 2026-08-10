@@ -20,6 +20,15 @@ const ROLE_BADGE: Record<UserRole, string> = {
   ADMIN: 'badge live',
 }
 
+/** 01012345678 → 010-1234-5678. 형식이 다르면 원본 그대로 노출 */
+function formatPhone(phone: string | null): string {
+  if (!phone) return '—'
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11) return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+  return phone
+}
+
 /**
  * 전체 회원 (AI-211)
  * 모든 권한의 회원 목록 · 권한 배지 클릭 → 유저/관리자 선택 → 확인 후 변경.
@@ -106,6 +115,8 @@ export default function AllMembersPage() {
                 <tr>
                   <th style={{ width: 160 }}>이름</th>
                   <th>이메일</th>
+                  <th style={{ width: 140 }}>전화번호</th>
+                  <th style={{ width: 100, textAlign: 'right' }}>크레딧</th>
                   <th style={{ width: 140 }}>가입일</th>
                   <th style={{ width: 130, textAlign: 'center' }}>권한</th>
                 </tr>
@@ -115,6 +126,10 @@ export default function AllMembersPage() {
                   <tr key={u.id}>
                     <td className="strong">{u.name ?? u.nickname ?? '회원'}</td>
                     <td>{u.email ?? '—'}</td>
+                    <td className="num">{formatPhone(u.phoneNumber)}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {u.creditBalance != null ? u.creditBalance.toLocaleString() : '—'}
+                    </td>
                     <td className="num">{u.createdAt?.slice(0, 10) ?? '—'}</td>
                     <td
                       style={{

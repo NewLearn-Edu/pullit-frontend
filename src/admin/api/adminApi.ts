@@ -149,6 +149,24 @@ export async function fetchProblemFilters(subject: ApiSubject): Promise<FilterNo
   return data.data
 }
 
+export interface ProblemSubjectStat {
+  subject: ApiSubject
+  count: number
+  inactiveCount: number
+}
+
+export interface ProblemStats {
+  totalCount: number
+  inactiveCount: number
+  subjects: ProblemSubjectStat[]
+}
+
+/** 전체 문제 현황 KPI — 과목별 전체/비공개 문제 수 */
+export async function fetchProblemStats(): Promise<ProblemStats> {
+  const { data } = await adminApi.get<BaseResponse<ProblemStats>>('/api/admin/problems/stats')
+  return data.data
+}
+
 export async function fetchProblemDetail(id: string): Promise<ProblemDetail> {
   const { data } = await adminApi.get<BaseResponse<ProblemDetail>>(
     `/api/admin/problems/${encodeURIComponent(id)}`,
@@ -230,6 +248,8 @@ export interface AdminUser {
   name: string | null
   nickname: string | null
   email: string | null
+  phoneNumber: string | null
+  creditBalance: number | null
   role: UserRole
   createdAt: string
 }
