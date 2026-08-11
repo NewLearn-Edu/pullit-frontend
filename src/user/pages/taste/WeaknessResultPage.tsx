@@ -75,16 +75,68 @@ function useCountUp(target: number, delay = 300, duration = 900): number {
 }
 
 /**
- * 채점 마크 — 정답 동그라미 · 오답 빗금이 펜으로 긋듯 그려진다.
- * 완벽한 원 대신 살짝 삐뚤한 손그림 베지어 + 시작점을 지나치는 오버슛.
+ * 공용 카운트업 진행률 (0 → 1, easeOutCubic).
+ * 문항별 풀이 시간과 요약 풀이 시간이 같은 진행률을 곱해 쓰면
+ * 값이 달라도 전부 동시에 출발해 동시에 끝난다.
+ */
+function useCountProgress(delay: number, duration = 900): number {
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setProgress(1)
+      return
+    }
+    let raf = 0
+    let startAt: number | null = null
+    const tick = (now: number) => {
+      if (startAt === null) startAt = now
+      const t = Math.min(1, (now - startAt) / duration)
+      setProgress(1 - Math.pow(1 - t, 3))
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(tick)
+    }, delay)
+    return () => {
+      clearTimeout(timer)
+      cancelAnimationFrame(raf)
+    }
+  }, [delay, duration])
+
+  return progress
+}
+
+/**
+ * 채점 마크 — 정답 동그라미 · 시간 초과 정답 세모 · 오답 빗금이 펜으로 긋듯 그려진다.
+ * 완벽한 도형 대신 살짝 삐뚤한 손그림 베지어 + 시작점을 지나치는 오버슛.
  * delayMs 로 문항 순서대로 스태거 (선생님이 위에서부터 채점하는 느낌)
  */
+type MarkKind = 'circle' | 'triangle' | 'slash'
+
 const CIRCLE_D =
   'M 27.8 4.6 C 16.2 2.6 4.9 11.4 4.2 23.6 C 3.5 36.4 13.5 47.3 25.9 47.6 ' +
   'C 38.4 47.9 47.9 37.8 47.6 25.4 C 47.3 13.4 38.9 4.9 27.9 5.3 C 23.4 5.5 19.6 7.1 16.4 9.7'
+// 꼭짓점에서 왼쪽 아래 → 밑변 → 오른쪽 위로 닫는 손그림 세모
+// 세 꼭짓점 모두 곡선으로 굴려 각진 느낌 제거 (끝은 꼭짓점을 살짝 지나침)
+const TRIANGLE_D =
+  'M 23.6 11.8 C 19.4 18.6 12.2 30.6 7.6 38.4 C 5.8 41.4 6.8 43.5 10.2 43.8 ' +
+  'C 21 44.7 31.4 44.6 41 43.8 C 44.4 43.5 45.4 41.4 43.6 38.4 ' +
+  'C 39 30.6 32.2 19 27.6 12 C 26.4 9.9 24.4 9.9 23.4 11.7 C 22.5 13.3 21.6 14.9 20.7 16.5'
 const SLASH_D = 'M 42.8 7.4 C 35.6 16.2 21.8 30.8 8.4 43.6'
 
-function GradeMark({ correct, delayMs }: { correct: boolean; delayMs: number }) {
+const MARK_PATH: Record<MarkKind, string> = {
+  circle: CIRCLE_D,
+  triangle: TRIANGLE_D,
+  slash: SLASH_D,
+}
+const MARK_LABEL: Record<MarkKind, string> = {
+  circle: '정답',
+  triangle: '정답 · 권장 시간 초과',
+  slash: '오답',
+}
+
+function GradeMark({ kind, delayMs }: { kind: MarkKind; delayMs: number }) {
   const style = { '--delay': `${delayMs}ms` } as React.CSSProperties
   return (
     <svg
@@ -92,12 +144,12 @@ function GradeMark({ correct, delayMs }: { correct: boolean; delayMs: number }) 
       className={markStyles.mark}
       style={style}
       role="img"
-      aria-label={correct ? '정답' : '오답'}
+      aria-label={MARK_LABEL[kind]}
     >
       <path
-        d={correct ? CIRCLE_D : SLASH_D}
+        d={MARK_PATH[kind]}
         pathLength={100}
-        className={clsx(markStyles.stroke, !correct && markStyles.strokeFast)}
+        className={clsx(markStyles.stroke, kind === 'slash' && markStyles.strokeFast)}
       />
     </svg>
   )
@@ -207,9 +259,10 @@ export default function WeaknessResultPage() {
 
   const score = skillScore?.score ?? local
   const weak = skillScore?.weak ?? score < 70
-  // 채점 마크(300ms 시작 · 문항당 350ms 스태거 · 원 그리기 600ms)가 모두 끝난 뒤 점수를 굴린다
-  const marksDoneMs = 300 + Math.max(0, rows.length - 1) * 350 + 700
-  const displayScore = useCountUp(score, marksDoneMs)
+  // 시퀀스: 채점 마크 → 풀이 시간 → 점수 → 약점 도장
+  const marksDoneMs = 300 + Math.max(0, rows.length - 1) * 350 + 700 // 마크 완료
+  const timesDoneMs = marksDoneMs + 900 // 풀이 시간 굴림(900ms) 완료
+  const displayScore = useCountUp(score, timesDoneMs)
 
   // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
   const [stamped, setStamped] = useState(false)
@@ -218,15 +271,19 @@ export default function WeaknessResultPage() {
       setStamped(false)
       return
     }
-    const timer = window.setTimeout(() => setStamped(true), marksDoneMs + 950)
+    const timer = window.setTimeout(() => setStamped(true), timesDoneMs + 950)
     return () => clearTimeout(timer)
-  }, [weak, marksDoneMs])
+  }, [weak, timesDoneMs])
 
   const correctCount = rows.filter(({ result }) => result.serverCorrect ?? result.correct).length
   const totalSec = Math.round(rows.reduce((s, { result }) => s + result.elapsedMs, 0) / 1000)
 
-  // 풀이 시간 — 채점이 끝난 뒤 점수와 동시에 도르륵
-  const displayTotalSec = useCountUp(totalSec, marksDoneMs)
+  // 풀이 시간 — 채점 마크가 끝난 뒤, 요약 카드와 문항별 셀이 같은 진행률로 동시에 차오른다
+  const countProgress = useCountProgress(marksDoneMs)
+  const displayTotalSec = Math.round(totalSec * countProgress)
+
+  // 문항별 획득 점수 — 풀이 시간이 다 오른 뒤 상단 점수와 함께 굴린다
+  const scoreProgress = useCountProgress(timesDoneMs)
 
   // 정답 수 — 채점 마크에서 동그라미가 쳐지는 순간마다 +1
   const [displayCorrect, setDisplayCorrect] = useState(0)
@@ -267,7 +324,7 @@ export default function WeaknessResultPage() {
             {weak && stamped && (
               <span
                 className={clsx(
-                  'shrink-0 rounded-full bg-[#fff1f2] px-[10px] py-[4px] text-[12px] font-semibold text-primary',
+                  'shrink-0 rounded-full bg-primary px-[12px] py-[5px] text-[13px] font-bold text-white',
                   markStyles.stamp,
                 )}
               >
@@ -335,7 +392,10 @@ export default function WeaknessResultPage() {
                     <p className="whitespace-nowrap text-[16px] font-bold text-[#121417]">
                       {i + 1}번
                     </p>
-                    <GradeMark correct={isCorrect} delayMs={300 + i * 350} />
+                    <GradeMark
+                      kind={isCorrect ? (overTime ? 'triangle' : 'circle') : 'slash'}
+                      delayMs={300 + i * 350}
+                    />
                   </div>
 
                   {/* 답안 — 내 답만 크게 · 정답 보조줄은 틀렸을 때만 */}
@@ -352,7 +412,7 @@ export default function WeaknessResultPage() {
                       <p className="flex items-center gap-[4px] whitespace-nowrap text-[15px] font-medium text-primary">
                         정답
                         {shortAnswer ? (
-                          <span>{correctAnswer}</span>
+                          <span className="font-semibold">{correctAnswer}</span>
                         ) : (
                           <span className="text-[20px] leading-none">{correctAnswer}</span>
                         )}
@@ -362,16 +422,12 @@ export default function WeaknessResultPage() {
 
                   {/* 풀이 시간 — 권장 보조줄은 초과했을 때만 (빨간 시간의 이유) */}
                   <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
-                    <p
-                      className={clsx(
-                        'whitespace-nowrap text-[15px] font-semibold tabular-nums',
-                        overTime ? 'text-primary' : 'text-[#121417]',
-                      )}
-                    >
-                      {formatShort(elapsedSec)}
+                    <p className="whitespace-nowrap text-[15px] font-semibold tabular-nums text-[#121417]">
+                      {/* 요약 카드와 같은 진행률 — 모든 시간이 동시에 차오른다 */}
+                      {formatShort(Math.round(elapsedSec * countProgress))}
                     </p>
                     {overTime && (
-                      <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
+                      <p className="whitespace-nowrap text-[15px] font-medium tabular-nums text-primary">
                         권장 {formatShort(recSec)}
                       </p>
                     )}
@@ -380,7 +436,12 @@ export default function WeaknessResultPage() {
                   {/* 점수 — 획득 점수만 크게 · 배점 보조줄은 만점이 아닐 때만 */}
                   <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
                     <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-[#121417]">
-                      {Number.isInteger(earned) ? earned : earned.toFixed(1)}점
+                      {(() => {
+                        // 풀이 시간이 끝난 뒤 상단 점수와 같은 진행률로 차오른다
+                        const shown = Math.round(earned * scoreProgress * 10) / 10
+                        return Number.isInteger(shown) ? shown : shown.toFixed(1)
+                      })()}
+                      점
                     </p>
                     {earned < basePoints && (
                       <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
