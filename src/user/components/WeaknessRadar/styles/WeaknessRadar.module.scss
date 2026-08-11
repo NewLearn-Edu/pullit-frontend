@@ -1,0 +1,46 @@
+// -----------------------------------------------------------------------------
+// WeaknessRadar · 약점 레이더 차트 (Figma 2689-12016)
+// 약점 노드는 띵~ 띵 울리는 이중 펄스 링으로 강조한다
+// -----------------------------------------------------------------------------
+
+.pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radar-ping 2.2s ease-out infinite;
+}
+
+// 두 번째 링 — 첫 링을 살짝 따라가며 "띵~ 띵" 이중 울림
+.pulseLate {
+  animation-delay: 0.35s;
+}
+
+@keyframes radar-ping {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.5);
+  }
+  55% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+// 점·라벨 색은 약점 여부가 바뀔 때 부드럽게 전환
+.dot {
+  transition: fill 300ms ease;
+}
+
+.label {
+  transition: fill 300ms ease, opacity 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+    opacity: 0;
+  }
+}
