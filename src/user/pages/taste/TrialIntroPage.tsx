@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
-import { useUserStore } from '@/user/stores/userStore'
+import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
+import { useMe } from '@/user/hooks/useMe'
 
 /**
  * 마케팅 진입용 시네마틱 인트로 (/start/:subject)
@@ -65,6 +66,14 @@ export default function TrialIntroPage() {
   useEffect(() => {
     if (!subject) navigate('/', { replace: true })
   }, [subject, navigate])
+
+  // 회원은 맛보기 퍼널 대상이 아니다 — 광고 링크·직접 진입 모두 홈으로
+  // (useMe 는 조회 전용 loadMe 라 게스트를 만들지 않는다 — 크롤러 안전)
+  useMe()
+  const isMember = useUserStore(selectIsMember)
+  useEffect(() => {
+    if (isMember) navigate('/home', { replace: true })
+  }, [isMember, navigate])
 
   const lines = useMemo(() => buildLines(subject ?? 'math'), [subject])
 

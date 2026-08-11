@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import AppHeader from '@/user/components/AppHeader'
 import { type Subject } from '@/user/stores/tasteStore'
-import { useUserStore } from '@/user/stores/userStore'
+import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
+import { useMe } from '@/user/hooks/useMe'
 import styles from './styles/TasteStartPage.module.scss'
 
 interface SubjectOption {
@@ -29,6 +30,13 @@ export default function TasteStartPage() {
   const [selected, setSelected] = useState<Subject>('math')
   const [pending, setPending] = useState(false)
   const [sessionFailed, setSessionFailed] = useState(false)
+
+  // 회원은 맛보기 퍼널 대상이 아니다 — 홈으로 (조회 전용이라 게스트 생성 없음)
+  useMe()
+  const isMember = useUserStore(selectIsMember)
+  useEffect(() => {
+    if (isMember) navigate('/home', { replace: true })
+  }, [isMember, navigate])
 
   /**
    * 시네마틱 인트로(/start/:subject)로 — reset·setLastSubject 는 인트로의
