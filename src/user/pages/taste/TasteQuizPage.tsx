@@ -13,6 +13,7 @@ import {
 } from '@/user/data/mockProblems'
 import { useTasteStore } from '@/user/stores/tasteStore'
 import { useUserStore } from '@/user/stores/userStore'
+import { useSolveStore } from '@/user/stores/solveStore'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
@@ -47,6 +48,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   const idx = Number(index ?? 0)
 
   const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTasteStore()
+  const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
   const ensureSession = useUserStore((s) => s.ensureSession)
 
   // 홈에서 /taste 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
@@ -56,6 +58,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   }, [ensureSession])
 
   const problems = useMemo(() => {
+    if (!isTaste && solveSession) return solveSession.problems
     if (subject === 'math' && mathSkillNodeId) {
       return getProblemsBySkillNode(mathSkillNodeId)
     }
@@ -63,16 +66,17 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
       return getProblemsByEnglishType(englishTypeId)
     }
     return []
-  }, [subject, mathSkillNodeId, englishTypeId])
+  }, [isTaste, solveSession, subject, mathSkillNodeId, englishTypeId])
 
   useEffect(() => {
+    if (!isTaste && solveSession) return // 진입처가 준비한 문제로 진행 — 목 선택 불필요
     const fallback = isTaste ? '/taste' : '/home'
     if (subject === 'math' && !mathSkillNodeId) {
       navigate(fallback, { replace: true })
     } else if (subject === 'english' && !englishTypeId) {
       navigate(fallback, { replace: true })
     }
-  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTaste])
+  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTaste, solveSession])
 
   const problem = problems[idx]
 
@@ -177,7 +181,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
 
     const req: AttemptSubmitRequest = {
       problemId: serverId,
-      source: isTaste ? 'TRIAL' : 'FREE',
+      source: isTaste ? 'TRIAL' : (solveSession?.source ?? 'FREE'),
       // 무응답은 서버가 400(답 필수)을 던지므로 0 을 sentinel 로 보낸다.
       // 정답 번호는 1~5 라 절대 일치하지 않아 오답으로 채점된다 (skipped 플래그는 백엔드 후속)
       submittedNo: selectedChoice ?? 0,
@@ -233,13 +237,13 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
       navigate(`${isTaste ? '/taste/quiz' : '/solve'}/${subject}/${nextIdx}`)
       return
     }
-    navigate(isTaste ? '/weakness' : '/home')
+    navigate(isTaste ? '/weakness' : (solveSession?.returnTo ?? '/home'))
   }
 
   const handleClose = () => {
     // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
     if (window.confirm('나가면 풀이가 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
-      navigate(isTaste ? '/taste' : '/home')
+      navigate(isTaste ? '/taste' : (solveSession?.returnTo ?? '/home'))
     }
   }
 

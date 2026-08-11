@@ -1,4 +1,5 @@
 import { type WrongNoteItem } from '@/user/api/attemptApi'
+import { type Problem } from '@/user/data/mockProblems'
 import { MATH_MAP_NODES, type MapNode } from '@/user/data/mathWeaknessMap'
 import { ENGLISH_MAP_NODES } from '@/user/data/englishWeaknessMap'
 import { type Subject } from '@/user/stores/tasteStore'
@@ -72,4 +73,32 @@ export function formatWrongAt(iso: string): string {
   if (Number.isNaN(d.getTime())) return ''
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// 난이도별 권장/제한 시간 (초) — 서버 문제에는 시간 정보가 없어 POC 기본값
+const TIME_BY_DIFFICULTY: Record<string, { rec: number; max: number }> = {
+  basic: { rec: 120, max: 240 },
+  normal: { rec: 180, max: 300 },
+  advanced: { rec: 240, max: 420 },
+}
+
+/**
+ * 오답노트 항목 → 풀이 화면(Problem) 변환.
+ * 서버는 정답을 목록에 내려주지 않으므로 answer 는 0 (채점은 제출 API 가 담당).
+ */
+export function toSolveProblem(item: WrongNoteItem, index: number): Problem {
+  const time = TIME_BY_DIFFICULTY[item.difficulty?.toLowerCase() ?? ''] ?? TIME_BY_DIFFICULTY.normal
+  const points = item.points === 2 || item.points === 3 || item.points === 4 ? item.points : 3
+  return {
+    id: index + 1,
+    serverId: item.problemId,
+    subject: item.subject === 'ENGLISH' ? 'english' : 'math',
+    points,
+    tRecSec: time.rec,
+    tMaxSec: time.max,
+    bodyText: [item.question, item.passage].filter(Boolean).join('\n\n'),
+    choices: item.choices ?? [],
+    answer: 0, // 미공개 — 서버 채점 결과(submitAttempt 응답)만 신뢰
+    explanation: { intent: '', correctAnalysis: '' },
+  }
 }
