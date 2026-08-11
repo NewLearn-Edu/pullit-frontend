@@ -1,0 +1,144 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// StreakHeatmapCard · 학습 연속일 (Figma 2678-9949)
+//   12주 = 4주 블록 × 3 · 행(주) × 열(일~토) 12px 칸
+// -----------------------------------------------------------------------------
+
+$ink-900: #121417;
+$line: #e5e7ea;
+$fill: #f0f1f3;
+
+// 학습량 5단계 (시안 팔레트)
+$lv0: #f0f1f3;
+$lv1: #ffe0e5;
+$lv2: #ffbac4;
+$lv3: #f97587;
+$lv4: #ed3451;
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: $color-canvas;
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+// ── 헤더 ─────────────────────────────────────────────────────────────────────
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  width: 100%;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: $ink-900;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: $fill;
+  font-size: 12px;
+  font-weight: $fw-medium;
+  color: #23272b;
+  white-space: nowrap;
+}
+
+// ── 잔디 ─────────────────────────────────────────────────────────────────────
+// 칸을 고정 12px 로 두면 350px 폭에서 넘쳐 잘린다.
+// 그리드 1fr 로 유연하게 줄어들되, 전체 폭을 시안 크기(12px 칸)로 상한을 둔다.
+
+.blocks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); // 4주 블록 3개 = 12주
+  gap: 10px;
+  width: 100%;
+  max-width: 356px; // 12px 칸 기준 자연 크기 — 넓은 화면에서 과대 확대 방지
+  margin: 0 auto;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.month {
+  font-size: 11px;
+  line-height: 11px;
+  color: #7e848a;
+}
+
+.weeks {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr); // 행 = 주
+  gap: 3px;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); // 열 = 일~토
+  gap: 3px;
+}
+
+.cell {
+  width: 100%;
+  aspect-ratio: 1; // 정사각 유지 — 폭에 따라 함께 줄어든다
+  border-radius: 2px;
+  background: $lv0;
+}
+
+.lv0 { background: $lv0; }
+.lv1 { background: $lv1; }
+.lv2 { background: $lv2; }
+.lv3 { background: $lv3; }
+.lv4 { background: $lv4; }
+
+// 미래 날짜 — 아직 오지 않은 칸은 테두리만 남겨 "빈 자리"로 구분
+.future {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px $fill;
+}
+
+// ── 범례 ─────────────────────────────────────────────────────────────────────
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+// 범례 스와치 — 잔디 칸과 달리 고정 크기
+.legendCell {
+  display: block;
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: $lv0;
+}
+
+.legendLabel {
+  font-size: 11px;
+  color: #7e848a;
+
+  &:first-child { margin-right: 2px; }
+  &:last-child { margin-left: 2px; }
+}
