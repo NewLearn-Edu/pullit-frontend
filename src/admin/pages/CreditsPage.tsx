@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import {
   adjustCredit,
@@ -359,7 +360,9 @@ function AdjustModal({
     }
   }
 
-  return (
+  // .view 진입 애니메이션의 transform 이 fixed 기준점을 바꿔 오버레이가 본문 영역만 덮는다.
+  // 포털로 밖에 렌더 — 어드민 CSS 변수가 .admin-root 스코프라 대상도 .admin-root
+  return createPortal(
     <div className="cr-overlay" onClick={onClose}>
       <div className="card cr-modal" onClick={(e) => e.stopPropagation()}>
         <div className="card-head">
@@ -419,6 +422,7 @@ function AdjustModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.querySelector('.admin-root') ?? document.body,
   )
 }

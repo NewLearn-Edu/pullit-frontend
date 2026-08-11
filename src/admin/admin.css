@@ -358,6 +358,8 @@
     background: var(--color-canvas); border: 1px solid var(--color-line);
     border-radius: 12px; font-size: 14px;
   }
+  /* 검색어가 있으면 보더 강조 — 보더가 래퍼에 있어 :has 로 건다 (2026-08-11) */
+  .search-box:has(input:not(:placeholder-shown)),
   .search-box:focus-within { border-color: var(--line-strong); }
   .search-box input { border: none; outline: none; background: none; flex: 1; font-size: 14px; color: var(--color-fg); }
   .search-box input::placeholder { color: var(--color-muted); }
@@ -768,21 +770,37 @@
 
   .cr-overlay {
     position: fixed; inset: 0; z-index: 120;
-    background: rgba(22, 15, 14, .38);
+    background: rgba(22, 15, 14, .45);   /* 문제 미리보기 모달(.pv-modal-overlay)과 동일 */
     display: grid; place-items: center;
+    padding: 24px;
     animation: pa-view-in .18s ease both;
   }
-  .cr-modal { width: min(420px, calc(100vw - 32px)); padding: 22px; }
-  .cr-field { display: block; margin-bottom: 12px; }
-  .cr-field span { display: block; font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 6px; }
+  .cr-modal { width: min(420px, calc(100vw - 32px)); padding: 24px; }   /* 카드 패딩 24px */
+  .cr-field { display: block; margin-bottom: 14px; }
+  .cr-field span { display: block; font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 8px; }
+  /* 인풋 규격 — 검색박스·셀렉트와 동일하게 44px / r12 / 좌우 패딩 14px (2026-07-24) */
   .cr-field input {
-    width: 100%; height: 38px; padding: 0 12px;
-    border: 1px solid var(--color-line); border-radius: var(--r-compact);
+    width: 100%; height: 44px; padding: 0 14px;
+    border: 1px solid var(--color-line); border-radius: 12px;
     background: var(--color-canvas); color: var(--color-fg); font-size: 14px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
   }
-  .cr-field input:focus { border-color: var(--line-strong); }
-  .cr-error { margin: -6px 0 12px; font-size: 12.5px; color: var(--color-primary); font-weight: 600; }
-  .cr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .cr-field input::placeholder { color: var(--color-muted); }
+  /* 값이 들어간 인풋은 보더를 진하게 — 빈 값과 구분 (2026-08-11).
+     placeholder 가 있어야 :not(:placeholder-shown) 이 동작한다.
+     포커스가 이기도록 포커스 규칙보다 먼저 선언 */
+  .cr-field input:not(:placeholder-shown) { border-color: var(--line-strong); }
+  .cr-field input:focus {
+    border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft);
+  }
+  /* number 스피너 제거 — 디자인 시스템에 없는 네이티브 컨트롤 */
+  .cr-field input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+  .cr-field input[type="number"]::-webkit-outer-spin-button,
+  .cr-field input[type="number"]::-webkit-inner-spin-button { appearance: none; margin: 0; }
+  .cr-error { margin: -8px 0 14px; font-size: 12.5px; color: var(--color-primary); font-weight: 600; }
+  .cr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .cr-actions .btn { height: 44px; padding: 0 18px; }   /* 폼 제출 버튼 44px */
+  .cr-actions .btn:disabled { opacity: .45; cursor: default; filter: none; }
 
   /* ============ View entrance ============ */
   .view { display: block; animation: pa-view-in .35s cubic-bezier(.2, .8, .3, 1) both; }
