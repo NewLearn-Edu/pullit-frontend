@@ -13,6 +13,7 @@ import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
 import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import TasteStartPage from './user/pages/taste/TasteStartPage'
+import TrialIntroPage from './user/pages/taste/TrialIntroPage'
 import TasteQuizPage from './user/pages/taste/TasteQuizPage'
 import TasteCompletePage from './user/pages/taste/TasteCompletePage'
 import TasteReviewPage from './user/pages/taste/TasteReviewPage'
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
       <Route path="/taste" element={<TasteStartPage />} />
+      <Route path="/start/:subject" element={<TrialIntroPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
       <Route path="/taste/review/:subject/:index" element={<TasteReviewPage />} />

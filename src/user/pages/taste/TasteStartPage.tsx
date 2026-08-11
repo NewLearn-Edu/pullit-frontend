@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import AppHeader from '@/user/components/AppHeader'
-import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/tasteStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import styles from './styles/TasteStartPage.module.scss'
@@ -25,19 +25,16 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
  */
 export default function TasteStartPage() {
   const navigate = useNavigate()
-  const reset = useTasteStore((s) => s.reset)
-  const setLastSubject = useTasteStore((s) => s.setLastSubject)
   const ensureSession = useUserStore((s) => s.ensureSession)
   const [selected, setSelected] = useState<Subject>('math')
   const [pending, setPending] = useState(false)
   const [sessionFailed, setSessionFailed] = useState(false)
 
-  /** 세션 확보 후 퀴즈로 — 실패해도 reset 하지 않아 기존 결과가 날아가지 않는다 */
-  const start = () => {
-    reset()
-    setLastSubject(selected)
-    navigate(`/taste/quiz/${selected}/0`)
-  }
+  /**
+   * 시네마틱 인트로(/start/:subject)로 — reset·setLastSubject 는 인트로의
+   * 시작하기 클릭에서 처리되므로 여기선 이동만 한다 (실패해도 기존 결과 보존)
+   */
+  const start = () => navigate(`/start/${selected}`)
 
   const handleNext = async () => {
     setPending(true)
