@@ -45,6 +45,7 @@ export default function App() {
       <Route path="/taste" element={<TasteStartPage />} />
       <Route path="/start/:subject" element={<TrialIntroPage />} />
       <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
+      <Route path="/solve/:subject/:index" element={<TasteQuizPage mode="solve" />} />
       <Route path="/taste/complete" element={<TasteCompletePage />} />
       <Route path="/taste/review/:subject/:index" element={<TasteReviewPage />} />
       <Route path="/weakness" element={<WeaknessResultPage />} />

@@ -1,7 +1,8 @@
 import styles from './styles/QuizTopBar.module.scss'
 
 interface QuizTopBarProps {
-  progress: { current: number; total: number }
+  /** 미전달 시 진행 문구("성적 상승까지 N문제") 없이 과목명만 표시 — 일반 문제풀이 모드 */
+  progress?: { current: number; total: number }
   subjectLabel: string
   onClose: () => void
   /** 우측 액션 — 풀이 중에는 정답·해설 접근 금지라 미전달 (2026-08-07 플로우 변경) */
@@ -34,7 +35,7 @@ export function QuizTopBar({
   progressRatio,
 }: QuizTopBarProps) {
   // 현재 문제 포함 남은 문제 수
-  const remaining = Math.max(0, progress.total - progress.current + 1)
+  const remaining = progress ? Math.max(0, progress.total - progress.current + 1) : 0
 
   return (
     <header className={styles.header}>
@@ -54,11 +55,15 @@ export function QuizTopBar({
         {/* 중앙: 과목명 | 성적 상승까지 N문제 (진행 바는 문제 카드 상단으로 이동) */}
         <div className={styles.center}>
           <span className={styles.subject}>{subjectLabel}</span>
-          <span aria-hidden className={styles.vDivider} />
-          <span className={styles.remaining}>
-            성적 상승까지{' '}
-            <span className={styles.remainingCount}>{remaining}문제</span>
-          </span>
+          {progress && (
+            <>
+              <span aria-hidden className={styles.vDivider} />
+              <span className={styles.remaining}>
+                성적 상승까지{' '}
+                <span className={styles.remainingCount}>{remaining}문제</span>
+              </span>
+            </>
+          )}
         </div>
 
         {/* 우측: 전달된 액션만 (풀이 화면은 비움 — 정답·해설은 결과 페이지에서) */}

@@ -25,15 +25,23 @@ const SUBJECT_LABEL: Record<Subject, string> = {
   english: '영어 · 빈칸 추론',
 }
 
+type QuizMode = 'taste' | 'solve'
+
 /**
- * 맛보기 테스트 문제풀이 화면 (2026-08-07 플로우 변경)
+ * 문제풀이 화면 (2026-08-07 플로우 변경 · 2026-08-11 solve 모드 추가)
+ *
+ * mode='taste' (기본, /taste/quiz/*): 맛보기 진단 — 진행바·문항 카운트 표시,
+ *   결과를 tasteStore 에 쌓고 마지막 문제에서 결과 페이지(/weakness)로.
+ * mode='solve' (/solve/*): 일반 문제풀이 — 진행 표시 없음, source=FREE,
+ *   진단 세션을 오염시키지 않고 마지막 문제 완료 시 홈으로 (결과 화면은 후속).
  * 상단 2행 (네비 + 필기 툴바) 고정 · 아래는 문제카드 (필기 캔버스) · 보기 5개.
  *
  * 풀이 중에는 정답·해설 접근 불가 — 채점은 마지막 문제의 "채점하기"에서 일괄.
  * 보기를 선택하면 하단에서 다음/채점하기 버튼이 올라오고, 선택 해제하면 내려간다.
  * 해설은 결과 페이지(/weakness)의 문항별 "해설보기"로 확인한다.
  */
-export default function TasteQuizPage() {
+export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
+  const isTaste = mode === 'taste'
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
@@ -58,12 +66,13 @@ export default function TasteQuizPage() {
   }, [subject, mathSkillNodeId, englishTypeId])
 
   useEffect(() => {
+    const fallback = isTaste ? '/taste' : '/home'
     if (subject === 'math' && !mathSkillNodeId) {
-      navigate('/taste', { replace: true })
+      navigate(fallback, { replace: true })
     } else if (subject === 'english' && !englishTypeId) {
-      navigate('/taste', { replace: true })
+      navigate(fallback, { replace: true })
     }
-  }, [subject, mathSkillNodeId, englishTypeId, navigate])
+  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTaste])
 
   const problem = problems[idx]
 
@@ -168,7 +177,7 @@ export default function TasteQuizPage() {
 
     const req: AttemptSubmitRequest = {
       problemId: serverId,
-      source: 'TRIAL',
+      source: isTaste ? 'TRIAL' : 'FREE',
       // 무응답은 서버가 400(답 필수)을 던지므로 0 을 sentinel 로 보낸다.
       // 정답 번호는 1~5 라 절대 일치하지 않아 오답으로 채점된다 (skipped 플래그는 백엔드 후속)
       submittedNo: selectedChoice ?? 0,
@@ -176,12 +185,13 @@ export default function TasteQuizPage() {
     }
 
     submitAttempt(req)
-      .then((res) =>
+      .then((res) => {
+        if (!isTaste) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
         updateResult(subject as Subject, problem.id, {
           attemptId: res.attemptId,
           serverCorrect: res.isCorrect,
-        }),
-      )
+        })
+      })
       .catch((error) => {
         if (isRetryableAttemptError(error)) enqueueAttempt(req)
       })
@@ -201,33 +211,35 @@ export default function TasteQuizPage() {
     })
 
     const elapsedMs = Date.now() - startAt.current
-    addResult(subject as Subject, {
-      problemId: problem.id,
-      selectedChoice: answerValue,
-      correct,
-      earnedPoints: score.earnedPoints,
-      timeoverFlag: score.timeoverFlag,
-      peekedBeforeAnswer: false,
-      elapsedMs,
-    })
+    if (isTaste) {
+      addResult(subject as Subject, {
+        problemId: problem.id,
+        selectedChoice: answerValue,
+        correct,
+        earnedPoints: score.earnedPoints,
+        timeoverFlag: score.timeoverFlag,
+        peekedBeforeAnswer: false,
+        elapsedMs,
+      })
+    }
     recordAttempt(answerValue, elapsedMs)
     goNext()
   }
 
-  // 선택한 과목의 문제만 풀고 완주 — 마지막 문제(채점하기)는 결과 페이지로 직행
+  // 맛보기: 마지막 문제(채점하기) → 결과 페이지 · 일반 풀이: 완료 → 홈 (결과 화면 후속)
   const goNext = () => {
     const nextIdx = idx + 1
     if (nextIdx < problems.length) {
-      navigate(`/taste/quiz/${subject}/${nextIdx}`)
+      navigate(`${isTaste ? '/taste/quiz' : '/solve'}/${subject}/${nextIdx}`)
       return
     }
-    navigate('/weakness')
+    navigate(isTaste ? '/weakness' : '/home')
   }
 
   const handleClose = () => {
     // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
-    if (window.confirm('나가면 이 진단은 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
-      navigate('/taste')
+    if (window.confirm('나가면 풀이가 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
+      navigate(isTaste ? '/taste' : '/home')
     }
   }
 
@@ -235,15 +247,17 @@ export default function TasteQuizPage() {
   const confirmDontKnow = () => {
     setSkipConfirmOpen(false)
     const elapsedMs = Date.now() - startAt.current
-    addResult(subject as Subject, {
-      problemId: problem.id,
-      selectedChoice: null,
-      correct: false,
-      earnedPoints: 0,
-      timeoverFlag: overTime,
-      peekedBeforeAnswer: false,
-      elapsedMs,
-    })
+    if (isTaste) {
+      addResult(subject as Subject, {
+        problemId: problem.id,
+        selectedChoice: null,
+        correct: false,
+        earnedPoints: 0,
+        timeoverFlag: overTime,
+        peekedBeforeAnswer: false,
+        elapsedMs,
+      })
+    }
     recordAttempt(null, elapsedMs)
     goNext()
   }
@@ -251,10 +265,10 @@ export default function TasteQuizPage() {
   return (
     <div className={styles.page}>
       <QuizTopBar
-        progress={{ current: idx + 1, total: problems.length }}
+        progress={isTaste ? { current: idx + 1, total: problems.length } : undefined}
         subjectLabel={SUBJECT_LABEL[subject as Subject]}
         onClose={handleClose}
-        progressRatio={(idx + 1) / problems.length}
+        progressRatio={isTaste ? (idx + 1) / problems.length : undefined}
         rightExtra={
           <button
             type="button"
@@ -389,7 +403,7 @@ export default function TasteQuizPage() {
         )}
         {answerValue != null ? (
           <button type="button" onClick={submitAndNext} className={styles.nextButton}>
-            {isLast ? '채점하기' : '다음'}
+            {isLast ? (isTaste ? '채점하기' : '완료') : '다음'}
           </button>
         ) : (
           <button
