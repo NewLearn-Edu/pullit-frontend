@@ -32,7 +32,7 @@ export function UserNav({ active }: UserNavProps) {
           <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
           <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
           <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
-          <NavItem icon={<ReportIcon filled={active === 'report'} />} label="리포트" active={active === 'report'} />
+          <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 리포트" active={active === 'report'} />
           <NavItem to="/my" icon={<ProfileIcon filled={active === 'my'} />} label="마이페이지" active={active === 'my'} />
         </nav>
         <div className={styles.footer}>
@@ -60,17 +60,17 @@ export function UserNav({ active }: UserNavProps) {
           <MapIcon filled={active === 'map'} />
           약점 지도
         </Link>
-        <button
-          type="button"
-          // 오답노트는 학습 기록 섹션 소속 — 하단 네비에서는 학습 기록을 활성 표시 (시안 2632-7566)
+        <Link
+          to="/report"
+          // 오답노트는 학습 리포트 섹션 소속 — 하단 네비에서는 리포트를 활성 표시 (시안 2632-7566)
           className={clsx(
             styles.bottomItem,
             (active === 'report' || active === 'wrongNote') && styles.bottomItemActive,
           )}
         >
           <ReportIcon filled={active === 'report' || active === 'wrongNote'} />
-          학습 기록
-        </button>
+          학습 리포트
+        </Link>
       </nav>
     </>
   )

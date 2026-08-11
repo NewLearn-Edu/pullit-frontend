@@ -5,6 +5,7 @@ import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import WrongNoteDetailPage from './user/pages/wrongnote/WrongNoteDetailPage'
 import MyPage from './user/pages/my/MyPage'
+import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/wrong-note" element={<WrongNotePage />} />
       <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
+      <Route path="/report" element={<ReportPage />} />
       <Route path="/my" element={<MyPage />} />
       <Route path="/weakness-map" element={<WeaknessMapPage />} />
       <Route path="/login" element={<LoginPage />} />
