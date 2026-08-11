@@ -275,6 +275,12 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include hover { opacity: 0.85; }
 }
 
+// 진단완료(점수) 행 — 표시 전용, 클릭 어포던스 제거
+.subRowStatic {
+  cursor: default;
+  @include hover { opacity: 1; }
+}
+
 .subRowLocked {
   background: $row-gray;
   cursor: default;

@@ -192,8 +192,9 @@ export default function HomePage() {
               {subUnits.map((u, i) => {
                 const firstUnsolved = subUnits.findIndex((x) => x.score == null)
                 if (u.score != null) {
+                  // 진단완료 행은 표시 전용 — 풀이 진입은 "풀기" 행에서만
                   return (
-                    <button key={u.name} type="button" onClick={startQuiz} className={styles.subRow}>
+                    <div key={u.name} className={clsx(styles.subRow, styles.subRowStatic)}>
                       <span className={styles.subBody}>
                         <span className={styles.subName}>{u.name}</span>
                         {u.minutes != null && (
@@ -205,7 +206,7 @@ export default function HomePage() {
                       <span className={clsx(styles.score, u.weak && styles.scoreWeak)}>
                         {u.score}점
                       </span>
-                    </button>
+                    </div>
                   )
                 }
                 if (i === firstUnsolved) {
