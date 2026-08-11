@@ -1,0 +1,274 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ScoreComparisonCard · 평균 점수 비교 (Figma 2678-8996)
+// -----------------------------------------------------------------------------
+
+$ink: #160f0e; // text/dark
+$ink-900: #121417; // black/900
+$line: #e5e7ea; // black/200
+$muted: #80858b; // black/500
+$label: #40464c; // black/700
+$chip-dark: #23272b; // black/800
+$tint: #fff1f2; // red/100
+$fill: #f0f1f3; // black/100
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+  background: $color-canvas;
+  overflow: hidden;
+}
+
+// ── 헤더 ─────────────────────────────────────────────────────────────────────
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px; // Body/L/Strong
+  font-weight: $fw-bold;
+  color: $ink;
+}
+
+// 16px 원형 ⓘ — 시안은 소문자 i, 배경 black/100
+.infoButton {
+  @include button-reset;
+  @include flex-center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 12px;
+  background: $fill;
+  font-size: 10px;
+  font-weight: $fw-bold;
+  line-height: 1;
+  color: $muted;
+
+  @include hover { background: #e5e7ea; }
+}
+
+// ── 대분류 칩 ────────────────────────────────────────────────────────────────
+
+.chips {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  @include button-reset;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid $line;
+  background: $color-canvas;
+  font-size: 12px;
+  font-weight: $fw-medium;
+  color: $ink-900;
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.chipActive {
+  border-color: $chip-dark;
+  background: $chip-dark;
+  color: #fff;
+}
+
+// ── 막대 차트 ────────────────────────────────────────────────────────────────
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 153px; // 시안 고정 높이 (배지 + 막대 + 라벨)
+}
+
+.barColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 9px;
+  background: $fill;
+  font-size: 12px;
+  font-weight: $fw-medium;
+  color: $muted;
+  white-space: nowrap;
+}
+
+.badgeHighlight {
+  background: $tint;
+  color: $color-primary;
+}
+
+.bar {
+  width: 30px;
+  border-radius: 6px 6px 0 0;
+  background: $line;
+  // 카드 진입 시 아래에서 자라나는 연출
+  transform-origin: bottom;
+  animation: bar-grow 520ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
+
+.barHighlight {
+  background: $color-primary;
+}
+
+.barLabel {
+  width: 60px;
+  font-size: 10px;
+  font-weight: $fw-medium;
+  color: $label;
+  text-align: center;
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+}
+
+// 데이터 없음 — 칩을 골랐는데 아직 푼 문제가 없는 단원
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 153px;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: $label;
+  text-align: center;
+}
+
+.emptySub {
+  font-size: 12px;
+  font-weight: $fw-normal;
+  color: $muted;
+}
+
+// ── ⓘ 안내 — 모바일 바텀시트 / 데스크탑 중앙 다이얼로그 ──────────────────────
+
+.infoDim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  animation: info-fade 200ms ease;
+
+  @include desktop-up { align-items: center; }
+}
+
+.infoSheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 350px; // 최소 지원 폭
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: $color-canvas;
+  transform: translateY(var(--drag-y, 0px));
+  animation: info-rise 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+
+  @include desktop-up {
+    max-width: 420px;
+    min-width: 0;
+    padding: 24px;
+    border-radius: 20px;
+    animation: info-pop 260ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+}
+
+// 드래그 중에는 트랜지션 없이 손가락을 그대로 따라간다
+.infoSheetDragging {
+  animation: none;
+}
+
+.infoHandle {
+  width: 42px;
+  height: 5px;
+  border-radius: $radius-full;
+  background: $line;
+
+  @include desktop-up { display: none; }
+}
+
+.infoTitle {
+  margin: 6px 0 0;
+  width: 100%;
+  font-size: 18px;
+  font-weight: $fw-bold;
+  color: $ink-900;
+  text-align: left;
+}
+
+.infoDesc {
+  margin: 0;
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #5e6368;
+  word-break: keep-all;
+}
+
+.infoFormula {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8f8f8;
+  font-size: 14px;
+  font-weight: $fw-bold;
+  color: $ink-900;
+  text-align: center;
+}
+
+.infoClose {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  height: 52px;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: $chip-dark;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: #fff;
+
+  @include hover { opacity: 0.92; }
+}
+
+@keyframes info-fade {
+  from { opacity: 0; }
+}
+
+@keyframes info-rise {
+  from { transform: translateY(100%); }
+}
+
+@keyframes info-pop {
+  from { opacity: 0; transform: scale(0.94); }
+}
