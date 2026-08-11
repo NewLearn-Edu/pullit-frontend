@@ -9,7 +9,6 @@ import {
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
-import OnboardingHeader from '@/user/components/OnboardingHeader'
 import WeaknessRadar from '@/user/components/WeaknessRadar/WeaknessRadar'
 import logoApple from '@/assets/auth/logo-apple.svg'
 import logoGoogle from '@/assets/auth/logo-google.svg'
@@ -54,6 +53,8 @@ export default function SignupPromptPage() {
   const navigate = useNavigate()
   const isMember = useUserStore(selectIsMember)
   const [error, setError] = useState<string | null>(null)
+  // 건너뛰기 확인 — 게스트 기록의 한계(브라우저 종속·2주 후 삭제)를 고지하고 진행
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
 
   // 약점 그래프 데모 — 3.2초마다 시나리오 순환
   const [scenarioIdx, setScenarioIdx] = useState(0)
@@ -73,6 +74,19 @@ export default function SignupPromptPage() {
   useEffect(() => {
     if (isMember) navigate('/home', { replace: true })
   }, [isMember, navigate])
+
+  // 스크롤 없는 화면 — 드래그 시 러버밴드(밀렸다 튕겨 돌아옴) 차단
+  useEffect(() => {
+    const html = document.documentElement
+    const prevOverscroll = html.style.overscrollBehavior
+    const prevBodyOverflow = document.body.style.overflow
+    html.style.overscrollBehavior = 'none'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      html.style.overscrollBehavior = prevOverscroll
+      document.body.style.overflow = prevBodyOverflow
+    }
+  }, [])
 
   /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 보던 결과 화면으로 복귀 */
   const withReturn = (startLogin: () => void) => () => {
@@ -96,10 +110,10 @@ export default function SignupPromptPage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-white">
-      <OnboardingHeader onClose={() => navigate(-1)} />
+    <div className="flex h-dvh touch-none flex-col overflow-hidden overscroll-none bg-white">
 
       {/* 타이틀 · 그래프 · 로그인 버튼을 한 묶음으로 세로 중앙 정렬 — 그래프 간격은 margin 으로 관리 */}
+      {/* 타이틀·그래프·버튼을 촘촘한 한 묶음으로 — 묶음 자체를 세로 중앙 정렬 */}
       <main className="flex min-h-0 w-full flex-1 flex-col items-center justify-center px-[40px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[16px] max-md:px-lg">
         <div className="flex w-full max-w-[620px] shrink-0 flex-col gap-md text-center">
           <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">
@@ -168,15 +182,87 @@ export default function SignupPromptPage() {
 
         {error && <p className="text-[14px] text-danger">{error}</p>}
 
+          {/* 터치 타깃 확보 — 텍스트는 그대로, 패딩으로 누르는 영역만 키운다 */}
           <button
             type="button"
-            onClick={() => navigate('/home')}
-            className="mt-xs text-[15px] font-medium text-[#80858b]"
+            onClick={() => setSkipConfirmOpen(true)}
+            className="px-xl py-[12px] text-[15px] font-medium text-[#80858b]"
           >
             건너뛰기
           </button>
         </div>
       </main>
+
+      {/* 건너뛰기 확인 — 데스크탑 중앙 다이얼로그 · 모바일 바텀시트 */}
+      {skipConfirmOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="skip-confirm-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-md:items-end max-md:p-0"
+        >
+          <style>{`
+            @keyframes pi-modal-fade { from { opacity: 0 } }
+            @keyframes pi-modal-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }
+            @keyframes pi-modal-rise { from { transform: translateY(100%) } }
+          `}</style>
+          {/* 배경 딤 — 탭하면 닫힘 (= 가입 유도 화면 유지) */}
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => setSkipConfirmOpen(false)}
+            className="absolute inset-0 animate-[pi-modal-fade_200ms_ease] bg-black/45"
+          />
+          <div className="relative w-full max-w-[400px] animate-[pi-modal-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] rounded-[20px] bg-white px-[24px] pb-[20px] pt-[28px] max-md:max-w-none max-md:animate-[pi-modal-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-md:rounded-b-none max-md:rounded-t-[24px] max-md:pb-[calc(20px+env(safe-area-inset-bottom))]">
+            <div className="mx-auto flex size-[52px] items-center justify-center rounded-full bg-[#fff1f2] text-[24px]">
+              ⏳
+            </div>
+            <h2
+              id="skip-confirm-title"
+              className="mt-[14px] break-keep text-center text-[20px] font-bold text-[#121417]"
+            >
+              저장하지 않고 넘어갈까?
+            </h2>
+            <p className="mt-[8px] break-keep text-center text-[14px] text-[#80858b]">
+              가입하지 않으면 진단 기록이
+            </p>
+
+            <ul className="mt-[16px] flex flex-col gap-[10px] rounded-[14px] bg-[#f7f8f9] px-[18px] py-[16px]">
+              <li className="flex items-start gap-[8px] text-[14.5px] leading-[1.55] text-[#40464c]">
+                <span className="mt-[7px] size-[4px] shrink-0 rounded-full bg-[#a6abb1]" aria-hidden />
+                <span className="break-keep">
+                  <b className="font-semibold text-[#121417]">이 브라우저에만 남아</b> — 다른 기기나
+                  브라우저에서는 볼 수 없어
+                </span>
+              </li>
+              <li className="flex items-start gap-[8px] text-[14.5px] leading-[1.55] text-[#40464c]">
+                <span className="mt-[7px] size-[4px] shrink-0 rounded-full bg-[#a6abb1]" aria-hidden />
+                <span className="break-keep">
+                  <b className="font-semibold text-[#ff385c]">2주가 지나면 모두 사라져</b> — 다시
+                  오면 처음부터 시작해야 해
+                </span>
+              </li>
+            </ul>
+
+            <div className="mt-[20px] flex flex-col gap-[8px]">
+              <button
+                type="button"
+                onClick={() => setSkipConfirmOpen(false)}
+                className="h-[54px] rounded-[12px] bg-[#ff385c] text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
+              >
+                3초만에 저장하기
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/home')}
+                className="h-[46px] rounded-[12px] text-[15px] font-medium text-[#80858b] transition-colors hover:bg-[#f7f8f9]"
+              >
+                사라져도 괜찮아
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
