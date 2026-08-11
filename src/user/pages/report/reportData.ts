@@ -37,18 +37,15 @@ export function getScoreComparison(category: string): ScoreComparison | null {
 export interface HeatmapDay {
   date: Date
   level: 0 | 1 | 2 | 3 | 4
+  /** 아직 오지 않은 날 — 빈 자리로 표시 */
+  future: boolean
 }
 
-/** 4주(28일) 블록 — 시안은 3블록을 가로로 나열, 각 블록 위에 월 라벨 */
-export interface HeatmapBlock {
-  /** 블록 대표 월 (1~12) */
-  month: number
-  /** 4행 × 7열 — 행 = 주, 열 = 일~토 */
-  weeks: HeatmapDay[][]
-}
+/** 한 주(일~토 7칸) — GitHub 잔디와 동일하게 열 = 주, 행 = 요일 */
+export type HeatmapWeek = HeatmapDay[]
 
-const BLOCK_COUNT = 3
-const WEEKS_PER_BLOCK = 4
+/** 1년 = 53주 (GitHub 컨트리뷰션 그래프와 동일한 범위) */
+export const HEATMAP_WEEKS = 53
 
 /** 날짜 시드 기반 의사난수 — 같은 날짜면 항상 같은 값 (렌더 흔들림 방지) */
 function seededLevel(date: Date): HeatmapDay['level'] {
@@ -63,47 +60,67 @@ function seededLevel(date: Date): HeatmapDay['level'] {
 }
 
 /**
- * 오늘이 속한 주의 토요일을 끝으로 하는 12주치 히트맵.
- * 미래 날짜는 level 0 으로 비워 둔다.
+ * 최근 1년치 잔디 — 이번 주 토요일을 마지막 열로 하는 53주.
+ * 각 열은 일~토 7칸이고, 미래 날짜는 빈 자리로 남긴다.
  */
-export function buildHeatmap(today: Date): HeatmapBlock[] {
+export function buildHeatmap(today: Date): HeatmapWeek[] {
   const end = new Date(today)
   end.setHours(0, 0, 0, 0)
   end.setDate(end.getDate() + (6 - end.getDay())) // 이번 주 토요일
 
-  const totalDays = BLOCK_COUNT * WEEKS_PER_BLOCK * 7
   const start = new Date(end)
-  start.setDate(start.getDate() - (totalDays - 1))
+  start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1))
 
-  const days: HeatmapDay[] = Array.from({ length: totalDays }, (_, i) => {
-    const date = new Date(start)
-    date.setDate(start.getDate() + i)
-    const future = date.getTime() > today.getTime()
-    return { date, level: future ? 0 : seededLevel(date) }
-  })
+  return Array.from({ length: HEATMAP_WEEKS }, (_, w) =>
+    Array.from({ length: 7 }, (_, d) => {
+      const date = new Date(start)
+      date.setDate(start.getDate() + w * 7 + d)
+      const future = date.getTime() > today.getTime()
+      return { date, level: future ? (0 as const) : seededLevel(date), future }
+    }),
+  )
+}
 
-  return Array.from({ length: BLOCK_COUNT }, (_, b) => {
-    const blockDays = days.slice(b * WEEKS_PER_BLOCK * 7, (b + 1) * WEEKS_PER_BLOCK * 7)
-    const weeks = Array.from({ length: WEEKS_PER_BLOCK }, (_, w) =>
-      blockDays.slice(w * 7, w * 7 + 7),
-    )
-    // 블록 대표 월 = 가운데 날짜 기준 (블록이 두 달에 걸쳐도 하나로 표기)
-    const mid = blockDays[Math.floor(blockDays.length / 2)]
-    return { month: mid.date.getMonth() + 1, weeks }
+/**
+ * 열(주)마다 표시할 월 라벨 — 그 달의 첫 주에만 값이 있고 나머지는 null.
+ * 첫 열은 잘린 주라 라벨을 붙이지 않는다 (라벨이 왼쪽으로 삐져나오는 것 방지).
+ */
+export function buildMonthLabels(weeks: HeatmapWeek[]): Array<number | null> {
+  let prev = -1
+  return weeks.map((week, i) => {
+    const month = week[0].date.getMonth()
+    if (i === 0) {
+      prev = month
+      return null
+    }
+    if (month !== prev) {
+      prev = month
+      return month + 1
+    }
+    return null
   })
 }
 
-/** 오늘까지 이어진 연속 학습일 (level > 0 인 날이 끊기지 않은 길이) */
-export function countStreak(blocks: HeatmapBlock[], today: Date): number {
-  const flat = blocks
-    .flatMap((b) => b.weeks.flat())
-    .filter((d) => d.date.getTime() <= today.getTime())
+/**
+ * 연속 학습일 — level > 0 인 날이 끊기지 않은 길이.
+ * 오늘은 아직 안 풀었을 수 있으므로 오늘이 비어 있으면 어제부터 센다
+ * (하루가 끝나기 전까지는 연속이 깨진 게 아니다).
+ */
+export function countStreak(weeks: HeatmapWeek[]): number {
+  const flat = weeks.flat().filter((d) => !d.future)
+  let end = flat.length - 1
+  if (end >= 0 && flat[end].level === 0) end-- // 오늘 미학습 — 판정 보류
   let streak = 0
-  for (let i = flat.length - 1; i >= 0; i--) {
+  for (let i = end; i >= 0; i--) {
     if (flat[i].level === 0) break
     streak++
   }
   return streak
+}
+
+/** 1년간 학습한 날 수 — 헤더 부제용 */
+export function countActiveDays(weeks: HeatmapWeek[]): number {
+  return weeks.flat().filter((d) => !d.future && d.level > 0).length
 }
 
 // ── 이번 주 학습 (라인 차트) ─────────────────────────────────────────────────

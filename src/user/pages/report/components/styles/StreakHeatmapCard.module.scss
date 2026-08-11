@@ -32,10 +32,17 @@ $lv4: #ed3451;
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: $space-sm;
   width: 100%;
+}
+
+.headTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .title {
@@ -43,6 +50,17 @@ $lv4: #ed3451;
   font-size: 16px;
   font-weight: $fw-bold;
   color: $ink-900;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: #7e848a;
+
+  b {
+    font-weight: $fw-bold;
+    color: #40464c;
+  }
 }
 
 .badge {
@@ -59,47 +77,89 @@ $lv4: #ed3451;
   white-space: nowrap;
 }
 
-// ── 잔디 ─────────────────────────────────────────────────────────────────────
-// 칸을 고정 12px 로 두면 350px 폭에서 넘쳐 잘린다.
-// 그리드 1fr 로 유연하게 줄어들되, 전체 폭을 시안 크기(12px 칸)로 상한을 둔다.
+// ── 잔디 (GitHub 컨트리뷰션 그래프 방식) ────────────────────────────────────
+// 1년 = 53주 → 열 = 주, 행 = 일~토. 대부분의 화면보다 넓어 가로 스크롤한다.
 
-.blocks {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); // 4주 블록 3개 = 12주
-  gap: 10px;
-  width: 100%;
-  max-width: 356px; // 12px 칸 기준 자연 크기 — 넓은 화면에서 과대 확대 방지
-  margin: 0 auto;
-}
+$cell: 11px;
+$cell-gap: 3px;
+$row-h: $cell + $cell-gap;
 
-.block {
+// 요일 축(고정) + 스크롤 영역(잔디)
+.chartRow {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  width: 100%;
   min-width: 0;
 }
 
+.scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  // 스크롤바가 잔디 아래에 겹쳐 보이지 않게 숨김 (스크롤 자체는 유지)
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+// 왼쪽 요일 축 — 월 라벨 높이만큼 내려서 잔디 행과 맞춘다
+.dayAxis {
+  display: flex;
+  flex-direction: column;
+  gap: $cell-gap;
+  flex: none;
+  padding-top: 18px;
+}
+
+.dayAxisLabel {
+  height: $cell;
+  font-size: 9px;
+  line-height: $cell;
+  color: #a6abb1;
+  white-space: nowrap;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content; // 53주 실폭 유지 — 줄어들어 뭉개지지 않게
+}
+
+// 월 라벨 — 주 열과 같은 폭으로 깔아 달 시작 열 위에 정확히 얹힌다
+.months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: $row-h;
+  height: 14px;
+}
+
 .month {
-  font-size: 11px;
-  line-height: 11px;
+  font-size: 10px;
+  line-height: 14px;
   color: #7e848a;
+  white-space: nowrap;
 }
 
 .weeks {
-  display: grid;
-  grid-template-rows: repeat(4, 1fr); // 행 = 주
-  gap: 3px;
+  display: flex;
+  gap: $cell-gap;
 }
 
+// 한 주 = 세로 7칸 (일~토)
 .week {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr); // 열 = 일~토
-  gap: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: $cell-gap;
+  flex: none;
 }
 
 .cell {
-  width: 100%;
-  aspect-ratio: 1; // 정사각 유지 — 폭에 따라 함께 줄어든다
+  display: block;
+  width: $cell;
+  height: $cell;
   border-radius: 2px;
   background: $lv0;
 }
@@ -125,14 +185,15 @@ $lv4: #ed3451;
   gap: 4px;
 }
 
-// 범례 스와치 — 잔디 칸과 달리 고정 크기
+// 범례 스와치 — 잔디 칸과 달리 고정 크기.
+// background 를 여기서 지정하면 뒤에 선언된 규칙이 .lv1~.lv4 를 덮어써
+// 범례가 전부 회색으로 나온다 (동일 특이도 · 후순위 승리). 색은 레벨 클래스에만 맡긴다.
 .legendCell {
   display: block;
   flex: none;
   width: 11px;
   height: 11px;
   border-radius: 2px;
-  background: $lv0;
 }
 
 .legendLabel {
