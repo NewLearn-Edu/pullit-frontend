@@ -172,18 +172,31 @@ export default function HomePage() {
               {/* 순서대로 진행 — 진단 안 된 첫 항목만 풀 수 있고 나머지는 잠김 */}
               {progress.rows.map((u) => {
                 if (u.diagnosis) {
+                  // 진단 완료 행 — 누르면 그 단원의 진단 결과 재열람으로
                   return (
-                    <div key={u.name} className={clsx(styles.subRow, styles.subRowStatic)}>
+                    <button
+                      key={u.name}
+                      type="button"
+                      onClick={() =>
+                        navigate(`/unit-result/${subject}/${encodeURIComponent(u.name)}`)
+                      }
+                      className={clsx(styles.subRow, styles.subRowLink)}
+                    >
                       <span className={styles.subBody}>
                         <span className={styles.subName}>{u.name}</span>
                         <span className={styles.subMeta}>
                           {u.diagnosis.minutes}분 | 정답 {u.diagnosis.correct}문제
                         </span>
                       </span>
-                      <span className={clsx(styles.score, u.diagnosis.weak && styles.scoreWeak)}>
-                        {u.diagnosis.score}점
+                      <span className={styles.subRight}>
+                        <span
+                          className={clsx(styles.score, u.diagnosis.weak && styles.scoreWeak)}
+                        >
+                          {u.diagnosis.score}점
+                        </span>
+                        <ChevronIcon />
                       </span>
-                    </div>
+                    </button>
                   )
                 }
                 if (u.state === 'next') {
@@ -312,5 +325,23 @@ function RadarChart({
 }
 
 /* --- 인라인 SVG 아이콘 --- */
+
+function ChevronIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#a6abb1"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="m9 5 7 7-7 7" />
+    </svg>
+  )
+}
 
 

@@ -272,6 +272,21 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   cursor: default;
 }
 
+// 진단 완료 행 — 결과 재열람으로 진입 가능
+.subRowLink {
+  cursor: pointer;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.85; }
+}
+
+.subRight {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
 .subRowLocked {
   background: $row-gray;
   cursor: default;
