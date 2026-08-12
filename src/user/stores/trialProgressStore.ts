@@ -73,7 +73,7 @@ export function todayKey(base: Date = new Date()): string {
  * 실서비스 연동 시 이 상수와 initial diagnosed 를 통째로 지우면 된다.
  */
 const DEMO_DIAGNOSED: Record<string, UnitDiagnosis> = {
-  '지수와 로그': { score: 68, weak: true, minutes: 24, correct: 2, date: '2026-08-11' },
+  '지수·로그': { score: 68, weak: true, minutes: 24, correct: 2, date: '2026-08-11' },
   주제: { score: 82, weak: false, minutes: 18, correct: 3, date: '2026-08-11' },
 }
 

@@ -18,7 +18,11 @@ import type { Subject } from '@/user/stores/tasteStore'
  */
 
 export interface CurriculumUnit {
-  /** 표시 명칭 — 서버 skill_node 와 같은 이름을 쓴다 (점수 매칭 키) */
+  /**
+   * 표시 명칭 — 약점 지도(mathWeaknessMap)와 같은 축약 표기 (2026-08-12 표).
+   * 서버 skill_node 정식 명칭("지수와 로그")과는 normalize 느슨 매칭으로 잇는다.
+   * 진단 저장(diagnosed) 키로도 쓰인다.
+   */
   name: string
   /**
    * 맛보기 문제 조회 키 (POC 목 데이터용).
@@ -40,11 +44,11 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     name: '대수',
     slug: 'algebra',
     units: [
-      { name: '지수와 로그', nodeId: 'sn-exp-log-01' },
-      { name: '지수함수와 로그함수', nodeId: 'sn-exp-log-02' },
+      { name: '지수·로그', nodeId: 'sn-exp-log-01' },
+      { name: '지수·로그함수', nodeId: 'sn-exp-log-02' },
       { name: '삼각함수', nodeId: 'sn-trig-01' },
-      { name: '사인법칙과 코사인법칙', nodeId: 'sn-trig-02' },
-      { name: '등차수열과 등비수열', nodeId: 'sn-seq-01' },
+      { name: '사인·코사인법칙', nodeId: 'sn-trig-02' },
+      { name: '등차·등비수열', nodeId: 'sn-seq-01' },
       { name: '수열의 합', nodeId: 'sn-seq-02' },
       { name: '수학적 귀납법' },
     ],
@@ -55,8 +59,9 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     units: [
       { name: '함수의 극한' },
       { name: '함수의 연속' },
-      { name: '미분계수와 도함수', nodeId: 'sn-diff-01' },
-      { name: '도함수의 활용', nodeId: 'sn-diff-02' },
+      // 축약 표에선 미분계수/도함수가 분리돼 있지만 진단 유닛은 합본 유지 — 같은 규칙으로 축약
+      { name: '미분계수·도함수', nodeId: 'sn-diff-01' },
+      { name: '도함수 활용', nodeId: 'sn-diff-02' },
     ],
   },
   {
@@ -64,8 +69,8 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     slug: 'statistics',
     units: [
       { name: '경우의 수' },
-      { name: '순열과 조합' },
-      { name: '확률의 뜻과 활용' },
+      { name: '순열·조합' },
+      { name: '확률의 뜻·이용' },
       { name: '조건부확률', nodeId: 'sn-stat-01' },
     ],
   },
