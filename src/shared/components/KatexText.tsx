@@ -106,6 +106,109 @@ const renderWithFallback = (tex: string, displayMode: boolean) => {
   return html
 }
 
+/**
+ * 괄호 그룹 하나를 통째로 묶을 수 있는 최대 길이(TeX 문자 수).
+ * 이보다 길면 묶지 않는다 — 통짜로 두면 접을 자리가 없어 화면을 넘치는데,
+ * 그 경우엔 그룹 안에서라도 접히는 편이 낫다.
+ */
+const MAX_PROTECTED_GROUP = 80
+
+/** open 위치의 ( 에 대응하는 ) 의 다음 인덱스 (짝이 없으면 -1) */
+const matchParen = (tex: string, open: number): number => {
+  let depth = 0
+  for (let i = open; i < tex.length; i++) {
+    const c = tex[i]
+    if (c === '\\') {
+      i++
+      continue
+    }
+    if (c === '(') depth++
+    else if (c === ')') {
+      depth--
+      if (depth === 0) return i + 1
+    }
+  }
+  return -1
+}
+
+/**
+ * 괄호 그룹을 {…} 로 묶어 **안에서 접히지 않게** 한다.
+ * KaTeX 는 괄호 안 이항연산자에도 base 를 끊어 두기 때문에, 그냥 두면
+ * "(2cos∠ABC +⏎1)(38cos∠ABC−37)" 처럼 묶음 한가운데서 줄이 갈라진다.
+ * 중괄호 그룹은 base 1개로 렌더되므로 그룹 사이(최상위 연산자)에서만 접힌다.
+ */
+const protectParenGroups = (tex: string): string => {
+  let out = ''
+  let braceDepth = 0
+  let i = 0
+  while (i < tex.length) {
+    const ch = tex[i]
+    if (ch === '\\') {
+      // \left( 는 \right) 와 짝이라 \left 부터 감싸야 구조가 깨지지 않는다.
+      // 구분자가 소괄호인 경우만 — \left\{ · \left| 등을 괄호로 오인하면
+      // 엉뚱한 위치에서 짝을 찾아 TeX 구조가 깨진다
+      const left = /^\\left\s*\(/.exec(tex.slice(i))
+      if (left) {
+        const end = braceDepth === 0 ? matchParen(tex, i + left[0].length - 1) : -1
+        if (end > 0 && end - i <= MAX_PROTECTED_GROUP) {
+          out += `{${tex.slice(i, end)}}`
+          i = end
+          continue
+        }
+        // 묶지 않기로 했으면 \left( 를 통째로 흘려보낸다 — 여기서 2글자만
+        // 소비하면 뒤따르는 ( 를 일반 괄호로 오인해 "\left{(" 로 깨진다
+        out += left[0]
+        i += left[0].length
+        continue
+      }
+      out += ch + (tex[i + 1] ?? '')
+      i += 2
+      continue
+    }
+    if (ch === '{') braceDepth++
+    else if (ch === '}') braceDepth--
+    if (ch === '(' && braceDepth === 0) {
+      const end = matchParen(tex, i)
+      if (end > 0 && end - i <= MAX_PROTECTED_GROUP) {
+        out += `{${tex.slice(i, end)}}`
+        i = end
+        continue
+      }
+    }
+    out += ch
+    i++
+  }
+  return out
+}
+
+/**
+ * 쉼표 뒤 줄바꿈 지점 삽입 — 쉼표로만 이어진 나열("(3,2,2),(4,3,2),…")은
+ * 통짜 base 1개라 접히지 않는다. 괄호·중괄호 **밖**의 쉼표 뒤에만 넣는다.
+ */
+const addCommaBreaks = (tex: string): string => {
+  let out = ''
+  let depth = 0
+  for (let i = 0; i < tex.length; i++) {
+    const ch = tex[i]
+    if (ch === '\\') {
+      out += ch + (tex[i + 1] ?? '')
+      i++
+      continue
+    }
+    if (ch === '(' || ch === '[' || ch === '{') depth++
+    else if (ch === ')' || ch === ']' || ch === '}') depth--
+    out += ch
+    if (ch === ',' && depth <= 0) out += '\\allowbreak '
+  }
+  return out
+}
+
+/**
+ * wrap 모드 전처리 — 접을 자리를 "묶음 사이"에만 만든다.
+ * 괄호 보호를 먼저 하므로, 뒤이은 쉼표 처리는 그룹 안 쉼표를 건드리지 않는다.
+ */
+const addBreakPoints = (tex: string): string => addCommaBreaks(protectParenGroups(tex))
+
 /** 인라인 수식 1개 → HTML (폭 실측용으로도 사용 — 실제 렌더와 동일 처리) */
 export const renderInlineHtml = (tex: string) =>
   emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(tex)), false))
@@ -115,7 +218,17 @@ interface Part {
   value: string
 }
 
-export function KatexText({ text }: { text: string }) {
+interface KatexTextProps {
+  text: string
+  /**
+   * 폭이 모자랄 때 **축소 대신 줄바꿈**으로 맞춘다 (기본 false = 기존 자동 축소).
+   * 해설처럼 "수식 크기가 화면 전체에서 균일" 해야 하는 곳에서 켠다 —
+   * display 자동 축소를 끄고, 끊을 자리가 없는 나열에는 \allowbreak 을 넣는다.
+   */
+  wrap?: boolean
+}
+
+export function KatexText({ text, wrap = false }: KatexTextProps) {
   const parts = useMemo(() => parse(text), [text])
 
   // 줄 전체가 수식 하나로 된 줄은 크기와 무관하게 위아래 간격 필요 — 개행/블록
@@ -147,9 +260,9 @@ export function KatexText({ text }: { text: string }) {
           )
         }
         if (p.type === 'block') {
-          return <BlockMath key={i} tex={p.value} />
+          return <BlockMath key={i} tex={p.value} wrap={wrap} />
         }
-        const html = renderInlineHtml(p.value)
+        const html = renderInlineHtml(wrap ? addBreakPoints(p.value) : p.value)
         return (
           <span
             key={i}
@@ -174,7 +287,7 @@ export function KatexText({ text }: { text: string }) {
  * 가로 스크롤 없이 딱 맞춘다 (최소 0.7배 · 그 밑으로는 스크롤 폴백).
  * 컨테이너 폭 변화(디바이스 토글·패드 드래그)에도 ResizeObserver 로 재계산.
  */
-function BlockMath({ tex }: { tex: string }) {
+function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null)
   const scaleRef = useRef(1)
   const [scale, setScale] = useState(1)
@@ -182,8 +295,14 @@ function BlockMath({ tex }: { tex: string }) {
   const html = useMemo(
     // displaySizeFractions: 블록 본문 분수는 이미 display 크기라 영향 없고,
     // 지수·첨자 속 분수만 \tfrac 으로 키워진다 (깨알 크기 방지)
-    () => emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(tex)), true)),
-    [tex],
+    () =>
+      emboldenDelims(
+        renderWithFallback(
+          displaySizeFractions(enlargeSetOps(wrap ? addBreakPoints(tex) : tex)),
+          true,
+        ),
+      ),
+    [tex, wrap],
   )
 
   useLayoutEffect(() => {
@@ -197,14 +316,15 @@ function BlockMath({ tex }: { tex: string }) {
 
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return
+    if (!el || wrap) return  // wrap 모드는 축소하지 않는다 — 크기 균일 유지
     const measure = () => {
       const container = el.clientWidth
       if (!container) return
-      // 실제 수식 콘텐츠 폭을 매번 실측 — .base 가 콘텐츠 크기(min-content)를
+      // 실제 수식 콘텐츠 폭을 매번 실측 — base 가 콘텐츠 크기(min-content)를
       // 갖는 유일한 노드 (.katex-display/.katex 는 블록이라 컨테이너 폭과 같고,
       // scrollWidth 는 컨테이너 폭 아래로 안 내려가 축소 후 복귀 불가)
-      const bases = el.querySelectorAll<HTMLElement>('.base')
+      // KaTeX 0.18 부터 클래스가 .katex-base 로 바뀌어 둘 다 잡는다
+      const bases = el.querySelectorAll<HTMLElement>('.katex-base, .base')
       const contentWidth = bases.length
         ? Math.max(...Array.from(bases, (b) => b.getBoundingClientRect().width))
         : el.scrollWidth
@@ -219,13 +339,13 @@ function BlockMath({ tex }: { tex: string }) {
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [html, scale])
+  }, [html, scale, wrap])
 
   return (
     <span
       ref={ref}
       className="katex-block block my-md overflow-x-auto text-center"
-      style={scale < 1 ? { fontSize: `${scale}em` } : undefined}
+      style={!wrap && scale < 1 ? { fontSize: `${scale}em` } : undefined}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

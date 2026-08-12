@@ -119,6 +119,14 @@
   font-weight: 700;
 }
 
+/* 수식 안 한글 — KaTeX 는 hangul_fallback 으로 감싸기만 하고 폰트를 지정하지 않아
+   KaTeX_Main 을 상속하다 브라우저 기본 세리프로 떨어진다((가)·(나) 폰트 튐).
+   본문과 같은 KoPubWorld Batang 으로 되돌린다 */
+.katex .hangul_fallback,
+.katex .cjk_fallback {
+  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', serif);
+}
+
 /* ── KaTeX 조판 보정 (문제·해설·학생 화면 공통) ──────────────────
    KaTeX 기본(1.21em)은 한글 본문보다 커서 줄이 튐 → 본문 크기에 맞춤 */
 .katex {
@@ -143,7 +151,9 @@ span.katex-block {
 
 .exam-blocks {
   font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', serif);
-  font-size: 15px;
+  /* .exam-explain-scale 과 동일 공식 — 350px→13px · 500px→15.5px 선형.
+     수식(em)이 이 크기를 따라가므로 해설 전체가 한 크기로 움직인다 */
+  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
   font-weight: 500;
   line-height: 1.85;
   color: var(--pv-fg, #120c0b);
@@ -164,6 +174,89 @@ span.katex-block {
 
 .exam-blocks .xb-math .katex-block {
   margin: 6px 0 14px;
+}
+
+/* 유도 단계 — aligned 를 대신하는 grid 2열.
+   1열(좌변) 우측 정렬 · 2열(우변) 좌측 정렬 → 등호가 세로로 맞는다.
+   행 간격은 row-gap 이 담당 (KatexText 가 span 래퍼를 하나 더 두기 때문에
+   .katex-block 인접 선택자로는 잡히지 않는다).
+   폭이 모자라면 접지 않고 블록 단위로 축소한다 — .xb-steps-fit 이 가용 폭
+   기준선, 그 안의 .xb-steps 는 자연 폭을 유지하고 배율은 StepsBlock 이 계산 */
+.exam-blocks .xb-steps-fit {
+  width: 100%;
+  margin: 6px 0 14px;
+  /* ★ overflow 를 걸지 않는다 — 한 축만 auto/hidden 이면 나머지 축의 visible 이
+     auto 로 계산돼(CSS Overflow §3) 세로 스크롤바까지 생긴다.
+     폭 맞추기는 전적으로 StepsBlock 의 배율이 담당한다 */
+}
+
+.exam-blocks .xb-steps {
+  display: grid;
+  grid-template-columns: auto auto;
+  /* ★ 좌변·우변의 baseline 을 맞춘다. 기본값(stretch)이면
+     ① 우변이 두 줄로 접힐 때 좌변이 첫 줄과 어긋나고
+     ② 좌변이 분수면 = 이 분수의 수학 축(axis)과 어긋난다.
+     KaTeX 가 분수를 축 기준으로 baseline 을 잡으므로 baseline 정렬이
+     한 수식으로 조판했을 때와 같은 위치를 만든다.
+     (아래 nowrap 으로 셀이 한 줄로 고정돼 접힘 시 어긋나는 문제는 없다) */
+  align-items: baseline;
+  row-gap: 8px; /* 기존 aligned 의 \\[0.5em] 행간과 동일 */
+  /* 좌우변을 별도 수식으로 쪼개면 KaTeX 가 관계연산자(=) 앞 여백을 잃는다
+     ("g(k)= 2k+1" 처럼 붙음) → 수학 조판의 thick space(5/18em) 만큼 복원 */
+  column-gap: 0.28em;
+  /* 컨테이너에 눌리면 셀이 좁아져 좌변이 접힌다 — 자연 폭을 유지하고
+     폭 맞추기는 StepsBlock 의 배율이 담당한다 */
+  width: max-content;
+  margin: 0 auto;
+}
+
+/* 유도 줄만 줄바꿈 금지 — 좌변이 접히면 우변(등호)이 좌변 첫 줄에 붙어
+   "304cos²(∠ABC) − = 0" 처럼 식이 뒤죽박죽으로 읽힌다 */
+.exam-blocks .xb-steps .katex-block .katex,
+.exam-blocks .xb-steps .katex-block .katex-display > .katex {
+  white-space: nowrap;
+}
+.exam-blocks .xb-steps .xb-step-l {
+  justify-self: end;
+  min-width: 0;
+}
+.exam-blocks .xb-steps .xb-step-r {
+  justify-self: start;
+  min-width: 0;
+}
+/* 각 셀 안의 display 수식은 셀 정렬을 따른다 — .katex-block 의 text-center 와
+   KaTeX 의 .katex-display{text-align:center} 를 모두 눌러야 먹는다 */
+.exam-blocks .xb-steps .xb-step-l .katex-block,
+.exam-blocks .xb-steps .xb-step-l .katex-display,
+.exam-blocks .xb-steps .xb-step-l .katex-display > .katex {
+  text-align: right;
+}
+.exam-blocks .xb-steps .xb-step-r .katex-block,
+.exam-blocks .xb-steps .xb-step-r .katex-display,
+.exam-blocks .xb-steps .xb-step-r .katex-display > .katex {
+  text-align: left;
+}
+.exam-blocks .xb-steps .katex-block {
+  margin: 0;
+  padding: 0;
+}
+
+/* ── 가로 스크롤 금지 · 넘치면 줄바꿈 ─────────────────────────────
+   KaTeX 는 .katex 에 white-space: nowrap 을 걸어 한 줄로 붙잡는데,
+   0.18 은 최상위 이항연산자마다 .katex-base 를 끊어 놓으므로
+   부모의 nowrap 만 풀면 그 경계에서 줄이 접힌다 (base 내부는 nowrap 유지).
+   .katex-base 의 display:inline-block · width:min-content 는 건드리지 않는다 —
+   줄바꿈은 base 사이에서만 일어나야 글리프가 깨지지 않는다 */
+.exam-blocks .katex-block .katex,
+.exam-blocks .katex-block .katex-display > .katex {
+  white-space: normal;
+}
+/* ★ overflow-x:auto(tailwind) 를 반드시 걷어내야 한다 — 스크롤 컨테이너가 되면
+   폭이 모자라도 접힐 이유가 없어져 white-space:normal 이 무력화된다.
+   두 축을 함께 visible 로 둔다 — 한 축이 hidden 이면 나머지 축의 visible 은
+   auto 로 계산돼(CSS Overflow §3) 스크롤바가 되살아난다 */
+.exam-blocks .katex-block {
+  overflow: visible;
 }
 
 /* (i)(ii)(iii) 케이스 분기 — 각 케이스 위에 여백을 넉넉히 줘 구획감 부여 */
