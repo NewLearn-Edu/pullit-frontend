@@ -144,7 +144,7 @@ export const useTrialProgressStore = create<TrialProgressState>()(
         }))
       },
 
-      // TODO: 크레딧 차감 API 연동 (CreditTransactionType 에 소모 타입 추가 필요) — 지금은 로컬 카운터만
+      // 크레딧 차감은 호출부(UnlockProgressPage)가 POST /api/credits/extra-set 성공 후 부른다
       buyExtraSet: () => {
         get().syncDay()
         set((s) => ({ extraToday: s.extraToday + 1 }))

@@ -4,7 +4,9 @@ import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { useCreditForExtraSet } from '@/user/api/creditApi'
 import { useMe } from '@/user/hooks/useMe'
+import { useUserStore } from '@/user/stores/userStore'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
 import {
@@ -39,6 +41,7 @@ export default function UnlockProgressPage() {
   const category = slug ? findCategoryBySlug(subject, slug) : undefined
 
   const { me } = useMe()
+  const loadMe = useUserStore((s) => s.loadMe)
   const credit = me?.creditBalance ?? 0
 
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
@@ -102,9 +105,23 @@ export default function UnlockProgressPage() {
     else setCreditSheetOpen(true)
   }
 
-  const confirmBuyExtraSet = () => {
-    buyExtraSet()
-    setCreditSheetOpen(false)
+  // 크레딧 이어풀기 — 서버 차감(POST /api/credits/extra-set) 성공 시에만 세트를 연다
+  const [buying, setBuying] = useState(false)
+  const [buyError, setBuyError] = useState<string | null>(null)
+  const confirmBuyExtraSet = async () => {
+    if (buying) return
+    setBuying(true)
+    setBuyError(null)
+    try {
+      await useCreditForExtraSet()
+      buyExtraSet() // 오늘 세트 카운터 +1 (로컬 진행 상태)
+      loadMe(true) // 크레딧 배지 잔액 갱신
+      setCreditSheetOpen(false)
+    } catch {
+      setBuyError('크레딧 사용에 실패했어. 잔액을 확인하고 다시 시도해줘')
+    } finally {
+      setBuying(false)
+    }
   }
 
   return (
@@ -286,6 +303,8 @@ export default function UnlockProgressPage() {
 
             {credit < EXTRA_SET_CREDIT_COST ? (
               <p className={styles.sheetWarn}>크레딧이 부족해. 내일 무료 세트로 이어서 풀자</p>
+            ) : buyError ? (
+              <p className={styles.sheetWarn}>{buyError}</p>
             ) : null}
 
             <div className={styles.sheetActions}>
@@ -299,10 +318,10 @@ export default function UnlockProgressPage() {
               <button
                 type="button"
                 onClick={confirmBuyExtraSet}
-                disabled={credit < EXTRA_SET_CREDIT_COST}
+                disabled={credit < EXTRA_SET_CREDIT_COST || buying}
                 className={styles.sheetConfirm}
               >
-                크레딧 쓰기
+                {buying ? '처리 중…' : '크레딧 쓰기'}
               </button>
             </div>
           </div>
