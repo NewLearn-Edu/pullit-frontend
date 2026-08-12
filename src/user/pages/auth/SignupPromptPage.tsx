@@ -213,42 +213,25 @@ export default function SignupPromptPage() {
             onClick={() => setSkipConfirmOpen(false)}
             className="absolute inset-0 animate-[pi-modal-fade_200ms_ease] bg-black/45"
           />
+          {/* 크레딧 시트와 같은 문법 — 타이틀 + 완결된 두 줄 안내 + 버튼 스택 */}
           <div className="relative w-full max-w-[400px] animate-[pi-modal-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] rounded-[20px] bg-white px-[24px] pb-[20px] pt-[28px] max-md:max-w-none max-md:animate-[pi-modal-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-md:rounded-b-none max-md:rounded-t-[24px] max-md:pb-[calc(20px+env(safe-area-inset-bottom))]">
-            <div className="mx-auto flex size-[52px] items-center justify-center rounded-full bg-[#fff1f2] text-[24px]">
-              ⏳
-            </div>
             <h2
               id="skip-confirm-title"
-              className="mt-[14px] break-keep text-center text-[20px] font-bold text-[#121417]"
+              className="break-keep text-center text-[18px] font-semibold text-[#121417]"
             >
               저장하지 않고 넘어갈까?
             </h2>
-            <p className="mt-[8px] break-keep text-center text-[14px] text-[#80858b]">
-              가입하지 않으면 진단 기록이
+            <p className="mt-[10px] break-keep text-center text-[14px] leading-[1.6] text-[#6f686a]">
+              지금 나가면 진단 기록은 이 브라우저에만 남고,
+              <br />
+              <b className="font-semibold text-[#ff385c]">2주가 지나면 사라져</b>
             </p>
-
-            <ul className="mt-[16px] flex flex-col gap-[10px] rounded-[14px] bg-[#f7f8f9] px-[18px] py-[16px]">
-              <li className="flex items-start gap-[8px] text-[14.5px] leading-[1.55] text-[#40464c]">
-                <span className="mt-[7px] size-[4px] shrink-0 rounded-full bg-[#a6abb1]" aria-hidden />
-                <span className="break-keep">
-                  <b className="font-semibold text-[#121417]">이 브라우저에만 남아</b> — 다른 기기나
-                  브라우저에서는 볼 수 없어
-                </span>
-              </li>
-              <li className="flex items-start gap-[8px] text-[14.5px] leading-[1.55] text-[#40464c]">
-                <span className="mt-[7px] size-[4px] shrink-0 rounded-full bg-[#a6abb1]" aria-hidden />
-                <span className="break-keep">
-                  <b className="font-semibold text-[#ff385c]">2주가 지나면 모두 사라져</b> — 다시
-                  오면 처음부터 시작해야 해
-                </span>
-              </li>
-            </ul>
 
             <div className="mt-[20px] flex flex-col gap-[8px]">
               <button
                 type="button"
                 onClick={() => setSkipConfirmOpen(false)}
-                className="h-[54px] rounded-[12px] bg-[#ff385c] text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
+                className="h-[54px] rounded-[12px] bg-[#ff385c] text-[16px] font-bold text-white transition-colors hover:bg-[#e6203f]"
               >
                 3초만에 저장하기
               </button>
