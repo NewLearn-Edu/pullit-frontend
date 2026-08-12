@@ -25,14 +25,23 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 16px 16px calc(40px + 96px); // 하단 네비에 가리지 않게 (모바일)
 
   @include desktop-up {
     max-width: 620px;
     margin: 0 auto;
     width: 100%;
-    padding: $space-xxl 16px 40px;
+  }
+}
+
+// 헤더(PageHeader)를 제외한 본문 — 카드들 간격·패딩
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 16px calc(40px + 96px); // 하단 네비에 가리지 않게 (모바일)
+
+  @include desktop-up {
+    padding: $space-md 16px 40px;
   }
 }
 

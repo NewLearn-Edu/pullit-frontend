@@ -17,22 +17,7 @@ $sub: #80858b;
   background: $bg;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  padding: $space-md 12px;
-}
 
-.back {
-  @include button-reset;
-  @include flex-center;
-  width: 40px;
-  height: 40px;
-  border-radius: $radius-full;
-  color: $ink;
-
-  @include hover { background: rgba(0, 0, 0, 0.05); }
-}
 
 .main {
   flex: 1;

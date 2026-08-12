@@ -4,67 +4,26 @@ import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
+import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
-import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/tasteStore'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
-import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
+import {
+  computeCategoryProgress,
+  selectRemainingSetsToday,
+  useTrialProgressStore,
+} from '@/user/stores/trialProgressStore'
+import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import graphLock from '@/assets/home/graph-lock.png'
 import graphExample from '@/assets/home/graph-example.png'
 import rowLock from '@/assets/home/row-lock.svg'
 import styles from './styles/HomePage.module.scss'
 
-// ── POC 목 데이터 · 백엔드 연동 시 API 로 대체 ────────────────────────────────
-
-/** 상단 칩 — 수학: 대분류 (2022 교육과정) · 영어: 독해 능력 4분류 */
-const CATS: Record<Subject, string[]> = {
-  math: ['대수', '미적분 I', '확률과 통계'],
-  english: ENGLISH_ABILITIES.map((a) => a.name),
-}
-
-interface SubUnit {
-  name: string
-  /** 진단 완료 시 점수 보유 — 없으면 풀기 대기/잠금 */
-  score?: number
-  /** 약점 판정 — 점수를 빨간색으로 강조 */
-  weak?: boolean
-  /** 진단 완료 행의 메타 ("24분 | 정답 2문제") */
-  minutes?: number
-  correct?: number
-}
-
-/** 진단 점수 목 (칩 이름 → 소단원/유형별) — 진단 API 연동 시 이 상수만 교체 */
-const MOCK_SCORES: Record<string, SubUnit[]> = {
-  대수: [
-    { name: '지수와 로그', score: 68, weak: true, minutes: 24, correct: 2 },
-    { name: '지수함수와 로그함수' },
-    { name: '삼각함수' },
-    { name: '사인법칙과 코사인법칙' },
-    { name: '등차수열과 등비수열' },
-    { name: '수열의 합' },
-    { name: '수학적 귀납법' },
-  ],
-  '미적분 I': [
-    { name: '함수의 극한' },
-    { name: '함수의 연속' },
-    { name: '미분계수와 도함수' },
-    { name: '도함수의 활용' },
-  ],
-  '확률과 통계': [
-    { name: '경우의 수' },
-    { name: '순열과 조합' },
-    { name: '확률의 뜻과 활용' },
-    { name: '조건부확률' },
-  ],
-  // 영어 4개 능력 — 유형 목록은 englishAbilities 단일 원천에서 파생
-  ...Object.fromEntries(
-    ENGLISH_ABILITIES.map((a) => [a.name, a.types.map((name) => ({ name }))]),
-  ),
-}
-// 디자인 목값: 내용 파악의 주제만 진단 완료 (82점 · 약점 아님)
-MOCK_SCORES['내용 파악'][0] = { name: '주제', score: 82, minutes: 18, correct: 3 }
+/** 맛보기 세트 문항 수 — 정책 3문항 */
+const SET_SIZE = 3
 
 /**
  * 메인 홈 (Figma PI-PAGE-04 · 2431-17022 · 2026-08-07 개편)
@@ -73,8 +32,9 @@ MOCK_SCORES['내용 파악'][0] = { name: '주제', score: 82, minutes: 18, corr
  */
 export default function HomePage() {
   const navigate = useNavigate()
-  const reset = useTasteStore((s) => s.reset)
-  const setLastSubject = useTasteStore((s) => s.setLastSubject)
+  const diagnosed = useTrialProgressStore((s) => s.diagnosed)
+  const syncDay = useTrialProgressStore((s) => s.syncDay)
+  const setsLeftToday = useTrialProgressStore(selectRemainingSetsToday)
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
   const credit = me?.creditBalance ?? 0
@@ -92,26 +52,32 @@ export default function HomePage() {
   }, [me, navigate])
 
   const [subject, setSubject] = useState<Subject>('math')
-  const [cat, setCat] = useState(CATS.math[0])
+  const [catSlug, setCatSlug] = useState(CURRICULUM.math[0].slug)
   const [infoOpen, setInfoOpen] = useState(false) // 약점 그래프 예시 안내 (? 버튼)
   // 인포 시트 아래로 스와이프 닫기 — 웹은 중앙 다이얼로그라 제스처 제외
   const infoDrag = useSheetDrag(() => setInfoOpen(false), {
     disabled: () => window.matchMedia('(min-width: 1281px)').matches,
   })
 
+  // 하루 세트 카운터는 자정에 리셋 — 홈 진입 때마다 날짜를 맞춘다
+  useEffect(() => {
+    syncDay()
+  }, [syncDay])
+
   const changeSubject = (s: Subject) => {
     setSubject(s)
-    setCat(CATS[s][0])
+    setCatSlug(CURRICULUM[s][0].slug)
   }
 
-  // 잠금 해제 = 문제 풀이 · POC 는 맛보기 퀴즈 플로우로 진입
-  const startQuiz = () => {
-    reset()
-    setLastSubject(subject)
-    navigate(`/taste/quiz/${subject}/0`)
-  }
+  const categories = CURRICULUM[subject]
+  const category = categories.find((c) => c.slug === catSlug) ?? categories[0]
+  const progress = computeCategoryProgress(category, diagnosed)
+  const unitLabel = UNIT_LABEL[subject]
+  const canStartToday = setsLeftToday > 0
 
-  const subUnits = MOCK_SCORES[cat] ?? []
+  /** 잠금 해제 진행 페이지 — 어디까지 왔는지·오늘 뭘 하면 되는지를 여기서 본다 */
+  const openUnlock = () => navigate(`/unlock/${subject}/${category.slug}`)
+
 
   return (
     <div className={styles.page}>
@@ -119,102 +85,121 @@ export default function HomePage() {
 
       <main className={styles.main}>
         {/* 상단 헤더 — 크레딧 · 과목 토글 · 오답노트/마이 */}
-        <header className={styles.header}>
-          <CreditBadge credit={credit} />
-          <SubjectTabs pill value={subject} onChange={changeSubject} />
-          <div className={styles.headerIcons}>
-            <button
-              type="button"
-              aria-label="오답노트"
-              onClick={() => navigate('/wrong-note')}
-              className={styles.iconCircle}
-            >
-              <WrongNoteIcon />
-            </button>
-            <button
-              type="button"
-              aria-label="마이페이지"
-              onClick={() => navigate('/my')}
-              className={styles.iconCircle}
-            >
-              <ProfileIcon size={18} />
-            </button>
-          </div>
-        </header>
+        <PageHeader
+          left={<CreditBadge credit={credit} />}
+          center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
+          hideRightOnDesktop
+          right={
+            <>
+              <button
+                type="button"
+                aria-label="오답노트"
+                onClick={() => navigate('/wrong-note')}
+                className={styles.iconCircle}
+              >
+                <WrongNoteIcon />
+              </button>
+              <button
+                type="button"
+                aria-label="마이페이지"
+                onClick={() => navigate('/my')}
+                className={styles.iconCircle}
+              >
+                <ProfileIcon size={18} />
+              </button>
+            </>
+          }
+        />
 
         <div className={styles.content}>
           <h1 className={styles.title}>약점 그래프</h1>
 
           {/* 대분류 칩 */}
           <div className={styles.chips}>
-            {CATS[subject].map((c) => (
+            {categories.map((c) => (
               <button
-                key={c}
+                key={c.slug}
                 type="button"
-                onClick={() => setCat(c)}
-                className={clsx(styles.chip, cat === c && styles.chipActive)}
+                onClick={() => setCatSlug(c.slug)}
+                className={clsx(styles.chip, category.slug === c.slug && styles.chipActive)}
               >
-                {c}
+                {c.name}
               </button>
             ))}
           </div>
 
-          {/* 약점 그래프 카드 — 진단 전에는 잠금 오버레이 */}
+          {/* 약점 그래프 카드 — 카테고리 유닛을 전부 진단해야 잠금이 풀린다 */}
           <div className={styles.graphCard}>
-            <RadarChart labels={subUnits.map((u) => u.name)} />
-            <div className={styles.graphOverlay}>
-              <button
-                type="button"
-                aria-label="약점 그래프 안내"
-                onClick={() => setInfoOpen(true)}
-                className={styles.helpChip}
-              >
-                ?
-              </button>
-              <div className={styles.graphOverlayBody}>
-                <img src={graphLock} alt="" className={styles.lockImage} />
-                <p className={styles.graphOverlayTitle}>{cat} 약점 그래프</p>
-                <p className={styles.graphOverlayDesc}>딱 3문제만 더 풀면 약점 그래프 열어줄게</p>
+            <RadarChart
+              units={progress.rows.map((u) => ({
+                name: u.name,
+                score: u.diagnosis?.score,
+                weak: u.diagnosis?.weak,
+              }))}
+            />
+            {!progress.unlocked && (
+              <div className={styles.graphOverlay}>
+                <button
+                  type="button"
+                  aria-label="약점 그래프 안내"
+                  onClick={() => setInfoOpen(true)}
+                  className={styles.helpChip}
+                >
+                  ?
+                </button>
+                <div className={styles.graphOverlayBody}>
+                  <img src={graphLock} alt="" className={styles.lockImage} />
+                  <p className={styles.graphOverlayTitle}>{category.name} 약점 그래프</p>
+                  <p className={styles.graphOverlayDesc}>
+                    {progress.remaining === 1
+                      ? `${unitLabel} 딱 하나 남았어. ${SET_SIZE}문제면 그래프가 열려`
+                      : `${unitLabel} ${progress.remaining}개만 더 풀면 그래프 열어줄게`}
+                  </p>
+                </div>
+                <button type="button" onClick={openUnlock} className={styles.unlockButton}>
+                  내 약점 그래프 잠금 해제하기
+                </button>
               </div>
-              <button type="button" onClick={startQuiz} className={styles.unlockButton}>
-                내 약점 그래프 잠금 해제하기
-              </button>
-            </div>
+            )}
           </div>
 
           {/* 소단원(수학) / 유형(영어) 리스트 — 진단완료·풀기·잠금 3단계 (Figma 2605-5698) */}
           <section className={styles.subSection}>
             <div className={styles.subHead}>
-              <h2 className={styles.subTitle}>{subject === 'math' ? '소단원' : '유형'}</h2>
+              <h2 className={styles.subTitle}>{unitLabel}</h2>
             </div>
             <div className={styles.subList}>
               {/* 순서대로 진행 — 진단 안 된 첫 항목만 풀 수 있고 나머지는 잠김 */}
-              {subUnits.map((u, i) => {
-                const firstUnsolved = subUnits.findIndex((x) => x.score == null)
-                if (u.score != null) {
-                  // 진단완료 행은 표시 전용 — 풀이 진입은 "풀기" 행에서만
+              {progress.rows.map((u) => {
+                if (u.diagnosis) {
                   return (
                     <div key={u.name} className={clsx(styles.subRow, styles.subRowStatic)}>
                       <span className={styles.subBody}>
                         <span className={styles.subName}>{u.name}</span>
-                        {u.minutes != null && (
-                          <span className={styles.subMeta}>
-                            {u.minutes}분 | 정답 {u.correct}문제
-                          </span>
-                        )}
+                        <span className={styles.subMeta}>
+                          {u.diagnosis.minutes}분 | 정답 {u.diagnosis.correct}문제
+                        </span>
                       </span>
-                      <span className={clsx(styles.score, u.weak && styles.scoreWeak)}>
-                        {u.score}점
+                      <span className={clsx(styles.score, u.diagnosis.weak && styles.scoreWeak)}>
+                        {u.diagnosis.score}점
                       </span>
                     </div>
                   )
                 }
-                if (i === firstUnsolved) {
+                if (u.state === 'next') {
+                  // 홈 리스트는 표시 전용 — 풀이 진입은 그래프 카드의 잠금 해제 CTA 로만
                   return (
-                    <button key={u.name} type="button" onClick={startQuiz} className={styles.subRow}>
-                      <span className={styles.subName}>{u.name}</span>
-                      <span className={styles.solveChip}>풀기</span>
-                    </button>
+                    <div
+                      key={u.name}
+                      className={clsx(styles.subRow, styles.subRowStatic, styles.subRowNext)}
+                    >
+                      <span className={styles.subBody}>
+                        <span className={styles.subName}>{u.name}</span>
+                        <span className={styles.subMeta}>
+                          {canStartToday ? '오늘 풀 차례' : '내일 열려'}
+                        </span>
+                      </span>
+                    </div>
                   )
                 }
                 return (
@@ -247,9 +232,8 @@ export default function HomePage() {
             </button>
             <h2 className={styles.infoTitle}>약점 그래프 예시</h2>
             <p className={styles.infoDesc}>
-              소단원(유형)을 다 풀면 결과가 이렇게 보여,
-              <br />
-              빨간색으로 표시된 부분부터 먼저 잡으면 돼
+              여기까지만 하면, 다음부턴 풀잇이 알아서 해.
+              <br />네 약점에 딱 맞는 {SET_SIZE}문제를 매일 아침 준비해둘게
             </p>
             <div className={styles.infoCard}>
               <img src={graphExample} alt="약점 그래프 예시" className={styles.infoImage} />
@@ -264,11 +248,20 @@ export default function HomePage() {
   )
 }
 
+/** 잠금 상태 실루엣용 목 점수 — 진단 전에는 오버레이 뒤에 흐리게 깔린다 */
+const LOCKED_SILHOUETTE = [72, 50, 62, 40, 55, 45, 60]
+
 /**
- * 잠금 상태 배경용 레이더 차트 (n각형 링 + 축 라벨).
- * 진단 데이터 연동 전 — 오버레이 뒤에 흐리게 깔리는 시각 요소.
+ * 약점 레이더 차트 (n각형 링 + 축 라벨).
+ * scores 가 있으면 실제 진단 점수로 그리고, 없는 축(미진단)은 실루엣 값으로 채운다.
+ * 약점(70점 미만) 꼭짓점은 점을 찍어 어디를 잡아야 하는지 바로 보이게 한다.
  */
-function RadarChart({ labels }: { labels: string[] }) {
+function RadarChart({
+  units,
+}: {
+  units: { name: string; score?: number; weak?: boolean }[]
+}) {
+  const labels = units.map((u) => u.name)
   const n = Math.max(labels.length, 3)
   const cx = 150
   const cy = 150
@@ -282,10 +275,12 @@ function RadarChart({ labels }: { labels: string[] }) {
   const polygon = (r: number) =>
     Array.from({ length: n }, (_, i) => point(i, r).join(',')).join(' ')
 
-  // 목 데이터 폴리곤 — 오버레이 뒤 흐릿한 실루엣용
-  const dataR = [0.72, 0.5, 0.62, 0.4, 0.55, 0.45, 0.6]
+  const ratio = (i: number) => {
+    const score = units[i]?.score
+    return (score ?? LOCKED_SILHOUETTE[i % LOCKED_SILHOUETTE.length] ?? 50) / 100
+  }
   const dataPoints = Array.from({ length: n }, (_, i) =>
-    point(i, maxR * (dataR[i % dataR.length] ?? 0.5)).join(','),
+    point(i, maxR * ratio(i)).join(','),
   ).join(' ')
 
   return (
@@ -298,6 +293,11 @@ function RadarChart({ labels }: { labels: string[] }) {
         return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#d6d8db" strokeWidth="1" />
       })}
       <polygon points={dataPoints} fill="rgba(255,56,92,0.25)" stroke="#ff385c" strokeWidth="1.5" />
+      {units.map((u, i) => {
+        if (!u.weak) return null
+        const [x, y] = point(i, maxR * ratio(i))
+        return <circle key={`dot-${u.name}`} cx={x} cy={y} r="3.5" fill="#ff385c" />
+      })}
       {labels.map((label, i) => {
         const [x, y] = point(i, maxR + 14)
         const anchor = Math.abs(x - cx) < 8 ? 'middle' : x > cx ? 'start' : 'end'

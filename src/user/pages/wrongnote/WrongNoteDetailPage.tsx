@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { PageHeader } from '@/user/components/PageHeader'
 import { deleteWrongNote, fetchWrongNotes, restoreWrongNote, type WrongNoteItem } from '@/user/api/attemptApi'
 import { findWrongUnit, formatWrongAt, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
@@ -120,11 +121,7 @@ export default function WrongNoteDetailPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <button type="button" aria-label="뒤로" onClick={() => navigate('/wrong-note')} className={styles.back}>
-          <BackIcon />
-        </button>
-      </header>
+      <PageHeader backTo="/wrong-note" />
 
       <main className={styles.main}>
         <h1 className={styles.title}>{row.name}</h1>
@@ -257,10 +254,3 @@ function ChevronDownIcon() {
   )
 }
 
-function BackIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 5l-7 7 7 7" />
-    </svg>
-  )
-}

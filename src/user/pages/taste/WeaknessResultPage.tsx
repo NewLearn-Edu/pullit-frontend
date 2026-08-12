@@ -7,6 +7,7 @@ import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
+import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
@@ -278,6 +279,25 @@ export default function WeaknessResultPage() {
   const correctCount = rows.filter(({ result }) => result.serverCorrect ?? result.correct).length
   const totalSec = Math.round(rows.reduce((s, { result }) => s + result.elapsedMs, 0) / 1000)
 
+  // ── 진단 진행 확정 ──────────────────────────────────────────────────────────
+  // 진행 페이지에서 시작한 세트라면 여기서 그 유닛을 "진단 완료" 로 굳히고 오늘 몫을 소진한다.
+  // 점수는 서버 누적 점수(skillScore)를 우선 쓰되, 첫 진단이면 세션 점수와 같은 값이라 폴백해도 무방.
+  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  const finishPendingUnit = useTrialProgressStore((s) => s.finishPendingUnit)
+  // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로는 미리 잡아둔다
+  const returnToRef = useRef<string | null>(null)
+  if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
+
+  useEffect(() => {
+    if (!hydrated || rows.length === 0) return
+    finishPendingUnit({
+      score,
+      weak,
+      minutes: Math.max(1, Math.round(totalSec / 60)),
+      correct: correctCount,
+    })
+  }, [hydrated, rows.length, score, weak, totalSec, correctCount, finishPendingUnit])
+
   // 풀이 시간 — 채점 마크가 끝난 뒤, 요약 카드와 문항별 셀이 같은 진행률로 동시에 차오른다
   const countProgress = useCountProgress(marksDoneMs)
   const displayTotalSec = Math.round(totalSec * countProgress)
@@ -473,7 +493,8 @@ export default function WeaknessResultPage() {
       <footer className="fixed inset-x-0 bottom-0 flex min-w-[350px] justify-center bg-white px-[40px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[12px] max-md:px-lg">
         <button
           type="button"
-          onClick={() => navigate(isMember ? '/home' : '/signup')}
+          // 잠금 해제 진행 중이던 세트면 진행 페이지로 복귀 — 방금 채운 칸을 바로 보게 한다
+          onClick={() => navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
           완료

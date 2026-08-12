@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
+import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
@@ -65,23 +66,26 @@ export default function WrongNotePage() {
 
       <main className={styles.main}>
         {/* 상단 헤더 — 홈과 동일 문법 · 오답노트 아이콘은 활성(채움) 상태 */}
-        <header className={styles.header}>
-          <CreditBadge credit={me?.creditBalance ?? 0} />
-          <SubjectTabs pill value={subject} onChange={changeSubject} />
-          <div className={styles.headerIcons}>
-            <span className={clsx(styles.iconCircle, styles.iconCircleActive)} aria-hidden>
-              <WrongNoteIcon filled />
-            </span>
-            <button
-              type="button"
-              aria-label="마이페이지"
-              onClick={() => navigate('/my')}
-              className={styles.iconCircle}
-            >
-              <ProfileIcon size={18} />
-            </button>
-          </div>
-        </header>
+        <PageHeader
+          left={<CreditBadge credit={me?.creditBalance ?? 0} />}
+          center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
+          hideRightOnDesktop
+          right={
+            <>
+              <span className={clsx(styles.iconCircle, styles.iconCircleActive)} aria-hidden>
+                <WrongNoteIcon filled />
+              </span>
+              <button
+                type="button"
+                aria-label="마이페이지"
+                onClick={() => navigate('/my')}
+                className={styles.iconCircle}
+              >
+                <ProfileIcon size={18} />
+              </button>
+            </>
+          }
+        />
 
         <div className={styles.content}>
           <h1 className={styles.title}>오답노트</h1>

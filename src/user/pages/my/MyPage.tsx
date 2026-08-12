@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
+import { PageHeader } from '@/user/components/PageHeader'
 import { logout } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
@@ -48,6 +49,9 @@ export default function MyPage() {
       <UserNav active="my" />
 
       <main className={styles.main}>
+        <PageHeader backTo="history" />
+
+        <div className={styles.content}>
         {/* 프로필 카드 */}
         <section className={styles.profileCard}>
           <div className={styles.profileInfo}>
@@ -128,6 +132,7 @@ export default function MyPage() {
             {signingOut ? '로그아웃 중…' : '로그아웃'}
           </button>
           <span className={styles.version}>{APP_VERSION}</span>
+        </div>
         </div>
       </main>
     </div>

@@ -32,29 +32,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 // ── 상단 헤더 (홈과 동일 문법) ───────────────────────────────────────────────
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  padding: $space-md 12px; // 최소 지원 폭 350px 수용
 
-  @include desktop-up {
-    max-width: 660px;
-    margin: 0 auto;
-    width: 100%;
-    padding: $space-xl $space-lg $space-md;
-  }
-}
-
-.headerIcons {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-
-  // 웹은 사이드바에 오답노트·마이페이지가 있어 중복 — 숨김 (자리만 유지)
-  @include desktop-up { visibility: hidden; }
-}
 
 .iconCircle {
   @include button-reset;

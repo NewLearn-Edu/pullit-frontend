@@ -37,31 +37,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // 상단 헤더 — 크레딧 · 과목 토글 · 아이콘 (시안 Header)
 // ─────────────────────────────────────────────────────────────────────────────
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  // 최소 지원 폭 350px 에서 크레딧 + 토글 + 아이콘 2개가 모두 들어가야 함
-  padding: $space-md 12px;
 
-  @include desktop-up {
-    max-width: 660px;
-    margin: 0 auto;
-    width: 100%;
-    padding: $space-xl $space-lg $space-md;
-  }
-}
-
-.headerIcons {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-
-  // 웹은 사이드바에 오답노트·마이페이지가 있어 중복 — 숨김
-  // (display:none 이면 space-between 균형이 깨져 토글이 오른쪽으로 밀림 → 자리만 유지)
-  @include desktop-up { visibility: hidden; }
-}
 
 .iconCircle {
   @include button-reset;
@@ -237,6 +213,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+  margin-top: 10px; // 그래프 카드와 소단원 타이틀 사이 여백 추가
   padding-bottom: 20px;
 }
 
@@ -266,19 +243,33 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   justify-content: space-between;
   gap: $space-md;
   width: 100%;
-  padding: 24px 16px;
+  height: 72px; // 기록(2줄) 유무와 무관하게 모든 행 같은 높이 (언락 페이지와 동일)
+  padding: 0 16px;
   border-radius: 12px;
   background: $color-canvas;
   text-align: left;
-  transition: opacity 150ms ease;
+}
 
-  @include hover { opacity: 0.85; }
+// 다음 차례 행 — 메인 컬러 스트로크가 은은하게 깜빡인다 (언락 페이지와 동일)
+.subRowNext {
+  animation: strokeBlink 2s ease-in-out infinite;
+}
+
+@keyframes strokeBlink {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.12); }
+  50% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subRowNext {
+    animation: none;
+    box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.45);
+  }
 }
 
 // 진단완료(점수) 행 — 표시 전용, 클릭 어포던스 제거
 .subRowStatic {
   cursor: default;
-  @include hover { opacity: 1; }
 }
 
 .subRowLocked {
@@ -286,7 +277,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   cursor: default;
 
   .subName { color: #80858b; }
-  @include hover { opacity: 1; }
 }
 
 .subBody {
@@ -313,9 +303,9 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 .score {
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: $fw-semibold;
-  color: #121417;
+  color: #121417; // 70점 미만(weak)만 primary, 나머지는 검정
 }
 
 .scoreWeak {
@@ -323,16 +313,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 }
 
 // 풀기 버튼 칩 — 행 전체가 클릭 영역이라 시각 요소만
-.solveChip {
-  flex-shrink: 0;
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: $color-primary;
-  color: #fff;
-  font-size: $fs-caption;
-  font-weight: $fw-medium;
-}
-
 .rowLock {
   flex-shrink: 0;
   width: 28px;

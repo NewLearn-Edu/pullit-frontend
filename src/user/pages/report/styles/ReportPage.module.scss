@@ -30,29 +30,7 @@ $ink: #160f0e; // text/dark · 페이지 타이틀
 
 // ── 상단 헤더 (홈·오답노트와 동일) ───────────────────────────────────────────
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  padding: $space-md 12px; // 최소 지원 폭 350px 수용
 
-  @include desktop-up {
-    width: 100%;
-    max-width: 660px;
-    margin: 0 auto;
-    padding: $space-xl $space-lg $space-md;
-  }
-}
-
-.headerIcons {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-
-  // 웹은 사이드바에 동일 진입점이 있어 중복 — 자리만 유지해 토글 중앙 정렬 보존
-  @include desktop-up { visibility: hidden; }
-}
 
 .iconCircle {
   @include button-reset;

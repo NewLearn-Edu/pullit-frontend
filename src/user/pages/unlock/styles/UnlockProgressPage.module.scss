@@ -1,0 +1,477 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// UnlockProgressPage · 약점 그래프 잠금 해제 진행 (2026-08-12)
+//   유닛 카드 리스트 + 왼쪽 세로 레일(진행 경로 · 다음 노드 핑)
+//   HomePage 와 같은 팔레트 — 회색 배경 위 흰 카드, 강조는 primary 하나만
+// -----------------------------------------------------------------------------
+
+// HomePage 와 동일한 시안 로컬 팔레트 (Pull-it 신규 · 토큰 미승격)
+$bg: #f0f1f3;          // black/100 · 페이지 배경
+$row-gray: #f8f8f8;    // black/50 · 잠금 행 배경
+$ink: #160f0e;         // text/dark
+$muted: #a6abb1;       // black/400
+
+.page {
+  display: flex;
+  min-height: 100dvh;
+  background: $bg;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 96px; // 하단 네비 회피 (모바일)
+
+  @include desktop-up {
+    padding-bottom: $space-xxl;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 페이지 타이틀 — 약점 그래프 공개까지 남은 개수
+// ─────────────────────────────────────────────────────────────────────────────
+
+.pageTitle {
+  margin: 0 0 $space-xs;
+  // 왼쪽 시작점을 아래 유닛 카드의 왼쪽 끝(레일 16px + 간격 10px 뒤)과 맞춘다
+  padding: 0 6px 0 28px;
+  font-size: 22px;
+  font-weight: $fw-bold;
+  line-height: 1.35;
+  color: $ink;
+}
+
+.pageTitleCount {
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 콘텐츠
+// ─────────────────────────────────────────────────────────────────────────────
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  padding: $space-md $space-lg $space-lg;
+  width: 100%;
+
+  @include desktop-up {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 유닛 리스트 — 카드 왼쪽 세로 레일이 진행 경로
+//   지나온 길 = primary 실선 · 다음 노드 = 핑 파동 · 남은 길 = 회색 선
+//   카드는 번호·테두리 없이: 완료(기록·점수) / 다음(풀기) / 잠김(회색·자물쇠)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// 행 = 레일 + 카드. 카드 간격은 gap 대신 카드 margin 으로 줘야 레일 선이 끊기지 않는다.
+.item {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.railLine {
+  flex: 1;
+  width: 2px;
+  border-radius: $radius-full;
+  background: #dcdfe3;
+}
+
+.railLineDone {
+  background: $color-primary;
+}
+
+// 첫 카드 위 · 마지막 카드 아래 — 공간은 유지하고 선만 숨긴다 (점 위치 정렬용)
+.railLineHidden {
+  background: transparent;
+}
+
+.dot {
+  position: relative;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin: 4px 0;
+  border-radius: $radius-full;
+  background: #dcdfe3;
+}
+
+.dotDone {
+  background: $color-primary;
+}
+
+// 다음 차례 — primary 링 + 핑 파동
+.dotNext {
+  width: 12px;
+  height: 12px;
+  background: $color-canvas;
+  border: 3px solid $color-primary;
+}
+
+// 핑 파동 — 점 테두리가 퍼지며 사라진다 (2박자 겹침)
+.pulse {
+  position: absolute;
+  inset: -5px;
+  border-radius: $radius-full;
+  border: 2px solid rgba(255, 56, 92, 0.5);
+  animation: nodePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.pulseLate {
+  animation-delay: 1s;
+}
+
+@keyframes nodePing {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  70%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; opacity: 0; }
+}
+
+.row {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  height: 72px; // 기록(2줄) 유무와 무관하게 모든 카드 같은 높이
+  padding: 0 20px;
+  border-radius: 16px;
+  background: $color-canvas;
+}
+
+// 마지막 카드는 아래 여백 없이 (레일 선 숨김 구간과 맞춤)
+.item:last-child .row {
+  margin-bottom: 0;
+}
+
+// 다음 차례 카드 — 메인 컬러 스트로크가 은은하게 깜빡인다 (레일 핑과 같은 2초 박자)
+.rowNext {
+  animation: strokeBlink 2s ease-in-out infinite;
+}
+
+@keyframes strokeBlink {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.12); }
+  50% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rowNext {
+    animation: none;
+    box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.45);
+  }
+}
+
+.rowLocked {
+  background: $row-gray;
+
+  .rowName {
+    color: #80858b;
+    font-weight: $fw-medium;
+  }
+}
+
+.rowBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: #121417;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowMeta {
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: $muted;
+}
+
+.rowScore {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: $fw-bold;
+  color: #121417; // 70점 미만(weak)만 primary, 나머지는 검정
+  font-variant-numeric: tabular-nums;
+}
+
+.rowScoreWeak {
+  color: $color-primary;
+}
+
+.rowLockIcon {
+  @include flex-center;
+  flex-shrink: 0;
+  color: #c4c9ce;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 완주 CTA
+// ─────────────────────────────────────────────────────────────────────────────
+
+.primaryCta {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  height: 56px;
+  border-radius: $radius-btn-md;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  white-space: nowrap;
+  transition: background 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 크레딧 추가 세트 시트 (HomePage 안내 시트와 같은 규격)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.sheetDim {
+  position: fixed;
+  inset: 0;
+  min-width: 350px;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(21, 17, 18, 0.38);
+  z-index: 60;
+
+  @include desktop-up {
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  width: 100%;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: $bg;
+  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
+  animation: sheetIn 280ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  transform: translateY(var(--drag-y, 0px));
+  transition: transform 200ms ease;
+  touch-action: none;
+
+  @include desktop-up {
+    max-width: 420px;
+    padding: 20px;
+    border-radius: 26px;
+    transform: none;
+    transition: none;
+  }
+}
+
+.sheetDragging {
+  transition: none;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 하단 고정 진단 패널 (Figma 2647-13768) — 흰 배경 · 상단 라운드 · 다크 CTA
+//   sticky + margin-top:auto — 콘텐츠가 짧아도 화면 하단에 붙고,
+//   스크롤 중에는 뷰포트 하단(모바일은 하단 네비 위)에 고정된다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 흰 시트 배경 없이 버튼 두 개만 페이지 위에 얹는다
+.dock {
+  position: sticky;
+  bottom: calc(64px + env(safe-area-inset-bottom)); // 하단 네비(64px) 위
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-top: auto;
+  padding: 12px 20px 16px;
+
+  @include desktop-up {
+    bottom: 0; // 데스크탑은 사이드바 — 하단 네비 없음
+    max-width: 660px;
+    margin: auto auto 0;
+  }
+}
+
+.dockCta {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b; // black/800
+  color: #fff;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  transition: background 150ms ease;
+
+  @include hover { background: #3a3f45; }
+}
+
+.dockSkip {
+  @include button-reset;
+  align-self: center;
+  font-size: 12px;
+  font-weight: $fw-medium;
+  color: #6f686a;
+  text-decoration: underline;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.7; }
+}
+
+@keyframes sheetIn {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.sheetHandleWrap {
+  @include button-reset;
+  @include flex-center;
+  width: 100%;
+  padding: 4px 0;
+
+  @include desktop-up { display: none; }
+}
+
+.sheetHandle {
+  display: block;
+  width: 42px;
+  height: 5px;
+  border-radius: $radius-full;
+  background: #d6d8db;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: $fw-semibold;
+  color: #211a1c;
+  text-align: center;
+}
+
+.sheetDesc {
+  margin: -8px 0 0;
+  font-size: $fs-body-sm;
+  font-weight: $fw-normal;
+  line-height: 1.45;
+  color: #6f686a;
+  text-align: center;
+}
+
+.sheetCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-lg;
+  border-radius: 16px;
+  background: $color-canvas;
+}
+
+.sheetCardLabel {
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: #80858b;
+}
+
+.sheetCardValue {
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheetWarn {
+  margin: -8px 0 0;
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: $color-primary;
+  text-align: center;
+}
+
+.sheetActions {
+  display: flex;
+  gap: $space-md;
+}
+
+.sheetCancel {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 56px;
+  border-radius: 12px;
+  background: $color-canvas;
+  color: #6f686a;
+  font-size: $fs-body;
+  font-weight: $fw-semibold;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.85; }
+}
+
+.sheetConfirm {
+  @include button-reset;
+  @include flex-center;
+  flex: 1.4;
+  height: 56px;
+  border-radius: 12px;
+  background: $color-primary;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  transition: background 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: #d6d8db;
+    color: #fff;
+  }
+}

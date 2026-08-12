@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserNav } from '@/user/components/UserNav'
+import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
@@ -46,28 +47,31 @@ export default function ReportPage() {
 
       <main className={styles.main}>
         {/* 상단 헤더 — 홈·오답노트와 동일 문법 */}
-        <header className={styles.header}>
-          <CreditBadge credit={me?.creditBalance ?? 0} />
-          <SubjectTabs pill value={subject} onChange={setSubject} />
-          <div className={styles.headerIcons}>
-            <button
-              type="button"
-              aria-label="오답노트"
-              onClick={() => navigate('/wrong-note')}
-              className={styles.iconCircle}
-            >
-              <WrongNoteIcon size={18} />
-            </button>
-            <button
-              type="button"
-              aria-label="마이페이지"
-              onClick={() => navigate('/my')}
-              className={styles.iconCircle}
-            >
-              <ProfileIcon size={18} />
-            </button>
-          </div>
-        </header>
+        <PageHeader
+          left={<CreditBadge credit={me?.creditBalance ?? 0} />}
+          center={<SubjectTabs pill value={subject} onChange={setSubject} />}
+          hideRightOnDesktop
+          right={
+            <>
+              <button
+                type="button"
+                aria-label="오답노트"
+                onClick={() => navigate('/wrong-note')}
+                className={styles.iconCircle}
+              >
+                <WrongNoteIcon size={18} />
+              </button>
+              <button
+                type="button"
+                aria-label="마이페이지"
+                onClick={() => navigate('/my')}
+                className={styles.iconCircle}
+              >
+                <ProfileIcon size={18} />
+              </button>
+            </>
+          }
+        />
 
         <div className={styles.content}>
           <h1 className={styles.title}>학습 리포트</h1>

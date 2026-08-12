@@ -1,0 +1,51 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// PageHeader · 공통 페이지 헤더 (2026-08-12)
+//   모든 페이지의 헤더 높이는 여기서만 관리한다 — 페이지별 padding/height 재정의 금지.
+//   내용 높이(뒤로 32px vs 과목 토글 등)와 무관하게 min-height 로 총 높이를 통일한다.
+// -----------------------------------------------------------------------------
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  width: 100%;
+  min-height: 64px;
+  padding: 16px 12px 10px; // 위를 조금 더 살린 패딩 (최소 지원 폭 350px 수용)
+
+  @include desktop-up {
+    max-width: 660px;
+    margin: 0 auto;
+    min-height: 72px;
+    padding: $space-xl $space-lg $space-md;
+  }
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+}
+
+// 웹은 사이드바에 동일 진입점이 있어 중복 — 자리만 유지해 가운데 토글 정렬 보존
+.sideRightHidden {
+  @include desktop-up { visibility: hidden; }
+}
+
+.backButton {
+  @include button-reset;
+  @include flex-center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  background: $color-canvas;
+  color: #5e6368;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.7; }
+}
