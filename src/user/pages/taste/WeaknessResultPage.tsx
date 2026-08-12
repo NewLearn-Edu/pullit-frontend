@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
-import { getProblemsByEnglishType, getProblemsBySkillNode, type Problem } from '@/user/data/mockProblems'
+import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
+import { loadQuizProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
@@ -199,14 +200,25 @@ export default function WeaknessResultPage() {
 
   const subject = lastSubject ?? 'math'
 
-  const mathProblems = useMemo(
-    () => (mathSkillNodeId ? getProblemsBySkillNode(mathSkillNodeId) : []),
-    [mathSkillNodeId],
-  )
-  const englishProblems = useMemo(
-    () => (englishTypeId ? getProblemsByEnglishType(englishTypeId) : []),
-    [englishTypeId],
-  )
+  // 풀이 화면과 같은 세트를 봐야 결과 매칭이 맞는다 — problemSet 캐시 공유 (보통 즉시 resolve)
+  const [mathProblems, setMathProblems] = useState<Problem[]>([])
+  const [englishProblems, setEnglishProblems] = useState<Problem[]>([])
+  useEffect(() => {
+    if (!mathSkillNodeId) return
+    let alive = true
+    loadQuizProblems('math', mathSkillNodeId).then((list) => alive && setMathProblems(list))
+    return () => {
+      alive = false
+    }
+  }, [mathSkillNodeId])
+  useEffect(() => {
+    if (!englishTypeId) return
+    let alive = true
+    loadQuizProblems('english', englishTypeId).then((list) => alive && setEnglishProblems(list))
+    return () => {
+      alive = false
+    }
+  }, [englishTypeId])
 
   const rows: Row[] = useMemo(
     () => [
@@ -297,6 +309,9 @@ export default function WeaknessResultPage() {
         const recSec = problem?.tRecSec ?? 0
         const isCorrect = result.serverCorrect ?? result.correct
         const shortAnswer = problem?.choices.length === 0
+        // 서버 세트 문항은 로컬 정답이 없어(answer=0) 제출 응답의 정답 번호를 우선 사용
+        const answerNo =
+          result.serverAnswerNo ?? (problem && problem.answer !== 0 ? problem.answer : null)
         return {
           correct: isCorrect,
           overTime: recSec > 0 && elapsedSec > recSec,
@@ -307,11 +322,8 @@ export default function WeaknessResultPage() {
           myAnswer: shortAnswer
             ? String(result.selectedChoice ?? '-')
             : circled(result.selectedChoice),
-          correctAnswer: problem
-            ? shortAnswer
-              ? String(problem.answer)
-              : circled(problem.answer)
-            : '-',
+          correctAnswer:
+            answerNo == null ? '-' : shortAnswer ? String(answerNo) : circled(answerNo),
           recSec,
         }
       }),
@@ -320,6 +332,8 @@ export default function WeaknessResultPage() {
 
   useEffect(() => {
     if (!hydrated || rows.length === 0) return
+    // 문제 세트가 아직 로드 전이면 로컬 점수·문항별 결과가 비어 확정하지 않는다
+    if (rows.some((r) => !r.problem)) return
     finishPendingUnit({
       score,
       weak,
@@ -428,11 +442,12 @@ export default function WeaknessResultPage() {
               const myAnswer = shortAnswer
                 ? result.selectedChoice ?? '-'
                 : circled(result.selectedChoice)
-              const correctAnswer = problem
-                ? shortAnswer
-                  ? problem.answer
-                  : circled(problem.answer)
-                : '-'
+              // 서버 세트 문항은 로컬 정답이 없어(answer=0) 제출 응답의 정답 번호를 우선 사용
+              const answerNo =
+                result.serverAnswerNo ??
+                (problem && problem.answer !== 0 ? problem.answer : null)
+              const correctAnswer =
+                answerNo == null ? '-' : shortAnswer ? String(answerNo) : circled(answerNo)
 
               return (
                 <div

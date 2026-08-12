@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
@@ -6,11 +6,8 @@ import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/component
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { MathProblemRender } from '@/shared/components/ExamRender'
-import {
-  getProblemsBySkillNode,
-  getProblemsByEnglishType,
-  type Problem,
-} from '@/user/data/mockProblems'
+import { type Problem } from '@/user/data/mockProblems'
+import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTasteStore } from '@/user/stores/tasteStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
@@ -57,15 +54,24 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
     ensureSession()
   }, [ensureSession])
 
-  const problems = useMemo(() => {
-    if (!isTaste && solveSession) return solveSession.problems
-    if (subject === 'math' && mathSkillNodeId) {
-      return getProblemsBySkillNode(mathSkillNodeId)
+  // 문제 세트 — 서버(GET /api/problems) 우선, 실패·부족 시 목 폴백 (problemSet 캐시 공유)
+  const [problems, setProblems] = useState<Problem[]>(() =>
+    !isTaste && solveSession ? solveSession.problems : [],
+  )
+  useEffect(() => {
+    if (!isTaste && solveSession) {
+      setProblems(solveSession.problems)
+      return
     }
-    if (subject === 'english' && englishTypeId) {
-      return getProblemsByEnglishType(englishTypeId)
+    const nodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
+    if (!subject || !nodeId) return
+    let alive = true
+    loadQuizProblems(subject, nodeId).then((list) => {
+      if (alive) setProblems(list)
+    })
+    return () => {
+      alive = false
     }
-    return []
   }, [isTaste, solveSession, subject, mathSkillNodeId, englishTypeId])
 
   useEffect(() => {
@@ -176,25 +182,41 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   const recordAttempt = (selectedChoice: number | null, elapsedMs: number) => {
     const serverId = problem.serverId
     if (!serverId) return // 서버 미매핑 목 문항 (영어 창작 데이터) — 저장 스킵
-    // 주관식은 서버 채점(1~5 비교)과 맞지 않아 스킵 — 단답 채점은 백엔드 후속 과제
-    if (isShortAnswer) return
 
+    const skipped = selectedChoice == null
     const req: AttemptSubmitRequest = {
       problemId: serverId,
       source: isTaste ? 'TRIAL' : (solveSession?.source ?? 'FREE'),
-      // 무응답은 서버가 400(답 필수)을 던지므로 0 을 sentinel 로 보낸다.
-      // 정답 번호는 1~5 라 절대 일치하지 않아 오답으로 채점된다 (skipped 플래그는 백엔드 후속)
-      submittedNo: selectedChoice ?? 0,
+      // 주관식은 원문 텍스트로 제출 — 서버가 정수 파싱해 채점한다
+      submittedNo: isShortAnswer ? null : selectedChoice,
+      submittedText: isShortAnswer && selectedChoice != null ? String(selectedChoice) : null,
       timeSpentMs: Math.round(elapsedMs),
+      // 무응답("모르겠어요")은 skipped 로 명시 — 서버가 오답 채점 + 찍은 오답과 구분 기록
+      skipped,
     }
+
+    // 서버 세트 문항은 로컬에 정답이 없어(answer=0) 채점 확정 시 획득 점수를 재계산해야 한다
+    const elapsedSecAtSubmit = Math.round(elapsedMs / 1000)
+    const { points, tRecSec, tMaxSec } = problem
 
     submitAttempt(req)
       .then((res) => {
         if (!isTaste) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
+        const rescored = computeScore({
+          points,
+          correct: res.isCorrect,
+          elapsedSec: elapsedSecAtSubmit,
+          tRecSec,
+          tMaxSec,
+          peekedBeforeAnswer: false,
+        })
         updateResult(subject as Subject, problem.id, {
           attemptId: res.attemptId,
           serverCorrect: res.isCorrect,
+          serverAnswerNo: res.answerNumber,
           serverExplanation: res.explanation,
+          earnedPoints: rescored.earnedPoints,
+          timeoverFlag: rescored.timeoverFlag,
         })
       })
       .catch((error) => {

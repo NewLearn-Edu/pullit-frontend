@@ -5,11 +5,8 @@ import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { MathProblemRender } from '@/shared/components/ExamRender'
-import {
-  getProblemsBySkillNode,
-  getProblemsByEnglishType,
-  type Problem,
-} from '@/user/data/mockProblems'
+import { type Problem } from '@/user/data/mockProblems'
+import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTasteStore } from '@/user/stores/tasteStore'
 import styles from './styles/TasteQuizPage.module.scss'
 
@@ -32,13 +29,24 @@ export default function TasteReviewPage() {
 
   const { mathSkillNodeId, englishTypeId, mathResults, englishResults } = useTasteStore()
 
-  const problems = useMemo(() => {
-    if (subject === 'math' && mathSkillNodeId) return getProblemsBySkillNode(mathSkillNodeId)
-    if (subject === 'english' && englishTypeId) return getProblemsByEnglishType(englishTypeId)
-    return []
+  // 풀이 화면과 같은 세트 (problemSet 캐시 공유) — null = 로드 전
+  const [problems, setProblems] = useState<Problem[] | null>(null)
+  useEffect(() => {
+    const nodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
+    if (!subject || !nodeId) {
+      setProblems([])
+      return
+    }
+    let alive = true
+    loadQuizProblems(subject, nodeId).then((list) => {
+      if (alive) setProblems(list)
+    })
+    return () => {
+      alive = false
+    }
   }, [subject, mathSkillNodeId, englishTypeId])
 
-  const problem = problems[idx]
+  const problem = problems?.[idx]
 
   const myResult = useMemo(() => {
     const results = subject === 'math' ? mathResults : englishResults
@@ -46,10 +54,10 @@ export default function TasteReviewPage() {
   }, [subject, mathResults, englishResults, problem])
   const myChoice = myResult?.selectedChoice ?? null
 
-  // 풀이 기록 없이 접근하면 결과 페이지로
+  // 풀이 기록 없이 접근하면 결과 페이지로 (세트 로드가 끝난 뒤에만 판정)
   useEffect(() => {
-    if (!problem) navigate('/weakness', { replace: true })
-  }, [problem, navigate])
+    if (problems && !problem) navigate('/weakness', { replace: true })
+  }, [problems, problem, navigate])
 
   const [tab, setTab] = useState<'answer' | 'explanation'>('explanation')
   const [panelWidth, setPanelWidth] = useState(420)

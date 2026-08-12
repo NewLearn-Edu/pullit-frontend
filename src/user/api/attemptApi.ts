@@ -9,6 +9,8 @@ export interface AttemptSubmitRequest {
   submittedNo?: number | null
   submittedText?: string | null
   timeSpentMs: number
+  /** 무응답 제출("모르겠어요") — 오답 채점 + 원장에서 찍은 오답과 구분 기록 */
+  skipped?: boolean
 }
 
 export interface AttemptSubmitResponse {

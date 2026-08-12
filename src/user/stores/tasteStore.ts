@@ -15,6 +15,8 @@ export interface QuizItemResult {
   attemptId?: number | null
   /** 서버 채점 결과 — 로컬 채점과 다르면 서버가 진실원 */
   serverCorrect?: boolean
+  /** 서버 정답 번호 — 서버 세트 문항은 로컬에 정답이 없어(answer=0) 표시용으로 박제 */
+  serverAnswerNo?: number | null
   /**
    * 서버 해설 — 블록 배열을 담은 JSON 문자열 또는 구 마크다운 문자열.
    * 있으면 목 데이터 해설 대신 이걸 보여준다 (어드민 검수 화면과 같은 조판).
