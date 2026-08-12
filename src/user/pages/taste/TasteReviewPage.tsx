@@ -40,10 +40,11 @@ export default function TasteReviewPage() {
 
   const problem = problems[idx]
 
-  const myChoice = useMemo(() => {
+  const myResult = useMemo(() => {
     const results = subject === 'math' ? mathResults : englishResults
-    return results.find((r) => r.problemId === problem?.id)?.selectedChoice ?? null
+    return results.find((r) => r.problemId === problem?.id) ?? null
   }, [subject, mathResults, englishResults, problem])
+  const myChoice = myResult?.selectedChoice ?? null
 
   // 풀이 기록 없이 접근하면 결과 페이지로
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function TasteReviewPage() {
           tab={tab}
           onTabChange={setTab}
           problem={problem}
+          serverExplanation={myResult?.serverExplanation}
           revealed
           width={panelWidth}
           resizing={resizing}

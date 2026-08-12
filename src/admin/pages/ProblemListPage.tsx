@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
+import { ProblemExplain } from '@/shared/components/ProblemExplain'
 import {
   EnglishExplainRender,
   EnglishProblemRender,
@@ -35,10 +36,12 @@ const NODE_ORDER: Record<string, string[]> = {
   'MATH:대수': ['지수함수와 로그함수', '삼각함수', '수열'],
   'MATH:미적분Ⅰ': ['함수의 극한과 연속', '미분', '적분'],
   'MATH:확률과 통계': ['경우의 수', '확률', '통계'],
-  // 영어 독해 능력 4분류 (2026-08-07 정책 확정) — 기초 언어 능력(어휘 쓰임·voca03)은 서비스 제외
-  // '어휘 의미'는 DB skill_node 명 그대로 (정책 표기 '밑줄 함의·어휘(voca01·04)' — DB 개명 시 함께 교체)
+  // 영어 독해 능력 4분류 (2026-08-12 표 기준) — 기초 언어 능력(어휘 쓰임·voca03)은 서비스 제외
+  // 아래 이름은 DB skill_node 명 그대로 — 정책 표기와 다른 것들:
+  //   순서→글의 순서 · 삽입→문장 삽입 · 어휘 의미→밑줄 함의(voca01·voca04 통합)
+  //   여기서 정책 표기로 바꾸면 트리 매칭이 끊겨 문항이 0건으로 잡힌다 (DB 개명 시 함께 교체)
   'ENGLISH:': ['중심 내용 파악', '논리 구조 이해', '종합·추론 능력', '정보 확인 능력'],
-  'ENGLISH:중심 내용 파악': ['주제', '제목', '요지', '목적'],
+  'ENGLISH:중심 내용 파악': ['목적', '주제', '제목', '요지'],
   'ENGLISH:논리 구조 이해': ['주장', '순서', '삽입', '무관한 문장'],
   'ENGLISH:종합·추론 능력': ['빈칸', '요약', '어휘 의미'],
   'ENGLISH:정보 확인 능력': ['안내문 일치', '안내문 불일치', '내용 불일치', '도표'],
@@ -525,7 +528,7 @@ export default function ProblemListPage() {
                   </div>
                   <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
                   <div className="pv-explain-body">
-                    <ExplainRender text={detail.explanation} />
+                    <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
+import { ProblemExplain } from '@/shared/components/ProblemExplain'
 import {
   EnglishExplainRender,
   EnglishProblemRender,
@@ -598,7 +599,7 @@ export default function TrialTestPage() {
                       </div>
                       <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
                       <div className="pv-explain-body">
-                        <ExplainRender text={detail.explanation} />
+                        <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
                       </div>
                     </div>
                   </div>

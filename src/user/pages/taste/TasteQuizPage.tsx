@@ -194,6 +194,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
         updateResult(subject as Subject, problem.id, {
           attemptId: res.attemptId,
           serverCorrect: res.isCorrect,
+          serverExplanation: res.explanation,
         })
       })
       .catch((error) => {

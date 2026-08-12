@@ -15,6 +15,11 @@ export interface QuizItemResult {
   attemptId?: number | null
   /** 서버 채점 결과 — 로컬 채점과 다르면 서버가 진실원 */
   serverCorrect?: boolean
+  /**
+   * 서버 해설 — 블록 배열을 담은 JSON 문자열 또는 구 마크다운 문자열.
+   * 있으면 목 데이터 해설 대신 이걸 보여준다 (어드민 검수 화면과 같은 조판).
+   */
+  serverExplanation?: string | null
 }
 
 interface TasteState {

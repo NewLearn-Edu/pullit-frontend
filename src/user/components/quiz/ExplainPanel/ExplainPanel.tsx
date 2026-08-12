@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import type { Problem } from '@/user/data/mockProblems'
 import { MathExplainRender } from '@/shared/components/ExamRender'
+import { ProblemExplain } from '@/shared/components/ProblemExplain'
 import styles from './styles/ExplainPanel.module.scss'
 
 interface ExplainPanelProps {
@@ -9,6 +10,8 @@ interface ExplainPanelProps {
   tab: 'answer' | 'explanation'
   onTabChange: (t: 'answer' | 'explanation') => void
   problem: Problem
+  /** 서버가 내려준 해설 — 있으면 목 데이터 대신 이걸 어드민과 같은 조판으로 렌더 */
+  serverExplanation?: string | null
   revealed: boolean
   /** md+ 에서 사용자가 divider 로 조절한 폭 (px) */
   width: number
@@ -28,6 +31,7 @@ export function ExplainPanel({
   tab,
   onTabChange,
   problem,
+  serverExplanation,
   revealed,
   width,
   resizing,
@@ -91,6 +95,11 @@ export function ExplainPanel({
                   <p className={styles.answerValue}>
                     {['①', '②', '③', '④', '⑤'][problem.answer - 1]}
                   </p>
+                </div>
+              ) : serverExplanation ? (
+                /* 서버 해설 — 어드민 업로드·검수 화면과 동일 렌더러 */
+                <div className={styles.sections}>
+                  <ProblemExplain explanation={serverExplanation} subject={problem.subject} />
                 </div>
               ) : (
                 <div className={styles.sections}>
