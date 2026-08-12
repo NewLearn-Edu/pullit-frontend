@@ -42,7 +42,11 @@ export default function WrongNoteDetailPage() {
   }, [sortOpen])
 
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   useEffect(() => {

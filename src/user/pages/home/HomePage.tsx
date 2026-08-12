@@ -41,7 +41,11 @@ export default function HomePage() {
 
   // 홈은 세션(게스트·회원)이 있어야 하는 페이지 — 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   // 프로필 미완성 회원은 추가 정보 입력부터 (연령 게이트 — 생년월일·전화번호·약관)

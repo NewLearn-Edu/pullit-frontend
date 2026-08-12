@@ -24,7 +24,11 @@ export default function UnitResultPage() {
   const diagnosis = useTrialProgressStore((s) => s.diagnosed[unitName])
 
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   // 진단 기록이 없는 단원 — 홈으로 (주소 직접 입력 등)

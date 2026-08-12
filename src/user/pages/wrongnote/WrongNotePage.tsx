@@ -32,7 +32,11 @@ export default function WrongNotePage() {
 
   // 세션(게스트·회원) 필요 — 오답 원장이 계정 단위
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   useEffect(() => {

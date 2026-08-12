@@ -33,7 +33,11 @@ export default function ReportPage() {
 
   // 리포트는 계정 단위 데이터 — 세션 없으면 로그인으로
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   const [subject, setSubject] = useState<Subject>('math')

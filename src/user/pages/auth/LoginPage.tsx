@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import {
   loginWithApple,
@@ -8,6 +8,7 @@ import {
   startNaverLogin,
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import logoImg from '@/assets/images/logo.png'
 import logoApple from '@/assets/auth/logo-apple.svg'
 import logoGoogle from '@/assets/auth/logo-google.svg'
@@ -24,11 +25,27 @@ import styles from './styles/LoginPage.module.scss'
  */
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [error, setError] = useState<string | null>(null)
+
+  // 로그인 후 복귀 경로 — 세션 가드가 넘겨준 출발지, 없으면 홈.
+  // 랜딩('/')에서 온 경우도 홈으로 보낸다 (로그인했는데 랜딩 복귀는 어색)
+  const rawFrom = (location.state as { from?: string } | null)?.from
+  const returnTo = rawFrom && rawFrom.startsWith('/') && rawFrom !== '/' ? rawFrom : '/home'
+
+  /**
+   * 모든 로그인 시작 전에 복귀 경로를 "항상" 덮어쓴다 —
+   * 이전 시도(가입 유도 화면 등)가 남긴 stale 값이 소비되는 문제 방지.
+   */
+  const withReturn = (startLogin: () => void) => () => {
+    setPostLoginRedirect(returnTo)
+    startLogin()
+  }
 
   // 애플은 팝업 방식이라 콜백 페이지 없이 여기서 완료·이동까지 처리
   const handleAppleLogin = async () => {
     setError(null)
+    setPostLoginRedirect(returnTo)
     try {
       await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
       await loginWithApple()
@@ -54,7 +71,7 @@ export default function LoginPage() {
         <div className={styles.buttons}>
           <button
             type="button"
-            onClick={startKakaoLogin}
+            onClick={withReturn(startKakaoLogin)}
             className={clsx(styles.socialButton, styles.kakao)}
           >
             <span className={styles.socialIcon}>
@@ -64,7 +81,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={startNaverLogin}
+            onClick={withReturn(startNaverLogin)}
             className={clsx(styles.socialButton, styles.naver)}
           >
             <span className={styles.socialIcon}>
@@ -75,7 +92,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={startGoogleLogin}
+            onClick={withReturn(startGoogleLogin)}
             className={clsx(styles.socialButton, styles.google)}
           >
             <span className={styles.socialIcon}>

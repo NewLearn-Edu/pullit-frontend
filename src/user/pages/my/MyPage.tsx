@@ -27,7 +27,11 @@ export default function MyPage() {
 
   // 세션(게스트·회원) 필요 — 재발급까지 끝났는데 없으면 로그인으로
   useEffect(() => {
-    if (sessionStatus === 'anonymous') navigate('/login', { replace: true })
+    if (sessionStatus === 'anonymous') navigate('/login', {
+        replace: true,
+        // 로그인 후 이 페이지로 복귀 (LoginPage 가 postLoginRedirect 로 저장)
+        state: { from: window.location.pathname + window.location.search },
+      })
   }, [sessionStatus, navigate])
 
   const isGuest = me?.type === 'GUEST'
