@@ -81,8 +81,8 @@ $fill: #f0f1f3; // black/100
 
 .name {
   font-size: 14px;
-  font-weight: $fw-semibold;
-  color: $ink-900;
+  font-weight: $fw-medium;
+  color: $label;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -96,17 +96,17 @@ $fill: #f0f1f3; // black/100
 }
 
 .score {
-  font-size: 16px;
-  font-weight: $fw-bold;
-  color: $ink;
+  font-size: 15px;
+  font-weight: $fw-semibold;
+  color: $ink-900;
   font-variant-numeric: tabular-nums;
 }
 
 .delta {
-  padding: 3px 7px;
+  padding: 2px 6px;
   border-radius: $radius-full;
   font-size: 11px;
-  font-weight: $fw-bold;
+  font-weight: $fw-semibold;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -129,7 +129,7 @@ $fill: #f0f1f3; // black/100
 }
 
 .track {
-  height: 10px;
+  height: 8px; // 홈 세그먼트 바와 같은 두께
   border-radius: $radius-full;
   background: $fill;
   overflow: hidden;
@@ -159,16 +159,16 @@ $fill: #f0f1f3; // black/100
 .marker {
   position: absolute;
   top: -3px;
-  width: 2px;
-  height: 16px;
+  width: 1.5px;
+  height: 14px;
   border-radius: 1px;
-  background: #23272b;
+  background: #5e6368;
   transform: translateX(-50%);
 }
 
 .markerLabel {
   position: absolute;
-  top: 18px;
+  top: 16px;
   font-size: 10px;
   font-weight: $fw-medium;
   font-variant-numeric: tabular-nums;
@@ -188,10 +188,10 @@ $fill: #f0f1f3; // black/100
 
 .legendMarker {
   display: block;
-  width: 2px;
+  width: 1.5px;
   height: 11px;
   border-radius: 1px;
-  background: #23272b;
+  background: #5e6368;
 }
 
 // 데이터 없음 — 아직 푼 문제가 없는 과목
