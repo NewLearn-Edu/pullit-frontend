@@ -112,7 +112,7 @@ export default function UnlockProgressPage() {
       <UserNav active="recommend" />
 
       <main className={styles.main}>
-        <PageHeader backTo="/home" right={<CreditBadge credit={credit} />} />
+        <PageHeader backTo="history" right={<CreditBadge credit={credit} />} />
 
         <div className={styles.content}>
           {/* ── 타이틀 — 약점 그래프 공개까지 남은 개수 ─────────────────── */}
@@ -139,7 +139,12 @@ export default function UnlockProgressPage() {
             <ol className={styles.list}>
               {progress.rows.map((row, i) => {
                 const isNext = row.state === 'next'
+                // "지나온 길" 은 이어진 구간만 — 중간 유닛만 진단된 비정상 데이터가 와도
+                // 잠긴 카드 쪽으로 primary 선이 뻗지 않게 양 끝 상태를 함께 본다
                 const prevDone = i > 0 && progress.rows[i - 1].state === 'done'
+                const nextRow = progress.rows[i + 1]
+                const traveledTop = prevDone && row.state !== 'locked'
+                const traveledBottom = row.state === 'done' && nextRow && nextRow.state !== 'locked'
                 return (
                   <li key={row.name} className={styles.item}>
                     {/* 왼쪽 레일 — 위/아래 선 + 상태 점 */}
@@ -148,7 +153,7 @@ export default function UnlockProgressPage() {
                         className={clsx(
                           styles.railLine,
                           i === 0 && styles.railLineHidden,
-                          prevDone && styles.railLineDone,
+                          traveledTop && styles.railLineDone,
                         )}
                       />
                       <span
@@ -169,7 +174,7 @@ export default function UnlockProgressPage() {
                         className={clsx(
                           styles.railLine,
                           i === progress.rows.length - 1 && styles.railLineHidden,
-                          row.state === 'done' && styles.railLineDone,
+                          traveledBottom && styles.railLineDone,
                         )}
                       />
                     </span>
@@ -215,7 +220,20 @@ export default function UnlockProgressPage() {
           </section>
 
           {progress.unlocked && (
-            <button type="button" onClick={() => navigate('/home')} className={styles.primaryCta}>
+            <button
+              type="button"
+              // 보고 있던 과목·카테고리를 유지한 채 홈 그래프로
+              onClick={() =>
+                navigate(
+                  `/home?${new URLSearchParams(
+                    subject === 'math'
+                      ? { cat: category.slug }
+                      : { subject, cat: category.slug },
+                  )}`,
+                )
+              }
+              className={styles.primaryCta}
+            >
               약점 그래프 보러가기
             </button>
           )}

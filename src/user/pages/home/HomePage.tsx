@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
@@ -51,8 +51,11 @@ export default function HomePage() {
     }
   }, [me, navigate])
 
-  const [subject, setSubject] = useState<Subject>('math')
-  const [catSlug, setCatSlug] = useState(CURRICULUM.math[0].slug)
+  // 과목 탭·대분류 칩은 URL 쿼리가 진실원 — 언락 등에서 뒤로가기로 돌아와도 상태가 복원된다
+  const [searchParams, setSearchParams] = useSearchParams()
+  const subject: Subject = searchParams.get('subject') === 'english' ? 'english' : 'math'
+  const catSlug = searchParams.get('cat') ?? CURRICULUM[subject][0].slug
+
   const [infoOpen, setInfoOpen] = useState(false) // 약점 그래프 예시 안내 (? 버튼)
   // 인포 시트 아래로 스와이프 닫기 — 웹은 중앙 다이얼로그라 제스처 제외
   const infoDrag = useSheetDrag(() => setInfoOpen(false), {
@@ -64,9 +67,14 @@ export default function HomePage() {
     syncDay()
   }, [syncDay])
 
+  // replace — 탭/칩 전환이 히스토리 스택에 쌓이지 않게 (뒤로가기 한 번에 홈 이탈)
   const changeSubject = (s: Subject) => {
-    setSubject(s)
-    setCatSlug(CURRICULUM[s][0].slug)
+    setSearchParams(s === 'math' ? {} : { subject: s }, { replace: true })
+  }
+  const changeCat = (slug: string) => {
+    const next: Record<string, string> = slug === CURRICULUM[subject][0].slug ? {} : { cat: slug }
+    if (subject !== 'math') next.subject = subject
+    setSearchParams(next, { replace: true })
   }
 
   const categories = CURRICULUM[subject]
@@ -120,7 +128,7 @@ export default function HomePage() {
               <button
                 key={c.slug}
                 type="button"
-                onClick={() => setCatSlug(c.slug)}
+                onClick={() => changeCat(c.slug)}
                 className={clsx(styles.chip, category.slug === c.slug && styles.chipActive)}
               >
                 {c.name}

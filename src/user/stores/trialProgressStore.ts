@@ -73,8 +73,9 @@ export function todayKey(base: Date = new Date()): string {
  * 실서비스 연동 시 이 상수와 initial diagnosed 를 통째로 지우면 된다.
  */
 const DEMO_DIAGNOSED: Record<string, UnitDiagnosis> = {
+  // 순서 진행 정책과 어긋나지 않게 각 과목 "첫 유닛" 만 진단된 것으로 시드
   '지수·로그': { score: 68, weak: true, minutes: 24, correct: 2, date: '2026-08-11' },
-  주제: { score: 82, weak: false, minutes: 18, correct: 3, date: '2026-08-11' },
+  목적: { score: 82, weak: false, minutes: 18, correct: 3, date: '2026-08-11' },
 }
 
 /** 진행 중인 세트 — 결과 화면이 "어느 유닛을 푼 건지" 알아야 진단으로 확정할 수 있다 */
