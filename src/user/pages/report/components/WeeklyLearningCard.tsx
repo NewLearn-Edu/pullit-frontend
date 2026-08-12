@@ -105,13 +105,16 @@ export function WeeklyLearningCard({ subject, today }: { subject: Subject; today
             />
           ))}
 
-          {/* 마지막 지점 값 툴팁 — 차트 밖으로 나가지 않게 좌우 끝에서 정렬을 바꾼다 */}
+          {/* 마지막 지점 값 툴팁 — 차트 밖으로 나가지 않게 좌우 끝에서 정렬을 바꾸고,
+              점이 상단권이면 위로 뚫고 나가 세그먼트와 겹치지 않게 점 아래로 뒤집는다 */}
           {last && (
             <span
               className={styles.tooltip}
               style={{
                 left: `${last.x}%`,
-                bottom: `calc(${100 - last.y}% + 16px)`,
+                ...(last.y < 30
+                  ? { top: `calc(${last.y}% + 14px)` }
+                  : { bottom: `calc(${100 - last.y}% + 16px)` }),
                 transform: `translateX(${last.x > 85 ? '-100%' : last.x < 15 ? '0%' : '-50%'})`,
               }}
             >
