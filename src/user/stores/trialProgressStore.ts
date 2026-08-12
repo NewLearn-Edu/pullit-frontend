@@ -16,6 +16,30 @@ import type { CurriculumCategory, CurriculumUnit } from '@/user/data/curriculum'
  * 데일리 카운터는 서버 일일 세션 기록으로 대체한다 (클라이언트 조작 방지).
  */
 
+/**
+ * 재열람용 문항별 결과 — 목 문제 데이터 없이도 결과 표를 다시 그릴 수 있게
+ * 표시값(답안 문자열 등)을 진단 시점에 박제한다.
+ */
+export interface DiagnosisItem {
+  correct: boolean
+  /** 정답이지만 권장 시간 초과 (세모 채점) */
+  overTime: boolean
+  /** 풀이 시간 (초) */
+  seconds: number
+  /** 획득 점수 (시간 감점 반영) */
+  earned: number
+  /** 배점 */
+  points: number
+  /** 단답형 여부 — 답안 원기호 크기 보정용 */
+  short: boolean
+  /** 내 답 표시 문자열 (①~⑤ 또는 단답) */
+  myAnswer: string
+  /** 정답 표시 문자열 — 오답 보조줄용 */
+  correctAnswer: string
+  /** 권장 시간 (초) — 초과 보조줄용 */
+  recSec: number
+}
+
 export interface UnitDiagnosis {
   /** 0~100 — 서버 SkillScoreResponse.score 와 같은 정의 (맞춘 배점 ÷ 푼 배점) */
   score: number
@@ -26,6 +50,8 @@ export interface UnitDiagnosis {
   correct: number
   /** 진단일 (YYYY-MM-DD) */
   date: string
+  /** 문항별 결과 — 재열람 페이지용 (구버전 데이터엔 없을 수 있음) */
+  items?: DiagnosisItem[]
 }
 
 /** 추가 세트 1개 가격 — 정책 확정 시 조정 */

@@ -11,15 +11,15 @@ import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
-/** m:ss (풀이 시간 셀) */
-function formatShort(totalSec: number): string {
+/** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
+export function formatShort(totalSec: number): string {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** "2분 48초" (요약 카드) */
-function formatSummary(totalSec: number): string {
+/** "2분 48초" (요약 카드) — 재열람(UnitResultPage)에서도 사용 */
+export function formatSummary(totalSec: number): string {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60
   return m > 0 ? `${m}분 ${s}초` : `${s}초`
@@ -137,7 +137,8 @@ const MARK_LABEL: Record<MarkKind, string> = {
   slash: '오답',
 }
 
-function GradeMark({ kind, delayMs }: { kind: MarkKind; delayMs: number }) {
+/** 채점 마크 컴포넌트 — 재열람(UnitResultPage)에서도 사용 */
+export function GradeMark({ kind, delayMs }: { kind: MarkKind; delayMs: number }) {
   const style = { '--delay': `${delayMs}ms` } as React.CSSProperties
   return (
     <svg
@@ -288,6 +289,35 @@ export default function WeaknessResultPage() {
   const returnToRef = useRef<string | null>(null)
   if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
 
+  // 재열람용 문항별 결과 — 목 문제 데이터 없이도 표를 다시 그릴 수 있게 표시값을 박제
+  const diagnosisItems = useMemo(
+    () =>
+      rows.map(({ result, problem }) => {
+        const elapsedSec = Math.round(result.elapsedMs / 1000)
+        const recSec = problem?.tRecSec ?? 0
+        const isCorrect = result.serverCorrect ?? result.correct
+        const shortAnswer = problem?.choices.length === 0
+        return {
+          correct: isCorrect,
+          overTime: recSec > 0 && elapsedSec > recSec,
+          seconds: elapsedSec,
+          earned: isCorrect ? result.earnedPoints : 0,
+          points: problem?.points ?? 0,
+          short: shortAnswer,
+          myAnswer: shortAnswer
+            ? String(result.selectedChoice ?? '-')
+            : circled(result.selectedChoice),
+          correctAnswer: problem
+            ? shortAnswer
+              ? String(problem.answer)
+              : circled(problem.answer)
+            : '-',
+          recSec,
+        }
+      }),
+    [rows],
+  )
+
   useEffect(() => {
     if (!hydrated || rows.length === 0) return
     finishPendingUnit({
@@ -295,8 +325,9 @@ export default function WeaknessResultPage() {
       weak,
       minutes: Math.max(1, Math.round(totalSec / 60)),
       correct: correctCount,
+      items: diagnosisItems,
     })
-  }, [hydrated, rows.length, score, weak, totalSec, correctCount, finishPendingUnit])
+  }, [hydrated, rows.length, score, weak, totalSec, correctCount, diagnosisItems, finishPendingUnit])
 
   // 풀이 시간 — 채점 마크가 끝난 뒤, 요약 카드와 문항별 셀이 같은 진행률로 동시에 차오른다
   const countProgress = useCountProgress(marksDoneMs)
