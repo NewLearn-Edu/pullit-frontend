@@ -9,29 +9,25 @@ import {
   MathProblemRender,
 } from '@/shared/components/ExamRender'
 import { MathExplainKatexRender } from '@/shared/components/ExamRender'
-import { ExplainBlocksRender, type ExplainBlock } from '@/shared/components/ExamBlocks'
+import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
 import { importProblemFile, type ProblemImportResult } from '../api/adminApi'
+import {
+  addToReviewQueue,
+  makeReviewKey,
+  type ReviewEntry,
+  type ReviewProblem,
+} from '../data/reviewQueue'
 
 const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어' }
 
 /** 배점 미리보기 — 임포터와 동일 규칙 (수학 difficulty 매핑 · 영어 2점) */
 const POINTS_BY_DIFFICULTY: Record<string, number> = { basic: 2, normal: 3, advanced: 4 }
 
-interface UploadItem {
-  id?: string | number
-  subject?: string
-  question?: string
-  passage?: string
-  choices?: string[]
-  answer_no?: number
-  answer_text?: string
-  /** 구 포맷 = 마크다운 문자열 · 신 포맷(2026-08-09~) = 블록 배열 */
-  explanation?: string | ExplainBlock[]
-  difficulty?: string
-}
+/** 업로드 파일 1행 — 검수 큐와 같은 스키마를 쓴다 */
+type UploadItem = ReviewProblem
 
 export default function ProblemUploadPage() {
   const { subject: subjectParam = '' } = useParams()
@@ -45,6 +41,9 @@ export default function ProblemUploadPage() {
   const [over, setOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<ProblemImportResult | null>(null)
+  // 검수 큐에 담을 문항 (파일 내 인덱스) · 업로드 확인 팝업
+  const [checked, setChecked] = useState<Set<number>>(new Set())
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // 과목 자동 감지 — 단일 "문제 업로드" 메뉴 대응. 파일 rows 의 subject 필드 우선, URL 파라미터는 폴백
@@ -96,6 +95,7 @@ export default function ProblemUploadPage() {
       }
       setItems(parsed as UploadItem[])
       setIdx(0)
+      setChecked(new Set())
       setFile(file)
       setResult(null)
       setFileName(file.name)
@@ -105,19 +105,55 @@ export default function ProblemUploadPage() {
     reader.readAsText(file)
   }
 
+  /** 체크한 문항을 검수 큐에 적재 — 업로드 성공 직후 1회 */
+  const pushCheckedToReview = () => {
+    if (checked.size === 0) return
+    const entries: ReviewEntry[] = [...checked]
+      .sort((a, b) => a - b)
+      .map((i) => ({
+        key: makeReviewKey(fileName, items[i], i),
+        problemId: String(items[i]?.id ?? `${fileName}#${i + 1}`),
+        fileName,
+        filePath,
+        subject,
+        problem: items[i],
+        addedAt: new Date().toISOString(),
+      }))
+    const { added, skipped, stored } = addToReviewQueue(entries)
+    if (!stored) {
+      toast('검수 목록 저장 공간이 가득 찼어요 · 검수 페이지에서 정리해주세요')
+      return
+    }
+    toast(
+      `검수 목록에 ${added}문항 담았어요${skipped > 0 ? ` · 이미 담긴 ${skipped}문항 제외` : ''}`,
+    )
+  }
+
   const onUpload = async () => {
     if (!file || uploading) return
+    setConfirmOpen(false)
     setUploading(true)
     try {
       const r = await importProblemFile(file)
       setResult(r)
       toast(`업로드 완료 · 신규 ${r.inserted.toLocaleString()} · 갱신 ${r.updated.toLocaleString()}${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`)
+      pushCheckedToReview()
     } catch (e) {
       const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
       toast(serverMsg ?? '업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
     } finally {
       setUploading(false)
     }
+  }
+
+  /** 현재 문항 검수 체크 토글 */
+  const toggleChecked = () => {
+    setChecked((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
   }
 
   const onDrop = (e: DragEvent) => {
@@ -131,6 +167,7 @@ export default function ProblemUploadPage() {
     setItems([])
     setFile(null)
     setResult(null)
+    setChecked(new Set())
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -194,7 +231,7 @@ export default function ProblemUploadPage() {
             <button
               className="btn btn-primary"
               disabled={uploading}
-              onClick={onUpload}
+              onClick={() => setConfirmOpen(true)}
             >
               {uploading ? '업로드 중…' : '업로드하기'}
             </button>
@@ -221,8 +258,19 @@ export default function ProblemUploadPage() {
 
           <div className="card">
             <div className="viewer-head">
-              <div className="card-title">
-                문항 {idx + 1} / {items.length}{item?.id ? ` · ${item.id}` : ''}
+              {/* 좌측 묶음 — space-between 이 체크박스·제목·배지를 흩뜨리지 않게 한 덩어리로 */}
+              <div className="viewer-head-left">
+                {/* 검수 체크 — 담아 두면 업로드 시 문제 검수 페이지로 넘어간다 */}
+                <label className="upl-check" title="문제 검수 목록에 담기">
+                  <input type="checkbox" checked={checked.has(idx)} onChange={toggleChecked} />
+                  <span className="upl-check-box" aria-hidden />
+                </label>
+                <div className="card-title">
+                  문항 {idx + 1} / {items.length}{item?.id ? ` · ${item.id}` : ''}
+                </div>
+                {checked.size > 0 && (
+                  <span className="badge neutral upl-check-count">검수 {checked.size}</span>
+                )}
               </div>
               <div className="viewer-nav">
                 <div className="seg pv-device-seg">
@@ -321,6 +369,46 @@ export default function ProblemUploadPage() {
                 </div>
               </div>
             </div>
+        </div>
+      )}
+
+      {/* 업로드 확인 — 되돌리기 어려운 DB 적재라 한 번 더 확인 */}
+      {confirmOpen && (
+        <div className="cr-overlay" onClick={() => setConfirmOpen(false)}>
+          <div className="card cr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 10 }}>업로드할까요?</h3>
+            <p className="page-sub" style={{ marginBottom: 16 }}>
+              아래 파일의 문항이 DB에 저장돼요. 같은 ID가 이미 있으면 갱신됩니다.
+            </p>
+            <div className="upl-confirm-info">
+              <div>
+                <span>파일</span>
+                <b>{fileName}</b>
+              </div>
+              <div>
+                <span>단원</span>
+                <b>{filePath}</b>
+              </div>
+              <div>
+                <span>문항</span>
+                <b>{items.length.toLocaleString()}문항</b>
+              </div>
+              {checked.size > 0 && (
+                <div>
+                  <span>검수 목록</span>
+                  <b>{checked.size}문항 담김</b>
+                </div>
+              )}
+            </div>
+            <div className="cr-actions">
+              <button className="btn btn-ghost" onClick={() => setConfirmOpen(false)}>
+                취소
+              </button>
+              <button className="btn btn-primary" disabled={uploading} onClick={onUpload}>
+                업로드
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

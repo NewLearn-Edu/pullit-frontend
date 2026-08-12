@@ -11,6 +11,7 @@ import {
   IcoEnglish,
   IcoEnglishTest,
   IcoHome,
+  IcoList,
   IcoMath,
   IcoMathTest,
   IcoMember,
@@ -67,12 +68,17 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const meName = me?.name ?? me?.nickname ?? '관리자'
 
   // 레일 섹션: 대시보드 = home, 목록·업로드·맛보기 = problem, 회원 = member
+  // 문제 섹션에 속하는 경로 — 하나라도 빠지면 사이드바가 홈 섹션으로 떨어진다
   const isProblem =
-    pathname.includes('/problems/') || pathname.includes('/upload') || pathname.includes('/trial-tests/')
+    pathname.includes('/problems/') ||
+    pathname.includes('/upload') ||
+    pathname.includes('/trial-tests/') ||
+    pathname.includes('/review')
   const isMember = pathname.includes('/members') || pathname.includes('/credits')
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
-  const isUpload = pathname.includes('/upload')
+  // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
+  const isUpload = pathname.includes('/upload') || pathname.includes('/review')
 
   const soonMenus = [
     { name: '통계', ico: <IcoStats /> },
@@ -167,6 +173,10 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
             <NavLink to="/admin/problems/english" className={navClass}>
               <span className="ico"><IcoEnglish /></span>
               영어
+            </NavLink>
+            <NavLink to="/admin/review" className={navClass}>
+              <span className="ico"><IcoList /></span>
+              문제 검수
             </NavLink>
 
             <div className="nav-label">맛보기 테스트</div>

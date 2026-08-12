@@ -739,6 +739,8 @@
   .upl-summary .t span { font-size: 13px; color: var(--color-muted); }
   .viewer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
   .viewer-nav { display: flex; align-items: center; gap: 12px; }
+  /* 좌측 묶음(체크박스·제목·배지) — 한 덩어리로 왼쪽에 붙인다 */
+  .viewer-head-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   /* 헤더 안 세그 — 모달용 부유 그림자 대신 차분한 트랙 스타일 */
   .viewer-nav .pv-device-seg { margin: 0; box-shadow: none; background: var(--color-fill-hover); }
   .vw-body { max-width: 760px; }
@@ -801,6 +803,49 @@
   .cr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   .cr-actions .btn { height: 44px; padding: 0 18px; }   /* 폼 제출 버튼 44px */
   .cr-actions .btn:disabled { opacity: .45; cursor: default; filter: none; }
+
+  /* ============ 문제 검수 ============ */
+  /* 업로드 뷰어의 체크박스 — 담아 두면 업로드 시 검수 목록으로 넘어간다 */
+  .upl-check { display: inline-flex; align-items: center; cursor: pointer; flex: none; }
+  .upl-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .upl-check-box {
+    width: 20px; height: 20px; border-radius: 6px;
+    border: 1.5px solid var(--line-strong); background: var(--color-canvas);
+    display: inline-block; position: relative;
+    transition: background .15s, border-color .15s;
+  }
+  .upl-check input:checked + .upl-check-box {
+    background: var(--color-primary); border-color: var(--color-primary);
+  }
+  /* 체크 표시 — 흰 ✓ 를 두 변의 보더로 그린다 */
+  .upl-check input:checked + .upl-check-box::after {
+    content: ''; position: absolute; left: 6px; top: 2px;
+    width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .upl-check input:focus-visible + .upl-check-box {
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+  }
+  .upl-check-count { margin-left: 2px; }
+
+  /* 업로드 확인 팝업 본문 — 파일·단원·문항 수 요약 */
+  .upl-confirm-info {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; border-radius: 12px; background: var(--color-fill-soft);
+  }
+  .upl-confirm-info > div { display: flex; align-items: baseline; gap: 12px; }
+  .upl-confirm-info span {
+    flex: 0 0 62px; font-size: 12.5px; font-weight: 600; color: var(--color-muted);
+  }
+  .upl-confirm-info b {
+    font-size: 13.5px; font-weight: 600; color: var(--color-fg);
+    word-break: break-all;
+  }
+
+  /* 검수 — 한 문항씩 보기 (조판은 업로드 미리보기 재사용) */
+  .rv-empty { text-align: center; padding: 56px 24px; }
+  .rv-empty b { display: block; font-size: 15px; color: var(--color-fg); margin-bottom: 6px; }
+  .rv-empty p { font-size: 13px; color: var(--color-muted); }
 
   /* ============ View entrance ============ */
   .view { display: block; animation: pa-view-in .35s cubic-bezier(.2, .8, .3, 1) both; }

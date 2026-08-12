@@ -5,6 +5,7 @@ import AdminLayout from './AdminLayout'
 import DashboardPage from './pages/DashboardPage'
 import ProblemListPage from './pages/ProblemListPage'
 import ProblemUploadPage from './pages/ProblemUploadPage'
+import ProblemReviewPage from './pages/ProblemReviewPage'
 import TrialTestPage from './pages/TrialTestPage'
 import MembersPage from './pages/MembersPage'
 import AllMembersPage from './pages/AllMembersPage'
@@ -43,6 +44,7 @@ export default function AdminRoutes() {
       <Route element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="problems/:subject" element={<ProblemListPage />} />
+        <Route path="review" element={<ProblemReviewPage />} />
         <Route path="upload" element={<ProblemUploadPage />} />
         <Route path="upload/:subject" element={<ProblemUploadPage />} />
         <Route path="trial-tests/:subject" element={<TrialTestPage />} />
