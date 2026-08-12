@@ -56,103 +56,152 @@ $fill: #f0f1f3; // black/100
   @include hover { background: #e5e7ea; }
 }
 
-// ── 대분류 칩 ────────────────────────────────────────────────────────────────
+// ── 단원별 bullet chart ─────────────────────────────────────────────────────
+// 가로 막대 = 내 점수, 세로 마커 = 풀잇 평균. 3개 대분류를 한 화면에서 비교한다.
 
-.chips {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.chip {
-  @include button-reset;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid $line;
-  background: $color-canvas;
-  font-size: 12px;
-  font-weight: $fw-medium;
-  color: $ink-900;
-  white-space: nowrap;
-  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
-.chipActive {
-  border-color: $chip-dark;
-  background: $chip-dark;
-  color: #fff;
-}
-
-// ── 막대 차트 ────────────────────────────────────────────────────────────────
-
-.chart {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 153px; // 시안 고정 높이 (배지 + 막대 + 라벨)
-}
-
-.barColumn {
+.rows {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  gap: 18px;
+  margin-top: 4px;
 }
 
-.badge {
-  display: inline-flex;
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-sm;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: $ink-900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowRight {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border-radius: 9px;
-  background: $fill;
-  font-size: 12px;
-  font-weight: $fw-medium;
-  color: $muted;
+  gap: 6px;
+  flex: none;
+}
+
+.score {
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  padding: 3px 7px;
+  border-radius: $radius-full;
+  font-size: 11px;
+  font-weight: $fw-bold;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.badgeHighlight {
+// 평균 이상은 레드, 미만은 중립 회색 — 학습 앱이라 하락을 질책 색으로 칠하지 않는다
+.deltaUp {
   background: $tint;
   color: $color-primary;
 }
 
-.bar {
-  width: 30px;
-  border-radius: 6px 6px 0 0;
-  background: $line;
-  // 카드 진입 시 아래에서 자라나는 연출
-  transform-origin: bottom;
-  animation: bar-grow 520ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+.deltaDown {
+  background: $fill;
+  color: $muted;
+}
+
+// 마커 라벨(평균값)이 아래로 붙으므로 그만큼 자리를 비워 둔다
+.trackWrap {
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.track {
+  height: 10px;
+  border-radius: $radius-full;
+  background: $fill;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: $radius-full;
+  background: $color-primary;
+  // 왼쪽에서 차오르는 연출 — 행마다 순차 지연
+  transform-origin: left;
+  animation: fill-grow 620ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
 
   @media (prefers-reduced-motion: reduce) { animation: none; }
 }
 
-.barHighlight {
-  background: $color-primary;
+// 평균 미만 — 같은 계열이되 채도를 낮춰 "아직 못 미친다"를 색으로도 전달
+.fillBelow {
+  background: #ffbac4;
 }
 
-.barLabel {
-  width: 60px;
+@keyframes fill-grow {
+  from { transform: scaleX(0); }
+}
+
+// 평균 마커 — 막대 위아래로 살짝 튀어나온 세로선
+.marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: #23272b;
+  transform: translateX(-50%);
+}
+
+.markerLabel {
+  position: absolute;
+  top: 18px;
   font-size: 10px;
   font-weight: $fw-medium;
-  color: $label;
-  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: $muted;
+  white-space: nowrap;
 }
 
-@keyframes bar-grow {
-  from { transform: scaleY(0); }
+// 마커 의미 설명 — 행마다 반복하지 않고 카드에 한 번만
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: $muted;
 }
 
-// 데이터 없음 — 칩을 골랐는데 아직 푼 문제가 없는 단원
+.legendMarker {
+  display: block;
+  width: 2px;
+  height: 11px;
+  border-radius: 1px;
+  background: #23272b;
+}
+
+// 데이터 없음 — 아직 푼 문제가 없는 과목
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 153px;
+  height: 140px;
   font-size: 14px;
   font-weight: $fw-semibold;
   color: $label;

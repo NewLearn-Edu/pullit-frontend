@@ -14,7 +14,7 @@ import { StreakHeatmapCard } from './components/StreakHeatmapCard'
 import { WeeklyLearningCard } from './components/WeeklyLearningCard'
 import styles from './styles/ReportPage.module.scss'
 
-/** 비교 범위 칩 — 수학은 대분류, 영어는 독해 능력 4분류 */
+/** 비교 대상 — 수학은 대분류, 영어는 독해 능력 4분류 */
 const CATEGORIES: Record<Subject, string[]> = {
   math: ['대수', '미적분 I', '확률과 통계'],
   english: ENGLISH_ABILITIES.map((a) => a.name),
@@ -36,12 +36,6 @@ export default function ReportPage() {
   }, [sessionStatus, navigate])
 
   const [subject, setSubject] = useState<Subject>('math')
-  const [category, setCategory] = useState(CATEGORIES.math[0])
-
-  const changeSubject = (s: Subject) => {
-    setSubject(s)
-    setCategory(CATEGORIES[s][0])
-  }
 
   // 오늘 날짜는 한 번만 고정 — 렌더마다 새 Date 를 만들면 자식 useMemo 가 매번 무효화된다
   const today = useMemo(() => new Date(), [])
@@ -54,7 +48,7 @@ export default function ReportPage() {
         {/* 상단 헤더 — 홈·오답노트와 동일 문법 */}
         <header className={styles.header}>
           <CreditBadge credit={me?.creditBalance ?? 0} />
-          <SubjectTabs pill value={subject} onChange={changeSubject} />
+          <SubjectTabs pill value={subject} onChange={setSubject} />
           <div className={styles.headerIcons}>
             <button
               type="button"
@@ -78,11 +72,7 @@ export default function ReportPage() {
         <div className={styles.content}>
           <h1 className={styles.title}>학습 리포트</h1>
 
-          <ScoreComparisonCard
-            categories={CATEGORIES[subject]}
-            category={category}
-            onCategoryChange={setCategory}
-          />
+          <ScoreComparisonCard categories={CATEGORIES[subject]} />
           <StreakHeatmapCard today={today} />
           <WeeklyLearningCard subject={subject} today={today} />
         </div>
