@@ -186,7 +186,11 @@ function renderMdNoBacktick(text: string): string {
 
 /** 최상위 렌더 — `백틱` 구간은 조건 박스 (render_md) */
 function renderMd(text: string): string {
-  const s = String(text ?? '').replace(/\r\n?/g, '\n').trim()
+  const s = String(text ?? '')
+    .replace(/\r\n?/g, '\n')
+    // 말줄임 중복 접기 — "\cdots\cdots"(6점) → 한 개 (KatexText.collapseCdots 와 동일 규칙)
+    .replace(/\\cdots(\s*\\cdots)+/g, '\\cdots')
+    .trim()
   if (!s) return ''
   const segments = s.split(/`([^`]+)`/)
   const out: string[] = []

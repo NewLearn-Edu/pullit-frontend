@@ -19,6 +19,9 @@ const TALL_MATH = /\\[dct]?frac|\\int|\\o?i+nt|\\sum|\\prod|\\binom|\\begin\{|\\
  */
 const enlargeSetOps = (tex: string) => tex.replace(/\\(cup|cap)\b/g, '\\mathbin{\\large\\$1}')
 
+/** 말줄임 중복 접기 — 데이터에 "\cdots\cdots"(6점)로 온 말줄임을 한 개(3점)로 */
+const collapseCdots = (tex: string) => tex.replace(/\\cdots(\s*\\cdots)+/g, '\\cdots')
+
 /**
  * 절댓값(|)·대괄호([ ]) 획 보강 — KaTeX 기본이 수능 지면보다 가늘어 볼드 글리프로 교체.
  * KaTeX 가 이웃 글리프를 한 span 으로 합치는 경우("2∣" 등)에도 놓치지 않도록
@@ -223,7 +226,7 @@ const addBreakPoints = (tex: string): string => addCommaBreaks(protectParenGroup
 
 /** 인라인 수식 1개 → HTML (폭 실측용으로도 사용 — 실제 렌더와 동일 처리) */
 export const renderInlineHtml = (tex: string) =>
-  emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(tex)), false))
+  emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(collapseCdots(tex))), false))
 
 interface Part {
   type: 'text' | 'inline' | 'block'
@@ -310,7 +313,7 @@ function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
     () =>
       emboldenDelims(
         renderWithFallback(
-          displaySizeFractions(enlargeSetOps(wrap ? addBreakPoints(tex) : tex)),
+          displaySizeFractions(enlargeSetOps(collapseCdots(wrap ? addBreakPoints(tex) : tex))),
           true,
         ),
       ),
