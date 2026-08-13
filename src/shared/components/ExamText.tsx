@@ -11,6 +11,15 @@ import './exam.css'
  *
  * 페이지에서 직접 쓰지 말 것 — ExamRender 의 4종 컴포넌트를 통해서만 사용.
  */
+/**
+ * 데이터에 문자 그대로 들어온 "\n"(백슬래시+n)을 실제 개행으로 교정.
+ * 변환 파이프라인 이스케이프 실수 잔재 (_ebs_refined 기준 16건).
+ * 뒤가 영문자면 TeX 명령(\neq·\nabla·\not 등)이므로 건드리지 않는다.
+ */
+function normalizeLiteralNewlines(text: string): string {
+  return text.replace(/\\n(?![a-zA-Z])/g, '\n')
+}
+
 export function ExamText({
   text,
   boxClassName = 'pv-box',
@@ -18,7 +27,7 @@ export function ExamText({
   text: string
   boxClassName?: string
 }) {
-  const segments = String(text ?? '').split('`')
+  const segments = normalizeLiteralNewlines(String(text ?? '')).split('`')
   // 박스 경계의 개행 흡수 — 데이터의 \n\n 이 빈 줄로 렌더되어 박스 마진과 겹치면
   // 박스 위아래에 큰 공백이 생긴다 (간격은 박스 CSS 마진이 담당)
   const cleaned = segments.map((segment, i) => {
@@ -64,7 +73,7 @@ export function ExamText({
  * · 증감표(마크다운 파이프 표)는 실선 표
  */
 export function MathExplainLayout({ text }: { text: string }) {
-  const blocks = splitMarkdownTables(String(text ?? ''))
+  const blocks = splitMarkdownTables(normalizeLiteralNewlines(String(text ?? '')))
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
     // 내부(exam-explain-scale) 폰트가 13~15px 로 유동적으로 줄어든다
