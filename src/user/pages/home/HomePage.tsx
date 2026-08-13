@@ -5,6 +5,7 @@ import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
+import { UnitRailList } from '@/user/components/UnitRailList'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { type Subject } from '@/user/stores/tasteStore'
@@ -15,11 +16,12 @@ import {
   computeCategoryProgress,
   selectRemainingSetsToday,
   useTrialProgressStore,
+  type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
+import { formatShort, GradeMark } from '@/user/pages/taste/WeaknessResultPage'
 import graphLock from '@/assets/home/graph-lock.png'
 import graphExample from '@/assets/home/graph-example.png'
-import rowLock from '@/assets/home/row-lock.svg'
 import styles from './styles/HomePage.module.scss'
 
 /** 맛보기 세트 문항 수 — 정책 3문항 */
@@ -66,6 +68,12 @@ export default function HomePage() {
     disabled: () => window.matchMedia('(min-width: 1281px)').matches,
   })
 
+  // 진단 완료 유닛 상세 시트 — 약점지도 노드 시트와 같은 구성 (통계 · 학습 경로 · CTA)
+  const [unitSheet, setUnitSheet] = useState<UnitProgressRow | null>(null)
+  const unitDrag = useSheetDrag(() => setUnitSheet(null), {
+    disabled: () => window.matchMedia('(min-width: 1281px)').matches,
+  })
+
   // 하루 세트 카운터는 자정에 리셋 — 홈 진입 때마다 날짜를 맞춘다
   useEffect(() => {
     syncDay()
@@ -89,6 +97,15 @@ export default function HomePage() {
 
   /** 잠금 해제 진행 페이지 — 어디까지 왔는지·오늘 뭘 하면 되는지를 여기서 본다 */
   const openUnlock = () => navigate(`/unlock/${subject}/${category.slug}`)
+
+  /** 유닛 시트의 학습 경로 — 커리큘럼 순서 기준 이전 → 현재 → 다음 (약점지도와 동일) */
+  const sheetIdx = unitSheet ? progress.rows.findIndex((r) => r.name === unitSheet.name) : -1
+  const sheetPath =
+    unitSheet && sheetIdx >= 0
+      ? [progress.rows[sheetIdx - 1], progress.rows[sheetIdx], progress.rows[sheetIdx + 1]]
+          .filter((r): r is UnitProgressRow => !!r)
+          .map((r) => ({ name: r.name, state: r.state, current: r.name === unitSheet.name }))
+      : []
 
 
   return (
@@ -180,61 +197,11 @@ export default function HomePage() {
             <div className={styles.subHead}>
               <h2 className={styles.subTitle}>{unitLabel}</h2>
             </div>
-            <div className={styles.subList}>
-              {/* 순서대로 진행 — 진단 안 된 첫 항목만 풀 수 있고 나머지는 잠김 */}
-              {progress.rows.map((u) => {
-                if (u.diagnosis) {
-                  // 진단 완료 행 — 누르면 그 단원의 진단 결과 재열람으로
-                  return (
-                    <button
-                      key={u.name}
-                      type="button"
-                      onClick={() =>
-                        navigate(`/unit-result/${subject}/${encodeURIComponent(u.name)}`)
-                      }
-                      className={clsx(styles.subRow, styles.subRowLink)}
-                    >
-                      <span className={styles.subBody}>
-                        <span className={styles.subName}>{u.name}</span>
-                        <span className={styles.subMeta}>
-                          {u.diagnosis.minutes}분 | 정답 {u.diagnosis.correct}문제
-                        </span>
-                      </span>
-                      <span className={styles.subRight}>
-                        <span
-                          className={clsx(styles.score, u.diagnosis.weak && styles.scoreWeak)}
-                        >
-                          {u.diagnosis.score}점
-                        </span>
-                        <ChevronIcon />
-                      </span>
-                    </button>
-                  )
-                }
-                if (u.state === 'next') {
-                  // 홈 리스트는 표시 전용 — 풀이 진입은 그래프 카드의 잠금 해제 CTA 로만
-                  return (
-                    <div
-                      key={u.name}
-                      className={clsx(styles.subRow, styles.subRowStatic, styles.subRowNext)}
-                    >
-                      <span className={styles.subBody}>
-                        <span className={styles.subName}>{u.name}</span>
-                        <span className={styles.subMeta}>
-                          {canStartToday ? '오늘 풀 차례' : '내일 열려'}
-                        </span>
-                      </span>
-                    </div>
-                  )
-                }
-                return (
-                  <div key={u.name} className={clsx(styles.subRow, styles.subRowLocked)}>
-                    <span className={styles.subName}>{u.name}</span>
-                    <img src={rowLock} alt="잠김" className={styles.rowLock} />
-                  </div>
-                )
-              })}
-            </div>
+            <UnitRailList
+              rows={progress.rows}
+              nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
+              onDoneClick={setUnitSheet}
+            />
           </section>
         </div>
       </main>
@@ -266,6 +233,167 @@ export default function HomePage() {
             <button type="button" onClick={() => setInfoOpen(false)} className={styles.infoClose}>
               닫기
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 진단 완료 유닛 상세 — 약점지도 노드 시트와 동일: 웹 우측 패널 · 모바일 바텀시트 */}
+      {unitSheet?.diagnosis && (
+        <div className={styles.unitDim} onClick={() => setUnitSheet(null)}>
+          <div
+            {...unitDrag.sheetProps}
+            className={clsx(styles.unitSheet, unitDrag.dragging && styles.infoSheetDragging)}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={() => setUnitSheet(null)}
+              className={styles.infoHandleWrap}
+            >
+              <span className={styles.infoHandle} />
+            </button>
+            {/* 웹(우측 패널) 전용 닫기 버튼 — 모바일은 핸들·스와이프로 닫음 */}
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={() => setUnitSheet(null)}
+              className={styles.unitClose}
+            >
+              ×
+            </button>
+
+            <div className={styles.unitTitleRow}>
+              <h2 className={styles.unitTitle}>{unitSheet.name}</h2>
+              {unitSheet.diagnosis.weak && <span className={styles.unitBadgeWeak}>약점</span>}
+            </div>
+
+            <div className={styles.unitStats}>
+              <div className={styles.unitStat}>
+                <span className={styles.unitStatLabel}>푼 문제</span>
+                <span className={styles.unitStatValue}>
+                  {unitSheet.diagnosis.items?.length ?? SET_SIZE}문제
+                </span>
+              </div>
+              <div className={styles.unitStat}>
+                <span className={styles.unitStatLabel}>점수</span>
+                <span className={styles.unitStatValue}>{unitSheet.diagnosis.score}점</span>
+              </div>
+              <div className={clsx(styles.unitStat, styles.unitStatLast)}>
+                <span className={styles.unitStatLabel}>공부 시간</span>
+                <span className={styles.unitStatValue}>
+                  {Math.floor(unitSheet.diagnosis.minutes / 60)}시간{' '}
+                  {unitSheet.diagnosis.minutes % 60}분
+                </span>
+              </div>
+            </div>
+
+            {sheetPath.length > 0 && (
+              <>
+                <h3 className={styles.unitSection}>학습 경로</h3>
+                <div className={styles.unitPathBox}>
+                  {sheetPath.map((p, i) => (
+                    <div key={p.name} className={styles.unitPathItem}>
+                      {i > 0 && <span className={styles.unitPathLine} />}
+                      <span
+                        className={clsx(
+                          styles.unitPathRow,
+                          !p.current && p.state === 'locked' && styles.unitPathRowLocked,
+                        )}
+                      >
+                        <i
+                          className={clsx(
+                            styles.unitPathDot,
+                            p.current && styles.unitPathDotCurrent,
+                            !p.current && p.state !== 'locked' && styles.unitPathDotDone,
+                          )}
+                        />
+                        {p.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 문항별 결과 — 진단 결과 페이지와 같은 표 (박제된 진단분에만 존재) */}
+            {unitSheet.diagnosis.items && unitSheet.diagnosis.items.length > 0 ? (
+              <>
+                <h3 className={styles.unitSection}>문항별 결과</h3>
+                <div className="flex w-full flex-col overflow-hidden rounded-[12px] border border-[#f0f1f3]">
+                  <div className="flex w-full items-center bg-[#f8f8f8]">
+                    {['문항', '답안', '풀이 시간', '점수'].map((label) => (
+                      <div key={label} className="flex flex-1 items-center justify-center p-md">
+                        <p className="whitespace-nowrap text-[13px] text-[#80858b]">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {unitSheet.diagnosis.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex min-h-[68px] w-full items-center border-t border-[#f0f1f3] py-md"
+                    >
+                      <div className="relative flex min-w-0 flex-1 items-center justify-center self-stretch px-sm">
+                        <p className="whitespace-nowrap text-[15px] font-bold text-[#121417]">
+                          {i + 1}번
+                        </p>
+                        <GradeMark
+                          kind={item.correct ? (item.overTime ? 'triangle' : 'circle') : 'slash'}
+                          delayMs={150 + i * 200}
+                        />
+                      </div>
+
+                      <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
+                        <p className="whitespace-nowrap text-[15px] font-medium text-[#121417]">
+                          {item.short ? (
+                            item.myAnswer
+                          ) : (
+                            <span className="text-[19px] leading-none">{item.myAnswer}</span>
+                          )}
+                        </p>
+                        {!item.correct && (
+                          <p className="flex items-center gap-[4px] whitespace-nowrap text-[14px] font-medium text-primary">
+                            정답
+                            {item.short ? (
+                              <span className="font-semibold">{item.correctAnswer}</span>
+                            ) : (
+                              <span className="text-[19px] leading-none">{item.correctAnswer}</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
+                        <p className="whitespace-nowrap text-[14px] font-semibold tabular-nums text-[#121417]">
+                          {formatShort(item.seconds)}
+                        </p>
+                        {item.overTime && (
+                          <p className="whitespace-nowrap text-[13px] font-medium tabular-nums text-primary">
+                            권장 {formatShort(item.recSec)}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
+                        <p className="whitespace-nowrap text-[14px] font-bold tabular-nums text-[#121417]">
+                          {Number.isInteger(item.earned) ? item.earned : item.earned.toFixed(1)}점
+                        </p>
+                        {item.earned < item.points && (
+                          <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
+                            배점 {item.points}점
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-[13px] text-[#a6abb1]">
+                이 진단은 문항별 기록이 저장되기 전에 진행돼서 요약만 볼 수 있어
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -338,22 +466,5 @@ function RadarChart({
 
 /* --- 인라인 SVG 아이콘 --- */
 
-function ChevronIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#a6abb1"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m9 5 7 7-7 7" />
-    </svg>
-  )
-}
 
 

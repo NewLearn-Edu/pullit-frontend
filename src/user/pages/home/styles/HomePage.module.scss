@@ -230,109 +230,8 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   color: #121417;
 }
 
-.subList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
 
-.subRow {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  width: 100%;
-  height: 72px; // 기록(2줄) 유무와 무관하게 모든 행 같은 높이 (언락 페이지와 동일)
-  padding: 0 16px;
-  border-radius: 12px;
-  background: $color-canvas;
-  text-align: left;
-}
 
-// 다음 차례 행 — 메인 컬러 스트로크가 은은하게 깜빡인다 (언락 페이지와 동일)
-.subRowNext {
-  animation: strokeBlink 2s ease-in-out infinite;
-}
-
-@keyframes strokeBlink {
-  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.12); }
-  50% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.7); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .subRowNext {
-    animation: none;
-    box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.45);
-  }
-}
-
-// 진단완료(점수) 행 — 표시 전용, 클릭 어포던스 제거
-.subRowStatic {
-  cursor: default;
-}
-
-// 진단 완료 행 — 결과 재열람으로 진입 가능
-.subRowLink {
-  cursor: pointer;
-  transition: opacity 150ms ease;
-
-  @include hover { opacity: 0.85; }
-}
-
-.subRight {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 8px;
-}
-
-.subRowLocked {
-  background: $row-gray;
-  cursor: default;
-
-  .subName { color: #80858b; }
-}
-
-.subBody {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.subName {
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  color: #121417;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.subMeta {
-  font-size: $fs-caption;
-  font-weight: $fw-medium;
-  color: #a6abb1;
-}
-
-.score {
-  flex-shrink: 0;
-  font-size: 18px;
-  font-weight: $fw-semibold;
-  color: #121417; // 70점 미만(weak)만 primary, 나머지는 검정
-}
-
-.scoreWeak {
-  color: $color-primary;
-}
-
-// 풀기 버튼 칩 — 행 전체가 클릭 영역이라 시각 요소만
-.rowLock {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 약점 그래프 예시 안내 시트 (Figma 2504-22065) — ? 버튼
@@ -403,6 +302,197 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   height: 5px;
   border-radius: $radius-full;
   background: #d6d8db;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 진단 완료 유닛 상세 시트 — 약점지도(WeaknessMapPage) 노드 시트와 동일
+//   웹 = 우측 고정 패널 (× 닫기), 모바일 = 하단 네비 위 바텀시트 (핸들·스와이프)
+//   지도처럼 딤 없이 — 투명 오버레이가 바깥 탭 닫기만 담당한다
+// ─────────────────────────────────────────────────────────────────────────────
+
+.unitDim {
+  position: fixed;
+  inset: 0;
+  min-width: 350px;
+  display: flex;
+  align-items: flex-end;
+  background: transparent;
+  z-index: 60;
+}
+
+.unitSheet {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  width: 100%;
+  margin-bottom: 64px; // 하단 네비 위에서 시작 (지도와 동일)
+  max-height: calc(100dvh - 140px); // 문항별 결과까지 길어지면 시트 내부 스크롤
+  overflow-y: auto;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: $color-canvas;
+  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
+  animation: infoIn 280ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  transform: translateY(var(--drag-y, 0px));
+  transition: transform 200ms ease;
+  touch-action: none;
+
+  // 웹 — 바텀시트 대신 우측 고정 패널 (스와이프·드래그 없음)
+  @include desktop-up {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    bottom: 20px;
+    width: 400px;
+    margin-bottom: 0;
+    padding: 24px 20px;
+    border-radius: 20px;
+    overflow-y: auto;
+    transform: none;
+    transition: none;
+    filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.12));
+    animation: unitSheetInSide 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+}
+
+@keyframes unitSheetInSide {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+.unitClose {
+  @include button-reset;
+  display: none;
+
+  @include desktop-up {
+    @include flex-center;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-full;
+    font-size: 20px;
+    color: #80858b;
+    transition: background-color 150ms ease;
+
+    @include hover { background: #f0f1f3; }
+  }
+}
+
+.unitTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.unitTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: $fw-semibold;
+  color: #121417;
+}
+
+.unitBadgeWeak {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: $radius-full;
+  font-size: 10px;
+  font-weight: $fw-bold;
+  background: $color-primary;
+  color: #fff;
+}
+
+.unitStats {
+  display: flex;
+  padding: $space-lg 0;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.unitStat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  border-right: 1px solid #e5e7ea;
+}
+
+.unitStatLast {
+  border-right: none;
+}
+
+.unitStatLabel {
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: #5e6368;
+}
+
+.unitStatValue {
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: #121417;
+}
+
+.unitSection {
+  margin: 0;
+  font-size: 18px;
+  font-weight: $fw-semibold;
+  color: #121417;
+}
+
+.unitPathBox {
+  display: flex;
+  flex-direction: column;
+  padding: $space-lg;
+  border: 1px solid #e5e7ea;
+  border-radius: 12px;
+}
+
+.unitPathItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.unitPathLine {
+  display: block;
+  width: 2px;
+  height: 22px;
+  margin-left: 4px;
+  background: #e5e7ea;
+}
+
+.unitPathRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: $fs-body-sm;
+  font-weight: $fw-bold;
+  color: #121417;
+}
+
+.unitPathDot {
+  display: block;
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: $radius-full;
+  background: #e5e7ea;
+}
+
+.unitPathDotCurrent {
+  background: #23272b;
+}
+
+.unitPathDotDone {
+  background: $color-canvas;
+  border: 1.5px solid #23272b;
+}
+
+.unitPathRowLocked {
+  color: #aeaeae;
 }
 
 .infoTitle {
