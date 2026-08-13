@@ -71,11 +71,14 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
   {
     name: '확률과 통계',
     slug: 'statistics',
+    // 약점 지도(mathWeaknessMap) 노드 구성과 동일
     units: [
-      { name: '경우의 수' },
       { name: '순열·조합' },
+      { name: '이항정리' },
       { name: '확률의 뜻·이용' },
       { name: '조건부확률', nodeId: 'sn-stat-01' },
+      { name: '확률분포' },
+      { name: '통계적 추정' },
     ],
   },
 ]
