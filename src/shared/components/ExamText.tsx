@@ -72,8 +72,49 @@ export function ExamText({
  * · display 블록은 컨테이너(350~500px)에 맞게 자동 축소 (KatexText.BlockMath)
  * · 증감표(마크다운 파이프 표)는 실선 표
  */
+/**
+ * 여는 괄호가 안 닫힌 채 줄이 끝나면 다음 줄을 이어 붙인다.
+ * "(만약 $f(b) \le 0$이면\n$g(t)$가 … 모순이다.)" 같은 괄호 보조 설명이
+ * 줄 단위 조판에서 세 줄로 갈라지던 문제의 교정.
+ * 괄호 카운트는 수식($…$·$$…$$) 밖 텍스트만 — TeX 괄호와 섞이지 않게.
+ * 빈 줄(문단 경계)은 접지 않고 깊이를 리셋한다 (홀괄호 데이터 폭주 방지).
+ */
+function foldOpenParenNewlines(text: string): string {
+  let out = ''
+  let depth = 0
+  let inMath = false
+  let i = 0
+  while (i < text.length) {
+    const ch = text[i]
+    if (ch === '$') {
+      inMath = !inMath
+      out += ch
+      i++
+      continue
+    }
+    if (!inMath) {
+      if (ch === '(') depth++
+      else if (ch === ')') depth = Math.max(0, depth - 1)
+      else if (ch === '\n') {
+        if (/^[ \t]*\n/.test(text.slice(i + 1))) {
+          depth = 0 // 빈 줄 = 문단 경계 — 접기 중단
+        } else if (depth > 0) {
+          out += ' '
+          i++
+          continue
+        }
+      }
+    }
+    out += ch
+    i++
+  }
+  return out
+}
+
 export function MathExplainLayout({ text }: { text: string }) {
-  const blocks = splitMarkdownTables(normalizeLiteralNewlines(String(text ?? '')))
+  const blocks = splitMarkdownTables(
+    foldOpenParenNewlines(normalizeLiteralNewlines(String(text ?? ''))),
+  )
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
     // 내부(exam-explain-scale) 폰트가 13~15px 로 유동적으로 줄어든다
