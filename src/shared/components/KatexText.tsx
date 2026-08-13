@@ -103,6 +103,18 @@ const renderWithFallback = (tex: string, displayMode: boolean) => {
         .replace(/\\+\s*$/, ''),
     )
   }
+  if (html.includes('katex-error')) {
+    // 3차: env 밖에 남은 정렬 & 제거 — 원문이 빨간 텍스트로 노출되느니
+    // 정렬만 포기하고 수식은 그린다 (\& 이스케이프는 보존)
+    html = render(
+      tex
+        .replace(/\\left\b\s*/g, '')
+        .replace(/\\right\b\s*/g, '')
+        .replace(/\$/g, '')
+        .replace(/(?<!\\)&/g, ' ')
+        .replace(/\\+\s*$/, ''),
+    )
+  }
   return html
 }
 

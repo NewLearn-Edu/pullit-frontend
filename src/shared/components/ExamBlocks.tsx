@@ -223,8 +223,50 @@ function StepsBlock({ lines }: { lines: string[] }) {
   )
 }
 
+/**
+ * "A&=B, &C&=D" 처럼 열-쌍이 2개 이상 든 행을 등식별 행으로 분해.
+ * 그대로 두면 splitAtAlign 이 첫 & 에서만 갈라 우변에 & 가 남고,
+ * env 밖 & 는 KaTeX 파싱 에러 → 원문이 빨간 텍스트로 노출된다.
+ * & 분할은 최상위(중괄호·\begin 환경 밖)만, \& 는 보존.
+ */
+function splitColumnPairs(line: string): string[] {
+  const cells: string[] = []
+  let cur = ''
+  let braceDepth = 0
+  let envDepth = 0
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '\\') {
+      if (line.startsWith('\\begin{', i)) envDepth++
+      else if (line.startsWith('\\end{', i)) envDepth--
+      cur += ch + (line[i + 1] ?? '')
+      i++
+      continue
+    }
+    if (ch === '{') braceDepth++
+    else if (ch === '}') braceDepth--
+    if (ch === '&' && braceDepth === 0 && envDepth === 0) {
+      cells.push(cur)
+      cur = ''
+      continue
+    }
+    cur += ch
+  }
+  cells.push(cur)
+  if (cells.length <= 2) return [line]
+
+  const out: string[] = []
+  for (let i = 0; i < cells.length; i += 2) {
+    const l = (cells[i] ?? '').trim()
+    const r = (cells[i + 1] ?? '').trim()
+    if (!l && !r) continue
+    out.push(r ? `${l}&${r}` : l)
+  }
+  return out.length > 0 ? out : [line]
+}
+
 function renderSteps(lines: string[], key: number) {
-  return <StepsBlock key={key} lines={lines} />
+  return <StepsBlock key={key} lines={lines.flatMap(splitColumnPairs)} />
 }
 
 function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
