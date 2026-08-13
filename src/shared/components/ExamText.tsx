@@ -36,7 +36,17 @@ export function ExamText({
             <BoxContent text={segment} />
           </div>
         ) : (
-          <UnderlinedText key={i} text={segment} />
+          // 본문 속 마크다운 파이프 표(표준정규분포표 등)는 해설과 같은 실선 표로.
+          // 표가 없으면 splitMarkdownTables 가 통짜 text 블록 하나를 돌려줘 기존과 동일
+          <Fragment key={i}>
+            {splitMarkdownTables(segment).map((b, j) =>
+              b.rows ? (
+                <ExamTable key={j} rows={b.rows} />
+              ) : (
+                <UnderlinedText key={j} text={b.text ?? ''} />
+              ),
+            )}
+          </Fragment>
         ),
       )}
     </>
