@@ -110,6 +110,48 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // 약점 그래프 카드 — 레이더 + 잠금 오버레이
 // ─────────────────────────────────────────────────────────────────────────────
 
+// 진행형 레이더 (A안) — 카드 프레임 없이 크게
+.graphTall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 550px;
+}
+
+// 진행 칩 — 그래프 아래 중앙, 보상을 문장으로
+.graphChipRow {
+  display: flex;
+  justify-content: center;
+  margin-top: -18px; // 레이더 여백에 살짝 붙임
+}
+
+.graphChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: $radius-full;
+  background: $color-canvas;
+  font-size: $fs-caption;
+  font-weight: $fw-semibold;
+  color: #40464c;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+
+  b {
+    color: $color-primary;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// 완성 결론 헤드라인 아래 보조 문구
+.subTitleSub {
+  margin: -8px 0 0;
+  padding: 0 6px 0 28px;
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: #80858b;
+}
+
 .graphCard {
   position: relative;
   height: 300px;
@@ -495,6 +537,38 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 .unitPathRowLocked {
   color: #aeaeae;
+}
+
+// 자유 풀이 CTA — 대단원 진단 완주 전에는 disabled (2026-08-13 정책)
+.unitButton {
+  @include button-reset;
+  @include flex-center;
+  flex-shrink: 0;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b;
+  color: #fff;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: #e4e6e9;
+    color: #a6abb1;
+
+    @include hover { opacity: 1; }
+  }
+}
+
+.unitButtonHint {
+  margin: -8px 0 0;
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: #80858b;
+  text-align: center;
 }
 
 .infoTitle {

@@ -12,6 +12,8 @@ import { type Subject } from '@/user/stores/tasteStore'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
+import { useSolveStore } from '@/user/stores/solveStore'
+import { loadQuizProblems } from '@/user/services/problemSet'
 import {
   computeCategoryProgress,
   selectRemainingSetsToday,
@@ -20,6 +22,7 @@ import {
 } from '@/user/stores/trialProgressStore'
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import { formatShort, GradeMark } from '@/user/pages/taste/WeaknessResultPage'
+import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
 import graphLock from '@/assets/home/graph-lock.png'
 import graphExample from '@/assets/home/graph-example.png'
 import styles from './styles/HomePage.module.scss'
@@ -98,6 +101,32 @@ export default function HomePage() {
   /** 잠금 해제 진행 페이지 — 어디까지 왔는지·오늘 뭘 하면 되는지를 여기서 본다 */
   const openUnlock = () => navigate(`/unlock/${subject}/${category.slug}`)
 
+  /** 완성 시 결론 — 이 대단원에서 가장 약한 소단원 */
+  const weakestUnit = progress.unlocked
+    ? progress.rows.reduce((a, b) =>
+        (b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a,
+      )
+    : null
+
+  /**
+   * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
+   * 열려 있으면 해당 유닛 문제로 FREE 세션을 만들어 /solve 로 진입.
+   */
+  const startSolveSession = useSolveStore((s) => s.startSession)
+  const startFreeSolve = async (row: UnitProgressRow) => {
+    const problems = await loadQuizProblems(
+      subject,
+      row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
+    )
+    if (problems.length === 0) return
+    startSolveSession({
+      problems,
+      source: 'FREE',
+      returnTo: `/home${window.location.search}`,
+    })
+    navigate(`/solve/${subject}/0`)
+  }
+
   /** 유닛 시트의 학습 경로 — 커리큘럼 순서 기준 이전 → 현재 → 다음 (약점지도와 동일) */
   const sheetIdx = unitSheet ? progress.rows.findIndex((r) => r.name === unitSheet.name) : -1
   const sheetPath =
@@ -157,7 +186,34 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* 약점 그래프 카드 — 카테고리 유닛을 전부 진단해야 잠금이 풀린다 */}
+          {/* 진행형 약점 레이더 (A안 2026-08-13) — 진단 축만 조각으로 이어지고,
+              완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다 */}
+          <div className={styles.graphTall}>
+            <ProgressRadar
+              units={progress.rows.map((u) => ({
+                name: u.name,
+                score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 자물쇠)
+              }))}
+              className="h-full w-full"
+            />
+          </div>
+
+          {/* 진행 칩 — 채우는 동안 보상(가장 약한 곳 공개)을 문장으로 명시 */}
+          {!progress.unlocked && (
+            <div className={styles.graphChipRow}>
+              <span className={styles.graphChip}>
+                <b>
+                  {progress.doneCount}/{progress.total}
+                </b>{' '}
+                완성 — 다 채우면 제일 약한 곳이 보여
+              </span>
+            </div>
+          )}
+
+          {/* ── 원복용 임시 비활성 (2026-08-13) — 기존 다크 오버레이 그래프 카드 ──
+              false && 로 꺼둠. 되살리려면 아래 블록의 false && 를 지우고
+              위 graphTall 블록을 제거하면 된다. */}
+          {false && (
           <div className={styles.graphCard}>
             <RadarChart
               units={progress.rows.map((u) => ({
@@ -191,13 +247,19 @@ export default function HomePage() {
               </div>
             )}
           </div>
+          )}
+          {/* ── 원복용 임시 비활성 끝 ─────────────────────────────────────── */}
 
           {/* 소단원(수학) / 유형(영어) 리스트 — 헤드라인 + 레일 리스트 */}
           <section className={styles.subSection}>
-            {/* 회의 피드백(2026-08-13) — "소단원" 라벨 대신 남은 개수가 보이는 헤드라인 */}
+            {/* 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형으로 전환 (A안) */}
             <h2 className={styles.subTitle}>
-              {progress.unlocked ? (
-                <>{category.name} 약점 그래프가 열렸어!</>
+              {progress.unlocked && weakestUnit ? (
+                <>
+                  {category.name}에서 가장 약한 건
+                  <br />
+                  <span className={styles.subTitleCount}>{weakestUnit.name}</span>야
+                </>
               ) : (
                 <>
                   {category.name} 약점 그래프 공개까지
@@ -207,6 +269,9 @@ export default function HomePage() {
                 </>
               )}
             </h2>
+            {progress.unlocked && (
+              <p className={styles.subTitleSub}>내일부터 여기를 잡는 문제를 준비해둘게</p>
+            )}
             <UnitRailList
               rows={progress.rows}
               nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
@@ -402,6 +467,24 @@ export default function HomePage() {
             ) : (
               <p className="text-[13px] text-[#a6abb1]">
                 이 진단은 문항별 기록이 저장되기 전에 진행돼서 요약만 볼 수 있어
+              </p>
+            )}
+
+            {/* 자유 풀이 CTA — 대단원 진단 완주(unlocked) 전에는 잠금 (2026-08-13 정책) */}
+            <button
+              type="button"
+              disabled={!progress.unlocked}
+              onClick={() => {
+                setUnitSheet(null)
+                startFreeSolve(unitSheet)
+              }}
+              className={styles.unitButton}
+            >
+              문제 풀기
+            </button>
+            {!progress.unlocked && (
+              <p className={styles.unitButtonHint}>
+                {category.name}의 {unitLabel} 약점 진단을 모두 풀면 열려
               </p>
             )}
           </div>

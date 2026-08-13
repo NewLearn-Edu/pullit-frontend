@@ -4,8 +4,10 @@ import styles from './styles/WeaknessRadar.module.scss'
 
 export interface RadarUnit {
   name: string
-  /** 0~100 단원 점수 */
+  /** 0~100 단원 점수 (미진단 축은 실루엣 값) */
   score: number
+  /** 미진단 축 — 라벨을 회색 처리하고 점수 대신 자물쇠를 표시 */
+  locked?: boolean
 }
 
 /** 약점 판정 기준 — 70점 미만 */
@@ -19,7 +21,7 @@ const INK = '#23272b'
  * 각 꼭짓점에서 양쪽 변을 따라 radius 만큼 물러난 지점을 잇고
  * 꼭짓점을 제어점으로 하는 Q 곡선으로 모서리를 굴린다.
  */
-function roundedPolygon(
+export function roundedPolygon(
   pts: [number, number][],
   radius: number,
 ): { d: string; apexes: [number, number][] } {
@@ -44,7 +46,7 @@ function roundedPolygon(
   return { d: d + 'Z', apexes }
 }
 
-function roundedPolygonPath(pts: [number, number][], radius: number): string {
+export function roundedPolygonPath(pts: [number, number][], radius: number): string {
   return roundedPolygon(pts, radius).d
 }
 
@@ -103,7 +105,7 @@ export default function WeaknessRadar({
   const n = Math.max(units.length, 3)
   const cx = 180
   const cy = 168
-  const maxR = 92
+  const maxR = 104 // 라벨을 줄바꿈해 좌우 공간을 확보한 만큼 웹을 키움
 
   const animated = useAnimatedScores(units.map((u) => u.score))
 
@@ -126,6 +128,7 @@ export default function WeaknessRadar({
       className={className}
       role="img"
       aria-label="단원별 약점 그래프"
+      style={{ overflow: 'visible' }} // 라벨이 뷰박스 가장자리를 살짝 넘어도 잘리지 않게
     >
       {/* 그림자 베이스 — 반투명 핑크 링은 그림자도 투명해져 안 보이므로
           불투명한 흰 바닥판이 대신 그림자를 만든다 */}
@@ -163,6 +166,8 @@ export default function WeaknessRadar({
 
       {/* 노드 + 약점 펄스 */}
       {units.map((unit, i) => {
+        // 미진단 축은 중심에 수축돼 있어 점을 찍지 않는다 (중앙에 점 뭉침 방지)
+        if (unit.locked) return null
         const [x, y] = apexes[i]
         const weak = Math.round(animated[i] ?? unit.score) < WEAK_THRESHOLD
         return (
@@ -190,35 +195,65 @@ export default function WeaknessRadar({
       {/* 라벨 — 단원명 + 점수. 약점은 빨간 볼드, 나머지는 흐린 회색 */}
       {units.map((unit, i) => {
         const shown = Math.round(animated[i] ?? unit.score)
-        const weak = shown < WEAK_THRESHOLD
-        const [lx, ly] = point(i, maxR + 22)
+        const weak = !unit.locked && shown < WEAK_THRESHOLD
+        const [lx, ly] = point(i, maxR + 20)
         const anchor = Math.abs(lx - cx) < 10 ? 'middle' : lx > cx ? 'start' : 'end'
-        // 위쪽 라벨은 위로, 아래쪽 라벨은 아래로 밀어 겹침 방지
-        const dy = ly < cy - 40 ? -14 : ly > cy + 40 ? 14 : 0
+        // 긴 이름("사인·코사인법칙")은 가운뎃점에서 줄바꿈 — 좌우 공간 확보
+        const nameParts =
+          unit.name.includes('·') && unit.name.length >= 7 ? unit.name.split('·') : null
+        // 위쪽 라벨은 위로, 아래쪽 라벨은 아래로 밀어 겹침 방지 (두 줄이면 위쪽은 한 줄 더)
+        const dy = ly < cy - 40 ? (nameParts ? -32 : -16) : ly > cy + 40 ? 16 : 0
+        const nameY = ly + dy
+        const subY = nameY + (nameParts ? 35 : 20)
         return (
           <g key={unit.name} textAnchor={anchor}>
             <text
               x={lx}
-              y={ly + dy}
-              fontSize="12"
+              y={nameY}
+              fontSize="14"
               fontWeight="500"
               fill={INK}
-              opacity={weak ? 1 : 0.55}
+              opacity={unit.locked ? 0.35 : weak ? 1 : 0.55}
               className={styles.label}
             >
-              {unit.name}
+              {nameParts ? (
+                <>
+                  <tspan x={lx}>{nameParts[0]}·</tspan>
+                  <tspan x={lx} dy="16">
+                    {nameParts.slice(1).join('·')}
+                  </tspan>
+                </>
+              ) : (
+                unit.name
+              )}
             </text>
-            <text
-              x={lx}
-              y={ly + dy + 17}
-              fontSize={weak ? 14 : 12}
-              fontWeight={weak ? 700 : 500}
-              fill={weak ? RED : INK}
-              opacity={weak ? 1 : 0.55}
-              className={clsx(styles.label, 'tabular-nums')}
-            >
-              {shown}점
-            </text>
+            {unit.locked ? (
+              // 미진단 — 점수 대신 자물쇠
+              <g
+                transform={`translate(${anchor === 'middle' ? lx : anchor === 'start' ? lx + 12 : lx - 12}, ${subY - 9}) scale(1.25)`}
+                opacity="0.4"
+              >
+                <rect x="-4.5" y="0" width="9" height="6.5" rx="1.4" fill="#80858b" />
+                <path
+                  d="M -2.6 0 V -1.8 A 2.6 2.6 0 0 1 2.6 -1.8 V 0"
+                  stroke="#80858b"
+                  strokeWidth="1.4"
+                  fill="none"
+                />
+              </g>
+            ) : (
+              <text
+                x={lx}
+                y={subY}
+                fontSize={weak ? 16 : 13}
+                fontWeight={weak ? 700 : 500}
+                fill={weak ? RED : INK}
+                opacity={weak ? 1 : 0.55}
+                className={clsx(styles.label, 'tabular-nums')}
+              >
+                {shown}점
+              </text>
+            )}
           </g>
         )
       })}
