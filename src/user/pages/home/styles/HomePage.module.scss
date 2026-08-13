@@ -213,21 +213,23 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   flex-direction: column;
   gap: $space-lg;
-  margin-top: 10px; // 그래프 카드와 소단원 타이틀 사이 여백 추가
+  margin-top: 10px; // 그래프 카드와 소단원 헤드라인 사이 여백
   padding-bottom: 20px;
 }
 
-.subHead {
-  display: flex;
-  align-items: center;
-  padding: 0 $space-sm;
-}
-
+// 언락 페이지 타이틀과 같은 규격 — 왼쪽 시작점은 레일 카드 왼쪽 끝(레일 16px + 간격 10px)
 .subTitle {
   margin: 0;
-  font-size: 18px;
-  font-weight: $fw-semibold;
-  color: #121417;
+  padding: 0 6px 0 28px;
+  font-size: 22px;
+  font-weight: $fw-bold;
+  line-height: 1.35;
+  color: $ink;
+}
+
+.subTitleCount {
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
 }
 
 

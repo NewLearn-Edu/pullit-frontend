@@ -192,11 +192,21 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* 소단원(수학) / 유형(영어) 리스트 — 진단완료·풀기·잠금 3단계 (Figma 2605-5698) */}
+          {/* 소단원(수학) / 유형(영어) 리스트 — 헤드라인 + 레일 리스트 */}
           <section className={styles.subSection}>
-            <div className={styles.subHead}>
-              <h2 className={styles.subTitle}>{unitLabel}</h2>
-            </div>
+            {/* 회의 피드백(2026-08-13) — "소단원" 라벨 대신 남은 개수가 보이는 헤드라인 */}
+            <h2 className={styles.subTitle}>
+              {progress.unlocked ? (
+                <>{category.name} 약점 그래프가 열렸어!</>
+              ) : (
+                <>
+                  {category.name} 약점 그래프 공개까지
+                  <br />
+                  {unitLabel}{' '}
+                  <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
+                </>
+              )}
+            </h2>
             <UnitRailList
               rows={progress.rows}
               nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
