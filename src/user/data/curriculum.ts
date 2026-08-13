@@ -56,12 +56,16 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
   {
     name: '미적분 I',
     slug: 'calculus',
+    // 약점 지도(mathWeaknessMap) 노드 구성과 동일 — 홈 그래프 축·소단원 리스트가 지도와 맞아야 한다
     units: [
       { name: '함수의 극한' },
       { name: '함수의 연속' },
-      // 축약 표에선 미분계수/도함수가 분리돼 있지만 진단 유닛은 합본 유지 — 같은 규칙으로 축약
-      { name: '미분계수·도함수', nodeId: 'sn-diff-01' },
+      { name: '미분계수', nodeId: 'sn-diff-01' },
+      { name: '도함수' },
       { name: '도함수 활용', nodeId: 'sn-diff-02' },
+      { name: '부정적분' },
+      { name: '정적분' },
+      { name: '정적분 활용' },
     ],
   },
   {
