@@ -190,6 +190,7 @@ export default function HomePage() {
               완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다 */}
           <div className={styles.graphTall}>
             <ProgressRadar
+              key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
               units={progress.rows.map((u) => ({
                 name: u.name,
                 score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 자물쇠)

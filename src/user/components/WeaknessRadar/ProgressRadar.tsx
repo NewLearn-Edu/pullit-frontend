@@ -10,7 +10,10 @@ import styles from './styles/WeaknessRadar.module.scss'
  *    미진단 축 끝에는 점선 빈 슬롯 + 회색 라벨 + 자물쇠
  *  - 완성: 폴리곤이 닫히고 가장 약한 축만 크게·빨갛게 + 펄스,
  *    나머지 라벨은 조용히 가라앉는다 (결론 전환)
- * 애니메이션 없음 (약점 펄스 제외) — 점수는 정적으로 그린다.
+ *
+ * 애니메이션 — 진입 시 웹 링 스태거 등장 → 진단 조각이 중심에서 성장,
+ * 빈 슬롯 점선 회전 + 최근 진단 점 핑 (전부 CSS · reduced-motion 시 정지).
+ * 재생은 마운트 기준 — 탭/카테고리 전환 시 key 로 리마운트해 다시 재생한다.
  */
 export interface ProgressRadarUnit {
   name: string
@@ -91,7 +94,7 @@ export default function ProgressRadar({
         { f: 0.75, opacity: 0.08 },
         { f: 0.5, opacity: 0.16 },
         { f: 0.25, opacity: 0.24 },
-      ].map(({ f, opacity, stroke }) => (
+      ].map(({ f, opacity, stroke }, ringIdx) => (
         <path
           key={f}
           d={roundedPolygonPath(ringXY(maxR * f), Math.max(3, maxR * f * 0.13))}
@@ -99,26 +102,42 @@ export default function ProgressRadar({
           fillOpacity={opacity}
           stroke={stroke}
           strokeWidth={stroke ? 1 : 0}
+          className={styles.webIn}
+          // 첫 값 = 등장 스태거, 둘째 값 = 출렁임 시작 위상 / 링마다 주기를 다르게 — 물결 위상차
+          style={{
+            animationDelay: `${ringIdx * 70}ms, ${900 + ringIdx * 700}ms`,
+            animationDuration: `550ms, ${8000 + ringIdx * 1400}ms`,
+          }}
         />
       ))}
 
-      {/* ── 채우는 중 — 진단 조각 + 빈 슬롯 ─────────────────────────────── */}
-      {wedgePath && <path d={wedgePath} fill="rgba(255, 56, 92, 0.18)" />}
-      {edgePath && (
-        <path d={edgePath} stroke="#121417" strokeWidth="2" fill="none" strokeLinejoin="round" />
+      {/* ── 채우는 중 — 진단 조각 + 빈 슬롯 (조각은 중심에서 자라난다) ── */}
+      {!complete && partialPts.length > 0 && (
+        <g className={styles.pieceIn}>
+          {wedgePath && <path d={wedgePath} fill="rgba(255, 56, 92, 0.18)" />}
+          {edgePath && (
+            <path
+              d={edgePath}
+              stroke="#121417"
+              strokeWidth="2"
+              fill="none"
+              strokeLinejoin="round"
+            />
+          )}
+          {partialPts.map(([x, y], k) => (
+            <g key={diagnosed[k].i}>
+              {/* 마지막(가장 최근) 진단 점 — 은은한 핑으로 살아있는 느낌 */}
+              {k === partialPts.length - 1 && (
+                <>
+                  <circle cx={x} cy={y} r="8" fill="none" stroke={RED} strokeWidth="1" className={styles.pulse} />
+                  <circle cx={x} cy={y} r="8" fill="none" stroke={RED} strokeWidth="1" className={clsx(styles.pulse, styles.pulseLate)} />
+                </>
+              )}
+              <circle cx={x} cy={y} r="4.5" fill={RED} stroke="#fff" strokeWidth="1.5" />
+            </g>
+          ))}
+        </g>
       )}
-      {!complete &&
-        partialPts.map(([x, y], k) => (
-          <circle
-            key={diagnosed[k].i}
-            cx={x}
-            cy={y}
-            r="4.5"
-            fill={RED}
-            stroke="#fff"
-            strokeWidth="1.5"
-          />
-        ))}
       {!complete &&
         units.map((u, i) => {
           if (u.score != null) return null
@@ -133,6 +152,7 @@ export default function ProgressRadar({
               stroke="#c9ccd1"
               strokeWidth="1.4"
               strokeDasharray="3 3"
+              className={styles.slotSpin}
             />
           )
         })}
@@ -144,6 +164,7 @@ export default function ProgressRadar({
           fill="rgba(0, 0, 0, 0.16)"
           stroke="#121417"
           strokeWidth="1.6"
+          className={styles.pieceIn}
           style={{ filter: 'drop-shadow(0 6px 9px rgba(0, 0, 0, 0.25))' }}
         />
       )}
