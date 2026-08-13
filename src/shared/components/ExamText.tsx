@@ -634,13 +634,24 @@ function BoxContent({ text }: { text: string }) {
 function UnderlinedText({ text }: { text: string }) {
   if (!text) return null
   const parts: ReactNode[] = []
-  const pattern = /<u>([\s\S]*?)<\/u>/g
+  // <u>밑줄</u> 과 **볼드** (영어 지문의 마크다운 강조 — "**Location:**" 등) 를 함께 처리
+  const pattern = /<u>([\s\S]*?)<\/u>|\*\*([^*\n]+?)\*\*/g
   let cursor = 0
   let match: RegExpExecArray | null
   let key = 0
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > cursor) {
       parts.push(<KatexText key={key++} text={text.slice(cursor, match.index)} />)
+    }
+    if (match[2] != null) {
+      // **볼드** — 마크업이 그대로 노출되지 않게 strong 으로
+      parts.push(
+        <strong key={key++}>
+          <KatexText text={match[2]} />
+        </strong>,
+      )
+      cursor = match.index + match[0].length
+      continue
     }
     // 짧은 밑줄 구간(1~2단어)만 한 덩어리로 묶어 내부 공백 늘어남·줄바꿈을 막는다.
     // 기준을 넉넉히 잡으면 구 전체가 다음 줄로 밀리며 윗줄이 확 벌어지므로 25자로 제한.
