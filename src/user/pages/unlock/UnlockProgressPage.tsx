@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { UnitRailList } from '@/user/components/UnitRailList'
 import { useCreditForExtraSet } from '@/user/api/creditApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
@@ -150,90 +151,12 @@ export default function UnlockProgressPage() {
             )}
           </h1>
 
-          {/* ── 유닛 리스트 — 카드 왼쪽 세로 라인이 진행 경로, 다음 노드가 핑 ── */}
+          {/* ── 유닛 리스트 — 홈과 공용 레일 리스트 (UnitRailList) ─────────── */}
           <section className={styles.listSection}>
-
-            <ol className={styles.list}>
-              {progress.rows.map((row, i) => {
-                const isNext = row.state === 'next'
-                // "지나온 길" 은 이어진 구간만 — 중간 유닛만 진단된 비정상 데이터가 와도
-                // 잠긴 카드 쪽으로 primary 선이 뻗지 않게 양 끝 상태를 함께 본다
-                const prevDone = i > 0 && progress.rows[i - 1].state === 'done'
-                const nextRow = progress.rows[i + 1]
-                const traveledTop = prevDone && row.state !== 'locked'
-                const traveledBottom = row.state === 'done' && nextRow && nextRow.state !== 'locked'
-                return (
-                  <li key={row.name} className={styles.item}>
-                    {/* 왼쪽 레일 — 위/아래 선 + 상태 점 */}
-                    <span className={styles.rail} aria-hidden>
-                      <span
-                        className={clsx(
-                          styles.railLine,
-                          i === 0 && styles.railLineHidden,
-                          traveledTop && styles.railLineDone,
-                        )}
-                      />
-                      <span
-                        className={clsx(
-                          styles.dot,
-                          row.state === 'done' && styles.dotDone,
-                          isNext && styles.dotNext,
-                        )}
-                      >
-                        {isNext && (
-                          <>
-                            <span className={styles.pulse} />
-                            <span className={clsx(styles.pulse, styles.pulseLate)} />
-                          </>
-                        )}
-                      </span>
-                      <span
-                        className={clsx(
-                          styles.railLine,
-                          i === progress.rows.length - 1 && styles.railLineHidden,
-                          traveledBottom && styles.railLineDone,
-                        )}
-                      />
-                    </span>
-
-                    <div
-                      className={clsx(
-                        styles.row,
-                        isNext && styles.rowNext,
-                        row.state === 'locked' && styles.rowLocked,
-                      )}
-                    >
-                      <span className={styles.rowBody}>
-                        <span className={styles.rowName}>{row.name}</span>
-                        {row.diagnosis && (
-                          <span className={styles.rowMeta}>
-                            {row.diagnosis.minutes}분 | 정답 {row.diagnosis.correct}문제
-                          </span>
-                        )}
-                        {isNext && !canStartToday && (
-                          <span className={styles.rowMeta}>{countdown} 뒤에 열려</span>
-                        )}
-                      </span>
-
-                      {row.diagnosis ? (
-                        <span
-                          className={clsx(
-                            styles.rowScore,
-                            row.diagnosis.weak && styles.rowScoreWeak,
-                          )}
-                        >
-                          {row.diagnosis.score}점
-                        </span>
-                      ) : isNext ? null : (
-                        <span className={styles.rowLockIcon} aria-label="잠김">
-                          <LockIcon />
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
+            <UnitRailList
+              rows={progress.rows}
+              nextMeta={!canStartToday ? `${countdown} 뒤에 열려` : undefined}
+            />
           </section>
 
           {progress.unlocked && (
@@ -362,18 +285,3 @@ function formatRemain(ms: number): string {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
 }
 
-/* --- 인라인 SVG 아이콘 --- */
-
-function LockIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="3" y="7" width="10" height="6.5" rx="1.6" fill="currentColor" />
-      <path
-        d="M5.2 7V5.4a2.8 2.8 0 0 1 5.6 0V7"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        fill="none"
-      />
-    </svg>
-  )
-}
