@@ -399,5 +399,29 @@ function parse(text: string): Part[] {
     if (next?.type === 'text') next.value = next.value.replace(/^[ \t]*\n+[ \t]*/, '')
   }
   // 개행 제거로 빈 문자열이 된 텍스트 조각 제거 — 인접 판정 어긋남 방지
-  return parts.filter((p) => p.type !== 'text' || p.value !== '')
+  const filtered = parts.filter((p) => p.type !== 'text' || p.value !== '')
+
+  // 함수 인자·조건 주석이 별도 수식으로 갈라진 데이터 병합 —
+  // "$\lim … f$ $(x) = 0$" · "$a$ $(a > 1)$" 처럼 공백만 사이에 둔 인접
+  // 인라인 수식은 그 공백이 줄바꿈 지점이 되어 좁은 화면에서 "f / (x)=0" 으로
+  // 갈라진다. 뒤 조각이 여는 괄호로 시작하는 짧은 수식이면 한 수식으로 잇는다
+  // (긴 수식은 제외 — 통짜가 되면 접을 자리가 없어 화면을 넘친다).
+  for (let j = 0; j < filtered.length - 2; j++) {
+    const a = filtered[j]
+    const gap = filtered[j + 1]
+    const b = filtered[j + 2]
+    if (
+      a.type === 'inline' &&
+      b.type === 'inline' &&
+      gap.type === 'text' &&
+      /^[ \t]+$/.test(gap.value) && // 공백뿐 (개행 없음 = 원문 같은 줄)
+      b.value.trimStart().startsWith('(') &&
+      b.value.length <= 40
+    ) {
+      a.value = `${a.value} \\, ${b.value}`
+      filtered.splice(j + 1, 2)
+      j--
+    }
+  }
+  return filtered
 }
