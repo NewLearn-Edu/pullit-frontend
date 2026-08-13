@@ -20,6 +20,16 @@ function normalizeLiteralNewlines(text: string): string {
   return text.replace(/\\n(?![a-zA-Z])/g, '\n')
 }
 
+/**
+ * 보기 원기호(①…⑮) 앞 강제 줄바꿈 — "④ …습니다.  ⑤ 참가비는 없습니다." 처럼
+ * 데이터에 개행 없이 이어진 보기가 같은 줄에 렌더되던 문제의 교정.
+ * 앞뒤가 모두 공백인 원기호만 보기 항목으로 판정 — "이를 ①에 대입" · "①, ②에서"
+ * 같은 참조 용법(뒤에 공백 없음)은 건드리지 않는다.
+ */
+function breakBeforeChoiceMarkers(text: string): string {
+  return text.replace(/([^\n\s])[ \t]+([①-⑮])(?=[ \t])/g, '$1\n$2')
+}
+
 export function ExamText({
   text,
   boxClassName = 'pv-box',
@@ -27,7 +37,7 @@ export function ExamText({
   text: string
   boxClassName?: string
 }) {
-  const segments = normalizeLiteralNewlines(String(text ?? '')).split('`')
+  const segments = breakBeforeChoiceMarkers(normalizeLiteralNewlines(String(text ?? ''))).split('`')
   // 박스 경계의 개행 흡수 — 데이터의 \n\n 이 빈 줄로 렌더되어 박스 마진과 겹치면
   // 박스 위아래에 큰 공백이 생긴다 (간격은 박스 CSS 마진이 담당)
   const cleaned = segments.map((segment, i) => {
