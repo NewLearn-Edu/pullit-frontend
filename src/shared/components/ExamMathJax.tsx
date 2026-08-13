@@ -207,6 +207,27 @@ function renderMd(text: string): string {
 
 /* ── 컴포넌트 ────────────────────────────────────────────────── */
 
+/**
+ * typeset 직렬화 큐 — MathJax 의 typesetPromise 는 동시 호출을 지원하지 않는다.
+ * 어드민 검수에서 이전/다음을 빠르게 넘기면 이전 조판이 도는 중에 새 호출이
+ * 겹쳐 조판이 누락되고 "$15$" 원문이 그대로 남던 문제의 원인.
+ * 모든 호출을 하나의 프라미스 체인에 순서대로 이어 마지막 내용까지 반드시 조판한다.
+ */
+let mjTypesetQueue: Promise<void> = Promise.resolve()
+
+function enqueueTypeset(el: HTMLElement): Promise<void> {
+  mjTypesetQueue = mjTypesetQueue
+    .then(() => {
+      const MJ = window.MathJax
+      // 언마운트로 떨어져 나간 노드는 건너뛴다
+      if (!MJ?.typesetPromise || !el.isConnected) return
+      MJ.typesetClear?.([el])
+      return MJ.typesetPromise([el])
+    })
+    .catch(() => {}) // 한 건 실패해도 체인은 계속
+  return mjTypesetQueue
+}
+
 export function MathJaxExplainRender({ text }: { text: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const html = useMemo(() => renderMd(text), [text])
@@ -215,10 +236,8 @@ export function MathJaxExplainRender({ text }: { text: string }) {
     let alive = true
     loadMathJax().then(() => {
       const el = ref.current
-      const MJ = window.MathJax
-      if (!alive || !el || !MJ?.typesetPromise) return
-      MJ.typesetClear?.([el])
-      MJ.typesetPromise([el]).catch(() => {})
+      if (!alive || !el) return
+      enqueueTypeset(el)
     })
     return () => {
       alive = false
