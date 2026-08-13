@@ -599,6 +599,23 @@ $red-tint: #fff1f2;
   transition: opacity 150ms ease;
 
   @include hover { opacity: 0.9; }
+
+  // 자유 풀이 잠금 — 대단원 진단 완주 전 (2026-08-13 정책)
+  &:disabled {
+    cursor: not-allowed;
+    background: $gray-100;
+    color: #a6abb1;
+
+    @include hover { opacity: 1; }
+  }
+}
+
+.sheetButtonHint {
+  margin: -8px 0 0;
+  font-size: $fs-caption;
+  font-weight: $fw-medium;
+  color: $gray-500;
+  text-align: center;
 }
 
 // 선택 노드 플로팅 — 이륙 후 무한 부유

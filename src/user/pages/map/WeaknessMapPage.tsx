@@ -9,7 +9,11 @@ import { CreditBadge } from '@/user/components/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
-import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/tasteStore'
+import { useSolveStore } from '@/user/stores/solveStore'
+import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/trialProgressStore'
+import { findCategoryByName, UNIT_LABEL } from '@/user/data/curriculum'
+import { loadQuizProblems } from '@/user/services/problemSet'
 import {
   MATH_MAP_EDGES,
   MATH_MAP_NODES,
@@ -43,8 +47,8 @@ export default function WeaknessMapPage() {
   const navigate = useNavigate()
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
-  const reset = useTasteStore((s) => s.reset)
-  const setLastSubject = useTasteStore((s) => s.setLastSubject)
+  const diagnosed = useTrialProgressStore((s) => s.diagnosed)
+  const startSolveSession = useSolveStore((s) => s.startSession)
 
   useEffect(() => {
     if (sessionStatus === 'anonymous') navigate('/login', {
@@ -280,10 +284,31 @@ export default function WeaknessMapPage() {
       .map((n) => ({ name: n.name, state: n.state, current: n.id === selected.id }))
   }, [selected, nodes, edges])
 
-  const startQuiz = () => {
-    reset()
-    setLastSubject(subject)
-    navigate(`/taste/quiz/${subject}/0`)
+  /**
+   * 자유 풀이 게이트 (2026-08-13 정책) — 노드가 속한 대단원(카테고리)의
+   * 소단원 진단을 모두 마쳐야(unlocked) 그 단원 문제를 자유롭게 풀 수 있다.
+   */
+  const selectedCategory = selected ? findCategoryByName(subject, selected.cat) : undefined
+  const selectedUnlocked = selectedCategory
+    ? computeCategoryProgress(selectedCategory, diagnosed).unlocked
+    : false
+
+  /** 진단 경로로 이동 — 미진단 노드의 CTA */
+  const goDiagnose = () => {
+    if (selectedCategory) navigate(`/unlock/${subject}/${selectedCategory.slug}`)
+  }
+
+  /** 자유 풀이 시작 — 노드와 같은 이름의 커리큘럼 유닛 문제로 FREE 세션 */
+  const startFreeSolve = async () => {
+    if (!selected || !selectedCategory) return
+    const unit = selectedCategory.units.find((u) => u.name === selected.name)
+    const problems = await loadQuizProblems(
+      subject,
+      unit?.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
+    )
+    if (problems.length === 0) return
+    startSolveSession({ problems, source: 'FREE', returnTo: '/weakness-map' })
+    navigate(`/solve/${subject}/0`)
   }
 
   return (
@@ -562,10 +587,28 @@ export default function WeaknessMapPage() {
               </>
             )}
 
-            {/* 미진단(잠김) 단원은 첫 진단 유도, 진단된 단원은 계속 풀기 */}
-            <button type="button" onClick={startQuiz} className={styles.sheetButton}>
-              {selected.state === 'locked' ? '약점 진단하기' : '문제 풀기'}
-            </button>
+            {/* CTA — 미진단 노드는 진단 경로로, 진단 노드는 대단원 완주 후에만 자유 풀이 */}
+            {selected.state === 'locked' ? (
+              <button type="button" onClick={goDiagnose} className={styles.sheetButton}>
+                약점 진단하러 가기
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={!selectedUnlocked}
+                  onClick={startFreeSolve}
+                  className={styles.sheetButton}
+                >
+                  문제 풀기
+                </button>
+                {!selectedUnlocked && (
+                  <p className={styles.sheetButtonHint}>
+                    {selected.cat}의 {UNIT_LABEL[subject]} 약점 진단을 모두 풀면 열려
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
