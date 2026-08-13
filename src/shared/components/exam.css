@@ -102,6 +102,18 @@
 }
 /* td.exam-cell(+:last-child 조합)으로 어드민의 .admin-root 중첩 규칙보다
    명시도를 높인다 — 마지막 열 우측 정렬·마지막 행 border 제거가 못 덮치게 */
+/* 블록 스키마 table 의 헤더 행 — 본문 셀과 같은 규격 + 옅은 배경/굵기 */
+.exam-table th.exam-cell {
+  border: 1px solid currentColor;
+  padding: 4px 12px;
+  text-align: center;
+  vertical-align: middle;
+  min-width: 44px;
+  white-space: normal;
+  overflow: visible;
+  background: #f8f8f8;
+  font-weight: 600;
+}
 .exam-table td.exam-cell,
 .exam-table td.exam-cell:last-child,
 .exam-table tr:last-child td.exam-cell {

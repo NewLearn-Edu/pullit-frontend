@@ -33,6 +33,9 @@ export interface ExplainBlock {
   items?: Array<{ label: string; blocks: ExplainBlock[] }>
   /** conclusion */
   blocks?: ExplainBlock[]
+  /** table — 셀 값은 $...$ 수식 문자열 */
+  rows?: string[][]
+  headers?: string[]
 }
 
 export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
@@ -309,6 +312,39 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
           <KatexText wrap text={`$$${b.latex ?? ''}$$`} />
         </div>
       )
+
+    case 'table': {
+      const rows = b.rows ?? []
+      if (rows.length === 0) return null
+      return (
+        <div key={key} className="exam-table-wrap">
+          <table className="exam-table">
+            {b.headers && b.headers.length > 0 && (
+              <thead>
+                <tr>
+                  {b.headers.map((h, j) => (
+                    <th key={j} className="exam-cell">
+                      <KatexText text={h} />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {rows.map((row, r) => (
+                <tr key={r}>
+                  {row.map((cell, c) => (
+                    <td key={c} className="exam-cell">
+                      <KatexText text={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
 
     case 'cases':
       return (
