@@ -1,6 +1,7 @@
 import { Fragment, useLayoutEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { KatexText } from './KatexText'
+import { normalizeLiteralNewlines } from './ExamText'
 import './exam.css'
 
 /**
@@ -38,12 +39,28 @@ export interface ExplainBlock {
   headers?: string[]
 }
 
+/** 블록 트리 전체의 문자열 필드에 리터럴 \n 교정 적용 (ExamText 와 동일 규칙) */
+function normalizeBlock(b: ExplainBlock): ExplainBlock {
+  return {
+    ...b,
+    text: b.text != null ? normalizeLiteralNewlines(b.text) : b.text,
+    latex: b.latex != null ? normalizeLiteralNewlines(b.latex) : b.latex,
+    lines: b.lines?.map(normalizeLiteralNewlines),
+    rows: b.rows?.map((r) => r.map(normalizeLiteralNewlines)),
+    headers: b.headers?.map(normalizeLiteralNewlines),
+    items: b.items?.map((it) => ({ ...it, blocks: (it.blocks ?? []).map(normalizeBlock) })),
+    blocks: b.blocks?.map(normalizeBlock),
+  }
+}
+
 export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
     // .exam-blocks 폰트가 13~15.5px 로 움직인다 (MathExplainLayout 과 동일 규칙)
     <div className="exam-explain-root">
-      <div className="exam-blocks">{blocks.map((b, i) => renderBlock(b, i))}</div>
+      <div className="exam-blocks">
+        {blocks.map((b, i) => renderBlock(normalizeBlock(b), i))}
+      </div>
     </div>
   )
 }

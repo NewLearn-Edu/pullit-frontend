@@ -16,7 +16,7 @@ import './exam.css'
  * 변환 파이프라인 이스케이프 실수 잔재 (_ebs_refined 기준 16건).
  * 뒤가 영문자면 TeX 명령(\neq·\nabla·\not 등)이므로 건드리지 않는다.
  */
-function normalizeLiteralNewlines(text: string): string {
+export function normalizeLiteralNewlines(text: string): string {
   return text.replace(/\\n(?![a-zA-Z])/g, '\n')
 }
 
