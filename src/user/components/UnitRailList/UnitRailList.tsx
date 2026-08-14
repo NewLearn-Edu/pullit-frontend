@@ -14,6 +14,8 @@ interface UnitRailListProps {
    * cards = 완주 후 — 레일 없이 둥근 박스 나열 (상세 시트로 들어가는 버튼 느낌)
    */
   variant?: 'rail' | 'cards'
+  /** 약점 뱃지를 붙일 유닛 이름들 (cards 전용 — 점수 낮은 순 상위 N) */
+  weakNames?: string[]
 }
 
 /**
@@ -23,7 +25,13 @@ interface UnitRailListProps {
  * 다음 풀 노드는 핑(파동), 남은 길은 회색 선.
  * 행은 번호·테두리 없이 상태만: 완료(기록·점수) / 다음(핑) / 잠김(회색·자물쇠).
  */
-export function UnitRailList({ rows, nextMeta, onDoneClick, variant = 'rail' }: UnitRailListProps) {
+export function UnitRailList({
+  rows,
+  nextMeta,
+  onDoneClick,
+  variant = 'rail',
+  weakNames,
+}: UnitRailListProps) {
   const isCards = variant === 'cards'
   return (
     <ol className={clsx(styles.list, isCards && styles.cards)}>
@@ -39,7 +47,13 @@ export function UnitRailList({ rows, nextMeta, onDoneClick, variant = 'rail' }: 
         const cardBody = (
           <>
             <span className={styles.rowBody}>
-              <span className={styles.rowName}>{row.name}</span>
+              <span className={styles.rowNameLine}>
+                <span className={styles.rowName}>{row.name}</span>
+                {/* 약점 뱃지 — 리스트 자체가 결론이 되게 (헤드라인 나열 대신) */}
+                {isCards && weakNames?.includes(row.name) && (
+                  <span className={styles.rowWeakBadge}>약점</span>
+                )}
+              </span>
               {row.diagnosis && (
                 <span className={styles.rowMeta}>
                   {row.diagnosis.minutes}분 | 정답 {row.diagnosis.correct}문제
@@ -107,7 +121,8 @@ export function UnitRailList({ rows, nextMeta, onDoneClick, variant = 'rail' }: 
             </span>
             )}
 
-            {row.state === 'done' && onDoneClick ? (
+            {/* 완주 전(rail)은 정보 리스트 — 클릭 불가. 상세 진입은 완주(cards) 후에만 */}
+            {isCards && row.state === 'done' && onDoneClick ? (
               <button
                 type="button"
                 onClick={() => onDoneClick(row)}

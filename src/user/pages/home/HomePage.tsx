@@ -105,12 +105,16 @@ export default function HomePage() {
   const [previewUnlocked, setPreviewUnlocked] = useState(false)
   const unlockedView = progress.unlocked || previewUnlocked
 
-  /** 완성 시 결론 — 이 대단원에서 점수가 낮은 순 상위 3개 (헤드라인 "너의 약점은 …") */
-  const weakestUnits = unlockedView
-    ? [...progress.rows]
-        .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
-        .slice(0, 3)
-    : []
+  /**
+   * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 점수 낮은 순으로 정렬해
+   * 상위 3개에 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
+   */
+  const sortedRows = unlockedView
+    ? [...progress.rows].sort(
+        (a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101),
+      )
+    : progress.rows
+  const weakNames = unlockedView ? sortedRows.slice(0, 3).map((r) => r.name) : []
 
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
@@ -257,15 +261,8 @@ export default function HomePage() {
             {/* 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형으로 전환 (A안) */}
             <div className={styles.subHead}>
               <h2 className={clsx(styles.subTitle, unlockedView && styles.subTitleFlush)}>
-                {unlockedView && weakestUnits.length > 0 ? (
-                  <>
-                    {category.name}에서 너의 약점은
-                    <br />
-                    <span className={styles.subTitleCount}>
-                      {weakestUnits.map((u) => u.name).join(', ')}
-                    </span>{' '}
-                    {subject === 'math' ? '단원' : '유형'}이야
-                  </>
+                {unlockedView ? (
+                  <>{category.name} 약점 그래프가 완성됐어</>
                 ) : (
                   <>
                     {category.name} 약점 그래프 공개까지
@@ -292,10 +289,11 @@ export default function HomePage() {
               </p>
             )}
             <UnitRailList
-              rows={progress.rows}
+              rows={sortedRows}
               nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
               onDoneClick={setUnitSheet}
               variant={unlockedView ? 'cards' : 'rail'}
+              weakNames={weakNames}
             />
           </section>
         </div>
