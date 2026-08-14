@@ -106,15 +106,15 @@ export default function HomePage() {
   const unlockedView = progress.unlocked || previewUnlocked
 
   /**
-   * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 점수 낮은 순으로 정렬해
-   * 상위 3개에 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
+   * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 리스트는 커리큘럼 순서를
+   * 유지하고, 점수 낮은 순 상위 3개에만 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
    */
-  const sortedRows = unlockedView
-    ? [...progress.rows].sort(
-        (a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101),
-      )
-    : progress.rows
-  const weakNames = unlockedView ? sortedRows.slice(0, 3).map((r) => r.name) : []
+  const weakNames = unlockedView
+    ? [...progress.rows]
+        .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
+        .slice(0, 3)
+        .map((r) => r.name)
+    : []
 
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
@@ -289,7 +289,7 @@ export default function HomePage() {
               </p>
             )}
             <UnitRailList
-              rows={sortedRows}
+              rows={progress.rows}
               nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
               onDoneClick={setUnitSheet}
               variant={unlockedView ? 'cards' : 'rail'}
@@ -297,6 +297,16 @@ export default function HomePage() {
             />
           </section>
         </div>
+
+        {/* 약점 문제 풀기 — 완주 후 하단 고정 CTA (스크롤 따라다님)
+            TODO: 문제 선정 알고리즘 연결 예정 (추후 설명) — 지금은 자리만 */}
+        {unlockedView && (
+          <div className={styles.solveDock}>
+            <button type="button" className={styles.solveDockCta} onClick={() => {}}>
+              약점 문제 풀기
+            </button>
+          </div>
+        )}
       </main>
 
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
