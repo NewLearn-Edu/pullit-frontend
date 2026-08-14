@@ -48,9 +48,67 @@ function normalizeBlock(b: ExplainBlock): ExplainBlock {
     lines: b.lines?.map(normalizeLiteralNewlines),
     rows: b.rows?.map((r) => r.map(normalizeLiteralNewlines)),
     headers: b.headers?.map(normalizeLiteralNewlines),
-    items: b.items?.map((it) => ({ ...it, blocks: (it.blocks ?? []).map(normalizeBlock) })),
-    blocks: b.blocks?.map(normalizeBlock),
+    items: b.items?.map((it) => ({ ...it, blocks: normalizeBlocks(it.blocks ?? []) })),
+    blocks: b.blocks ? normalizeBlocks(b.blocks) : b.blocks,
   }
+}
+
+/** 수식($…$) 밖 괄호 잔여 개수 — 여는 괄호가 닫히지 않은 채 끝나면 양수 */
+function parenBalance(text: string): number {
+  let depth = 0
+  let inMath = false
+  for (const ch of text) {
+    if (ch === '$') {
+      inMath = !inMath
+      continue
+    }
+    if (inMath) continue
+    if (ch === '(') depth++
+    else if (ch === ')') depth--
+  }
+  return depth
+}
+
+/**
+ * 괄호 보조 설명이 여러 paragraph 로 쪼개진 데이터 병합 —
+ * "(만약 …이면" / "…모순이다." / ")" 가 각각 딴 줄로 렌더되던 문제의 교정.
+ * 여는 괄호가 안 닫힌 paragraph 는 뒤 paragraph 들을 이어 붙이되(최대 4개),
+ * 실제로 닫혔을 때만 병합을 확정한다 — 홀괄호 데이터 폭주 방지.
+ */
+function mergeOpenParenParagraphs(blocks: ExplainBlock[]): ExplainBlock[] {
+  const out: ExplainBlock[] = []
+  let i = 0
+  while (i < blocks.length) {
+    const b = blocks[i]
+    if (b.type === 'paragraph' && typeof b.text === 'string') {
+      let text = b.text
+      let bal = parenBalance(text)
+      let j = i + 1
+      while (
+        bal > 0 &&
+        j < blocks.length &&
+        j - i <= 4 &&
+        blocks[j].type === 'paragraph' &&
+        typeof blocks[j].text === 'string'
+      ) {
+        text = `${text} ${blocks[j].text}`
+        bal += parenBalance(blocks[j].text as string)
+        j++
+      }
+      if (j > i + 1 && bal <= 0) {
+        out.push({ ...b, text })
+        i = j
+        continue
+      }
+    }
+    out.push(b)
+    i++
+  }
+  return out
+}
+
+function normalizeBlocks(blocks: ExplainBlock[]): ExplainBlock[] {
+  return mergeOpenParenParagraphs(blocks.map(normalizeBlock))
 }
 
 export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
@@ -59,7 +117,7 @@ export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
     // .exam-blocks 폰트가 13~15.5px 로 움직인다 (MathExplainLayout 과 동일 규칙)
     <div className="exam-explain-root">
       <div className="exam-blocks">
-        {blocks.map((b, i) => renderBlock(normalizeBlock(b), i))}
+        {normalizeBlocks(blocks).map((b, i) => renderBlock(b, i))}
       </div>
     </div>
   )
