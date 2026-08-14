@@ -106,6 +106,22 @@ export default function HomePage() {
   const unlockedView = progress.unlocked || previewUnlocked
 
   /**
+   * A안 (2026-08-14) — 홈의 단일 버튼은 선택된 탭이 아니라 여정 전체 기준.
+   * 알고리즘 확정 전 임시 규칙: 커리큘럼 순서로 첫 미완주 대단원의 다음 소단원
+   * 진단 → 전부 완주면 전체 최저점 단원 약점 풀기. (TODO: 추천 알고리즘으로 교체)
+   */
+  const journey = categories.map((c) => ({ cat: c, prog: computeCategoryProgress(c, diagnosed) }))
+  const currentLeg = journey.find((j) => !j.prog.unlocked)
+  const nextUnitRow =
+    currentLeg?.prog.rows.find((r) => r.state === 'next') ??
+    currentLeg?.prog.rows.find((r) => r.state !== 'done')
+  const weakestOverall = !currentLeg
+    ? journey
+        .flatMap((j) => j.prog.rows)
+        .reduce((a, b) => ((b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a))
+    : null
+
+  /**
    * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 리스트는 커리큘럼 순서를
    * 유지하고, 점수 낮은 순 상위 3개에만 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
    */
@@ -178,6 +194,29 @@ export default function HomePage() {
         />
 
         <div className={styles.content}>
+          {/* 오늘의 학습 (A안 2026-08-14) — 하단 단일 버튼이 뭘 할지 화면이 먼저 말한다.
+              탭(대단원)과 무관하게 여정 기준이라, 버튼과 화면이 어긋나지 않는다 */}
+          <section className={styles.todayCard}>
+            <span className={styles.todayLabel}>오늘의 학습</span>
+            {currentLeg ? (
+              <>
+                <strong className={styles.todayTitle}>
+                  {currentLeg.cat.name} · {nextUnitRow?.name}
+                </strong>
+                <span className={styles.todaySub}>
+                  {canStartToday
+                    ? '진단 3문제로 약점을 확인해'
+                    : '오늘 세트는 끝 — 내일 이어서 하자'}
+                </span>
+              </>
+            ) : (
+              <>
+                <strong className={styles.todayTitle}>약점 보강 · {weakestOverall?.name}</strong>
+                <span className={styles.todaySub}>가장 약한 단원부터 잡는 문제를 준비했어</span>
+              </>
+            )}
+          </section>
+
           <h1 className={styles.title}>약점 그래프</h1>
 
           {/* 대분류 칩 */}
@@ -298,15 +337,28 @@ export default function HomePage() {
           </section>
         </div>
 
-        {/* 약점 문제 풀기 — 완주 후 하단 고정 CTA (스크롤 따라다님)
-            TODO: 문제 선정 알고리즘 연결 예정 (추후 설명) — 지금은 자리만 */}
-        {unlockedView && (
-          <div className={styles.solveDock}>
-            <button type="button" className={styles.solveDockCta} onClick={() => {}}>
+        {/* 홈의 단일 버튼 (A안) — 여정 기준으로 라벨·동작이 정해진다.
+            TODO: 추천 알고리즘 확정 시 아래 임시 규칙 교체 */}
+        <div className={styles.solveDock}>
+          {currentLeg ? (
+            <button
+              type="button"
+              className={styles.solveDockCta}
+              disabled={!canStartToday}
+              onClick={() => navigate(`/unlock/${subject}/${currentLeg.cat.slug}`)}
+            >
+              {canStartToday ? `${currentLeg.cat.name} 진단 시작하기` : '오늘 진단은 끝 — 내일 열려'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.solveDockCta}
+              onClick={() => weakestOverall && startFreeSolve(weakestOverall)}
+            >
               약점 문제 풀기
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
