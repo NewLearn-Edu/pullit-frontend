@@ -18,7 +18,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 .page {
   display: flex;
   min-height: 100dvh;
-  background: $bg;
+  background: $color-canvas; // 흰 배경 (2026-08-14 변경 — 기존 $bg 회색)
 }
 
 .main {
@@ -80,7 +80,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // 대분류 칩 — 350px 에서 다 안 들어가면 가로 스크롤 (잘림 방지)
 .chips {
   display: flex;
-  gap: $space-sm;
+  gap: 10px;
   margin: 0 (-$space-lg);
   padding: 0 $space-lg;
   overflow-x: auto;
@@ -93,10 +93,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include button-reset;
   padding: $space-sm $space-lg;
   border-radius: 20px;
-  background: $color-canvas;
-  font-size: $fs-body-sm;
+  // 흰 페이지 배경 위에서 칩이 구분되게 — 미선택은 옅은 회색 채움 + 차분한 글자
+  background: #f0f1f3;
+  font-size: 16px;
   font-weight: $fw-semibold;
-  color: #121417;
+  color: #5e6368;
   white-space: nowrap;
   transition: background 150ms ease, color 150ms ease;
 }
@@ -112,6 +113,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 // 진행형 레이더 (A안) — 카드 프레임 없이 크게
 .graphTall {
+  position: relative; // ? 안내 버튼 앵커
   display: flex;
   align-items: center;
   justify-content: center;

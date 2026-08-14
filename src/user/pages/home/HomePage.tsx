@@ -189,6 +189,15 @@ export default function HomePage() {
           {/* 진행형 약점 레이더 (A안 2026-08-13) — 진단 축만 조각으로 이어지고,
               완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다 */}
           <div className={styles.graphTall}>
+            {/* 약점 그래프 예시 안내 — 기존 다크 카드의 ? 버튼을 레이더 우상단으로 이전 */}
+            <button
+              type="button"
+              aria-label="약점 그래프 안내"
+              onClick={() => setInfoOpen(true)}
+              className={styles.helpChip}
+            >
+              ?
+            </button>
             <ProgressRadar
               key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
               units={progress.rows.map((u) => ({
