@@ -25,8 +25,9 @@ export const ENGLISH_MAP_NODES: MapNode[] = [
   // 어휘·추론
   { id: 'en-blank', cat: '어휘·추론', name: '빈칸 추론', x: COL_X[2], y: ROW_Y[0], state: 'locked' },
   { id: 'en-summary', cat: '어휘·추론', name: '요약문', x: COL_X[2], y: ROW_Y[1], state: 'locked' },
-  { id: 'en-voca01', cat: '어휘·추론', name: '어휘 의미 01', x: COL_X[2], y: ROW_Y[2], state: 'locked' },
-  { id: 'en-voca04', cat: '어휘·추론', name: '어휘 의미 04', x: COL_X[2], y: ROW_Y[3], state: 'locked' },
+  // 밑줄 함의 = voca01·voca04 통합 표시명 · 어휘 쓰임 = voca03 (2026-08-14 16유형 확정)
+  { id: 'en-voca-meaning', cat: '어휘·추론', name: '밑줄 함의', x: COL_X[2], y: ROW_Y[2], state: 'locked' },
+  { id: 'en-voca-usage', cat: '어휘·추론', name: '어휘 쓰임', x: COL_X[2], y: ROW_Y[3], state: 'locked' },
   // 정보 확인
   { id: 'en-notice-match', cat: '정보 확인', name: '안내문 내용 일치', x: COL_X[3], y: ROW_Y[0], state: 'locked' },
   { id: 'en-notice-mismatch', cat: '정보 확인', name: '안내문 내용 불일치', x: COL_X[3], y: ROW_Y[1], state: 'locked' },
@@ -42,8 +43,8 @@ export const ENGLISH_MAP_EDGES: MapEdge[] = [
   { from: 'en-insert', to: 'en-order' },
   { from: 'en-order', to: 'en-irrelevant' },
   { from: 'en-blank', to: 'en-summary' },
-  { from: 'en-summary', to: 'en-voca01' },
-  { from: 'en-voca01', to: 'en-voca04' },
+  { from: 'en-summary', to: 'en-voca-meaning' },
+  { from: 'en-voca-meaning', to: 'en-voca-usage' },
   { from: 'en-notice-match', to: 'en-notice-mismatch' },
   { from: 'en-notice-mismatch', to: 'en-content-mismatch' },
   { from: 'en-content-mismatch', to: 'en-chart' },
