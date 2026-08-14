@@ -101,12 +101,16 @@ export default function HomePage() {
   /** 잠금 해제 진행 페이지 — 어디까지 왔는지·오늘 뭘 하면 되는지를 여기서 본다 */
   const openUnlock = () => navigate(`/unlock/${subject}/${category.slug}`)
 
-  /** 완성 시 결론 — 이 대단원에서 가장 약한 소단원 */
-  const weakestUnit = progress.unlocked
-    ? progress.rows.reduce((a, b) =>
-        (b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a,
-      )
-    : null
+  /** 개발용 미리보기 — 완주 전에도 완성(결론형 헤드라인 + 카드 나열) 상태를 확인 */
+  const [previewUnlocked, setPreviewUnlocked] = useState(false)
+  const unlockedView = progress.unlocked || previewUnlocked
+
+  /** 완성 시 결론 — 이 대단원에서 점수가 낮은 순 상위 3개 (헤드라인 "너의 약점은 …") */
+  const weakestUnits = unlockedView
+    ? [...progress.rows]
+        .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
+        .slice(0, 3)
+    : []
 
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
@@ -208,18 +212,6 @@ export default function HomePage() {
             />
           </div>
 
-          {/* 진행 칩 — 채우는 동안 보상(가장 약한 곳 공개)을 문장으로 명시 */}
-          {!progress.unlocked && (
-            <div className={styles.graphChipRow}>
-              <span className={styles.graphChip}>
-                <b>
-                  {progress.doneCount}/{progress.total}
-                </b>{' '}
-                완성 — 다 채우면 제일 약한 곳이 보여
-              </span>
-            </div>
-          )}
-
           {/* ── 원복용 임시 비활성 (2026-08-13) — 기존 다크 오버레이 그래프 카드 ──
               false && 로 꺼둠. 되살리려면 아래 블록의 false && 를 지우고
               위 graphTall 블록을 제거하면 된다. */}
@@ -263,29 +255,47 @@ export default function HomePage() {
           {/* 소단원(수학) / 유형(영어) 리스트 — 헤드라인 + 레일 리스트 */}
           <section className={styles.subSection}>
             {/* 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형으로 전환 (A안) */}
-            <h2 className={styles.subTitle}>
-              {progress.unlocked && weakestUnit ? (
-                <>
-                  {category.name}에서 가장 약한 건
-                  <br />
-                  <span className={styles.subTitleCount}>{weakestUnit.name}</span>야
-                </>
-              ) : (
-                <>
-                  {category.name} 약점 그래프 공개까지
-                  <br />
-                  {unitLabel}{' '}
-                  <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
-                </>
+            <div className={styles.subHead}>
+              <h2 className={clsx(styles.subTitle, unlockedView && styles.subTitleFlush)}>
+                {unlockedView && weakestUnits.length > 0 ? (
+                  <>
+                    {category.name}에서 너의 약점은
+                    <br />
+                    <span className={styles.subTitleCount}>
+                      {weakestUnits.map((u) => u.name).join(', ')}
+                    </span>{' '}
+                    {subject === 'math' ? '단원' : '유형'}이야
+                  </>
+                ) : (
+                  <>
+                    {category.name} 약점 그래프 공개까지
+                    <br />
+                    {unitLabel}{' '}
+                    <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
+                  </>
+                )}
+              </h2>
+              {/* 개발용 — 완성 상태 미리보기 토글 (실 데이터로 완주하면 자연히 완성 화면) */}
+              {!progress.unlocked && (
+                <button
+                  type="button"
+                  className={styles.devToggle}
+                  onClick={() => setPreviewUnlocked((v) => !v)}
+                >
+                  {previewUnlocked ? '진행형' : '완성 미리보기'}
+                </button>
               )}
-            </h2>
-            {progress.unlocked && (
-              <p className={styles.subTitleSub}>내일부터 여기를 잡는 문제를 준비해둘게</p>
+            </div>
+            {unlockedView && (
+              <p className={clsx(styles.subTitleSub, styles.subTitleFlush)}>
+                내일부터 여기를 잡는 문제를 준비해둘게
+              </p>
             )}
             <UnitRailList
               rows={progress.rows}
               nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
               onDoneClick={setUnitSheet}
+              variant={unlockedView ? 'cards' : 'rail'}
             />
           </section>
         </div>

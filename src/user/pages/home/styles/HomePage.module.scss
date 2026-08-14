@@ -120,30 +120,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   height: 420px;
 }
 
-// 진행 칩 — 그래프 아래 중앙, 보상을 문장으로
-.graphChipRow {
-  display: flex;
-  justify-content: center;
-  margin-top: -18px; // 레이더 여백에 살짝 붙임
-}
-
-.graphChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  font-size: $fs-caption;
-  font-weight: $fw-semibold;
-  color: #40464c;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-
-  b {
-    color: $color-primary;
-    font-variant-numeric: tabular-nums;
-  }
-}
 
 // 완성 결론 헤드라인 아래 보조 문구
 .subTitleSub {
@@ -192,10 +168,10 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #d6d8db;
+  background: #ececec;
   font-size: $fs-body-sm;
   font-weight: $fw-medium;
-  color: #5e6368;
+  color: #8d8f91;
 }
 
 .graphOverlayBody {
@@ -261,6 +237,29 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   padding-bottom: 20px;
 }
 
+// 헤드라인 행 — 타이틀 + 우측 개발용 미리보기 토글
+.subHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+// 개발용 완성 미리보기 토글 — 눈에 안 띄는 소형 칩
+.devToggle {
+  @include button-reset;
+  flex-shrink: 0;
+  margin-right: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e3e5e8;
+  border-radius: 12px;
+  background: $color-canvas;
+  font-size: 11px;
+  font-weight: $fw-medium;
+  color: #8d8f91;
+  white-space: nowrap;
+}
+
 // 언락 페이지 타이틀과 같은 규격 — 왼쪽 시작점은 레일 카드 왼쪽 끝(레일 16px + 간격 10px)
 .subTitle {
   margin: 0;
@@ -274,6 +273,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 .subTitleCount {
   color: $color-primary;
   font-variant-numeric: tabular-nums;
+}
+
+// 완주(cards) 상태 — 레일 인덴트(28px)가 사라지므로 카드 안 텍스트(20px)와 좌측 정렬
+.subTitleFlush {
+  padding-left: 20px;
 }
 
 
