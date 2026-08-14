@@ -73,6 +73,30 @@ export default function ProblemReviewPage() {
     toast('검수 완료 · 목록에서 뺐어요')
   }
 
+  /**
+   * 검수 목록 엑셀 다운로드 — UTF-8 BOM CSV (엑셀에서 한글 깨짐 없이 바로 열림).
+   * 검수 큐가 이 브라우저(localStorage)에만 있어서 파일로 뽑아 공유하는 용도.
+   */
+  const downloadExcel = () => {
+    if (entries.length === 0) return
+    // replaceAll 은 타깃 ES 버전(lib)에 없어 정규식 전역 치환으로
+    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`
+    const rows = entries.map((e) => {
+      // 문항 번호 — ID 끝 숫자 추출 (2022_1_1_1-S0054 → 문항54)
+      const m = /(\d+)\s*$/.exec(e.problemId)
+      const no = m ? `문항${parseInt(m[1], 10)}` : e.problemId
+      return [no, e.fileName, e.problemId, e.filePath].map(esc).join(',')
+    })
+    const csv = '\uFEFF' + ['문항,파일명,문항 ID,단원', ...rows].join('\r\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `문제검수_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast(`검수 ${entries.length}문항을 내려받았어요`)
+  }
+
   const clearAll = () => {
     if (!window.confirm('검수 목록을 모두 비울까요? 문제 데이터는 그대로예요.')) return
     clearReviewQueue()
@@ -93,9 +117,14 @@ export default function ProblemReviewPage() {
           </p>
         </div>
         {entries.length > 0 && (
-          <button className="btn btn-ghost" onClick={clearAll}>
-            전체 비우기
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-ghost" onClick={downloadExcel}>
+              엑셀 다운로드
+            </button>
+            <button className="btn btn-ghost" onClick={clearAll}>
+              전체 비우기
+            </button>
+          </div>
         )}
       </div>
 
