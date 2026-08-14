@@ -743,6 +743,15 @@
   .viewer-head-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   /* 헤더 안 세그 — 모달용 부유 그림자 대신 차분한 트랙 스타일 */
   .viewer-nav .pv-device-seg { margin: 0; box-shadow: none; background: var(--color-fill-hover); }
+  /* 문항 번호 점프 — 제목의 현재 번호가 곧 입력창. 번호 입력 후 Enter 로 이동 */
+  .jump-input {
+    width: 52px; height: 30px; text-align: center;
+    border: 1px solid var(--color-line); border-radius: 12px;
+    background: var(--color-canvas); color: var(--color-fg);
+    font: inherit; font-variant-numeric: tabular-nums;
+    outline: none;
+  }
+  .jump-input:focus { border-color: var(--line-strong); }
   .vw-body { max-width: 760px; }
   .pv-choices .choice.correct .choice-num { color: var(--color-primary); }
   .vw-answer { margin-top: 20px; font-size: 13px; font-weight: 600; color: var(--color-muted); }

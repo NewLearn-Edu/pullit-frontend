@@ -35,6 +35,8 @@ export default function ProblemUploadPage() {
 
   const [items, setItems] = useState<UploadItem[]>([])
   const [idx, setIdx] = useState(0)
+  // 문항 번호 점프 — 입력 중인 임시값 (null 이면 현재 번호 표시)
+  const [jumpDraft, setJumpDraft] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState('')
   const [filePath, setFilePath] = useState('')
@@ -144,6 +146,16 @@ export default function ProblemUploadPage() {
     } finally {
       setUploading(false)
     }
+  }
+
+  /** 번호 입력으로 해당 문항 이동 — 범위 밖은 1~N 으로 클램프 */
+  const commitJump = () => {
+    if (jumpDraft == null) return
+    const n = parseInt(jumpDraft, 10)
+    if (!Number.isNaN(n) && items.length > 0) {
+      setIdx(Math.min(items.length, Math.max(1, n)) - 1)
+    }
+    setJumpDraft(null)
   }
 
   /** 현재 문항 검수 체크 토글 */
@@ -266,7 +278,22 @@ export default function ProblemUploadPage() {
                   <span className="upl-check-box" aria-hidden />
                 </label>
                 <div className="card-title">
-                  문항 {idx + 1} / {items.length}{item?.id ? ` · ${item.id}` : ''}
+                  문항{' '}
+                  <input
+                    className="jump-input"
+                    type="text"
+                    inputMode="numeric"
+                    value={jumpDraft ?? String(idx + 1)}
+                    aria-label="문항 번호로 이동"
+                    title="번호 입력 후 Enter — 해당 문항으로 이동"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setJumpDraft(e.target.value.replace(/\D/g, ''))}
+                    onBlur={commitJump}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    }}
+                  />{' '}
+                  / {items.length}{item?.id ? ` · ${item.id}` : ''}
                 </div>
                 {checked.size > 0 && (
                   <span className="badge neutral upl-check-count">검수 {checked.size}</span>
