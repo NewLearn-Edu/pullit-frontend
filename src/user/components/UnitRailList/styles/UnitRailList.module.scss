@@ -102,46 +102,38 @@ $muted: #a6abb1;    // black/400
   @include hover { opacity: 0.85; }
 }
 
+// 완주 전(rail) 기본 — 버튼처럼 안 보이게 박스 없이 아래 헤어라인 스트로크만
+// (2026-08-14 · 완주 후에만 .cards 로 둥근 박스 전환)
 .row {
   display: flex;
   flex: 1;
   min-width: 0;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
-  height: 72px; // 기록(2줄) 유무와 무관하게 모든 카드 같은 높이
+  height: 72px; // 기록(2줄) 유무와 무관하게 모든 행 같은 높이
   padding: 0 20px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+// 완주 후(cards) — 레일이 사라지고 둥근 박스 나열 (상세 시트로 들어가는 카드).
+// 회색 채움은 disabled 로 읽혀서 흰 배경 + 테두리로 (2026-08-14)
+.cards .row {
+  margin-bottom: 12px;
+  border-bottom: none;
+  border: 1px solid #f0f1f3;
   border-radius: 16px;
   background: $color-canvas;
 }
 
-// 마지막 카드는 아래 여백 없이 (레일 선 숨김 구간과 맞춤)
-.item:last-child .row {
+.cards .item:last-child .row {
   margin-bottom: 0;
-}
-
-// 다음 차례 카드 — 메인 컬러 스트로크가 은은하게 깜빡인다 (레일 핑과 같은 2초 박자)
-.rowNext {
-  animation: strokeBlink 2s ease-in-out infinite;
-}
-
-@keyframes strokeBlink {
-  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.12); }
-  50% { box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.7); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse { animation: none; opacity: 0; }
-
-  .rowNext {
-    animation: none;
-    box-shadow: inset 0 0 0 1.5px rgba(255, 56, 92, 0.45);
-  }
 }
 
 .rowLocked {
-  background: $row-gray;
-
   .rowName {
     color: #80858b;
     font-weight: $fw-medium;
@@ -184,6 +176,13 @@ $muted: #a6abb1;    // black/400
 }
 
 .rowLockIcon {
+  @include flex-center;
+  flex-shrink: 0;
+  color: #c4c9ce;
+}
+
+// 완주 카드 우측 셰브런 — 상세로 들어가는 버튼임을 드러낸다
+.rowChevron {
   @include flex-center;
   flex-shrink: 0;
   color: #c4c9ce;

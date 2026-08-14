@@ -8,6 +8,12 @@ interface UnitRailListProps {
   nextMeta?: string
   /** 진단 완료 카드 클릭 (홈 — 상세 시트 열기). 없으면 완료 카드는 표시 전용 */
   onDoneClick?: (row: UnitProgressRow) => void
+  /**
+   * rail(기본) = 대단원 완주 전 — 왼쪽 진행 레일 + 박스 없는 헤어라인 리스트
+   *   (버튼처럼 안 보이게 · 2026-08-14)
+   * cards = 완주 후 — 레일 없이 둥근 박스 나열 (상세 시트로 들어가는 버튼 느낌)
+   */
+  variant?: 'rail' | 'cards'
 }
 
 /**
@@ -15,11 +21,12 @@ interface UnitRailListProps {
  *
  * 카드 왼쪽 세로 레일이 진행 경로다 — 지나온 길(완료)은 primary 실선,
  * 다음 풀 노드는 핑(파동), 남은 길은 회색 선.
- * 카드는 번호·테두리 없이 상태만: 완료(기록·점수) / 다음(핑·스트로크 깜빡임) / 잠김(회색·자물쇠).
+ * 행은 번호·테두리 없이 상태만: 완료(기록·점수) / 다음(핑) / 잠김(회색·자물쇠).
  */
-export function UnitRailList({ rows, nextMeta, onDoneClick }: UnitRailListProps) {
+export function UnitRailList({ rows, nextMeta, onDoneClick, variant = 'rail' }: UnitRailListProps) {
+  const isCards = variant === 'cards'
   return (
-    <ol className={styles.list}>
+    <ol className={clsx(styles.list, isCards && styles.cards)}>
       {rows.map((row, i) => {
         const isNext = row.state === 'next'
         // "지나온 길" 은 이어진 구간만 — 중간 유닛만 진단된 비정상 데이터가 와도
@@ -38,30 +45,36 @@ export function UnitRailList({ rows, nextMeta, onDoneClick }: UnitRailListProps)
                   {row.diagnosis.minutes}분 | 정답 {row.diagnosis.correct}문제
                 </span>
               )}
-              {isNext && nextMeta && <span className={styles.rowMeta}>{nextMeta}</span>}
+              {!isCards && isNext && nextMeta && <span className={styles.rowMeta}>{nextMeta}</span>}
             </span>
 
-            {row.diagnosis ? (
+            {row.diagnosis && (
               <span className={clsx(styles.rowScore, row.diagnosis.weak && styles.rowScoreWeak)}>
                 {row.diagnosis.score}점
               </span>
-            ) : isNext ? null : (
-              <span className={styles.rowLockIcon} aria-label="잠김">
-                <LockIcon />
+            )}
+            {/* 완주(cards) — 다 푼 상태라 잠금 대신 상세로 들어가는 셰브런 */}
+            {isCards ? (
+              <span className={styles.rowChevron} aria-hidden>
+                <ChevronIcon />
               </span>
+            ) : (
+              !row.diagnosis &&
+              !isNext && (
+                <span className={styles.rowLockIcon} aria-label="잠김">
+                  <LockIcon />
+                </span>
+              )
             )}
           </>
         )
 
-        const cardClass = clsx(
-          styles.row,
-          isNext && styles.rowNext,
-          row.state === 'locked' && styles.rowLocked,
-        )
+        const cardClass = clsx(styles.row, !isCards && row.state === 'locked' && styles.rowLocked)
 
         return (
           <li key={row.name} className={styles.item}>
-            {/* 왼쪽 레일 — 위/아래 선 + 상태 점 */}
+            {/* 왼쪽 레일 — 위/아래 선 + 상태 점. 완주(cards)면 로드맵이 끝난 것이므로 없음 */}
+            {variant === 'rail' && (
             <span className={styles.rail} aria-hidden>
               <span
                 className={clsx(
@@ -92,6 +105,7 @@ export function UnitRailList({ rows, nextMeta, onDoneClick }: UnitRailListProps)
                 )}
               />
             </span>
+            )}
 
             {row.state === 'done' && onDoneClick ? (
               <button
@@ -108,6 +122,20 @@ export function UnitRailList({ rows, nextMeta, onDoneClick }: UnitRailListProps)
         )
       })}
     </ol>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M6 3.5 10.5 8 6 12.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
