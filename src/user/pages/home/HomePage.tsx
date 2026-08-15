@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
@@ -73,6 +73,8 @@ export default function HomePage() {
 
   // 진단 완료 유닛 상세 시트 — 약점지도 노드 시트와 같은 구성 (통계 · 학습 경로 · CTA)
   const [unitSheet, setUnitSheet] = useState<UnitProgressRow | null>(null)
+  // 시트가 어느 대단원 소속인지 — 리스트가 대단원 통합이라 행마다 소속이 다르다
+  const [sheetCatSlug, setSheetCatSlug] = useState<string | null>(null)
   const unitDrag = useSheetDrag(() => setUnitSheet(null), {
     disabled: () => window.matchMedia('(min-width: 1281px)').matches,
   })
@@ -103,7 +105,6 @@ export default function HomePage() {
 
   /** 개발용 미리보기 — 완주 전에도 완성(결론형 헤드라인 + 카드 나열) 상태를 확인 */
   const [previewUnlocked, setPreviewUnlocked] = useState(false)
-  const unlockedView = progress.unlocked || previewUnlocked
 
   /**
    * A안 (2026-08-14) — 홈의 단일 버튼은 선택된 탭이 아니라 여정 전체 기준.
@@ -121,16 +122,95 @@ export default function HomePage() {
         .reduce((a, b) => ((b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a))
     : null
 
+  /** 완성 시 결론은 리스트가 말한다 — 점수 낮은 순 상위 3개에만 약점 뱃지 */
+  const weakNamesOf = (rows: UnitProgressRow[]) =>
+    [...rows]
+      .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
+      .slice(0, 3)
+      .map((r) => r.name)
+
   /**
-   * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 리스트는 커리큘럼 순서를
-   * 유지하고, 점수 낮은 순 상위 3개에만 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
+   * 통합 스크롤 리스트 (2026-08-14) — 소단원 리스트를 대수→미적분 I→확통
+   * 한 줄로 이어 붙이고, 스크롤이 어느 대단원 구간에 닿았는지에 따라
+   * 위 그래프가 바운스로 전환된다. 칩 클릭 = 해당 구간으로 스크롤.
    */
-  const weakNames = unlockedView
-    ? [...progress.rows]
-        .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
-        .slice(0, 3)
-        .map((r) => r.name)
-    : []
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
+  const stickyRef = useRef<HTMLDivElement | null>(null)
+  const activeCatRef = useRef<string | null>(null)
+  useEffect(() => {
+    activeCatRef.current = null // 과목이 바뀌면 판정 초기화
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        // 판정선 = 고정 블록(타이틀·칩·그래프) 아래 "보이는 리스트 영역"의 35% 지점.
+        // 구간 헤더가 그래프 밑으로 조금 들어오면 그 구간이 활성 — 실측 기반이라
+        // 고정 블록 축소·뷰포트 크기와 무관하게 체감이 같다
+        const stickyBottom = stickyRef.current?.getBoundingClientRect().bottom ?? 0
+        const line = stickyBottom + (window.innerHeight - stickyBottom) * 0.35
+        let active: string | null = null
+        for (const c of CURRICULUM[subject]) {
+          const el = sectionRefs.current[c.slug]
+          if (el && el.getBoundingClientRect().top <= line) active = c.slug
+        }
+        if (!active || active === activeCatRef.current) return
+        activeCatRef.current = active
+        const next: Record<string, string> =
+          active === CURRICULUM[subject][0].slug ? {} : { cat: active }
+        if (subject !== 'math') next.subject = subject
+        setSearchParams(next, { replace: true })
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(raf)
+    }
+  }, [subject, setSearchParams])
+
+  /** 칩 클릭 — 활성 전환 + 해당 대단원 구간으로 스크롤 */
+  const goCat = (slug: string) => {
+    changeCat(slug)
+    sectionRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  /**
+   * 그래프 바운스 전환 — 활성 대단원이 바뀌면 현재 그래프가 슈욱 줄어들며
+   * 사라진 뒤(240ms), 새 대단원 그래프가 바운스로 나타난다.
+   */
+  const [displayCatSlug, setDisplayCatSlug] = useState(category.slug)
+  const [graphLeaving, setGraphLeaving] = useState(false)
+  useEffect(() => {
+    if (category.slug === displayCatSlug) return
+    setGraphLeaving(true)
+    const t = setTimeout(() => {
+      setDisplayCatSlug(category.slug)
+      setGraphLeaving(false)
+    }, 240)
+    return () => clearTimeout(t)
+  }, [category.slug, displayCatSlug])
+  const displayLeg = journey.find((j) => j.cat.slug === displayCatSlug) ?? journey[0]
+
+  /** 유닛 시트 소속 대단원 — 경로·자유풀이 게이트가 이 기준으로 동작 */
+  const sheetLeg = sheetCatSlug ? journey.find((j) => j.cat.slug === sheetCatSlug) : undefined
+
+  /** 스크롤하면 고정된 그래프를 살짝 축소 — 아래 리스트가 더 보이게 (히스테리시스로 떨림 방지) */
+  const [graphShrunk, setGraphShrunk] = useState(false)
+  useEffect(() => {
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        setGraphShrunk((prev) => (prev ? window.scrollY > 16 : window.scrollY > 120))
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
 
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
@@ -151,11 +231,12 @@ export default function HomePage() {
     navigate(`/solve/${subject}/0`)
   }
 
-  /** 유닛 시트의 학습 경로 — 커리큘럼 순서 기준 이전 → 현재 → 다음 (약점지도와 동일) */
-  const sheetIdx = unitSheet ? progress.rows.findIndex((r) => r.name === unitSheet.name) : -1
+  /** 유닛 시트의 학습 경로 — 소속 대단원의 커리큘럼 순서 기준 이전 → 현재 → 다음 */
+  const sheetRows = sheetLeg?.prog.rows ?? []
+  const sheetIdx = unitSheet ? sheetRows.findIndex((r) => r.name === unitSheet.name) : -1
   const sheetPath =
     unitSheet && sheetIdx >= 0
-      ? [progress.rows[sheetIdx - 1], progress.rows[sheetIdx], progress.rows[sheetIdx + 1]]
+      ? [sheetRows[sheetIdx - 1], sheetRows[sheetIdx], sheetRows[sheetIdx + 1]]
           .filter((r): r is UnitProgressRow => !!r)
           .map((r) => ({ name: r.name, state: r.state, current: r.name === unitSheet.name }))
       : []
@@ -195,13 +276,15 @@ export default function HomePage() {
 
         <div className={styles.content}>
           {/* 오늘의 학습 (A안 2026-08-14) — 하단 단일 버튼이 뭘 할지 화면이 먼저 말한다.
-              탭(대단원)과 무관하게 여정 기준이라, 버튼과 화면이 어긋나지 않는다 */}
+              탭(대단원)과 무관하게 여정 기준이라, 버튼과 화면이 어긋나지 않는다.
+              ── 임시 비활성 (2026-08-14) — 되살리려면 false && 제거 ── */}
+          {false && (
           <section className={styles.todayCard}>
             <span className={styles.todayLabel}>오늘의 학습</span>
             {currentLeg ? (
               <>
                 <strong className={styles.todayTitle}>
-                  {currentLeg.cat.name} · {nextUnitRow?.name}
+                  {currentLeg?.cat.name} · {nextUnitRow?.name}
                 </strong>
                 <span className={styles.todaySub}>
                   {canStartToday
@@ -216,16 +299,34 @@ export default function HomePage() {
               </>
             )}
           </section>
+          )}
 
-          <h1 className={styles.title}>약점 그래프</h1>
+          {/* 상단 고정 블록 — 타이틀 · 칩 · 그래프가 함께 붙고, 리스트만 밑으로 흐른다 */}
+          <div
+            ref={stickyRef}
+            className={clsx(styles.stickyTop, graphShrunk && styles.stickyTopShrunk)}
+          >
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>약점 그래프</h1>
+            {/* 개발용 — 완성 상태 미리보기 토글 (실 데이터로 완주하면 자연히 완성 화면) */}
+            {journey.some((j) => !j.prog.unlocked) && (
+              <button
+                type="button"
+                className={styles.devToggle}
+                onClick={() => setPreviewUnlocked((v) => !v)}
+              >
+                {previewUnlocked ? '진행형' : '완성 미리보기'}
+              </button>
+            )}
+          </div>
 
-          {/* 대분류 칩 */}
+          {/* 대분류 칩 — 클릭하면 아래 통합 리스트의 해당 구간으로 스크롤 */}
           <div className={styles.chips}>
             {categories.map((c) => (
               <button
                 key={c.slug}
                 type="button"
-                onClick={() => changeCat(c.slug)}
+                onClick={() => goCat(c.slug)}
                 className={clsx(styles.chip, category.slug === c.slug && styles.chipActive)}
               >
                 {c.name}
@@ -234,8 +335,9 @@ export default function HomePage() {
           </div>
 
           {/* 진행형 약점 레이더 (A안 2026-08-13) — 진단 축만 조각으로 이어지고,
-              완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다 */}
-          <div className={styles.graphTall}>
+              완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다.
+              활성 대단원이 바뀌면 바운스로 축소 → 새 그래프가 바운스로 등장 */}
+          <div className={clsx(styles.graphTall, graphShrunk && styles.graphTallShrunk)}>
             {/* 약점 그래프 예시 안내 — 기존 다크 카드의 ? 버튼을 레이더 우상단으로 이전 */}
             <button
               type="button"
@@ -245,14 +347,19 @@ export default function HomePage() {
             >
               ?
             </button>
-            <ProgressRadar
-              key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
-              units={progress.rows.map((u) => ({
-                name: u.name,
-                score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 자물쇠)
-              }))}
-              className="h-full w-full"
-            />
+            <div
+              key={`${subject}:${displayLeg.cat.slug}`} // 전환 시 리마운트 — 등장 애니메이션 재생
+              className={clsx(styles.graphSwap, graphLeaving ? styles.graphOut : styles.graphIn)}
+            >
+              <ProgressRadar
+                units={displayLeg.prog.rows.map((u) => ({
+                  name: u.name,
+                  score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 자물쇠)
+                }))}
+                className="h-full w-full"
+              />
+            </div>
+          </div>
           </div>
 
           {/* ── 원복용 임시 비활성 (2026-08-13) — 기존 다크 오버레이 그래프 카드 ──
@@ -295,46 +402,59 @@ export default function HomePage() {
           )}
           {/* ── 원복용 임시 비활성 끝 ─────────────────────────────────────── */}
 
-          {/* 소단원(수학) / 유형(영어) 리스트 — 헤드라인 + 레일 리스트 */}
-          <section className={styles.subSection}>
-            {/* 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형으로 전환 (A안) */}
-            <div className={styles.subHead}>
-              <h2 className={clsx(styles.subTitle, unlockedView && styles.subTitleFlush)}>
-                {unlockedView ? (
-                  <>{category.name} 약점 그래프가 완성됐어</>
-                ) : (
-                  <>
-                    {category.name} 약점 그래프 공개까지
-                    <br />
-                    {unitLabel}{' '}
-                    <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
-                  </>
+          {/* 통합 소단원 리스트 — 대수→미적분 I→확통 한 줄 나열.
+              스크롤이 구간에 닿으면 위 그래프·칩이 그 대단원으로 전환 */}
+          {journey.map(({ cat, prog }) => {
+            const secUnlocked = prog.unlocked || previewUnlocked
+            const isCurrentLeg = cat.slug === currentLeg?.cat.slug
+            return (
+              <section
+                key={cat.slug}
+                data-cat={cat.slug}
+                ref={(el) => {
+                  sectionRefs.current[cat.slug] = el
+                }}
+                className={styles.subSection}
+              >
+                {/* 구간 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형 */}
+                <h2 className={clsx(styles.subTitle, secUnlocked && styles.subTitleFlush)}>
+                  {secUnlocked ? (
+                    <>{cat.name} 약점 그래프가 완성됐어</>
+                  ) : (
+                    <>
+                      {cat.name} 약점 그래프 공개까지
+                      <br />
+                      {unitLabel}{' '}
+                      <span className={styles.subTitleCount}>{prog.remaining}개</span> 남았어
+                    </>
+                  )}
+                </h2>
+                {secUnlocked && (
+                  <p className={clsx(styles.subTitleSub, styles.subTitleFlush)}>
+                    내일부터 여기를 잡는 문제를 준비해둘게
+                  </p>
                 )}
-              </h2>
-              {/* 개발용 — 완성 상태 미리보기 토글 (실 데이터로 완주하면 자연히 완성 화면) */}
-              {!progress.unlocked && (
-                <button
-                  type="button"
-                  className={styles.devToggle}
-                  onClick={() => setPreviewUnlocked((v) => !v)}
-                >
-                  {previewUnlocked ? '진행형' : '완성 미리보기'}
-                </button>
-              )}
-            </div>
-            {unlockedView && (
-              <p className={clsx(styles.subTitleSub, styles.subTitleFlush)}>
-                내일부터 여기를 잡는 문제를 준비해둘게
-              </p>
-            )}
-            <UnitRailList
-              rows={progress.rows}
-              nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
-              onDoneClick={setUnitSheet}
-              variant={unlockedView ? 'cards' : 'rail'}
-              weakNames={weakNames}
-            />
-          </section>
+                <UnitRailList
+                  rows={prog.rows}
+                  nextMeta={
+                    isCurrentLeg
+                      ? canStartToday
+                        ? '오늘 풀 차례'
+                        : '내일 열려'
+                      : currentLeg
+                        ? `${currentLeg.cat.name} 완주 후에 열려`
+                        : undefined
+                  }
+                  onDoneClick={(row) => {
+                    setUnitSheet(row)
+                    setSheetCatSlug(cat.slug)
+                  }}
+                  variant={secUnlocked ? 'cards' : 'rail'}
+                  weakNames={secUnlocked ? weakNamesOf(prog.rows) : []}
+                />
+              </section>
+            )
+          })}
         </div>
 
         {/* 홈의 단일 버튼 (A안) — 여정 기준으로 라벨·동작이 정해진다.
@@ -550,10 +670,10 @@ export default function HomePage() {
               </p>
             )}
 
-            {/* 자유 풀이 CTA — 대단원 진단 완주(unlocked) 전에는 잠금 (2026-08-13 정책) */}
+            {/* 자유 풀이 CTA — 소속 대단원 진단 완주(unlocked) 전에는 잠금 (2026-08-13 정책) */}
             <button
               type="button"
-              disabled={!progress.unlocked}
+              disabled={!sheetLeg?.prog.unlocked}
               onClick={() => {
                 setUnitSheet(null)
                 startFreeSolve(unitSheet)
@@ -562,9 +682,9 @@ export default function HomePage() {
             >
               문제 풀기
             </button>
-            {!progress.unlocked && (
+            {sheetLeg && !sheetLeg.prog.unlocked && (
               <p className={styles.unitButtonHint}>
-                {category.name}의 {unitLabel} 약점 진단을 모두 풀면 열려
+                {sheetLeg.cat.name}의 {unitLabel} 약점 진단을 모두 풀면 열려
               </p>
             )}
           </div>

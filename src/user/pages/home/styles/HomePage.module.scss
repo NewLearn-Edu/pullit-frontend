@@ -69,12 +69,21 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   }
 }
 
+// 페이지 타이틀 행 — 타이틀 + 우측 개발용 미리보기 토글
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .title {
   margin: 0;
   padding: 0 $space-xs;
   font-size: 22px;
   font-weight: $fw-semibold;
   color: $ink;
+  transition: font-size 320ms ease;
 }
 
 // 대분류 칩 — 350px 에서 다 안 들어가면 가로 스크롤 (잘림 방지)
@@ -99,7 +108,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   font-weight: $fw-semibold;
   color: #5e6368;
   white-space: nowrap;
-  transition: background 150ms ease, color 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    padding 320ms ease,
+    font-size 320ms ease;
 }
 
 .chipActive {
@@ -111,13 +124,98 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // 약점 그래프 카드 — 레이더 + 잠금 오버레이
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 진행형 레이더 (A안) — 카드 프레임 없이 크게
+// 상단 고정 블록 — 타이틀 · 칩 · 그래프 (아래 통합 리스트만 밑으로 흐른다)
+.stickyTop {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  // 칩 가로 스크롤(-margin) 블리드까지 배경이 덮게 좌우로 확장
+  margin: 0 (-$space-lg);
+  padding: 0 $space-lg 8px;
+  background: $color-canvas; // 밑으로 지나가는 리스트 가림
+  transition: gap 320ms ease;
+}
+
+// 스크롤 축소 상태 — 타이틀·칩도 살짝 작아져 리스트 공간을 더 내준다
+.stickyTopShrunk {
+  gap: 10px;
+
+  .title {
+    font-size: 17px;
+  }
+
+  .chip {
+    padding: 6px 14px;
+    font-size: 14px;
+  }
+}
+
+// 진행형 레이더 (A안) — 카드 프레임 없이 크게. 스크롤하면 살짝 축소
 .graphTall {
   position: relative; // ? 안내 버튼 앵커
   display: flex;
   align-items: center;
   justify-content: center;
   height: 420px;
+  transition: height 320ms ease;
+}
+
+// 스크롤 축소 상태 — 아래 리스트가 더 보이게
+.graphTallShrunk {
+  height: 280px;
+}
+
+// 그래프 대단원 전환 (2026-08-14) — 스크롤 스파이가 활성 대단원을 바꾸면
+// 현재 그래프가 살짝 커졌다가 슈욱 줄어들며 사라지고, 새 그래프가 바운스로 등장
+.graphSwap {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+}
+
+.graphIn {
+  animation: graph-pop-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1); // 오버슛 스프링
+}
+
+.graphOut {
+  // back-in 이징 — 진행값이 초반에 음수로 내려가 scale 이 잠깐 1보다 커진 뒤 축소
+  animation: graph-pop-out 240ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+@keyframes graph-pop-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes graph-pop-out {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graphIn,
+  .graphOut {
+    animation: none;
+  }
+
+  .graphOut {
+    opacity: 0;
+  }
 }
 
 
@@ -235,6 +333,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   gap: $space-lg;
   margin-top: 10px; // 그래프 카드와 소단원 헤드라인 사이 여백
   padding-bottom: 20px;
+  scroll-margin-top: 12px; // 칩 클릭 스크롤 도착 지점 여백
 }
 
 // 헤드라인 행 — 타이틀 + 우측 개발용 미리보기 토글
