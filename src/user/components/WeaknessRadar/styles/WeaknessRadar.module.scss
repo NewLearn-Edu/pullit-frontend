@@ -59,21 +59,21 @@
 }
 
 // 출렁임 — 2% 남짓의 비대칭 스케일·미세 회전 (은은하지만 눈에 들어오는 수면 결)
-@keyframes radar-web-sway {
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-  30% {
-    transform: scale(1.062) rotate(0.7deg);
-  }
-  55% {
-    transform: scale(0.991) rotate(-0.55deg);
-  }
-  80% {
-    transform: scale(1.013) rotate(0.35deg);
-  }
-}
+// @keyframes radar-web-sway {
+//   0%,
+//   100% {
+//     transform: scale(1) rotate(0deg);
+//   }
+//   30% {
+//     transform: scale(1.062) rotate(0.7deg);
+//   }
+//   55% {
+//     transform: scale(0.991) rotate(-0.55deg);
+//   }
+//   80% {
+//     transform: scale(1.013) rotate(0.35deg);
+//   }
+// }
 
 // 진단 조각(면·선·점) — 링이 깔린 뒤 중심에서 자라난다
 .pieceIn {
