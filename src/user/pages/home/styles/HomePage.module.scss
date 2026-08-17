@@ -311,6 +311,12 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   transition: background 150ms ease;
 
   @include hover { background: #3a3f45; }
+
+  &:disabled {
+    background: #e3e5e8;
+    color: #a6abb1;
+    cursor: default;
+  }
 }
 
 

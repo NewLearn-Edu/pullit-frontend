@@ -106,6 +106,19 @@ export default function HomePage() {
   const unlockedView = progress.unlocked || previewUnlocked
 
   /**
+   * 하단 상시 CTA 의 여정 판정 — 홈 버튼은 하나, 탭이 아니라 여정 전체 기준.
+   * 임시 규칙: 커리큘럼 순서로 첫 미완주 대단원 진단 → 전부 완주면 전체 최저점
+   * 단원 약점 풀이. (TODO: 추천 알고리즘 확정 시 교체)
+   */
+  const journey = categories.map((c) => ({ cat: c, prog: computeCategoryProgress(c, diagnosed) }))
+  const currentLeg = journey.find((j) => !j.prog.unlocked)
+  const weakestOverall = !currentLeg
+    ? journey
+        .flatMap((j) => j.prog.rows)
+        .reduce((a, b) => ((b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a))
+    : null
+
+  /**
    * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 리스트는 커리큘럼 순서를
    * 유지하고, 점수 낮은 순 상위 3개에만 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
    */
@@ -298,15 +311,28 @@ export default function HomePage() {
           </section>
         </div>
 
-        {/* 약점 문제 풀기 — 완주 후 하단 고정 CTA (스크롤 따라다님)
-            TODO: 문제 선정 알고리즘 연결 예정 (추후 설명) — 지금은 자리만 */}
-        {unlockedView && (
-          <div className={styles.solveDock}>
-            <button type="button" className={styles.solveDockCta} onClick={() => {}}>
+        {/* 홈의 단일 CTA — 화면 아래 상시 고정, 여정 기준으로 라벨·동작 결정.
+            TODO: 추천 알고리즘 확정 시 임시 규칙 교체 */}
+        <div className={styles.solveDock}>
+          {currentLeg ? (
+            <button
+              type="button"
+              className={styles.solveDockCta}
+              disabled={!canStartToday}
+              onClick={() => navigate(`/unlock/${subject}/${currentLeg.cat.slug}`)}
+            >
+              {canStartToday ? `${currentLeg.cat.name} 진단 시작하기` : '오늘 진단은 끝 — 내일 열려'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.solveDockCta}
+              onClick={() => weakestOverall && startFreeSolve(weakestOverall)}
+            >
               약점 문제 풀기
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
