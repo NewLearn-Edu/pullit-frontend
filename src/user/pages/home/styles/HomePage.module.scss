@@ -280,36 +280,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   padding-left: 20px;
 }
 
-// 오늘의 학습 카드 (A안) — 하단 단일 버튼이 뭘 할지 먼저 말해주는 영역
-.todayCard {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 18px 20px;
-  border: 1px solid #f0f1f3;
-  border-radius: 16px;
-  background: $color-canvas;
-}
-
-.todayLabel {
-  font-size: 12px;
-  font-weight: $fw-semibold;
-  color: $color-primary;
-}
-
-.todayTitle {
-  font-size: 18px;
-  font-weight: $fw-bold;
-  color: #121417;
-}
-
-.todaySub {
-  font-size: $fs-body-sm;
-  font-weight: $fw-medium;
-  color: #80858b;
-}
-
-// 홈 단일 CTA — 하단에서 따라다니는 버튼 (언락 페이지 dock 과 같은 규격)
+// 약점 문제 풀기 — 하단에서 따라다니는 CTA (언락 페이지 dock 과 같은 규격)
 .solveDock {
   position: sticky;
   bottom: calc(64px + env(safe-area-inset-bottom)); // 하단 네비(64px) 위
@@ -340,12 +311,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   transition: background 150ms ease;
 
   @include hover { background: #3a3f45; }
-
-  &:disabled {
-    background: #e3e5e8;
-    color: #a6abb1;
-    cursor: default;
-  }
 }
 
 
