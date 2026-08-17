@@ -125,8 +125,8 @@ export function UnitRailList({
             </span>
             )}
 
-            {/* 완주 전(rail)은 정보 리스트 — 클릭 불가. 상세 진입은 완주(cards) 후에만 */}
-            {isCards && row.state === 'done' && onDoneClick ? (
+            {/* 맛보기를 마친 유닛은 어느 상태에서든 상세(자유 풀이) 진입 가능 (2026-08-17 정책) */}
+            {row.state === 'done' && onDoneClick ? (
               <button
                 type="button"
                 onClick={() => onDoneClick(row)}

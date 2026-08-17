@@ -11,8 +11,7 @@ import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/tasteStore'
 import { useSolveStore } from '@/user/stores/solveStore'
-import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/trialProgressStore'
-import { findCategoryByName, UNIT_LABEL } from '@/user/data/curriculum'
+import { findCategoryByName } from '@/user/data/curriculum'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import {
   MATH_MAP_EDGES,
@@ -47,7 +46,6 @@ export default function WeaknessMapPage() {
   const navigate = useNavigate()
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
-  const diagnosed = useTrialProgressStore((s) => s.diagnosed)
   const startSolveSession = useSolveStore((s) => s.startSession)
 
   useEffect(() => {
@@ -285,13 +283,10 @@ export default function WeaknessMapPage() {
   }, [selected, nodes, edges])
 
   /**
-   * 자유 풀이 게이트 (2026-08-13 정책) — 노드가 속한 대단원(카테고리)의
-   * 소단원 진단을 모두 마쳐야(unlocked) 그 단원 문제를 자유롭게 풀 수 있다.
+   * 자유 풀이 게이트 (2026-08-17 정책) — 해당 소단원(유형)의 맛보기 진단만
+   * 마쳤으면 그 단원 문제를 자유롭게 풀 수 있다 (대단원 완주 불필요).
    */
   const selectedCategory = selected ? findCategoryByName(subject, selected.cat) : undefined
-  const selectedUnlocked = selectedCategory
-    ? computeCategoryProgress(selectedCategory, diagnosed).unlocked
-    : false
 
   /** 진단 경로로 이동 — 미진단 노드의 CTA */
   const goDiagnose = () => {
@@ -587,27 +582,15 @@ export default function WeaknessMapPage() {
               </>
             )}
 
-            {/* CTA — 미진단 노드는 진단 경로로, 진단 노드는 대단원 완주 후에만 자유 풀이 */}
+            {/* CTA — 미진단 노드는 진단 경로로, 맛보기를 마친 노드는 바로 자유 풀이 */}
             {selected.state === 'locked' ? (
               <button type="button" onClick={goDiagnose} className={styles.sheetButton}>
                 약점 진단하러 가기
               </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={!selectedUnlocked}
-                  onClick={startFreeSolve}
-                  className={styles.sheetButton}
-                >
-                  문제 풀기
-                </button>
-                {!selectedUnlocked && (
-                  <p className={styles.sheetButtonHint}>
-                    {selected.cat}의 {UNIT_LABEL[subject]} 약점 진단을 모두 풀면 열려
-                  </p>
-                )}
-              </>
+              <button type="button" onClick={startFreeSolve} className={styles.sheetButton}>
+                문제 풀기
+              </button>
             )}
           </div>
         )}

@@ -524,10 +524,10 @@ export default function HomePage() {
               </p>
             )}
 
-            {/* 자유 풀이 CTA — 대단원 진단 완주(unlocked) 전에는 잠금 (2026-08-13 정책) */}
+            {/* 자유 풀이 CTA (2026-08-17 정책) — 이 소단원의 맛보기 진단을
+                마쳤으면 바로 풀 수 있다 (시트는 진단 완료 유닛에서만 열린다) */}
             <button
               type="button"
-              disabled={!progress.unlocked}
               onClick={() => {
                 setUnitSheet(null)
                 startFreeSolve(unitSheet)
@@ -536,11 +536,6 @@ export default function HomePage() {
             >
               문제 풀기
             </button>
-            {!progress.unlocked && (
-              <p className={styles.unitButtonHint}>
-                {category.name}의 {unitLabel} 약점 진단을 모두 풀면 열려
-              </p>
-            )}
           </div>
         </div>
       )}
