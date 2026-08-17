@@ -176,9 +176,18 @@ $muted: #a6abb1;    // black/400
 }
 
 .rowMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: $fs-caption;
   font-weight: $fw-medium;
   color: $muted;
+}
+
+// 맛보기 진단 완료 체크 — 스트로크 원 + 가운데 체크 아이콘
+.rowMetaCheck {
+  @include flex-center;
+  flex-shrink: 0;
 }
 
 .rowScore {

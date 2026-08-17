@@ -56,7 +56,11 @@ export function UnitRailList({
               </span>
               {row.diagnosis && (
                 <span className={styles.rowMeta}>
-                  {row.diagnosis.minutes}분 | 정답 {row.diagnosis.correct}문제
+                  {/* 맛보기 진단 완료 표시 — 스트로크 원 + 가운데 체크 */}
+                  <span className={styles.rowMetaCheck} aria-hidden>
+                    <CheckCircleIcon />
+                  </span>
+                  약점진단 | 정답 {row.diagnosis.correct}문제
                 </span>
               )}
               {!isCards && isNext && nextMeta && <span className={styles.rowMeta}>{nextMeta}</span>}
@@ -137,6 +141,22 @@ export function UnitRailList({
         )
       })}
     </ol>
+  )
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M5.2 8.2 7.2 10.2 10.8 6.4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
   )
 }
 
