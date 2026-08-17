@@ -80,7 +80,7 @@ export default function ReportPage() {
         <div className={styles.content}>
           <h1 className={styles.title}>학습 리포트</h1>
 
-          <ScoreComparisonCard categories={CATEGORIES[subject]} />
+          <ScoreComparisonCard subject={subject} categories={CATEGORIES[subject]} />
           <StreakHeatmapCard today={today} />
           <WeeklyLearningCard subject={subject} today={today} />
         </div>

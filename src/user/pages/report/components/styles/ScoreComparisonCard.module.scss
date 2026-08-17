@@ -103,7 +103,10 @@ $fill: #f0f1f3; // black/100
 }
 
 .delta {
-  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
   border-radius: $radius-full;
   font-size: 11px;
   font-weight: $fw-semibold;
@@ -122,23 +125,26 @@ $fill: #f0f1f3; // black/100
   color: $muted;
 }
 
-// 마커 라벨(평균값)이 아래로 붙으므로 그만큼 자리를 비워 둔다
+// 마커 필(평균값)이 아래로 붙으므로 그만큼 자리를 비워 둔다
 .trackWrap {
   position: relative;
-  padding-bottom: 16px;
+  padding-bottom: 22px;
 }
 
 .track {
-  height: 8px; // 홈 세그먼트 바와 같은 두께
+  height: 12px;
   border-radius: $radius-full;
-  background: $fill;
-  overflow: hidden;
+  background: #f2f3f5;
+  box-shadow: inset 0 1px 2px rgba(18, 20, 23, 0.04); // 홈이 눌린 트랙 질감
 }
 
 .fill {
+  position: relative;
   height: 100%;
   border-radius: $radius-full;
-  background: $color-primary;
+  // 왼쪽은 연하게 시작해 끝점으로 갈수록 진해진다 — 시선이 값 끝에 모이게
+  background: linear-gradient(90deg, #ff8598 0%, $color-primary 100%);
+  box-shadow: 0 2px 6px rgba(255, 56, 92, 0.28);
   // 왼쪽에서 차오르는 연출 — 행마다 순차 지연
   transform-origin: left;
   animation: fill-grow 620ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
@@ -148,31 +154,50 @@ $fill: #f0f1f3; // black/100
 
 // 평균 미만 — 같은 계열이되 채도를 낮춰 "아직 못 미친다"를 색으로도 전달
 .fillBelow {
-  background: #ffbac4;
+  background: linear-gradient(90deg, #ffd4db 0%, #ffa4b2 100%);
+  box-shadow: 0 2px 6px rgba(255, 164, 178, 0.3);
 }
 
 @keyframes fill-grow {
   from { transform: scaleX(0); }
 }
 
-// 평균 마커 — 막대 위아래로 살짝 튀어나온 세로선
+// 막대 끝점 — 흰 코어 도트. 채움 애니메이션과 함께 커지며 자리 잡는다
+.fillDot {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: $radius-full;
+  background: #fff;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+// 평균 마커 — 트랙을 살짝 넘는 잉크 세로선 (라운드 노치)
 .marker {
   position: absolute;
   top: -3px;
-  width: 1.5px;
-  height: 14px;
-  border-radius: 1px;
-  background: #5e6368;
+  width: 2.5px;
+  height: 18px;
+  border-radius: 2px;
+  background: $chip-dark;
   transform: translateX(-50%);
+  box-shadow: 0 0 0 2px $color-canvas; // 채움 위를 지나도 또렷하게
 }
 
-.markerLabel {
+// 평균값 필 — 숫자만 덜렁 있던 라벨을 "평균 51" 미니 필로
+.markerPill {
   position: absolute;
-  top: 16px;
+  top: 20px;
+  padding: 2px 7px;
+  border-radius: $radius-full;
+  background: $fill;
   font-size: 10px;
-  font-weight: $fw-medium;
+  font-weight: $fw-semibold;
   font-variant-numeric: tabular-nums;
-  color: $muted;
+  color: $label;
   white-space: nowrap;
 }
 
@@ -188,10 +213,41 @@ $fill: #f0f1f3; // black/100
 
 .legendMarker {
   display: block;
-  width: 1.5px;
+  width: 2.5px;
   height: 11px;
-  border-radius: 1px;
-  background: #5e6368;
+  border-radius: 2px;
+  background: $chip-dark;
+}
+
+// ── 잠긴 대단원 — 맛보기 진단을 끝내야 비교 공개 ────────────────────────────
+
+.rowLocked .name {
+  color: $muted;
+}
+
+.lockIcon {
+  @include flex-center;
+  color: #c4c9ce;
+}
+
+// 잠긴 트랙 — 옅은 사선 스트라이프 (채움 없음)
+.trackLocked {
+  background: repeating-linear-gradient(
+    135deg,
+    #f2f3f5 0 6px,
+    #eaecef 6px 12px
+  );
+  box-shadow: none;
+}
+
+.lockHint {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  font-size: 10px;
+  font-weight: $fw-medium;
+  color: #a6abb1;
+  white-space: nowrap;
 }
 
 // 데이터 없음 — 아직 푼 문제가 없는 과목
