@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
-import { logout } from '@/user/api/authApi'
+import { logout, withdrawAccount } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
@@ -45,6 +45,34 @@ export default function MyPage() {
       navigate('/', { replace: true })
     } finally {
       setSigningOut(false)
+    }
+  }
+
+  // 회원탈퇴 — 확인 다이얼로그를 거쳐 서버 탈퇴 후 로컬 학습 데이터까지 정리
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawError, setWithdrawError] = useState(false)
+  const handleWithdraw = async () => {
+    if (withdrawing) return
+    setWithdrawing(true)
+    setWithdrawError(false)
+    try {
+      await withdrawAccount()
+      // 이 브라우저에 남는 학습 흔적 정리 (진단 기록·풀이 큐 등)
+      localStorage.removeItem('pullit_trial_progress')
+      ;[
+        'pullit_taste_session',
+        'pullit_attempt_queue',
+        'pullit_post_login_redirect',
+        'pullit_oauth_state_naver',
+        'pullit_oauth_state_google',
+      ].forEach((key) => sessionStorage.removeItem(key))
+      clearSession()
+      // 전체 리로드 — zustand 메모리 상태가 스토리지를 다시 쓰지 않게
+      window.location.replace('/')
+    } catch {
+      setWithdrawing(false)
+      setWithdrawError(true)
     }
   }
 
@@ -125,7 +153,7 @@ export default function MyPage() {
           </div>
         </section>
 
-        {/* 로그아웃 · 버전 */}
+        {/* 로그아웃 · 회원탈퇴 · 버전 */}
         <div className={styles.footerActions}>
           <button
             type="button"
@@ -135,10 +163,62 @@ export default function MyPage() {
           >
             {signingOut ? '로그아웃 중…' : '로그아웃'}
           </button>
+          {/* 게스트는 탈퇴 개념 없음 — 14일 미접속 시 자동 삭제 */}
+          {!isGuest && (
+            <button
+              type="button"
+              onClick={() => {
+                setWithdrawError(false)
+                setWithdrawOpen(true)
+              }}
+              className={styles.logoutLink}
+            >
+              회원탈퇴
+            </button>
+          )}
           <span className={styles.version}>{APP_VERSION}</span>
         </div>
         </div>
       </main>
+
+      {/* 회원탈퇴 확인 다이얼로그 */}
+      {withdrawOpen && (
+        <div className={styles.withdrawDim} onClick={() => !withdrawing && setWithdrawOpen(false)}>
+          <div
+            role="dialog"
+            aria-label="회원탈퇴 확인"
+            className={styles.withdrawCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className={styles.withdrawTitle}>정말 탈퇴할까?</h2>
+            <p className={styles.withdrawDesc}>
+              지금 탈퇴하면 30일 뒤 계정과 풀이 기록·크레딧이 완전히 삭제돼.
+              <br />그 전에 같은 계정으로 다시 로그인하면 그대로 복구할 수 있어.
+            </p>
+            {withdrawError && (
+              <p className={styles.withdrawError}>탈퇴에 실패했어. 잠시 후 다시 시도해줘</p>
+            )}
+            <div className={styles.withdrawActions}>
+              <button
+                type="button"
+                onClick={() => setWithdrawOpen(false)}
+                disabled={withdrawing}
+                className={styles.withdrawCancel}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={withdrawing}
+                className={styles.withdrawConfirm}
+              >
+                {withdrawing ? '탈퇴 처리 중…' : '탈퇴하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

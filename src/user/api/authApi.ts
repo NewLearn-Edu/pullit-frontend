@@ -297,6 +297,14 @@ export async function logout(): Promise<void> {
   await api.post('/api/auth/logout')
 }
 
+/**
+ * 회원 탈퇴 (DELETE /api/users/me) — 서버가 소프트 삭제(DELETED) 후 인증 쿠키를 만료시킨다.
+ * 유예 기간(30일) 안에 같은 소셜로 재로그인하면 복구되고, 지나면 완전 삭제된다.
+ */
+export async function withdrawAccount(): Promise<void> {
+  await api.delete('/api/users/me')
+}
+
 // ---------------------------------------------------------------------------
 // 내 정보
 // ---------------------------------------------------------------------------
