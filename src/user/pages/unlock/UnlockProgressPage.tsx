@@ -133,7 +133,7 @@ export default function UnlockProgressPage() {
         <PageHeader backTo="history" right={<CreditBadge credit={credit} />} />
 
         <div className={styles.content}>
-          {/* ── 타이틀 — 약점 그래프 공개까지 남은 개수 ─────────────────── */}
+          {/* ── 타이틀 — 약점 그래프 완성까지 남은 개수 ─────────────────── */}
           <h1 className={styles.pageTitle}>
             {progress.unlocked ? (
               <>
@@ -143,7 +143,7 @@ export default function UnlockProgressPage() {
               </>
             ) : (
               <>
-                {category.name} 약점 그래프 공개까지
+                {category.name} 약점 그래프 완성까지
                 <br />
                 {unitLabel} <span className={styles.pageTitleCount}>{progress.remaining}개</span>{' '}
                 남았어

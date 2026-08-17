@@ -278,7 +278,7 @@ export default function HomePage() {
                   <>{category.name} 약점 그래프가 완성됐어</>
                 ) : (
                   <>
-                    {category.name} 약점 그래프 공개까지
+                    {category.name} 약점 그래프 완성까지
                     <br />
                     {unitLabel}{' '}
                     <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
