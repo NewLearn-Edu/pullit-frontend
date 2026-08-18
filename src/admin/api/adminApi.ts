@@ -37,12 +37,33 @@ export interface ImportLineError {
   reason: string
 }
 
+/** 이미 DB에 존재해 건너뛴 문제 — 목록에서 개별/전체 덮어쓰기를 선택한다 */
+export interface DuplicateProblem {
+  id: string
+  skillNode: string
+  unitLarge: string | null
+  unitMid: string | null
+  /** 이 문제를 푼 총 풀이 수(연인원) — 많을수록 덮어쓰기 주의 */
+  attemptCount: number
+  /** 들어온 파일의 정답이 기존과 다름 — 풀이 기록과 모순 위험 */
+  answerChanged: boolean
+}
+
 export interface ProblemImportResult {
   fileName: string
   total: number
   inserted: number
   updated: number
   inactiveCount: number
+  failed: number
+  errors: ImportLineError[]
+  /** 저장하지 않고 건너뛴 중복 문제 목록 */
+  duplicates: DuplicateProblem[]
+}
+
+export interface ProblemOverwriteResult {
+  total: number
+  updated: number
   failed: number
   errors: ImportLineError[]
 }
@@ -53,13 +74,22 @@ interface BaseResponse<T> {
   data: T
 }
 
-/** jsonl/json 문제 파일 1개를 업로드해 problems 테이블에 적재 */
+/** jsonl/json 문제 파일 1개를 업로드해 problems 테이블에 적재 (기존 id 는 건너뛰고 duplicates 로 보고) */
 export async function importProblemFile(file: File): Promise<ProblemImportResult> {
   const form = new FormData()
   form.append('file', file)
   const { data } = await adminApi.post<BaseResponse<ProblemImportResult>>(
     '/api/admin/problems/import',
     form,
+  )
+  return data.data
+}
+
+/** 중복 목록에서 선택한 문제 덮어쓰기 — rows 는 업로드 파일 라인과 같은 스키마의 원본 행 */
+export async function overwriteProblems(rows: unknown[]): Promise<ProblemOverwriteResult> {
+  const { data } = await adminApi.post<BaseResponse<ProblemOverwriteResult>>(
+    '/api/admin/problems/overwrite',
+    rows,
   )
   return data.data
 }
@@ -362,12 +392,32 @@ export async function adjustCredit(
 // 대시보드
 // ---------------------------------------------------------------------------
 
+/** 일별 학습 활동 (풀이 수 · 학습 유저 수) — 추이 차트용, 빈 날짜는 백엔드가 0 으로 채움 */
+export interface DailyActivity {
+  /** YYYY-MM-DD */
+  date: string
+  solved: number
+  learners: number
+}
+
 export interface DashboardStats {
-  totalUsers: number
-  todayUsers: number
-  totalProblems: number
-  /** attempts 미구현 — 백엔드가 0 고정 반환 (풀이기록 도메인 구축 시 실데이터) */
   todaySolved: number
+  yesterdaySolved: number
+  todayLearners: number
+  yesterdayLearners: number
+  /** 탈퇴 유예(DELETED) 제외 회원 수 */
+  totalMembers: number
+  totalGuests: number
+  /** registeredAt 기준 — 게스트 생성이 아닌 진짜 가입 */
+  todaySignups: number
+  totalProblems: number
+  /** 맛보기 응시자(TRIAL 시도 유저) — 완주율 분모 */
+  trialStarters: number
+  /** 맛보기 1세트 이상 완주 유저 — 완주율 분자 */
+  trialCompleters: number
+  todayCreditsSpent: number
+  /** 최근 30일, 오래된 날짜부터 */
+  trend: DailyActivity[]
 }
 
 /** 대시보드 상단 KPI 통계 */

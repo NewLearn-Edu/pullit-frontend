@@ -252,10 +252,11 @@
   .grid-stats > .card + .card, .kpi-problems > .card + .card { margin-top: 0; }
   .card-title { font-size: 16px; font-weight: 700; color: var(--color-fg); letter-spacing: -0.01em; }
   .card-sub { font-size: 13px; color: var(--color-muted); margin-top: 2px; }
-  .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 
   /* ============ Dashboard ============ */
   .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-stats.cols-3 { grid-template-columns: repeat(3, 1fr); }
   .stat { padding: 20px 22px; }
   .stat .label { font-size: 13px; font-weight: 600; color: var(--color-muted); }
   .stat .value { margin-top: 6px; font-size: 26px; font-weight: 800; color: var(--color-fg); letter-spacing: -0.02em; }
@@ -293,10 +294,12 @@
   .kpi-problems .stat { min-height: 118px; }
   @media (max-width: 900px) { .kpi-problems { grid-template-columns: 1fr; } }
 
-  .seg { display: inline-flex; background: var(--color-fill-hover); border-radius: var(--r-compact); padding: 3px; }
+  /* flex-shrink 0 + nowrap — 좁은 화면에서 토글이 짓눌려 세로로 줄바꿈되는 것 방지 */
+  .seg { display: inline-flex; flex-shrink: 0; background: var(--color-fill-hover); border-radius: var(--r-compact); padding: 3px; }
   .seg button {
     padding: 5px 12px; border-radius: 5px;
     font-size: 13px; font-weight: 400; color: var(--color-muted);
+    white-space: nowrap;
   }
   .seg button.on { background: var(--color-canvas); color: var(--color-fg); font-weight: 600; box-shadow: 0 1px 3px rgba(22, 15, 14, .1); }
 
@@ -857,14 +860,20 @@
   .rv-empty p { font-size: 13px; color: var(--color-muted); }
 
   /* ============ View entrance ============ */
-  .view { display: block; animation: pa-view-in .35s cubic-bezier(.2, .8, .3, 1) both; }
+  /* fill(both) 금지 — transform 애니메이션이 filled 상태로 남으면 이 요소가
+     position: fixed 자손(.cr-overlay 등 모달)의 containing block 을 가로채
+     오버레이가 뷰포트 전체가 아닌 섹션 영역에만 깔린다 */
+  .view { display: block; animation: pa-view-in .35s cubic-bezier(.2, .8, .3, 1); }
 
   @media (max-width: 1080px) {
-    .grid-stats { grid-template-columns: repeat(2, 1fr); }
+    .grid-stats, .grid-stats.cols-3 { grid-template-columns: repeat(2, 1fr); }
     .grid-two { grid-template-columns: 1fr; }
   }
   @media (max-width: 800px) {
     .sidebar, .rail { display: none; }
     .main { padding: 20px 16px 48px; }
+  }
+  @media (max-width: 520px) {
+    .grid-stats, .grid-stats.cols-3 { grid-template-columns: 1fr; }
   }
 }

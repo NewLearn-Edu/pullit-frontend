@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
@@ -13,7 +13,12 @@ import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import { codeToPath } from '../data/mockAdmin'
-import { importProblemFile, type ProblemImportResult } from '../api/adminApi'
+import {
+  importProblemFile,
+  overwriteProblems,
+  type DuplicateProblem,
+  type ProblemImportResult,
+} from '../api/adminApi'
 import {
   addToReviewQueue,
   makeReviewKey,
@@ -47,6 +52,19 @@ export default function ProblemUploadPage() {
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [confirmOpen, setConfirmOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // 중복 문제 목록 — 업로드 시 건너뛴 기존 id 들. 행 클릭 = 우측 패널 미리보기, 버튼 = 덮어쓰기
+  const [dups, setDups] = useState<DuplicateProblem[]>([])
+  const [dupSelectedId, setDupSelectedId] = useState<string | null>(null)
+  const [overwriting, setOverwriting] = useState<string | 'all' | null>(null)
+  const [confirmAllOpen, setConfirmAllOpen] = useState(false)
+
+  // 파일 원본 행을 id 로 찾는 인덱스 — 덮어쓰기 요청 body 는 원본 행 그대로 보낸다
+  const rowById = useMemo(() => {
+    const map = new Map<string, UploadItem>()
+    items.forEach((it) => map.set(String(it.id), it))
+    return map
+  }, [items])
 
   // 과목 자동 감지 — 단일 "문제 업로드" 메뉴 대응. 파일 rows 의 subject 필드 우선, URL 파라미터는 폴백
   const detected =
@@ -138,13 +156,43 @@ export default function ProblemUploadPage() {
     try {
       const r = await importProblemFile(file)
       setResult(r)
-      toast(`업로드 완료 · 신규 ${r.inserted.toLocaleString()} · 갱신 ${r.updated.toLocaleString()}${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`)
+      setDups(r.duplicates ?? [])
+      setDupSelectedId(null)
+      toast(
+        `업로드 완료 · 신규 ${r.inserted.toLocaleString()}${(r.duplicates?.length ?? 0) > 0 ? ` · 중복 ${r.duplicates.length.toLocaleString()}건 건너뜀` : ''}${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`,
+      )
       pushCheckedToReview()
     } catch (e) {
       const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
       toast(serverMsg ?? '업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
     } finally {
       setUploading(false)
+    }
+  }
+
+  /** 중복 문제 덮어쓰기 — 단건(행 버튼) 또는 전체(우측 상단 버튼) */
+  const onOverwrite = async (targets: DuplicateProblem[], key: string | 'all') => {
+    if (overwriting) return
+    const rows = targets.map((d) => rowById.get(d.id)).filter(Boolean)
+    if (rows.length === 0) {
+      toast('원본 파일 행을 찾지 못했어요 · 파일을 다시 선택해주세요')
+      return
+    }
+    setConfirmAllOpen(false)
+    setOverwriting(key)
+    try {
+      const r = await overwriteProblems(rows)
+      const doneIds = new Set(targets.map((d) => d.id))
+      setDups((prev) => prev.filter((d) => !doneIds.has(d.id)))
+      setDupSelectedId((prev) => (prev != null && doneIds.has(prev) ? null : prev))
+      toast(
+        `덮어쓰기 완료 · ${r.updated.toLocaleString()}문항${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`,
+      )
+    } catch (e) {
+      const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
+      toast(serverMsg ?? '덮어쓰기 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
+    } finally {
+      setOverwriting(null)
     }
   }
 
@@ -180,6 +228,9 @@ export default function ProblemUploadPage() {
     setFile(null)
     setResult(null)
     setChecked(new Set())
+    setDups([])
+    setDupSelectedId(null)
+    setConfirmAllOpen(false)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -187,6 +238,11 @@ export default function ProblemUploadPage() {
   // 본문 렌더러 — 과목·용도별 4종 중 선택 (공용 ExamRender 만 사용)
   const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
   const ExplainRender = subject === 'english' ? EnglishExplainRender : MathExplainRender
+
+  // 우측 패널에 띄울 중복 문제의 새(파일) 버전
+  const dupItem = dupSelectedId != null ? rowById.get(dupSelectedId) : undefined
+  const dupInfo = dupSelectedId != null ? dups.find((d) => d.id === dupSelectedId) : undefined
+  const answerChangedCount = dups.filter((d) => d.answerChanged).length
 
   return (
     <section className="view">
@@ -255,6 +311,7 @@ export default function ProblemUploadPage() {
               <div className="t">
                 <b>
                   총 {result.total.toLocaleString()}문항 · 신규 {result.inserted.toLocaleString()} · 갱신 {result.updated.toLocaleString()}
+                  {(result.duplicates?.length ?? 0) > 0 && ` · 중복 건너뜀 ${result.duplicates.length.toLocaleString()}`}
                   {result.inactiveCount > 0 && ` · 비노출 ${result.inactiveCount.toLocaleString()}`}
                   {result.failed > 0 && ` · 실패 ${result.failed.toLocaleString()}`}
                 </b>
@@ -265,6 +322,146 @@ export default function ProblemUploadPage() {
                   </span>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* 중복 문제 — 저장하지 않고 건너뛴 목록. 행 클릭 = 우측 패널로 새 버전 미리보기 (목록 페이지와 같은 뾰롱 팝) */}
+          {/* .card 래퍼가 아니라 .card + .card 전역 간격이 안 걸림 — 위아래 16px 직접 지정 */}
+          {dups.length > 0 && (
+            <div className={clsx('list-layout', dupSelectedId != null && 'open')} style={{ margin: '16px 0' }}>
+              <div className="card">
+                <div className="card-head">
+                  <div>
+                    <div className="card-title">이미 존재하는 문제 {dups.length.toLocaleString()}건</div>
+                    <div className="card-sub">
+                      저장하지 않고 건너뛰었어요 · 행을 누르면 파일의 새 버전을 미리 볼 수 있어요
+                      {answerChangedCount > 0 && ` · 정답 변경 ${answerChangedCount}건 주의`}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    disabled={overwriting != null}
+                    onClick={() => setConfirmAllOpen(true)}
+                  >
+                    {overwriting === 'all' ? '덮어쓰는 중…' : '전체 덮어씌우기'}
+                  </button>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <colgroup>
+                      <col style={{ width: 170 }} />
+                      <col />
+                      <col style={{ width: 100 }} />
+                      <col style={{ width: 108 }} />
+                      <col style={{ width: 130 }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>소분류</th>
+                        <th>풀이 수</th>
+                        <th>정답</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dups.map((d) => (
+                        <tr
+                          key={d.id}
+                          className={clsx(dupSelectedId === d.id && 'selected')}
+                          onClick={() => setDupSelectedId(dupSelectedId === d.id ? null : d.id)}
+                        >
+                          <td className="num" style={{ color: 'var(--color-muted)' }}>{d.id}</td>
+                          <td className="strong">
+                            {d.skillNode}
+                            {d.unitMid && <span className="sub">{d.unitLarge} › {d.unitMid}</span>}
+                          </td>
+                          <td className="num">{d.attemptCount.toLocaleString()}회</td>
+                          <td>
+                            {d.answerChanged
+                              ? <span className="badge pending">정답 변경</span>
+                              : <span className="badge neutral">동일</span>}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              disabled={overwriting != null}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onOverwrite([d], d.id)
+                              }}
+                            >
+                              {overwriting === d.id ? '쓰는 중…' : '덮어씌우기'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* 우측 미리보기 — 파일에 담긴 새 버전 렌더링 (문제·정답·해설) */}
+              <aside className="preview">
+                <div className="card">
+                  {dupItem && (
+                    <>
+                      <div className="card-head" style={{ marginBottom: 10 }}>
+                        <div>
+                          <div className="card-title num">{dupInfo?.id}</div>
+                          <div className="card-sub">
+                            파일의 새 버전 · 풀이 {dupInfo?.attemptCount.toLocaleString()}회
+                            {dupInfo?.answerChanged && ' · 정답 변경'}
+                          </div>
+                        </div>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setDupSelectedId(null)}>
+                          닫기
+                        </button>
+                      </div>
+                      <div className={clsx('pv-body', subject === 'english' && 'en')}>
+                        <div className="pv-question">
+                          <ProblemRender text={dupItem.question ?? ''} />
+                        </div>
+                        {dupItem.passage && (
+                          <div className="pv-passage">
+                            <ProblemRender text={dupItem.passage} />
+                          </div>
+                        )}
+                        {(dupItem.choices?.length ?? 0) > 0 && (
+                          <div className="pv-choices">
+                            {(dupItem.choices ?? []).map((c, i) => {
+                              const correct = dupItem.answer_no === i + 1
+                              return (
+                                <span key={i} className={clsx('choice', correct && 'correct')}>
+                                  <span className="choice-num">
+                                    {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                                  </span>
+                                  <span><ProblemRender text={c} /></span>
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <p className="pv-label" style={{ marginTop: 16 }}>정답</p>
+                      <div className="pv-explain-body pv-explain-answer">
+                        {(dupItem.choices?.length ?? 0) > 0 && dupItem.answer_no != null ? (
+                          String.fromCodePoint(0x245f + dupItem.answer_no)
+                        ) : (
+                          <ExplainRender text={String(dupItem.answer_text ?? dupItem.answer_no ?? '-')} />
+                        )}
+                      </div>
+                      <p className="pv-label" style={{ marginTop: 16 }}>해설</p>
+                      <div className="pv-explain-body">
+                        {Array.isArray(dupItem.explanation) ? (
+                          <ExplainBlocksRender blocks={dupItem.explanation} />
+                        ) : (
+                          <ExplainRender text={dupItem.explanation || '해설이 없어요'} />
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </aside>
             </div>
           )}
 
@@ -399,13 +596,47 @@ export default function ProblemUploadPage() {
         </div>
       )}
 
+      {/* 전체 덮어쓰기 확인 — 유저 풀이 기록이 붙은 문제가 바뀔 수 있어 한 번 더 확인 */}
+      {confirmAllOpen && (
+        <div className="cr-overlay" onClick={() => setConfirmAllOpen(false)}>
+          <div className="card cr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="card-title" style={{ marginBottom: 10 }}>전체 덮어씌울까요?</h3>
+            <p className="page-sub" style={{ marginBottom: 16 }}>
+              기존 문제 {dups.length.toLocaleString()}건이 파일의 새 버전으로 교체돼요.
+              {answerChangedCount > 0 && (
+                <>
+                  <br />
+                  <b style={{ color: 'var(--color-primary)' }}>
+                    정답이 바뀌는 문제가 {answerChangedCount}건 있어요
+                  </b>
+                  {' '}— 이미 푼 유저의 기록과 모순이 생길 수 있어요.
+                </>
+              )}
+            </p>
+            <div className="cr-actions">
+              <button className="btn btn-ghost" onClick={() => setConfirmAllOpen(false)}>
+                취소
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={overwriting != null}
+                onClick={() => onOverwrite(dups, 'all')}
+              >
+                전체 덮어씌우기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 업로드 확인 — 되돌리기 어려운 DB 적재라 한 번 더 확인 */}
       {confirmOpen && (
         <div className="cr-overlay" onClick={() => setConfirmOpen(false)}>
           <div className="card cr-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="card-title" style={{ marginBottom: 10 }}>업로드할까요?</h3>
             <p className="page-sub" style={{ marginBottom: 16 }}>
-              아래 파일의 문항이 DB에 저장돼요. 같은 ID가 이미 있으면 갱신됩니다.
+              아래 파일의 문항이 DB에 저장돼요. 같은 ID가 이미 있으면 건너뛰고
+              중복 목록으로 보여드려요 — 덮어쓸지 그때 선택하면 됩니다.
             </p>
             <div className="upl-confirm-info">
               <div>
