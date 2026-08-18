@@ -7,28 +7,23 @@
 // 사이드바 없는 풀스크린 흰 배경 · 중앙에 로고 + 소셜 버튼만.
 // -----------------------------------------------------------------------------
 
-// 소셜 브랜드 컬러 (공식 가이드)
-$color-kakao: #FEE500;
-$color-kakao-text: rgba(0, 0, 0, 0.85);
-$color-naver: #03C75A;
-
 .page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   min-height: 100dvh;
-  padding: $space-xl $space-lg;
   background: $color-canvas;
 }
 
-// 중앙 컨텐츠 컬럼
+// 중앙 컨텐츠 컬럼 — 헤더를 제외한 나머지 공간에서 세로 중앙 정렬 (margin auto)
 .content {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
   max-width: 400px;
+  margin: auto;
+  padding: 0 $space-lg $space-xl;
 }
 
 // 풀잇 워드마크 로고
@@ -39,96 +34,14 @@ $color-naver: #03C75A;
   @include tablet-up { width: 148px; }
 }
 
-// 카카오 버튼을 가리키는 소구 말풍선 — "빠른 가입 = 약점 확인" 상기
-.bubble {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 56px 0 0;   // 로고와 버튼 그룹 사이 호흡 — 로고가 독립적으로 보이도록 넉넉히
-  padding: 10px 18px;
-  background: $color-canvas;
-  border: 1px solid $color-line;
-  border-radius: $radius-full;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-foreground;
-
-  // 꼬리 — 테두리를 이어받은 회전 사각형이 버튼 쪽을 가리킨다
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    width: 10px;
-    height: 10px;
-    background: $color-canvas;
-    border-right: 1px solid $color-line;
-    border-bottom: 1px solid $color-line;
-    transform: translateX(-50%) rotate(45deg);
-  }
+// 약점 레이더 데모 카드 (RadarDemoCard 공용 컴포넌트) — 로고와의 세로 호흡만 여기서
+.radar {
+  margin-top: 32px;
 }
 
-// 소셜 버튼 스택
-.buttons {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  width: 100%;
-  margin-top: $space-lg;
-}
-
-.socialButton {
-  @include button-reset;
-  @include flex-center;
-  gap: 8px;
-  height: 54px;
-  border-radius: $radius-btn-md;
-  font-size: $fs-body;
-  font-weight: $fw-semibold;
-  transition: opacity 150ms ease, background-color 150ms ease;
-
-  @include hover { opacity: 0.9; }
-  &:active { opacity: 0.85; }
-}
-
-// 브랜드 로고 (카카오 말풍선 · 네이버 N · 구글 G · 애플) — 가입 유도 페이지와 동일 에셋
-.socialIcon {
-  @include flex-center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-
-  img {
-    width: 18px;
-    height: auto;
-  }
-}
-
-.kakao {
-  background: $color-kakao;
-  color: $color-kakao-text;
-}
-
-.naver {
-  background: $color-naver;
-  color: #fff;
-}
-
-.google {
-  background: $color-canvas;
-  color: $color-foreground;
-  border: 1px solid $color-line;
-
-  @include hover {
-    opacity: 1;
-    background: $color-surface;
-  }
-}
-
-.apple {
-  background: #000;
-  color: #fff;
+// 소셜 아이콘 행 (SocialLoginButtons 공용 컴포넌트) — 배지 영역(pt-36)이 위 여백을 겸한다
+.social {
+  margin-top: 8px;
 }
 
 // 애플 팝업 로그인 실패 안내 (콜백 페이지가 없어 이 페이지에서 표시)

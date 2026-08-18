@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { clsx } from 'clsx'
 import {
   loginWithApple,
   startGoogleLogin,
@@ -9,16 +8,15 @@ import {
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
+import { PageHeader } from '@/user/components/PageHeader/PageHeader'
+import SocialLoginButtons from '@/user/components/SocialLoginButtons'
+import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
 import logoImg from '@/assets/images/logo.png'
-import logoApple from '@/assets/auth/logo-apple.svg'
-import logoGoogle from '@/assets/auth/logo-google.svg'
-import logoKakao from '@/assets/auth/logo-kakao.svg'
-import logoNaver from '@/assets/auth/logo-naver.svg'
 import styles from './styles/LoginPage.module.scss'
 
 /**
  * 가입 및 로그인 (단독 페이지 · 리디자인)
- * 흰 배경 중앙에 풀잇 로고 + 소셜 로그인 버튼만 배치.
+ * 흰 배경 중앙에 풀잇 로고 + 소셜 로그인 원형 아이콘 행(SocialLoginButtons 공용).
  * - 카카오: 인가코드 방식 실동작 — 프론트가 토큰 교환 (authApi.startKakaoLogin)
  * - 네이버 · 구글: 인가코드 방식 실동작 — 백엔드가 토큰 교환 (authApi.startNaverLogin / startGoogleLogin)
  * - 애플: Apple JS 팝업 방식 — 리다이렉트 없이 이 페이지에서 로그인 완료 후 홈 이동
@@ -59,58 +57,23 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
+      {/* 뒤로가기 — 직전 화면으로 (딥링크로 바로 온 경우 홈 폴백) */}
+      <PageHeader backTo="history" />
+
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />
 
-        {/* 카카오 버튼을 가리키는 소구 말풍선 */}
-        <p className={styles.bubble}>
-          <span aria-hidden>⚡</span>
-          10초만에 가입 후 약점보기
-        </p>
+        {/* 약점 레이더 데모 — 가입 유도 페이지와 같은 카드 (진단 기록 있으면 실점수 고정) */}
+        <RadarDemoCard className={styles.radar} />
 
-        <div className={styles.buttons}>
-          <button
-            type="button"
-            onClick={withReturn(startKakaoLogin)}
-            className={clsx(styles.socialButton, styles.kakao)}
-          >
-            <span className={styles.socialIcon}>
-              <img src={logoKakao} alt="" />
-            </span>
-            카카오로 계속하기
-          </button>
-          <button
-            type="button"
-            onClick={withReturn(startNaverLogin)}
-            className={clsx(styles.socialButton, styles.naver)}
-          >
-            <span className={styles.socialIcon}>
-              {/* 원본 에셋이 상하 반전 상태로 내보내져 렌더 시 되돌린다 (가입 유도 페이지와 동일) */}
-              <img src={logoNaver} alt="" style={{ transform: 'scaleY(-1)' }} />
-            </span>
-            네이버로 계속하기
-          </button>
-          <button
-            type="button"
-            onClick={withReturn(startGoogleLogin)}
-            className={clsx(styles.socialButton, styles.google)}
-          >
-            <span className={styles.socialIcon}>
-              <img src={logoGoogle} alt="" />
-            </span>
-            Google로 계속하기
-          </button>
-          <button
-            type="button"
-            onClick={handleAppleLogin}
-            className={clsx(styles.socialButton, styles.apple)}
-          >
-            <span className={styles.socialIcon}>
-              <img src={logoApple} alt="" />
-            </span>
-            Apple로 계속하기
-          </button>
-        </div>
+        {/* 소셜 로그인 — 원형 아이콘 4개 + "3초만에 가입" 배지 (가입 유도 페이지와 동일) */}
+        <SocialLoginButtons
+          onKakao={withReturn(startKakaoLogin)}
+          onNaver={withReturn(startNaverLogin)}
+          onApple={handleAppleLogin}
+          onGoogle={withReturn(startGoogleLogin)}
+          className={styles.social}
+        />
 
         {error && <p className={styles.error}>{error}</p>}
 
