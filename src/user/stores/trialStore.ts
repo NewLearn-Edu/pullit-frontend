@@ -46,11 +46,11 @@ interface TrialState {
 }
 
 /**
- * POC 강제 세팅 - 사용자 선택 없이 지수와 로그 · 빈칸 추론으로 시작.
- * 정책 상 학생이 선택하지만 초기 개발용 임시 고정.
+ * 맛보기 고정 영역 — 수학 = 지수·로그, 영어 = 주제(topic).
+ * 맛보기 테스트 정책 §2 (과목만 선택, 출제 영역 고정).
  */
 const POC_MATH_SKILL_NODE = 'sn-exp-log-01'
-const POC_ENGLISH_TYPE = 'en-blank'
+const POC_ENGLISH_TYPE = 'en-topic'
 
 export const useTrialStore = create<TrialState>()(
   persist(

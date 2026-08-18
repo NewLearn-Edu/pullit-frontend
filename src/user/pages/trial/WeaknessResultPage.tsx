@@ -241,7 +241,7 @@ export default function WeaknessResultPage() {
   /** 이번에 푼 단원 표기명 */
   const unitName =
     subject === 'english'
-      ? '빈칸' // POC 고정 (en-blank)
+      ? '주제' // 맛보기 고정 영역 (en-topic)
       : MOCK_SKILL_NODES.find((n) => n.id === mathSkillNodeId)?.name ?? '수학'
 
   // 누적 단원 점수 (서버) — 맞춘 배점/푼 배점 ×100 · RETRY 제외 (2026-08-10 정책)

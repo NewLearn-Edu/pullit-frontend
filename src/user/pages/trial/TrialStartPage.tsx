@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
-import AppHeader from '@/user/components/AppHeader'
+import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { type Subject } from '@/user/stores/trialStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
@@ -10,14 +10,14 @@ import styles from './styles/TrialStartPage.module.scss'
 
 interface SubjectOption {
   value: Subject
-  icon: string
   title: string
   sub: string
 }
 
+// 서브텍스트는 단원·유형 명칭 정책의 표시 명칭 — 맛보기 고정 영역 (수학 지수·로그 · 영어 주제)
 const SUBJECT_OPTIONS: SubjectOption[] = [
-  { value: 'math', icon: '수', title: '수학', sub: '지수와 로그' },
-  { value: 'english', icon: '영', title: '영어', sub: '빈칸 추론' },
+  { value: 'math', title: '수학', sub: '지수·로그' },
+  { value: 'english', title: '영어', sub: '주제' },
 ]
 
 /**
@@ -61,11 +61,12 @@ export default function TrialStartPage() {
 
   return (
     <div className={styles.page}>
-      <AppHeader onClose={() => navigate('/')} />
+      {/* 시안 2824-4756 헤더 — 우측 닫기 X 만 (로고 없음) */}
+      <OnboardingHeader onClose={() => navigate('/')} />
 
       <main className={styles.main}>
-        <h1 className={styles.title}>어떤 과목을 진단할까요?</h1>
-        <p className={styles.subtitle}>약한 단원을 찾아 매일 3문제를 추천해요.</p>
+        <h1 className={styles.title}>어떤 과목의 약점을 볼래?</h1>
+        <p className={styles.subtitle}>약한 단원을 찾아 매일 3문제를 추천해줄게</p>
 
         <div className={styles.cards} role="radiogroup" aria-label="과목 선택">
           {SUBJECT_OPTIONS.map((opt) => {
@@ -79,14 +80,6 @@ export default function TrialStartPage() {
                 onClick={() => setSelected(opt.value)}
                 className={clsx(styles.card, active && styles.cardSelected)}
               >
-                <span
-                  className={clsx(
-                    styles.cardIcon,
-                    active && styles.cardIconSelected,
-                  )}
-                >
-                  {opt.icon}
-                </span>
                 <span className={styles.cardBody}>
                   <span className={styles.cardTitle}>{opt.title}</span>
                   <span className={styles.cardSub}>{opt.sub}</span>

@@ -22,6 +22,7 @@ const SET_SIZE = 3
 
 /** 목 노드 id → 서버 skill_node 조회 키 (영어 유형) */
 const ENGLISH_SERVER_NODES: Record<string, string> = {
+  'en-topic': '주제', // 맛보기 고정 영역 (맛보기 테스트 정책 §2.2)
   'en-blank': '빈칸',
 }
 
@@ -101,7 +102,12 @@ export async function loadQuizProblems(subject: Subject, nodeId: string): Promis
         // 네트워크·서버 오류 — 목 폴백으로 흐름 유지
       }
     }
-    const mock = mockProblemsOf(subject, nodeId)
+    let mock = mockProblemsOf(subject, nodeId)
+    // 영어 주제(en-topic)는 아직 목 문항이 없다 — 서버(주제 문항 업로드 후)가 정상 경로이고,
+    // 서버 실패 시에만 빈칸 목으로 흐름을 유지한다 (로컬 개발용 임시 폴백)
+    if (mock.length === 0 && subject === 'english') {
+      mock = getProblemsByEnglishType('en-blank')
+    }
     cache.set(key, mock)
     return mock
   })().finally(() => inflight.delete(key))

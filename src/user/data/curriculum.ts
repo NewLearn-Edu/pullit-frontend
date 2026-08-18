@@ -83,8 +83,9 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
   },
 ]
 
-/** 영어 유형 → 맛보기 목 문제 키 (목이 준비된 유형만) */
+/** 영어 유형 → 문제 세트 노드 키 (문항이 준비된 유형만) */
 const ENGLISH_NODE_IDS: Record<string, string> = {
+  주제: 'en-topic', // 맛보기 고정 영역 — 서버 주제 문항 업로드 후 활성
   빈칸: 'en-blank',
 }
 
