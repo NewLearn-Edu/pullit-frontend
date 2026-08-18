@@ -12,6 +12,7 @@ import { MathExplainKatexRender } from '@/shared/components/ExamRender'
 import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
+import JsonView from '../components/JsonView'
 import { codeToPath } from '../data/mockAdmin'
 import {
   importProblemFile,
@@ -76,6 +77,8 @@ export default function ProblemUploadPage() {
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
   // 해설 엔진 비교 — mathjax(검수 도구 방식·기본) vs katex(우리 구 조판)
   const [engine, setEngine] = useState<'katex' | 'mathjax'>('mathjax')
+  // 원본 JSON 뷰 — 렌더링 결과와 소스 대조용, 현재 문항을 따라간다
+  const [showJson, setShowJson] = useState(false)
   const [padWidth, setPadWidth] = useState(524)
   const startPadDrag = (e: ReactMouseEvent) => {
     e.preventDefault()
@@ -235,6 +238,17 @@ export default function ProblemUploadPage() {
   }
 
   const item = items[idx]
+
+  /** 현재 문항 원본 JSON 복사 */
+  const copyJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(item, null, 2))
+      toast(`문항 ${idx + 1} JSON을 복사했어요`)
+    } catch {
+      toast('복사하지 못했어요')
+    }
+  }
+
   // 본문 렌더러 — 과목·용도별 4종 중 선택 (공용 ExamRender 만 사용)
   const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
   const ExplainRender = subject === 'english' ? EnglishExplainRender : MathExplainRender
@@ -510,11 +524,20 @@ export default function ProblemUploadPage() {
                 <button className="btn btn-ghost btn-sm" onClick={() => idx < items.length - 1 && setIdx(idx + 1)}>
                   다음 ›
                 </button>
+                <button
+                  className={clsx('btn btn-ghost btn-sm upl-json-btn', showJson && 'on')}
+                  onClick={() => setShowJson(!showJson)}
+                  title="현재 문항의 원본 JSON 보기"
+                >
+                  {'{ }'} JSON
+                </button>
               </div>
             </div>
           </div>
           {/* 문제·정답해설은 헤더 카드 밖 — 페이지 배경 위의 독립 카드 2개.
-              웹·모바일은 좌우로 벌리고, 패드는 붙여서 디바이더 드래그 */}
+              웹·모바일은 좌우로 벌리고, 패드는 붙여서 디바이더 드래그.
+              JSON 대조 모드가 켜지면 문제·해설을 왼쪽에 세로로 쌓고 오른쪽에 JSON 패널 */}
+          <div className={clsx('upl-compare', showJson && 'json-on')}>
           <div className={clsx('upl-preview', device)}>
               <div
                 className={clsx('pv-device', device)}
@@ -593,6 +616,20 @@ export default function ProblemUploadPage() {
                 </div>
               </div>
             </div>
+
+          {/* 원본 JSON — 오른쪽 sticky 패널, 이전/다음 이동을 따라간다 */}
+          {showJson && (
+            <div className="card upl-json">
+              <div className="upl-json-head">
+                <span className="card-title">
+                  원본 JSON · 문항 {idx + 1}{item?.id ? ` · ${item.id}` : ''}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={copyJson}>복사</button>
+              </div>
+              <JsonView data={item} />
+            </div>
+          )}
+          </div>
         </div>
       )}
 

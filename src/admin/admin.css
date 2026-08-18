@@ -61,6 +61,8 @@
   --table-head-bg: #f6f7f9;          /* 테이블 헤더(th) 배경 */
   --pv-fg: #120c0b;                  /* 문제 미리보기 본문 색 (풀잇과 동일) */
   --font-batang: "KoPubWorld Batang", "Apple SD Gothic Neo", "Nanum Myeongjo", serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --json-key: #3068d8;               /* 원본 JSON 뷰 — 키 색 (값 색은 green/warn/primary 재사용) */
   color-scheme: light;
 
   /* 프로토타입의 body + .app 프레임 */
@@ -111,6 +113,7 @@
   --table-fg: #d7dbe0;
   --table-head-bg: #2c2c35;
   --pv-fg: #e9e6e3;
+  --json-key: #7ca9ff;
   color-scheme: dark;
 }
 
@@ -675,6 +678,48 @@
     border-radius: var(--r-pill);
   }
   .upl-engine-toggle:hover { color: var(--color-fg); }
+  /* 원본 JSON 대조 모드 — 켜면 왼쪽에 문제·해설 세로 스택, 오른쪽에 JSON sticky 패널.
+     PC 에서 렌더링·소스를 양옆에 두고 비교한다. 최상위 필드별 행 + 신택스 컬러 */
+  .upl-json-btn.on { background: var(--color-fill-hover); color: var(--color-fg); font-weight: 600; }
+  /* 대조 모드에서는 업로드 페이지 폭 제한(1140)을 풀어 JSON 패널이 넓게 앉는다 */
+  .main-inner.mid:has(.upl-compare.json-on) { max-width: 1600px; }
+  .upl-compare.json-on { display: flex; gap: 28px; align-items: flex-start; }
+  .upl-compare.json-on .upl-preview { flex: 0 0 auto; flex-direction: column; }
+  /* 해설 카드는 디바이스 프레임 폭에 맞춰 세로로 붙는다 (row 용 flex-basis 무효화) */
+  .upl-compare.json-on .upl-preview .pv-modal-explain { flex: none; width: 100%; min-width: 0; }
+  .upl-compare.json-on .pv-divider { display: none; } /* 패드 드래그는 좌우 배치 전용 */
+  .upl-json {
+    flex: 1; min-width: 0;
+    margin-top: 16px;
+    position: sticky; top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+  .upl-json-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .jv-row { display: grid; grid-template-columns: 110px 1fr; gap: 14px; padding: 9px 0; }
+  .jv-row + .jv-row { border-top: 1px solid var(--color-line); }
+  .jv-field {
+    font-family: var(--font-mono);
+    font-size: 12px; font-weight: 700; color: var(--json-key);
+    padding-top: 3px;
+    overflow-wrap: anywhere;
+  }
+  .json-view-pre {
+    margin: 0; min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 12.5px; line-height: 1.7;
+    color: var(--color-body);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .jv-key { color: var(--json-key); font-weight: 600; }
+  .jv-str { color: var(--green-text); }
+  .jv-num { color: var(--warn-text); }
+  .jv-bool, .jv-null { color: var(--color-primary); font-weight: 600; }
+  /* 좁은 창 — 대조 모드도 세로 스택으로 폴백, sticky 해제 */
+  @media (max-width: 1220px) {
+    .upl-compare.json-on { flex-direction: column; }
+    .upl-json { position: static; max-height: none; width: 100%; }
+  }
   /* 정답 원문자·값은 본문(15px)보다 크게 — 뒤에 선언된 .pv-explain-body 의
      15px 를 이기도록 복합 셀렉터로 우선순위 확보 */
   .pv-explain-body.pv-explain-answer { font-size: 18px; }
