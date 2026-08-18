@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   loginWithApple,
@@ -7,6 +7,8 @@ import {
   startNaverLogin,
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { useMe } from '@/user/hooks/useMe'
+import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
@@ -25,6 +27,14 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState<string | null>(null)
+
+  // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
+  // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
+  useMe()
+  const isMember = useUserStore(selectIsMember)
+  useEffect(() => {
+    if (isMember) navigate('/home', { replace: true })
+  }, [isMember, navigate])
 
   // 로그인 후 복귀 경로 — 세션 가드가 넘겨준 출발지, 없으면 홈.
   // 랜딩('/')에서 온 경우도 홈으로 보낸다 (로그인했는데 랜딩 복귀는 어색)

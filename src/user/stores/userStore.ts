@@ -31,16 +31,52 @@ interface UserState {
 let loadPromise: Promise<MeResult | null> | null = null
 let ensurePromise: Promise<MeResult | null> | null = null
 
+/**
+ * 세션 힌트 — "이 브라우저에 세션 쿠키가 있었을 것"이라는 표식.
+ * httpOnly 쿠키는 JS 로 존재 여부를 알 수 없어, 힌트 없이는 첫 방문자에게도
+ * 매 페이지 me 조회 → 401 → refresh 401 탐침이 나가 콘솔이 붉게 물든다.
+ * 힌트가 없으면 조회 전용(loadMe)은 네트워크 없이 익명으로 단정한다.
+ * (ensureSession 은 게스트 중복 생성 방지를 위해 항상 fetchMe 부터 — 힌트와 무관)
+ */
+const SESSION_HINT_KEY = 'pullit_session_hint'
+const hasSessionHint = () => {
+  try {
+    return localStorage.getItem(SESSION_HINT_KEY) === '1'
+  } catch {
+    return true // storage 접근 불가 환경에선 기존 동작(조회 시도) 유지
+  }
+}
+export const setSessionHint = () => {
+  try {
+    localStorage.setItem(SESSION_HINT_KEY, '1')
+  } catch {
+    /* noop */
+  }
+}
+export const clearSessionHint = () => {
+  try {
+    localStorage.removeItem(SESSION_HINT_KEY)
+  } catch {
+    /* noop */
+  }
+}
+
 export const useUserStore = create<UserState>((set, get) => ({
   me: null,
   status: 'idle',
 
   loadMe: (force = false) => {
     if (!force && get().status === 'ready') return Promise.resolve(get().me)
+    // 세션 흔적이 없는 방문자는 네트워크 없이 익명 확정 — 401 탐침 소음 제거
+    if (!force && !hasSessionHint()) {
+      set({ me: null, status: 'anonymous' })
+      return Promise.resolve(null)
+    }
     if (loadPromise) return loadPromise
     set({ status: 'loading' })
     loadPromise = fetchMe()
       .then((me) => {
+        if (me) setSessionHint()
         set({ me, status: me ? 'ready' : 'anonymous' })
         return me
       })
@@ -63,6 +99,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         await createGuestSession()
         me = await fetchMe()
       }
+      if (me) setSessionHint()
       set({ me, status: me ? 'ready' : 'anonymous' })
       return me
     })()
@@ -81,6 +118,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   clear: () => {
     loadPromise = null
     ensurePromise = null
+    clearSessionHint() // 로그아웃·탈퇴 후 재방문 시 불필요한 세션 탐침 방지
     set({ me: null, status: 'idle' })
   },
 }))

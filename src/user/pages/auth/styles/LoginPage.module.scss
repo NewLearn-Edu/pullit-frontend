@@ -16,12 +16,13 @@
 }
 
 // 중앙 컨텐츠 컬럼 — 헤더를 제외한 나머지 공간에서 세로 중앙 정렬 (margin auto)
+// 폭은 온보딩 표준 컬럼(620px)과 통일 — /trial 과목 선택 .main 과 동일 규격
 .content {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 400px;
+  max-width: 620px;
   margin: auto;
   padding: 0 $space-lg $space-xl;
 }

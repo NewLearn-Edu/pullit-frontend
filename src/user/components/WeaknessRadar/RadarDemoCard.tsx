@@ -105,12 +105,13 @@ export default function RadarDemoCard({
   /** 핑크 라디얼 블롭 배경 — false 면 배경 없이 그래프만 (로그인 등 심플 배치용) */
   tinted?: boolean
 }) {
-  // 약점 그래프 데모 — 3.2초마다 시나리오 순환 (진단 단원 축은 실점수로 고정)
+  // 약점 그래프 데모 — 1.6초마다 시나리오 순환 (진단 단원 축은 실점수로 고정)
+  // morph 트윈이 900ms 라 대기 체감은 ~0.7초 (기존 3.2초에서 절반 이하로 단축)
   const [scenarioIdx, setScenarioIdx] = useState(0)
   useEffect(() => {
     const timer = window.setInterval(
       () => setScenarioIdx((i) => (i + 1) % RADAR_SCENARIOS.length),
-      3200,
+      1600,
     )
     return () => clearInterval(timer)
   }, [])
