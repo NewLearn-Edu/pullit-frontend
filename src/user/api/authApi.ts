@@ -366,15 +366,25 @@ export async function confirmPhoneCode(phoneNumber: string, code: string): Promi
 }
 
 /**
+ * 내 정보 조회 + 실패 원인 (GET /api/users/me).
+ * unauthorized = 인터셉터가 refresh 재발급까지 시도한 뒤에도 401 —
+ * 세션이 서버 확정으로 죽은 상태 (네트워크 오류·5xx 는 판정 불가라 false).
+ * userStore 가 세션 힌트 정리 여부를 결정하는 데 쓴다.
+ */
+export async function probeSession(): Promise<{ me: MeResult | null; unauthorized: boolean }> {
+  try {
+    const { data } = await api.get<BaseResponse<MeResult>>('/api/users/me')
+    return { me: data.data, unauthorized: false }
+  } catch (e) {
+    return { me: null, unauthorized: axios.isAxiosError(e) && e.response?.status === 401 }
+  }
+}
+
+/**
  * 내 정보 조회 (GET /api/users/me).
  * 비로그인·세션 만료·오류 시 null — 호출부에서 폴백 처리.
  * (401이면 인터셉터가 재발급 후 재시도하므로, null이면 refresh까지 만료된 상태)
  */
 export async function fetchMe(): Promise<MeResult | null> {
-  try {
-    const { data } = await api.get<BaseResponse<MeResult>>('/api/users/me')
-    return data.data
-  } catch {
-    return null
-  }
+  return (await probeSession()).me
 }

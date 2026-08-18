@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { createGuestSession, fetchMe, type MeResult } from '@/user/api/authApi'
+import { createGuestSession, fetchMe, probeSession, type MeResult } from '@/user/api/authApi'
 
 export type SessionStatus =
   | 'idle' // 아직 조회하지 않음
@@ -74,9 +74,12 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
     if (loadPromise) return loadPromise
     set({ status: 'loading' })
-    loadPromise = fetchMe()
-      .then((me) => {
+    loadPromise = probeSession()
+      .then(({ me, unauthorized }) => {
         if (me) setSessionHint()
+        // 서버가 401 로 확정한 죽은 세션 — 힌트를 지워 다음 로드부터 탐침(콘솔 401)도 없앤다.
+        // 네트워크 오류·5xx 는 세션 생사를 모르므로 힌트 유지 (복구 기회 보존)
+        else if (unauthorized) clearSessionHint()
         set({ me, status: me ? 'ready' : 'anonymous' })
         return me
       })
