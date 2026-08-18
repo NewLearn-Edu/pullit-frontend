@@ -1,4 +1,4 @@
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 
 /**
  * 학습 리포트 데이터 (Figma 2678-8990)

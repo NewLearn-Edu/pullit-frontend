@@ -7,7 +7,7 @@ import { findWrongUnit, formatWrongAt, toSolveProblem, type WrongUnitRow } from 
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 import styles from './styles/WrongNoteDetailPage.module.scss'
 
 /**

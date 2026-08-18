@@ -15,12 +15,12 @@ import SignupInfoPage from './user/pages/auth/SignupInfoPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
 import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
-import TasteStartPage from './user/pages/taste/TasteStartPage'
-import TrialIntroPage from './user/pages/taste/TrialIntroPage'
-import TasteQuizPage from './user/pages/taste/TasteQuizPage'
-import TasteCompletePage from './user/pages/taste/TasteCompletePage'
-import TasteReviewPage from './user/pages/taste/TasteReviewPage'
-import WeaknessResultPage from './user/pages/taste/WeaknessResultPage'
+import TrialStartPage from './user/pages/trial/TrialStartPage'
+import TrialIntroPage from './user/pages/trial/TrialIntroPage'
+import TrialQuizPage from './user/pages/trial/TrialQuizPage'
+import TrialCompletePage from './user/pages/trial/TrialCompletePage'
+import TrialReviewPage from './user/pages/trial/TrialReviewPage'
+import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
 const AdminRoutes = lazy(() => import('./admin/routes'))
@@ -50,12 +50,12 @@ export default function App() {
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
-      <Route path="/taste" element={<TasteStartPage />} />
+      <Route path="/trial" element={<TrialStartPage />} />
       <Route path="/start/:subject" element={<TrialIntroPage />} />
-      <Route path="/taste/quiz/:subject/:index" element={<TasteQuizPage />} />
-      <Route path="/solve/:subject/:index" element={<TasteQuizPage mode="solve" />} />
-      <Route path="/taste/complete" element={<TasteCompletePage />} />
-      <Route path="/taste/review/:subject/:index" element={<TasteReviewPage />} />
+      <Route path="/trial/quiz/:subject/:index" element={<TrialQuizPage />} />
+      <Route path="/solve/:subject/:index" element={<TrialQuizPage mode="solve" />} />
+      <Route path="/trial/complete" element={<TrialCompletePage />} />
+      <Route path="/trial/review/:subject/:index" element={<TrialReviewPage />} />
       <Route path="/weakness" element={<WeaknessResultPage />} />
       <Route
         path="/admin/*"

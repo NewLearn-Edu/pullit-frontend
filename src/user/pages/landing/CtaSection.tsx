@@ -13,7 +13,7 @@ export default function CtaSection() {
           무료. 광고 없는 약점 진단. 모든 해설까지 공짜.
         </p>
         <Link
-          to="/taste"
+          to="/trial"
           className="flex items-center justify-center rounded-[10px] bg-primary px-[32px] py-[16px] text-[18px] font-semibold text-white drop-shadow-[0px_8px_15px_rgba(255,56,92,0.4)] transition-colors hover:bg-primary-hover max-xl:text-[16px]"
         >
           무료로 내 약점 진단받기 →

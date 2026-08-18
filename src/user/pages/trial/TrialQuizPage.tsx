@@ -8,13 +8,13 @@ import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { MathProblemRender } from '@/shared/components/ExamRender'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
-import { useTasteStore } from '@/user/stores/tasteStore'
+import { useTrialStore } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
-import styles from './styles/TasteQuizPage.module.scss'
+import styles from './styles/TrialQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
 
@@ -23,13 +23,13 @@ const SUBJECT_LABEL: Record<Subject, string> = {
   english: '영어 · 빈칸 추론',
 }
 
-type QuizMode = 'taste' | 'solve'
+type QuizMode = 'trial' | 'solve'
 
 /**
  * 문제풀이 화면 (2026-08-07 플로우 변경 · 2026-08-11 solve 모드 추가)
  *
- * mode='taste' (기본, /taste/quiz/*): 맛보기 진단 — 진행바·문항 카운트 표시,
- *   결과를 tasteStore 에 쌓고 마지막 문제에서 결과 페이지(/weakness)로.
+ * mode='trial' (기본, /trial/quiz/*): 맛보기 진단 — 진행바·문항 카운트 표시,
+ *   결과를 trialStore 에 쌓고 마지막 문제에서 결과 페이지(/weakness)로.
  * mode='solve' (/solve/*): 일반 문제풀이 — 진행 표시 없음, source=FREE,
  *   진단 세션을 오염시키지 않고 마지막 문제 완료 시 홈으로 (결과 화면은 후속).
  * 상단 2행 (네비 + 필기 툴바) 고정 · 아래는 문제카드 (필기 캔버스) · 보기 5개.
@@ -38,17 +38,17 @@ type QuizMode = 'taste' | 'solve'
  * 보기를 선택하면 하단에서 다음/채점하기 버튼이 올라오고, 선택 해제하면 내려간다.
  * 해설은 결과 페이지(/weakness)의 문항별 "해설보기"로 확인한다.
  */
-export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
-  const isTaste = mode === 'taste'
+export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
+  const isTrial = mode === 'trial'
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
-  const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTasteStore()
+  const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTrialStore()
   const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
   const ensureSession = useUserStore((s) => s.ensureSession)
 
-  // 홈에서 /taste 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
+  // 홈에서 /trial 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
   // ensureSession 은 single-flight 라 시작 페이지에서 이미 확보했으면 요청이 나가지 않는다.
   useEffect(() => {
     ensureSession()
@@ -56,10 +56,10 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
 
   // 문제 세트 — 서버(GET /api/problems) 우선, 실패·부족 시 목 폴백 (problemSet 캐시 공유)
   const [problems, setProblems] = useState<Problem[]>(() =>
-    !isTaste && solveSession ? solveSession.problems : [],
+    !isTrial && solveSession ? solveSession.problems : [],
   )
   useEffect(() => {
-    if (!isTaste && solveSession) {
+    if (!isTrial && solveSession) {
       setProblems(solveSession.problems)
       return
     }
@@ -72,17 +72,17 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
     return () => {
       alive = false
     }
-  }, [isTaste, solveSession, subject, mathSkillNodeId, englishTypeId])
+  }, [isTrial, solveSession, subject, mathSkillNodeId, englishTypeId])
 
   useEffect(() => {
-    if (!isTaste && solveSession) return // 진입처가 준비한 문제로 진행 — 목 선택 불필요
-    const fallback = isTaste ? '/taste' : '/home'
+    if (!isTrial && solveSession) return // 진입처가 준비한 문제로 진행 — 목 선택 불필요
+    const fallback = isTrial ? '/trial' : '/home'
     if (subject === 'math' && !mathSkillNodeId) {
       navigate(fallback, { replace: true })
     } else if (subject === 'english' && !englishTypeId) {
       navigate(fallback, { replace: true })
     }
-  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTaste, solveSession])
+  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTrial, solveSession])
 
   const problem = problems[idx]
 
@@ -186,7 +186,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
     const skipped = selectedChoice == null
     const req: AttemptSubmitRequest = {
       problemId: serverId,
-      source: isTaste ? 'TRIAL' : (solveSession?.source ?? 'FREE'),
+      source: isTrial ? 'TRIAL' : (solveSession?.source ?? 'FREE'),
       // 주관식은 원문 텍스트로 제출 — 서버가 정수 파싱해 채점한다
       submittedNo: isShortAnswer ? null : selectedChoice,
       submittedText: isShortAnswer && selectedChoice != null ? String(selectedChoice) : null,
@@ -201,7 +201,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
 
     submitAttempt(req)
       .then((res) => {
-        if (!isTaste) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
+        if (!isTrial) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
         const rescored = computeScore({
           points,
           correct: res.isCorrect,
@@ -238,7 +238,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
     })
 
     const elapsedMs = Date.now() - startAt.current
-    if (isTaste) {
+    if (isTrial) {
       addResult(subject as Subject, {
         problemId: problem.id,
         selectedChoice: answerValue,
@@ -257,16 +257,16 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   const goNext = () => {
     const nextIdx = idx + 1
     if (nextIdx < problems.length) {
-      navigate(`${isTaste ? '/taste/quiz' : '/solve'}/${subject}/${nextIdx}`)
+      navigate(`${isTrial ? '/trial/quiz' : '/solve'}/${subject}/${nextIdx}`)
       return
     }
-    navigate(isTaste ? '/weakness' : (solveSession?.returnTo ?? '/home'))
+    navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'))
   }
 
   const handleClose = () => {
     // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
     if (window.confirm('나가면 풀이가 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
-      navigate(isTaste ? '/taste' : (solveSession?.returnTo ?? '/home'))
+      navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
     }
   }
 
@@ -274,7 +274,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   const confirmDontKnow = () => {
     setSkipConfirmOpen(false)
     const elapsedMs = Date.now() - startAt.current
-    if (isTaste) {
+    if (isTrial) {
       addResult(subject as Subject, {
         problemId: problem.id,
         selectedChoice: null,
@@ -292,10 +292,10 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
   return (
     <div className={styles.page}>
       <QuizTopBar
-        progress={isTaste ? { current: idx + 1, total: problems.length } : undefined}
+        progress={isTrial ? { current: idx + 1, total: problems.length } : undefined}
         subjectLabel={SUBJECT_LABEL[subject as Subject]}
         onClose={handleClose}
-        progressRatio={isTaste ? (idx + 1) / problems.length : undefined}
+        progressRatio={isTrial ? (idx + 1) / problems.length : undefined}
         rightExtra={
           <button
             type="button"
@@ -430,7 +430,7 @@ export default function TasteQuizPage({ mode = 'taste' }: { mode?: QuizMode }) {
         )}
         {answerValue != null ? (
           <button type="button" onClick={submitAndNext} className={styles.nextButton}>
-            {isLast ? (isTaste ? '채점하기' : '완료') : '다음'}
+            {isLast ? (isTrial ? '채점하기' : '완료') : '다음'}
           </button>
         ) : (
           <button

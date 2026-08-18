@@ -63,8 +63,8 @@ export default function LoginPage() {
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />
 
-        {/* 약점 레이더 데모 — 가입 유도 페이지와 같은 카드 (진단 기록 있으면 실점수 고정) */}
-        <RadarDemoCard className={styles.radar} />
+        {/* 약점 레이더 데모 — 가입 유도와 같은 카드, 배경 블롭 없이 그래프만 */}
+        <RadarDemoCard className={styles.radar} tinted={false} />
 
         {/* 소셜 로그인 — 원형 아이콘 4개 + "3초만에 가입" 배지 (가입 유도 페이지와 동일) */}
         <SocialLoginButtons
@@ -80,7 +80,7 @@ export default function LoginPage() {
         {/* 가입 없이 맛보기 진입 — 게스트 세션으로 약점 진단까지 가능 */}
         <button
           type="button"
-          onClick={() => navigate('/taste')}
+          onClick={() => navigate('/trial')}
           className={styles.guestLink}
         >
           비회원으로 약점보기

@@ -24,7 +24,7 @@ export interface QuizItemResult {
   serverExplanation?: string | null
 }
 
-interface TasteState {
+interface TrialState {
   mathSkillNodeId: string | null
   englishTypeId: string | null
   mathResults: QuizItemResult[]
@@ -52,7 +52,7 @@ interface TasteState {
 const POC_MATH_SKILL_NODE = 'sn-exp-log-01'
 const POC_ENGLISH_TYPE = 'en-blank'
 
-export const useTasteStore = create<TasteState>()(
+export const useTrialStore = create<TrialState>()(
   persist(
     (set, get) => ({
       mathSkillNodeId: POC_MATH_SKILL_NODE,
@@ -72,7 +72,7 @@ export const useTasteStore = create<TasteState>()(
       addResult: (subject, result) =>
         set((state) => {
           const key = subject === 'math' ? 'mathResults' : 'englishResults'
-          return { [key]: [...state[key], result] } as Partial<TasteState>
+          return { [key]: [...state[key], result] } as Partial<TrialState>
         }),
 
       /** 서버 채점 응답이 도착하면 해당 문항 결과를 덧씌운다 (전송은 비동기라 나중에 도착) */
@@ -81,7 +81,7 @@ export const useTasteStore = create<TasteState>()(
           const key = subject === 'math' ? 'mathResults' : 'englishResults'
           return {
             [key]: state[key].map((r) => (r.problemId === problemId ? { ...r, ...patch } : r)),
-          } as Partial<TasteState>
+          } as Partial<TrialState>
         }),
 
       reset: () =>
@@ -99,7 +99,7 @@ export const useTasteStore = create<TasteState>()(
 
       /**
        * 완주 여부 — 실제 플로우는 과목 하나만 푼다.
-       * (수학·영어 둘 다 요구하던 기존 가드는 정상 완주자도 /taste 로 되튕겼다)
+       * (수학·영어 둘 다 요구하던 기존 가드는 정상 완주자도 /trial 로 되튕겼다)
        */
       hasCompletedSession: () => {
         const subject = get().lastSubject
@@ -116,7 +116,7 @@ export const useTasteStore = create<TasteState>()(
       },
     }),
     {
-      name: 'pullit_taste_session',
+      name: 'pullit_trial_session',
       /**
        * sessionStorage 인 이유 — 소셜 로그인은 외부 도메인을 왕복하지만 같은 탭이라
        * 결과가 살아남고, 브라우저를 닫으면 사라져 "맛보기 1회 세션" 의미와 맞는다.

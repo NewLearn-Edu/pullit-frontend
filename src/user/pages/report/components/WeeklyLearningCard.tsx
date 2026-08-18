@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { clsx } from 'clsx'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 import {
   buildWeekly,
   DAY_LABELS,

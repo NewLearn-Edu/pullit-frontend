@@ -7,7 +7,7 @@ import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
-import { useTasteStore, type QuizItemResult } from '@/user/stores/tasteStore'
+import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import markStyles from './styles/WeaknessResultPage.module.scss'
@@ -181,10 +181,10 @@ export default function WeaknessResultPage() {
     englishResults,
     lastSubject,
     hasCompletedSession,
-  } = useTasteStore()
+  } = useTrialStore()
 
   // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
-  const hydrated = useTasteStore.persist?.hasHydrated?.() ?? true
+  const hydrated = useTrialStore.persist?.hasHydrated?.() ?? true
 
   // 채점하기 → 결과 직행 플로우 — 전송 실패분 회수를 여기서 수행
   useEffect(() => {
@@ -194,7 +194,7 @@ export default function WeaknessResultPage() {
   useEffect(() => {
     if (!hydrated) return
     if (!hasCompletedSession()) {
-      navigate('/taste', { replace: true })
+      navigate('/trial', { replace: true })
     }
   }, [hydrated, hasCompletedSession, navigate])
 
@@ -520,7 +520,7 @@ export default function WeaknessResultPage() {
                     {problem && reviewIdx >= 0 ? (
                       <button
                         type="button"
-                        onClick={() => navigate(`/taste/review/${rowSubject}/${reviewIdx}`)}
+                        onClick={() => navigate(`/trial/review/${rowSubject}/${reviewIdx}`)}
                         className="whitespace-nowrap rounded-[8px] border border-[#e5e7ea] bg-[#f8f8f8] px-[12px] py-[7px] text-[13px] font-semibold text-[#40464c] transition-colors hover:bg-[#f0f1f3]"
                       >
                         해설

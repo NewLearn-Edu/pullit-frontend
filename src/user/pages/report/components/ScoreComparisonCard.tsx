@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { clsx } from 'clsx'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { findCategoryByName } from '@/user/data/curriculum'
 import { getScoreComparison } from '../reportData'

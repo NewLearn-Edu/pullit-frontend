@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useMe } from '@/user/hooks/useMe'
@@ -59,8 +59,8 @@ export default function TrialIntroPage() {
   const subject: Subject | null =
     subjectParam === 'math' || subjectParam === 'english' ? subjectParam : null
 
-  const reset = useTasteStore((s) => s.reset)
-  const setLastSubject = useTasteStore((s) => s.setLastSubject)
+  const reset = useTrialStore((s) => s.reset)
+  const setLastSubject = useTrialStore((s) => s.setLastSubject)
   const ensureSession = useUserStore((s) => s.ensureSession)
 
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function TrialIntroPage() {
     setTimeout(async () => {
       await session
       flushAttemptQueue()
-      if (aliveRef.current) navigate(`/taste/quiz/${subject}/0`, { replace: true })
+      if (aliveRef.current) navigate(`/trial/quiz/${subject}/0`, { replace: true })
     }, 2050)
   }, [subject, ensureSession, reset, setLastSubject, navigate])
 

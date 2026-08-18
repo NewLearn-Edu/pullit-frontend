@@ -61,7 +61,7 @@ export default function MyPage() {
       // 이 브라우저에 남는 학습 흔적 정리 (진단 기록·풀이 큐 등)
       localStorage.removeItem('pullit_trial_progress')
       ;[
-        'pullit_taste_session',
+        'pullit_trial_session',
         'pullit_attempt_queue',
         'pullit_post_login_redirect',
         'pullit_oauth_state_naver',

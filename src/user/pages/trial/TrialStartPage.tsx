@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import AppHeader from '@/user/components/AppHeader'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useMe } from '@/user/hooks/useMe'
-import styles from './styles/TasteStartPage.module.scss'
+import styles from './styles/TrialStartPage.module.scss'
 
 interface SubjectOption {
   value: Subject
@@ -24,7 +24,7 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
  * 맛보기 진단 · 과목 선택 페이지 (Figma 2253-118)
  * 과목 하나를 골라 "다음" → 해당 과목 3문제 풀이 → 완주.
  */
-export default function TasteStartPage() {
+export default function TrialStartPage() {
   const navigate = useNavigate()
   const ensureSession = useUserStore((s) => s.ensureSession)
   const [selected, setSelected] = useState<Subject>('math')

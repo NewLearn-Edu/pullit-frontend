@@ -26,17 +26,17 @@
   padding: 0 $space-lg $space-xl;
 }
 
-// 풀잇 워드마크 로고
+// 풀잇 워드마크 로고 — 레이더 카드가 주인공이라 기존(128px)보다 작게
 .logo {
-  width: 128px;
+  width: 88px;
   height: auto;
 
-  @include tablet-up { width: 148px; }
+  @include tablet-up { width: 96px; }
 }
 
 // 약점 레이더 데모 카드 (RadarDemoCard 공용 컴포넌트) — 로고와의 세로 호흡만 여기서
 .radar {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 // 소셜 아이콘 행 (SocialLoginButtons 공용 컴포넌트) — 배지 영역(pt-36)이 위 여백을 겸한다

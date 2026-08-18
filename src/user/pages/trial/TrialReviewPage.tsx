@@ -7,8 +7,8 @@ import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { MathProblemRender } from '@/shared/components/ExamRender'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
-import { useTasteStore } from '@/user/stores/tasteStore'
-import styles from './styles/TasteQuizPage.module.scss'
+import { useTrialStore } from '@/user/stores/trialStore'
+import styles from './styles/TrialQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
 
@@ -18,16 +18,16 @@ const SUBJECT_LABEL: Record<Subject, string> = {
 }
 
 /**
- * 해설 리뷰 화면 (/taste/review/:subject/:index)
+ * 해설 리뷰 화면 (/trial/review/:subject/:index)
  * 결과 페이지(문항별 결과)의 "해설보기" 진입 — 왼쪽 문제 · 오른쪽 해설 패널.
  * 풀이 화면과 같은 골격이지만 타이머·필기·선택 없이 읽기 전용이다.
  */
-export default function TasteReviewPage() {
+export default function TrialReviewPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
-  const { mathSkillNodeId, englishTypeId, mathResults, englishResults } = useTasteStore()
+  const { mathSkillNodeId, englishTypeId, mathResults, englishResults } = useTrialStore()
 
   // 풀이 화면과 같은 세트 (problemSet 캐시 공유) — null = 로드 전
   const [problems, setProblems] = useState<Problem[] | null>(null)

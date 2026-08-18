@@ -9,7 +9,7 @@ import { useCreditForExtraSet } from '@/user/api/creditApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
-import { useTasteStore, type Subject } from '@/user/stores/tasteStore'
+import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import {
   computeCategoryProgress,
   EXTRA_SET_CREDIT_COST,
@@ -51,10 +51,10 @@ export default function UnlockProgressPage() {
   const buyExtraSet = useTrialProgressStore((s) => s.buyExtraSet)
   const setsLeft = useTrialProgressStore(selectRemainingSetsToday)
 
-  const resetTaste = useTasteStore((s) => s.reset)
-  const setLastSubject = useTasteStore((s) => s.setLastSubject)
-  const setMathSkillNode = useTasteStore((s) => s.setMathSkillNode)
-  const setEnglishType = useTasteStore((s) => s.setEnglishType)
+  const resetTrial = useTrialStore((s) => s.reset)
+  const setLastSubject = useTrialStore((s) => s.setLastSubject)
+  const setMathSkillNode = useTrialStore((s) => s.setMathSkillNode)
+  const setEnglishType = useTrialStore((s) => s.setEnglishType)
 
   const [creditSheetOpen, setCreditSheetOpen] = useState(false)
   const creditDrag = useSheetDrag(() => setCreditSheetOpen(false), {
@@ -91,13 +91,13 @@ export default function UnlockProgressPage() {
     const next = progress.nextUnit
     if (!next || !canStartToday) return
 
-    resetTaste()
+    resetTrial()
     setLastSubject(subject)
     if (subject === 'math') setMathSkillNode(next.nodeId ?? 'sn-exp-log-01')
     else setEnglishType(next.nodeId ?? 'en-blank')
 
     startUnit({ unitName: next.name, returnTo: `/unlock/${subject}/${category.slug}` })
-    navigate(`/taste/quiz/${subject}/0`)
+    navigate(`/trial/quiz/${subject}/0`)
   }
 
   /** 하단 진단 시작 CTA — 오늘 몫이 남았으면 바로 시작, 다 썼으면 크레딧 시트 */

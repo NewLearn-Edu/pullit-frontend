@@ -2,7 +2,7 @@ import { type WrongNoteItem } from '@/user/api/attemptApi'
 import { type Problem } from '@/user/data/mockProblems'
 import { MATH_MAP_NODES, type MapNode } from '@/user/data/mathWeaknessMap'
 import { ENGLISH_MAP_NODES } from '@/user/data/englishWeaknessMap'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 
 /**
  * 오답노트 그룹핑 — 서버 오답 항목을 소단원(지도 노드) 행에 배분한다.

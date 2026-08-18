@@ -5,7 +5,7 @@ import {
   type Problem,
 } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
-import type { Subject } from '@/user/stores/tasteStore'
+import type { Subject } from '@/user/stores/trialStore'
 
 /**
  * 퀴즈 문제 세트 공급자 (2026-08-13)
@@ -13,8 +13,8 @@ import type { Subject } from '@/user/stores/tasteStore'
  * 서버(GET /api/problems)를 우선 사용하고, 유닛에 서버 문항이 없거나 조회에 실패하면
  * 기존 목 데이터로 폴백해 흐름을 유지한다.
  *
- * 세션 단위 캐시를 두는 이유 — 풀이(TasteQuizPage)·결과(WeaknessResultPage)·
- * 해설(TasteReviewPage)이 "같은 문제 배열"을 봐야 결과 매칭이 어긋나지 않는다.
+ * 세션 단위 캐시를 두는 이유 — 풀이(TrialQuizPage)·결과(WeaknessResultPage)·
+ * 해설(TrialReviewPage)이 "같은 문제 배열"을 봐야 결과 매칭이 어긋나지 않는다.
  */
 
 /** 맛보기 세트 문항 수 — 정책 3문항 */

@@ -1,20 +1,20 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AppHeader from '@/user/components/AppHeader'
-import { useTasteStore } from '@/user/stores/tasteStore'
+import { useTrialStore } from '@/user/stores/trialStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 
-export default function TasteCompletePage() {
+export default function TrialCompletePage() {
   const navigate = useNavigate()
-  const { hasCompletedSession, totalEarnedPoints } = useTasteStore()
+  const { hasCompletedSession, totalEarnedPoints } = useTrialStore()
   // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
-  const hydrated = useTasteStore.persist?.hasHydrated?.() ?? true
+  const hydrated = useTrialStore.persist?.hasHydrated?.() ?? true
 
   useEffect(() => {
     // 완주 하지 않은 접근은 시작 페이지로 (실제로 푼 과목만 검사)
     if (!hydrated) return
     if (!hasCompletedSession()) {
-      navigate('/taste', { replace: true })
+      navigate('/trial', { replace: true })
     }
   }, [hydrated, hasCompletedSession, navigate])
 

@@ -1,5 +1,5 @@
 import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
-import type { Subject } from '@/user/stores/tasteStore'
+import type { Subject } from '@/user/stores/trialStore'
 
 /**
  * 진단 커리큘럼 단일 진실원 (2026-08-12 확정)

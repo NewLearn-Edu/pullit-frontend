@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 import { fetchSkillScores } from '@/user/api/attemptApi'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
-import { useTasteStore } from '@/user/stores/tasteStore'
+import { useTrialStore } from '@/user/stores/trialStore'
 import WeaknessRadar from '@/user/components/WeaknessRadar/WeaknessRadar'
 
 /**
@@ -37,7 +37,7 @@ const normalize = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, ''
  * 세션 결과로 같은 공식(맞춘 배점 ÷ 푼 배점 × 100)을 폴백 계산한다.
  */
 function useDiagnosedScore(): { unitName: string | null; score: number | null } {
-  const { mathSkillNodeId, mathResults, lastSubject } = useTasteStore()
+  const { mathSkillNodeId, mathResults, lastSubject } = useTrialStore()
 
   // 영어 맛보기는 레이더(수학 단원 축)에 대응 축이 없어 실점수를 얹지 않는다
   const unitName =
@@ -97,7 +97,14 @@ function useDiagnosedScore(): { unitName: string | null; score: number | null } 
  * 3.2초마다 데모 시나리오가 순환하며 morph 하고, 맛보기로 진단한 단원이 있으면
  * 그 축만 실점수로 고정된다 (세션 없는 방문자는 전체 데모로 동작).
  */
-export default function RadarDemoCard({ className }: { className?: string }) {
+export default function RadarDemoCard({
+  className,
+  tinted = true,
+}: {
+  className?: string
+  /** 핑크 라디얼 블롭 배경 — false 면 배경 없이 그래프만 (로그인 등 심플 배치용) */
+  tinted?: boolean
+}) {
   // 약점 그래프 데모 — 3.2초마다 시나리오 순환 (진단 단원 축은 실점수로 고정)
   const [scenarioIdx, setScenarioIdx] = useState(0)
   useEffect(() => {
@@ -126,11 +133,15 @@ export default function RadarDemoCard({ className }: { className?: string }) {
         'flex aspect-[323/400] max-h-[480px] w-full max-w-[388px] min-h-0 shrink items-center justify-center rounded-[40px] bg-white',
         className,
       )}
-      style={{
-        backgroundImage:
-          'radial-gradient(48% 36% at 80% 19%, rgba(255, 218, 223, 0.4), rgba(255, 255, 255, 0)),' +
-          'radial-gradient(44% 33% at 17% 80%, rgba(255, 218, 223, 0.4), rgba(255, 255, 255, 0))',
-      }}
+      style={
+        tinted
+          ? {
+              backgroundImage:
+                'radial-gradient(48% 36% at 80% 19%, rgba(255, 218, 223, 0.4), rgba(255, 255, 255, 0)),' +
+                'radial-gradient(44% 33% at 17% 80%, rgba(255, 218, 223, 0.4), rgba(255, 255, 255, 0))',
+            }
+          : undefined
+      }
     >
       <div className="aspect-[360/336] w-full max-w-[430px] px-[10px]">
         <WeaknessRadar units={radarUnits} className="h-full w-full" />

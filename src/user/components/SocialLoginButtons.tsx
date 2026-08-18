@@ -30,14 +30,15 @@ export default function SocialLoginButtons({
   return (
     <div
       className={clsx(
-        'relative flex shrink-0 items-center justify-center gap-[8px]',
+        // 갭: 모바일 8px · 패드·웹 20px (행 폭 248px → 284px)
+        'relative flex shrink-0 items-center justify-center gap-[8px] md:gap-[20px]',
         badgeLabel != null && 'pt-[36px]',
         className,
       )}
     >
       {badgeLabel != null && (
-        // 배지 — 첫 버튼(카카오) 중심 위. 버튼 행 폭 248px 기준 중심 -96px
-        <div className="absolute left-[calc(50%-96px)] top-0 flex -translate-x-1/2 flex-col items-center">
+        // 배지 — 첫 버튼(카카오) 중심 위. 카카오 중심 = 행 중앙 - (행폭/2 - 28px)
+        <div className="absolute left-[calc(50%-96px)] top-0 flex -translate-x-1/2 flex-col items-center md:left-[calc(50%-114px)]">
           <span className="whitespace-nowrap rounded-[8px] bg-[#121417] px-[10px] py-[5px] text-[12px] font-semibold leading-[1.4] text-white">
             {badgeLabel}
           </span>

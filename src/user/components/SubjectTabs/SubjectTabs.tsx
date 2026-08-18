@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { type Subject } from '@/user/stores/tasteStore'
+import { type Subject } from '@/user/stores/trialStore'
 import styles from './styles/SubjectTabs.module.scss'
 
 interface SubjectTabsProps {

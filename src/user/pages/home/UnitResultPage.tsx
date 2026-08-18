@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/user/components/PageHeader'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
-import { type Subject } from '@/user/stores/tasteStore'
-import { formatShort, formatSummary, GradeMark } from '@/user/pages/taste/WeaknessResultPage'
+import { type Subject } from '@/user/stores/trialStore'
+import { formatShort, formatSummary, GradeMark } from '@/user/pages/trial/WeaknessResultPage'
 
 /**
  * 진단 결과 재열람 (/unit-result/:subject/:unitName)

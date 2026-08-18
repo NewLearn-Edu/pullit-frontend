@@ -17,7 +17,7 @@ export default function LandingNav() {
               로그인
             </Link>
             <Link
-              to="/taste"
+              to="/trial"
               className="flex items-center justify-center rounded-[8px] bg-primary px-[20px] py-[12px] text-[16px] font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               무료로 약점 확인하기

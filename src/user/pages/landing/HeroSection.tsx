@@ -43,7 +43,7 @@ function HeroProblemCard() {
         </div>
 
         <Link
-          to="/taste"
+          to="/trial"
           className="flex w-full items-center justify-center rounded-[10px] bg-primary px-[32px] py-[12px] text-[16px] font-semibold text-white transition-colors hover:bg-primary-hover"
         >
           3문제로 약점 확인하기
@@ -87,7 +87,7 @@ export default function HeroSection() {
             <span className="font-normal text-muted"> 내 약점부터 확인해봐</span>
           </p>
           <Link
-            to="/taste"
+            to="/trial"
             className="flex w-fit items-center justify-center rounded-[20px] bg-primary px-[44px] py-[20px] text-[18px] font-semibold text-white drop-shadow-[0px_8px_15px_rgba(255,56,92,0.4)] transition-colors hover:bg-primary-hover max-md:mt-[16px] max-md:text-[16px] max-md:font-bold"
           >
             무료로 약점 확인하기
