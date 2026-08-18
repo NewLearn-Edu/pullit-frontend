@@ -26,6 +26,15 @@ export default function LandingPage() {
     if (me) navigate('/home', { replace: true })
   }, [me, navigate])
 
+  // index.html 인라인 스크립트가 흰 화면 플래시 방지용으로 칠한 검은 배경을
+  // 랜딩을 떠날 때 원복 — 흰 배경 페이지로 이동해도 잔상이 남지 않게
+  useEffect(() => {
+    document.documentElement.style.background = '#000'
+    return () => {
+      document.documentElement.style.background = ''
+    }
+  }, [])
+
   return (
     <main className="min-h-dvh bg-black">
       <LandingNav />

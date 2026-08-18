@@ -23,10 +23,8 @@
     <link rel="icon" type="image/png" href="/logo_pullit_favicon.png" />
     <link rel="apple-touch-icon" href="/logo_pullit_favicon.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.min.css"
-    />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/Paperlogy-7Bold.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/KoPubWorldBatang-Bold.woff2" crossorigin />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
@@ -35,6 +33,10 @@
     />
   </head>
   <body>
+    <script>
+      // 다크 랜딩('/') 흰 화면 플래시 방지 — JS 번들 로드 전에 배경을 먼저 검게
+      if (location.pathname === '/') document.documentElement.style.background = '#000'
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

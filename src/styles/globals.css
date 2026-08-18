@@ -32,42 +32,42 @@
    출처: https://www.kopus.org/biz-electronic-font2/  · 로컬 배포 (public/fonts) */
 @font-face {
   font-family: 'KoPubWorld Batang';
-  src: url('/fonts/KoPubWorldBatang-Light.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldBatang-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'KoPubWorld Batang';
-  src: url('/fonts/KoPubWorldBatang-Medium.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldBatang-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'KoPubWorld Batang';
-  src: url('/fonts/KoPubWorldBatang-Bold.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldBatang-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'KoPubWorld Dotum';
-  src: url('/fonts/KoPubWorldDotum-Light.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldDotum-Light.woff2') format('woff2');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'KoPubWorld Dotum';
-  src: url('/fonts/KoPubWorldDotum-Medium.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldDotum-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'KoPubWorld Dotum';
-  src: url('/fonts/KoPubWorldDotum-Bold.ttf') format('truetype');
+  src: url('/fonts/KoPubWorldDotum-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
