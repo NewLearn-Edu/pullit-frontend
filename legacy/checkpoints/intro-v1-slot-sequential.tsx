@@ -6,11 +6,10 @@ import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
  * 마케팅 진입용 시네마틱 인트로 (/start)
  *
  * 랜딩 "무료로 약점 확인하기" → 이 페이지 → 시작하기 → 과목 선택(/trial).
- * 카피 전체(4줄 + 버튼)가 한번에 딱 슬램 등장하고, 숫자만 슬롯머신처럼
- * 짧게 굴러 떨어진다: "하루 90분 → … → 15분", "9문제 → 6문제 → 3문제".
- * 숫자가 3에 딱 멈추는 순간(~0.6초) 화면이 울리고(셰이크 + 쇼크웨이브) 붉은 잔광이
- * 남는다 — 줄어드는 카운트다운 자체가 "뭐? 딱 이것만?" 이라는 카피의 메시지다.
- * 총 ~1초 완결. (순차 버전 원복: legacy/checkpoints/intro-v1-slot-sequential.tsx)
+ * 검은 화면에서 숫자가 슬롯머신처럼 굴러 떨어진다:
+ * "하루 90분 → 60분 → 45분 → 30분 → 15분", "9문제 → 6문제 → 3문제".
+ * 숫자가 3에 딱 멈추는 순간 화면이 울리고(셰이크 + 쇼크웨이브) 붉은 잔광이 남는다 —
+ * 줄어드는 카운트다운 자체가 "뭐? 딱 이것만?" 이라는 카피의 메시지다.
  *
  * 연출은 전부 CSS 타임라인(animation-delay) — 탭하면 즉시 최종 화면으로 스킵.
  * 게스트 세션은 여기서 만들지 않는다 — 과목 선택(/trial)의 "다음" 클릭에서 확보
@@ -141,30 +140,30 @@ export default function TrialIntroPage() {
       {/* 임팩트 이후 남는 붉은 잔광 — 바닥 쪽에서 은은하게 */}
       <div
         aria-hidden
-        style={{ animationDelay: '620ms' }}
+        style={{ animationDelay: '2130ms' }}
         className="intro-anim pointer-events-none absolute inset-0 animate-[intro-fade_1400ms_ease_both] bg-[radial-gradient(58%_46%_at_50%_62%,rgba(255,56,92,0.13),transparent_70%)]"
       />
       {/* 착지 섬광 */}
       <div
         aria-hidden
-        style={{ animationDelay: '620ms' }}
+        style={{ animationDelay: '2130ms' }}
         className="intro-anim pointer-events-none absolute inset-0 animate-[intro-flash_450ms_ease-out_both] bg-[radial-gradient(50%_40%_at_50%_46%,rgba(255,56,92,0.2),transparent_72%)]"
       />
 
       {/* 카피 스택 — "3문제" 착지 순간 통째로 울린다 */}
       <div
-        style={{ animationDelay: '620ms' }}
+        style={{ animationDelay: '2130ms' }}
         className="intro-anim relative flex w-full max-w-[760px] animate-[intro-shake_380ms_linear_both] flex-col items-center gap-[18px] text-center max-md:gap-[14px]"
       >
         <p
-          style={{ animationDelay: '100ms' }}
+          style={{ animationDelay: '200ms' }}
           className={`${SLAM} break-keep text-[24px] font-semibold leading-[1.25] text-[#b7bbc2] max-md:text-[19px]`}
         >
           수학 영어, 하루{' '}
           <Roller
             cells={['90분', '60분', '45분', '30분', '15분']}
-            animation="animate-[intro-roll5_450ms_cubic-bezier(0.3,0,0.2,1)_both]"
-            delay={150}
+            animation="animate-[intro-roll5_820ms_cubic-bezier(0.3,0,0.2,1)_both]"
+            delay={520}
             finalClassName="font-bold text-white"
           />
           .
@@ -174,18 +173,18 @@ export default function TrialIntroPage() {
           {/* 쇼크웨이브 링 */}
           <span
             aria-hidden
-            style={{ animationDelay: '620ms' }}
+            style={{ animationDelay: '2130ms' }}
             className="intro-anim pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] animate-[intro-shock_620ms_cubic-bezier(0.22,0.9,0.3,1)_both] rounded-full border-2 border-[#ff385c]/70 max-md:h-[230px] max-md:w-[230px]"
           />
           <p
-            style={{ animationDelay: '100ms' }}
+            style={{ animationDelay: '1250ms' }}
             className={`${SLAM} relative break-keep font-paperlogy text-[92px] font-bold leading-[1.1] text-white max-md:text-[56px]`}
           >
             딱{' '}
             <Roller
               cells={['9문제', '6문제', '3문제']}
-              animation="animate-[intro-roll3_420ms_cubic-bezier(0.3,0,0.2,1)_both]"
-              delay={200}
+              animation="animate-[intro-roll3_640ms_cubic-bezier(0.3,0,0.2,1)_both]"
+              delay={1550}
               finalClassName="text-[#ff385c]"
             />
             .
@@ -193,14 +192,14 @@ export default function TrialIntroPage() {
         </div>
 
         <p
-          style={{ animationDelay: '100ms' }}
+          style={{ animationDelay: '2400ms' }}
           className={`${SLAM} break-keep text-[30px] font-bold leading-[1.25] text-[#ff385c] max-md:text-[23px]`}
         >
           너의 약점만 골라서 준다.
         </p>
 
         <p
-          style={{ animationDelay: '100ms' }}
+          style={{ animationDelay: '2850ms' }}
           className={`${SLAM} mt-[36px] break-keep text-[24px] font-semibold leading-[1.25] text-white max-md:mt-[26px] max-md:text-[19px]`}
         >
           그럼, 시작한다.
@@ -211,7 +210,7 @@ export default function TrialIntroPage() {
         <button
           type="button"
           onClick={() => navigate('/trial')}
-          style={{ animationDelay: '100ms' }}
+          style={{ animationDelay: '3050ms' }}
           className="intro-anim h-[56px] w-[280px] animate-[intro-rise_460ms_cubic-bezier(0.22,0.9,0.3,1)_both] rounded-[14px] bg-[#ff385c] text-[17px] font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] max-md:w-[240px]"
         >
           시작하기

@@ -36,3 +36,18 @@ export async function fetchProblemSet(
   })
   return data.data
 }
+
+/**
+ * 맛보기(트라이얼) 출제 세트 조회 (GET /api/trial-problems).
+ * 어드민이 선별해 올린 trial_problems 세트 — 그룹의 최소 세트 번호를 sequence 순으로.
+ * groupCode = 임포트 파일명 그룹 (수학: 2022_1_1_1 · 영어: 01_topic 등).
+ */
+export async function fetchTrialProblemSet(
+  subject: 'math' | 'english',
+  groupCode: string,
+): Promise<ProblemSetItem[]> {
+  const { data } = await api.get<BaseResponse<ProblemSetItem[]>>('/api/trial-problems', {
+    params: { subject: subject.toUpperCase(), groupCode },
+  })
+  return data.data
+}

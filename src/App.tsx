@@ -50,8 +50,9 @@ export default function App() {
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+      {/* 마케팅 인트로 → 과목 선택 → 퀴즈 순서 (랜딩 CTA 는 /start 로 진입) */}
+      <Route path="/start" element={<TrialIntroPage />} />
       <Route path="/trial" element={<TrialStartPage />} />
-      <Route path="/start/:subject" element={<TrialIntroPage />} />
       <Route path="/trial/quiz/:subject/:index" element={<TrialQuizPage />} />
       <Route path="/solve/:subject/:index" element={<TrialQuizPage mode="solve" />} />
       <Route path="/trial/complete" element={<TrialCompletePage />} />

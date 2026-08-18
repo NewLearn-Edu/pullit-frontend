@@ -1,4 +1,4 @@
-import { fetchProblemSet, type ProblemSetItem } from '@/user/api/problemApi'
+import { fetchProblemSet, fetchTrialProblemSet, type ProblemSetItem } from '@/user/api/problemApi'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -24,6 +24,28 @@ const SET_SIZE = 3
 const ENGLISH_SERVER_NODES: Record<string, string> = {
   'en-topic': '주제', // 맛보기 고정 영역 (맛보기 테스트 정책 §2.2)
   'en-blank': '빈칸',
+}
+
+/**
+ * 목 노드 id → 맛보기 세트 그룹 코드 (trial_problems.group_code = 임포트 파일명 그룹).
+ * 수학은 2022 단원 코드(단원·유형 명칭 정책 §1.1), 영어는 유형 파일명 그룹.
+ * 어드민이 해당 그룹의 trial-test 파일을 올리면 이 세트가 1순위로 출제된다.
+ */
+const TRIAL_GROUPS: Record<string, string> = {
+  'sn-exp-log-01': '2022_1_1_1', // 지수와 로그
+  'sn-exp-log-02': '2022_1_1_2', // 지수함수와 로그함수
+  'sn-trig-01': '2022_1_2_1', // 삼각함수
+  'sn-trig-02': '2022_1_2_2', // 사인법칙과 코사인법칙
+  'sn-seq-01': '2022_1_3_1', // 등차수열과 등비수열
+  'sn-seq-02': '2022_1_3_2', // 수열의 합
+  'sn-diff-01': '2022_2_2_1', // 미분계수
+  'sn-diff-02': '2022_2_2_3', // 도함수의 활용
+  'sn-int-01': '2022_2_3_1', // 부정적분
+  'sn-int-02': '2022_2_3_3', // 정적분의 활용
+  'sn-stat-01': '2022_3_2_2', // 조건부확률
+  'sn-stat-02': '2022_3_3_1', // 확률분포
+  'en-topic': '01_topic', // 영어 주제 — 실제 임포트 파일명 그룹과 일치해야 함
+  'en-blank': 'r12_blank',
 }
 
 /**
@@ -86,6 +108,24 @@ export async function loadQuizProblems(subject: Subject, nodeId: string): Promis
   if (pending) return pending
 
   const promise = (async () => {
+    // 1순위: 어드민 선별 맛보기 세트 (trial_problems) — 세트가 성립하면 그대로 채택
+    const trialGroup = TRIAL_GROUPS[nodeId]
+    if (trialGroup) {
+      try {
+        const items = await fetchTrialProblemSet(subject, trialGroup)
+        if (items.length >= SET_SIZE) {
+          const mapped = items
+            .slice(0, SET_SIZE)
+            .map((item, i) => toQuizProblem(item, i, subject, nodeId))
+          cache.set(key, mapped)
+          return mapped
+        }
+      } catch {
+        // 네트워크·서버 오류 — 은행 조회로 폴백
+      }
+    }
+
+    // 2순위: 문제 은행 (skill_node 오름차순 상위 3개)
     const skillNode = serverSkillNodeOf(subject, nodeId)
     if (skillNode) {
       try {

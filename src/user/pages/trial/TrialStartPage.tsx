@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
-import { type Subject } from '@/user/stores/trialStore'
-import { selectIsMember, useUserStore } from '@/user/stores/userStore'
+import { useTrialStore, type Subject } from '@/user/stores/trialStore'
+import { useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
-import { useMe } from '@/user/hooks/useMe'
+import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import styles from './styles/TrialStartPage.module.scss'
 
 interface SubjectOption {
@@ -27,22 +27,24 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
 export default function TrialStartPage() {
   const navigate = useNavigate()
   const ensureSession = useUserStore((s) => s.ensureSession)
+  const reset = useTrialStore((s) => s.reset)
+  const setLastSubject = useTrialStore((s) => s.setLastSubject)
   const [selected, setSelected] = useState<Subject>('math')
   const [pending, setPending] = useState(false)
   const [sessionFailed, setSessionFailed] = useState(false)
 
-  // 회원은 맛보기 퍼널 대상이 아니다 — 홈으로 (조회 전용이라 게스트 생성 없음)
-  useMe()
-  const isMember = useUserStore(selectIsMember)
-  useEffect(() => {
-    if (isMember) navigate('/home', { replace: true })
-  }, [isMember, navigate])
+  // 맛보기를 이미 완주한 회원만 홈으로 — 미완이면 방금 가입한 회원도 퍼널을 탄다
+  useTrialFunnelGuard()
 
   /**
-   * 시네마틱 인트로(/start/:subject)로 — reset·setLastSubject 는 인트로의
-   * 시작하기 클릭에서 처리되므로 여기선 이동만 한다 (실패해도 기존 결과 보존)
+   * 퀴즈 직행 — 인트로(/start)가 랜딩 → 과목 선택 앞 단계로 옮겨가면서
+   * 인트로가 하던 reset·setLastSubject 를 여기(퀴즈 진입 직전)서 처리한다
    */
-  const start = () => navigate(`/start/${selected}`)
+  const start = () => {
+    reset()
+    setLastSubject(selected)
+    navigate(`/trial/quiz/${selected}/0`)
+  }
 
   const handleNext = async () => {
     setPending(true)

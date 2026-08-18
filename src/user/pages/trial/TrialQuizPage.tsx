@@ -11,6 +11,7 @@ import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
+import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
@@ -47,6 +48,10 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTrialStore()
   const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
   const ensureSession = useUserStore((s) => s.ensureSession)
+
+  // 맛보기를 이미 완주한 회원의 딥링크 진입 방어 — 미완 유저(게스트·신규 회원)는 통과.
+  // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외
+  useTrialFunnelGuard(isTrial)
 
   // 홈에서 /trial 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
   // ensureSession 은 single-flight 라 시작 페이지에서 이미 확보했으면 요청이 나가지 않는다.

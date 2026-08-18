@@ -13,9 +13,8 @@ import {
   type PhoneVerifyResult,
 } from '@/user/api/authApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
-import { finishLogin } from '@/user/services/finishLogin'
+import { finishLogin, resolvePostAuthDestination } from '@/user/services/finishLogin'
 import { useUserStore } from '@/user/stores/userStore'
-import { consumePostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 
 /**
@@ -183,7 +182,8 @@ export default function SignupInfoPage() {
       await completeProfile({ name: name.trim(), birthDate, phoneNumber: phone, agreeTerms, agreePrivacy })
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
-      navigate(consumePostLoginRedirect() ?? '/home', { replace: true })
+      // 맛보기 미완 신규 가입자는 퍼널(/start)부터 — 완료 유저만 복귀 경로/홈
+      navigate(await resolvePostAuthDestination(), { replace: true })
     } catch (e) {
       const errCode = isAxiosError(e) ? e.response?.data?.errorCode : null
       if (errCode === 'U010') {

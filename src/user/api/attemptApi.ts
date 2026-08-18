@@ -86,3 +86,24 @@ export async function fetchSkillScores(subject: 'math' | 'english'): Promise<Ski
   })
   return data.data
 }
+
+/** 맛보기 진단 완료 기록 — 세트 완주 시 서버가 자동 박제한 행 (trial_diagnoses) */
+export interface TrialDiagnosis {
+  skillNode: string
+  groupCode: string
+  setNo: number
+  score: number
+  correctCount: number
+  totalCount: number
+  timeSpentMs: number | null
+  completedAt: string
+}
+
+export async function fetchTrialDiagnoses(
+  subject: 'math' | 'english',
+): Promise<TrialDiagnosis[]> {
+  const { data } = await api.get<BaseResponse<TrialDiagnosis[]>>('/api/trial-diagnoses', {
+    params: { subject: subject.toUpperCase() },
+  })
+  return data.data
+}

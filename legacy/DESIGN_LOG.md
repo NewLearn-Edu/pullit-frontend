@@ -71,3 +71,23 @@ POC 랜딩 페이지의 디자인 버전 기록. **"○○ 버전으로 원복�
 ## 원복 방법
 - "v1 미니멀로 원복" → `checkpoints/v1-minimal-coral.html` → `index.html` 복사
 - 새 버전 만들 때마다 `checkpoints/vN-이름.html` 로 먼저 박제 후 작업
+
+---
+
+# 인트로(/start) — 체크포인트
+
+마케팅 인트로 페이지(`src/user/pages/trial/TrialIntroPage.tsx`)의 연출 버전 기록.
+
+### intro-v1 — Slot Countdown Sequential ✅ 박제됨
+- **파일:** `checkpoints/intro-v1-slot-sequential.tsx`
+- **저장일:** 2026-08-18
+- **컨셉:** 슬롯머신 카운트다운 순차 연출 (~3.5초). 슬램 등장 → 90분→15분 롤 → 딱 __문제 슬램 → 9→3문제 롤 착지 순간 셰이크+쇼크웨이브+섬광 → 마무리 카피 → 버튼. 탭 스킵 지원.
+- **피드백:** "좋은데 시간이 조금 걸림" → intro-v2 에서 동시 등장으로 압축
+
+### intro-v2 — Slot Countdown Instant ✅ 현재 라이브
+- **파일:** (= 현재 `src/user/pages/trial/TrialIntroPage.tsx`)
+- **저장일:** 2026-08-18
+- **변경점 (v1 대비):** 전 요소(카피 4줄+버튼)가 t=100ms 에 한번에 슬램 등장. 숫자 롤만 짧게(0.4초대) 돌아 ~0.6초에 착지하며 임팩트(셰이크·쇼크웨이브·섬광·잔광). 총 ~1초 완결. 키프레임·컨셉은 v1 그대로, 딜레이·듀레이션만 압축.
+
+## 인트로 원복 방법
+- "인트로 v1(순차 버전)로 원복" → `checkpoints/intro-v1-slot-sequential.tsx` → `src/user/pages/trial/TrialIntroPage.tsx` 복사
