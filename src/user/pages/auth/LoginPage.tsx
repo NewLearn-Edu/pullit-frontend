@@ -7,8 +7,9 @@ import {
   startNaverLogin,
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { hasCompletedTrial } from '@/user/services/trialGate'
 import { useMe } from '@/user/hooks/useMe'
-import { selectIsCompleteMember, useUserStore } from '@/user/stores/userStore'
+import { isCompleteMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
@@ -31,12 +32,27 @@ export default function LoginPage() {
   // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
   // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
   useMe()
-  // 프로필까지 마친 회원만 홈으로 — 미완성 회원은 이 화면에서 소셜 버튼을 다시 눌러
-  // 로그인하면 finishLogin 이 /signup/info(추가 정보)로 안내한다
-  const isCompleteMember = useUserStore(selectIsCompleteMember)
+  // 세션 보유자(게스트·프로필 완료 회원)는 랜딩과 동일하게 완주 여부로 분기 —
+  // 완주면 홈, 미완(최초 유저)이면 퍼널(/start). 웹앱(start_url=/login)의 관문 역할.
+  // 게스트의 가입 전환은 마이페이지 "10초만에 가입하기" → /signup 이 담당한다.
+  // 프로필 미완성 회원만 이 화면에 남는다 — 소셜 버튼을 다시 누르면
+  // finishLogin 이 /signup/info(추가 정보)로 안내
+  const me = useUserStore((s) => s.me)
   useEffect(() => {
-    if (isCompleteMember) navigate('/home', { replace: true })
-  }, [isCompleteMember, navigate])
+    if (!me) return
+    if (me.type !== 'GUEST' && !isCompleteMember(me)) return
+    let alive = true
+    hasCompletedTrial()
+      .then((done) => {
+        if (alive) navigate(done ? '/home' : '/start', { replace: true })
+      })
+      .catch(() => {
+        if (alive) navigate('/home', { replace: true }) // 판정 불가 — 퍼널 오감금 방지
+      })
+    return () => {
+      alive = false
+    }
+  }, [me, navigate])
 
   // 로그인 후 복귀 경로 — 세션 가드가 넘겨준 출발지, 없으면 홈.
   // 랜딩('/')에서 온 경우도 홈으로 보낸다 (로그인했는데 랜딩 복귀는 어색)

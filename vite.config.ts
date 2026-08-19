@@ -18,7 +18,9 @@ export default defineConfig({
         // 홈 화면 설치 시 세로 고정 — Android 는 잠기고, iOS 는 매니페스트를 무시한다
         // (일반 브라우저 탭에선 웹이 회전을 막을 방법이 없음 · iOS 는 추후 네이티브 래핑 시 잠금)
         orientation: 'portrait',
-        start_url: '/',
+        // 설치된 웹앱은 마케팅 랜딩 대신 로그인부터 — 세션 있는 유저는
+        // LoginPage 가드가 홈/퍼널로 즉시 보낸다
+        start_url: '/login',
         icons: [
           {
             src: '/logo_pullit_favicon.png',
