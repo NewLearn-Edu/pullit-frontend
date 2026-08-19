@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import {
@@ -26,14 +26,43 @@ import OnboardingHeader from '@/user/components/OnboardingHeader'
  * 14세 미만이면 서버가 소셜에서 받은 정보를 즉시 파기하고 403 을 반환하며,
  * 이 화면은 안내 후 게스트 체험으로 유도한다. 보호자 동의 플로우는 정식 서비스 전 과제.
  */
+/** 캐스케이드 단계별 타이틀 — 현재 단계에 맞춰 상단 카피가 바뀐다 (토스 패턴) */
+const STEP_TITLES = [
+  { title: '이름을 알려줄래?', sub: '가입에 필요한 것들을 하나씩 물어볼게' },
+  { title: '생년월일을 알려줘', sub: '만 14세 이상부터 가입할 수 있어' },
+  { title: '휴대폰 번호를 인증해줘', sub: '학습 알림을 받을 번호가 필요해' },
+  { title: '마지막 단계야!', sub: '서비스 이용에 꼭 필요한 동의만 추렸어' },
+] as const
+
+/** 토스식 동의 리스트 체크 — 체크박스 대신 가벼운 ✓ 글리프 (on: 진회색 · off: 연회색) */
+function CheckMark({ on }: { on: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M4 10.5 8.2 14.5 16 6"
+        stroke={on ? '#121417' : '#c6cacf'}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export default function SignupInfoPage() {
   const navigate = useNavigate()
-  const me = useUserStore((s) => s.me)
   const loadMe = useUserStore((s) => s.loadMe)
   const clearSession = useUserStore((s) => s.clear)
 
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
+  // 생년월일 3분할 입력 (토스 패턴) — 숫자 키패드만 뜨고, 자릿수가 차면 다음 칸으로 자동 이동
+  const [birthY, setBirthY] = useState('')
+  const [birthM, setBirthM] = useState('')
+  const [birthD, setBirthD] = useState('')
+  const birthYRef = useRef<HTMLInputElement>(null)
+  const birthMRef = useRef<HTMLInputElement>(null)
+  const birthDRef = useRef<HTMLInputElement>(null)
   const [phone, setPhone] = useState('')
   // 전화번호 SMS 인증 상태
   const [codeSent, setCodeSent] = useState(false)
@@ -45,20 +74,70 @@ export default function SignupInfoPage() {
   const [phoneMsg, setPhoneMsg] = useState<{ text: string; tone: 'info' | 'error'; field: 'phone' | 'code' } | null>(null)
   // 인증은 통과했지만 이미 다른 계정이 쓰는 번호 — 기존 소셜 로그인으로 유도
   const [dupProvider, setDupProvider] = useState<Pick<PhoneVerifyResult, 'provider' | 'providerName'> | null>(null)
+  const [agreeAge, setAgreeAge] = useState(false) // [필수] 만 14세 이상 — 명시적 확인 (서버는 생년월일로 재검증)
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false) // 만 14세 미만 차단됨
 
+  /**
+   * 토스식 캐스케이드 — 한 번에 한 단계만 보여주고, 완성되면 다음 인풋이
+   * 애니메이션과 함께 "위에서" 나타난다 (이전 단계는 아래로 쌓임).
+   * 1 이름 → 2 생년월일 → 3 휴대폰 인증 → 4 약관 동의. 뒤로는 안 접는다(수정 자유).
+   */
+  const [revealed, setRevealed] = useState(1)
+  const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
+
   // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
   useEffect(() => {
     loadMe().then((loaded) => {
       if (!loaded || loaded.type !== 'USER') navigate('/login', { replace: true })
       else if (loaded.phoneNumber && loaded.birthDate) navigate('/home', { replace: true })
-      else if (loaded.name) setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (수정 가능)
+      else if (loaded.name) {
+        setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (수정 가능)
+        if (loaded.name.trim().length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
+      }
     })
   }, [loadMe, navigate])
+
+  /**
+   * 동의 바텀시트 (토스 패턴) — 인증 완료 시 기존 폼은 흐려지고(딤)
+   * 동의 패널이 화면 아래에서 올라온다. 딤 영역 탭 = 닫고 폼 수정,
+   * 하단 "동의하고 시작하기" 버튼으로 다시 연다.
+   */
+  const [consentOpen, setConsentOpen] = useState(false)
+
+  // 단계 자동 진행 — 휴대폰 인증 완료가 신호 (동의 시트도 함께 올라온다)
+  useEffect(() => {
+    if (phoneVerified) {
+      reveal(4)
+      setConsentOpen(true)
+    }
+  }, [phoneVerified])
+
+  /**
+   * 생년월일 3분할 → YYYY-MM-DD 합성. 범위가 유효할 때만 birthDate 를 세우고
+   * (서버 제출 포맷 그대로), 일(day)까지 두 자리가 차면 휴대폰 단계로 자동 진행.
+   */
+  const birthPartsFilled = birthY.length === 4 && birthM.length > 0 && birthD.length > 0
+  useEffect(() => {
+    const yearNum = Number(birthY)
+    const monthNum = Number(birthM)
+    const dayNum = Number(birthD)
+    const valid =
+      birthY.length === 4 &&
+      birthM.length > 0 &&
+      birthD.length > 0 &&
+      yearNum >= 1900 &&
+      yearNum <= new Date().getFullYear() &&
+      monthNum >= 1 &&
+      monthNum <= 12 &&
+      dayNum >= 1 &&
+      dayNum <= 31
+    setBirthDate(valid ? `${birthY}-${birthM.padStart(2, '0')}-${birthD.padStart(2, '0')}` : '')
+    if (valid && birthD.length === 2) reveal(3)
+  }, [birthY, birthM, birthD])
 
   /** 숫자만 남기고 010-0000-0000 형태로 자동 하이픈. 번호가 바뀌면 인증 무효 */
   const handlePhone = (raw: string) => {
@@ -162,24 +241,38 @@ export default function SignupInfoPage() {
   const phoneHasError = phoneMsg?.tone === 'error' && phoneMsg.field === 'phone'
   const codeHasError = phoneMsg?.tone === 'error' && phoneMsg.field === 'code'
 
+  /** 인풋 보더 — 에러는 빨강, 값이 채워지면 진한 회색, 비어 있으면 연회색 (포커스는 항상 진회색) */
+  const borderOf = (filled: boolean, hasError = false) =>
+    hasError
+      ? 'border-danger focus:border-danger'
+      : filled
+        ? 'border-[#a6abb1] focus:border-[#a6abb1]'
+        : 'border-[#ebedf0] focus:border-[#a6abb1]'
+
   const nameValid = name.trim().length >= 2
   const phoneValid = /^01[0-9]-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
-  const canSubmit = nameValid && birthValid && phoneVerified && agreeTerms && agreePrivacy && !pending
-
-  const allChecked = agreeTerms && agreePrivacy
-  const toggleAll = () => {
-    const next = !allChecked
-    setAgreeTerms(next)
-    setAgreePrivacy(next)
-  }
+  /** 필수 동의 3종 체크 여부 — 버튼 라벨(시작하기 vs 동의하고 시작하기) 분기용 */
+  const requiredAgreed = agreeAge && agreeTerms && agreePrivacy
+  /** 동의 단계까지 왔고 제출 가능한 상태 — 동의 자체는 버튼 클릭이 의사표시 (토스 패턴) */
+  const readyForConsent = nameValid && birthValid && phoneVerified && !pending
 
   const submit = async () => {
-    if (!canSubmit) return
+    if (!readyForConsent) return
+    // "동의하고 시작하기" 클릭 자체가 필수 동의 의사표시 — UI 체크도 함께 채운다
+    setAgreeAge(true)
+    setAgreeTerms(true)
+    setAgreePrivacy(true)
     setPending(true)
     setError(null)
     try {
-      await completeProfile({ name: name.trim(), birthDate, phoneNumber: phone, agreeTerms, agreePrivacy })
+      await completeProfile({
+        name: name.trim(),
+        birthDate,
+        phoneNumber: phone,
+        agreeTerms: true,
+        agreePrivacy: true,
+      })
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
       // 맛보기 미완 신규 가입자는 퍼널(/start)부터 — 완료 유저만 복귀 경로/홈
@@ -242,39 +335,158 @@ export default function SignupInfoPage() {
       />
 
       <main className="flex w-full flex-1 flex-col items-center px-[40px] py-[40px] max-md:px-lg max-md:py-xl">
+        <style>{`
+          /* 단계 등장 — 높이가 0에서 스윽 펼쳐지며(grid-rows) 내용은 살짝 늦게 안착한다.
+             높이를 함께 애니메이션해야 기존 인풋들이 튀지 않고 부드럽게 밀려난다.
+             translateZ(0)·backface-hidden 은 사파리 간헐 플리커 방지용 GPU 레이어 승격 */
+          @keyframes su-step-expand { from { grid-template-rows: 0fr } to { grid-template-rows: 1fr } }
+          @keyframes su-step-in { from { opacity: 0; transform: translateY(-10px) translateZ(0) } to { opacity: 1; transform: translateY(0) translateZ(0) } }
+          .su-step {
+            display: grid;
+            animation: su-step-expand 540ms cubic-bezier(0.33, 1, 0.68, 1) both;
+          }
+          .su-step-inner {
+            overflow: hidden;
+            min-height: 0;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            animation: su-step-in 480ms cubic-bezier(0.33, 1, 0.68, 1) 90ms both;
+          }
+          .su-step-in {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            animation: su-step-in 480ms cubic-bezier(0.33, 1, 0.68, 1) both;
+          }
+          /* 동의 바텀시트 — 아래에서 위로 상승 · 배경 폼은 흰 딤으로 흐려진다 (토스 패턴) */
+          @keyframes su-sheet-rise { from { transform: translateY(100%) translateZ(0) } to { transform: translateY(0) translateZ(0) } }
+          @keyframes su-dim-in { from { opacity: 0 } }
+          .su-sheet {
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            animation: su-sheet-rise 480ms cubic-bezier(0.33, 1, 0.68, 1) both;
+          }
+          .su-dim { animation: su-dim-in 320ms ease both }
+          @media (prefers-reduced-motion: reduce) {
+            .su-step, .su-step-inner, .su-step-in, .su-sheet, .su-dim { animation: none }
+          }
+        `}</style>
         <div className="flex w-full max-w-[620px] flex-col gap-md">
-          <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">
-            거의 다 왔어!
-          </h1>
-          <p className="break-keep text-[16px] text-[#5e6368] max-md:text-[15px]">
-            {me?.name ? `${me.name}님, ` : ''}학습 알림을 위해 몇 가지만 더 알려줘
-          </p>
+          {/* 단계별 타이틀 — key 교체로 단계가 바뀔 때마다 다시 슬라이드 인.
+              동의 단계 헤드라인은 바텀시트가 가지므로 본문 타이틀은 3단계까지 */}
+          <div key={`step-title-${Math.min(revealed, 3)}`} className="su-step-in flex flex-col gap-md">
+            <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">
+              {STEP_TITLES[Math.min(revealed, 3) - 1].title}
+            </h1>
+            <p className="break-keep text-[16px] text-[#5e6368] max-md:text-[15px]">
+              {STEP_TITLES[Math.min(revealed, 3) - 1].sub}
+            </p>
+          </div>
 
-          <div className="mt-lg flex flex-col gap-lg">
-            <label className="flex flex-col gap-sm">
-              <span className="text-[14px] font-semibold text-[#23272b]">이름</span>
-              <input
-                type="text"
-                autoComplete="name"
-                placeholder="이름을 입력해주세요"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-[56px] rounded-[12px] border border-[#ebedf0] px-[16px] text-[16px] text-[#121417] outline-none placeholder:text-[#a6abb1] focus:border-[#a6abb1]"
-              />
-            </label>
+          {/* 토스식 캐스케이드 — DOM 은 논리 순서(이름→…→약관), col-reverse 로 최신 단계가
+              시각적으로 맨 위에 온다. 탭 순서·스크린리더는 논리 순서 유지 */}
+          <div className="mt-lg flex flex-col-reverse gap-lg">
+            <div className="su-step">
+            <div className="su-step-inner">
+              <label className="flex flex-col gap-sm">
+                <span className="text-[14px] font-semibold text-[#23272b]">이름</span>
+                <input
+                  type="text"
+                  autoComplete="name"
+                  autoFocus
+                  placeholder="이름을 입력해주세요"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={() => nameValid && reveal(2)}
+                  onKeyDown={(e) => e.key === 'Enter' && nameValid && reveal(2)}
+                  className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(name.trim().length > 0)}`}
+                />
+              </label>
+            </div>
+            </div>
 
-            <label className="flex flex-col gap-sm">
+            {revealed >= 2 && (
+            <div className="su-step">
+            <div className="su-step-inner flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">생년월일</span>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                max={new Date().toISOString().slice(0, 10)}
-                className="h-[56px] rounded-[12px] border border-[#ebedf0] px-[16px] text-[16px] text-[#121417] outline-none focus:border-[#a6abb1]"
-              />
-            </label>
+              <div className="flex gap-sm">
+                <input
+                  ref={birthYRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoFocus
+                  maxLength={4}
+                  placeholder="년"
+                  value={birthY}
+                  onChange={(e) => {
+                    // 연도는 0 으로 시작할 수 없다 (1900~현재) — 앞자리 0 은 무시
+                    const digits = e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 4)
+                    setBirthY(digits)
+                    if (digits.length === 4) birthMRef.current?.focus() // 4자리 차면 월로
+                  }}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthY.length > 0, birthPartsFilled && !birthValid)}`}
+                />
+                <input
+                  ref={birthMRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  placeholder="월"
+                  value={birthM}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 2)
+                    // 첫 자리 0·1 은 01~09·10~12 가능성이 있어 대기, 2~9 는 그 달로 확정
+                    if (digits.length === 1 && !'01'.includes(digits)) {
+                      setBirthM(digits.padStart(2, '0'))
+                      birthDRef.current?.focus()
+                      return
+                    }
+                    setBirthM(digits)
+                    if (digits.length === 2) birthDRef.current?.focus()
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && birthM === '') birthYRef.current?.focus()
+                  }}
+                  // 함수형 업데이트 필수 — onChange 에서 다음 칸 focus 를 동기로 옮기면
+                  // blur 가 리렌더 전에 발화해 옛 상태("0")를 "00"으로 패딩해버린다
+                  onBlur={() => setBirthM((m) => (m.length === 1 ? m.padStart(2, '0') : m))}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthM.length > 0, birthPartsFilled && !birthValid)}`}
+                />
+                <input
+                  ref={birthDRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  placeholder="일"
+                  value={birthD}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 2)
+                    // 첫 자리 0~3 은 두 자리 날짜(01~31) 가능성이 있어 대기, 4~9 는 그 날로 확정
+                    if (digits.length === 1 && !'0123'.includes(digits)) {
+                      setBirthD(digits.padStart(2, '0')) // 길이 2 가 되며 합성 effect 가 다음 단계 진행
+                      return
+                    }
+                    setBirthD(digits)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && birthD === '') birthMRef.current?.focus()
+                  }}
+                  onBlur={() => setBirthD((d) => (d.length === 1 ? d.padStart(2, '0') : d))}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthD.length > 0, birthPartsFilled && !birthValid)}`}
+                />
+              </div>
+              {birthPartsFilled && !birthValid && (
+                <p className="text-[13px] text-danger">생년월일을 다시 확인해줘</p>
+              )}
+            </div>
+            </div>
+            )}
 
-            <div className="flex flex-col gap-sm">
+            {revealed >= 3 && (
+            <div className="su-step">
+            <div className="su-step-inner flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">휴대폰 번호</span>
               <div className="flex gap-sm">
                 <input
@@ -282,19 +494,20 @@ export default function SignupInfoPage() {
                   inputMode="numeric"
                   pattern="[0-9-]*"
                   autoComplete="tel-national"
+                  autoFocus
                   placeholder="010-0000-0000"
                   value={phone}
                   onChange={(e) => handlePhone(e.target.value)}
                   disabled={phoneVerified}
-                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#80858b] ${
-                    phoneHasError ? 'border-danger focus:border-danger' : 'border-[#ebedf0] focus:border-[#a6abb1]'
-                  }`}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#80858b] ${borderOf(phone.length > 0, phoneHasError)}`}
                 />
                 <button
                   type="button"
                   onClick={sendCode}
                   disabled={!phoneValid || phoneVerified || cooldown > 0}
-                  className="h-[56px] shrink-0 rounded-[12px] border border-[#23272b] px-[18px] text-[15px] font-semibold text-[#23272b] disabled:border-[#ebedf0] disabled:text-[#a6abb1]"
+                  // 고정 폭 — "재발송 59초" 카운트다운 중 초가 줄어도 박스 크기가 안 흔들리게.
+                  // 아래 확인 버튼과 같은 폭으로 세로 라인 정렬
+                  className="h-[56px] w-[112px] shrink-0 rounded-[12px] border border-[#23272b] text-[15px] font-semibold tabular-nums text-[#23272b] disabled:border-[#ebedf0] disabled:text-[#a6abb1]"
                 >
                   {phoneVerified
                     ? '인증 완료'
@@ -306,12 +519,14 @@ export default function SignupInfoPage() {
                 </button>
               </div>
 
-              {/* 인증번호 입력 — 발송 후에만 노출, 인증 완료 시 숨김 */}
+              {/* 인증번호 입력 — 발송 후 스윽 내려오며 자동 포커스, 인증 완료 시 숨김 */}
               {codeSent && !phoneVerified && (
-                <div className="flex gap-sm">
+                <div className="su-step">
+                <div className="su-step-inner flex gap-sm">
                   <div className="relative min-w-0 flex-1">
                     <input
                       type="text"
+                      autoFocus
                       inputMode="numeric"
                       pattern="[0-9]*"
                       autoComplete="one-time-code"
@@ -323,9 +538,7 @@ export default function SignupInfoPage() {
                         if (codeHasError) setPhoneMsg(null) // 다시 입력하기 시작하면 오류 표시 해제
                       }}
                       disabled={expired}
-                      className={`h-[56px] w-full rounded-[12px] border px-[16px] pr-[64px] text-[16px] tracking-[4px] text-[#121417] outline-none placeholder:tracking-normal placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#a6abb1] ${
-                        codeHasError ? 'border-danger focus:border-danger' : 'border-[#ebedf0] focus:border-[#a6abb1]'
-                      }`}
+                      className={`h-[56px] w-full rounded-[12px] border px-[16px] pr-[64px] transition-colors duration-150 text-[16px] tracking-[4px] text-[#121417] outline-none placeholder:tracking-normal placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#a6abb1] ${borderOf(code.length > 0, codeHasError)}`}
                     />
                     <span
                       className={`absolute right-[16px] top-1/2 -translate-y-1/2 text-[14px] font-semibold tabular-nums ${expired ? 'text-[#a6abb1]' : 'text-danger'}`}
@@ -337,15 +550,16 @@ export default function SignupInfoPage() {
                     type="button"
                     onClick={verifyCode}
                     disabled={code.length !== 6 || expired}
-                    className="h-[56px] shrink-0 rounded-[12px] bg-[#23272b] px-[24px] text-[15px] font-semibold text-white disabled:opacity-30"
+                    className="h-[56px] w-[112px] shrink-0 rounded-[12px] bg-[#23272b] text-[15px] font-semibold text-white disabled:opacity-30"
                   >
                     확인
                   </button>
                 </div>
+                </div>
               )}
 
               {phoneVerified && (
-                <p className="text-[13px] font-semibold text-success">전화번호 인증이 완료됐어요.</p>
+                <p className="text-[13px] text-[#80858b]">전화번호 인증이 완료됐어요.</p>
               )}
               {expired && (
                 <p className="text-[13px] text-danger">인증번호가 만료됐어요. 다시 받아주세요.</p>
@@ -367,48 +581,85 @@ export default function SignupInfoPage() {
                 </button>
               )}
             </div>
-          </div>
+            </div>
+            )}
 
-          {/* 약관 동의 */}
-          <div className="mt-lg flex flex-col rounded-[12px] border border-[#ebedf0]">
-            <label className="flex cursor-pointer items-center gap-md border-b border-[#f0f1f3] p-[16px]">
-              <input type="checkbox" checked={allChecked} onChange={toggleAll} className="size-[18px] accent-[#23272b]" />
-              <span className="text-[15px] font-bold text-[#121417]">전체 동의</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-md px-[16px] pb-sm pt-[12px]">
-              <input
-                type="checkbox"
-                checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="size-[18px] accent-[#23272b]"
-              />
-              <span className="text-[14px] text-[#5e6368]">[필수] 이용약관 동의</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-md px-[16px] pb-[16px] pt-sm">
-              <input
-                type="checkbox"
-                checked={agreePrivacy}
-                onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="size-[18px] accent-[#23272b]"
-              />
-              <span className="text-[14px] text-[#5e6368]">[필수] 개인정보 수집·이용 동의</span>
-            </label>
           </div>
 
           {error && <p className="text-[14px] text-danger">{error}</p>}
         </div>
       </main>
 
-      <footer className="flex w-full shrink-0 items-start justify-center px-[40px] pb-[48px] pt-[16px] max-md:px-lg max-md:pb-[calc(32px+env(safe-area-inset-bottom))]">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!canSubmit}
-          className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-30"
-        >
-          {pending ? '저장 중…' : '시작하기'}
-        </button>
-      </footer>
+      {/* 하단 버튼 — 동의 시트가 열려 있는 동안엔 시트 안의 버튼이 대신한다 */}
+      {!consentOpen && (
+        <footer className="flex w-full shrink-0 items-start justify-center px-[40px] pb-[48px] pt-[16px] max-md:px-lg max-md:pb-[calc(32px+env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => readyForConsent && setConsentOpen(true)}
+            disabled={!readyForConsent || revealed < 4}
+            className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-30"
+          >
+            동의하고 시작하기
+          </button>
+        </footer>
+      )}
+
+      {/* 동의 바텀시트 (토스 패턴) — 배경 폼이 흐려지고 아래에서 올라온다 */}
+      {consentOpen && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center">
+          {/* 흰 딤 — 뒤의 폼을 흐리게. 탭하면 시트를 닫고 폼 수정 가능 */}
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => setConsentOpen(false)}
+            className="su-dim absolute inset-0 bg-white/75"
+          />
+          <div className="su-sheet relative w-full max-w-[620px] bg-white px-[20px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[8px]">
+            <h2 className="break-keep pt-[16px] text-[22px] font-bold leading-[1.35] text-[#121417]">
+              서비스 이용에
+              <br />꼭 필요한 동의만 추렸어
+            </h2>
+
+            {/* 필수 동의 리스트 — 개별 토글도 되지만 버튼 클릭이 곧 전체 동의 */}
+            <div className="mt-[20px] flex flex-col">
+              {(
+                [
+                  // 법적 진술 항목이라 서비스 반말 톤과 별개로 표준 문구(격식체) 사용
+                  { checked: agreeAge, toggle: () => setAgreeAge((v) => !v), label: '만 14세 이상입니다' },
+                  { checked: agreeTerms, toggle: () => setAgreeTerms((v) => !v), label: '이용약관 동의' },
+                  { checked: agreePrivacy, toggle: () => setAgreePrivacy((v) => !v), label: '개인정보 수집·이용 동의' },
+                ] as const
+              ).map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.toggle}
+                  className="flex items-center gap-[10px] py-[10px] text-left"
+                >
+                  <CheckMark on={item.checked} />
+                  <span
+                    className={`text-[15px] transition-colors duration-150 ${
+                      item.checked ? 'text-[#121417]' : 'text-[#a6abb1]'
+                    }`}
+                  >
+                    <b className="mr-[6px] font-bold">필수</b>
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!readyForConsent}
+              className="mt-[20px] flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-30"
+            >
+              {pending ? '저장 중…' : requiredAgreed ? '시작하기' : '동의하고 시작하기'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -224,3 +224,9 @@
 .katex-block .katex-display {
   margin: 0;
 }
+
+/* iOS 사파리 date 인풋 — appearance:none 을 벗겨도 내부 값이 세로 중앙의
+   시스템 정렬로 남아 어긋난다. 값 텍스트를 일반 인풋처럼 좌측 정렬로 보정 */
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}
