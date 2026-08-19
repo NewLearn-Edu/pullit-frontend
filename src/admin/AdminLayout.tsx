@@ -74,7 +74,8 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
     pathname.includes('/upload') ||
     pathname.includes('/trial-tests/') ||
     pathname.includes('/review')
-  const isMember = pathname.includes('/members') || pathname.includes('/credits')
+  const isMember =
+    pathname.includes('/members') || pathname.includes('/credits') || pathname.includes('/policies')
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
   // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
@@ -159,6 +160,12 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
             <NavLink to="/admin/credits" className={navClass}>
               <span className="ico"><IcoCredit /></span>
               크레딧 관리
+            </NavLink>
+
+            <div className="nav-label">정책</div>
+            <NavLink to="/admin/policies" className={navClass}>
+              <span className="ico"><IcoList /></span>
+              정책 관리
             </NavLink>
           </>
         )}

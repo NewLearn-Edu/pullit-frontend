@@ -427,3 +427,54 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 정책 (법적 고지문) 관리
+// ---------------------------------------------------------------------------
+
+export type PolicySlug = 'terms' | 'privacy' | 'marketing'
+
+/** 문서 종류별 현재 상태 요약 — 게시본이 없으면 버전 필드 null */
+export interface PolicySummary {
+  slug: PolicySlug
+  displayName: string
+  currentVersion: number | null
+  currentTitle: string | null
+  effectiveAt: string | null
+  totalVersions: number
+}
+
+/** 버전 이력 행 (본문 포함 — 에디터 프리필·이전 버전 열람용) */
+export interface PolicyVersion {
+  id: number
+  slug: PolicySlug
+  version: number
+  title: string
+  content: string
+  effectiveAt: string
+  createdAt: string
+}
+
+export async function fetchAdminPolicies(): Promise<PolicySummary[]> {
+  const { data } = await adminApi.get<BaseResponse<PolicySummary[]>>('/api/admin/policies')
+  return data.data
+}
+
+export async function fetchAdminPolicyVersions(slug: PolicySlug): Promise<PolicyVersion[]> {
+  const { data } = await adminApi.get<BaseResponse<PolicyVersion[]>>(
+    `/api/admin/policies/${slug}/versions`,
+  )
+  return data.data
+}
+
+/** 개정 게시 — 항상 새 버전 추가. effectiveAt null 이면 즉시 시행 */
+export async function publishAdminPolicy(
+  slug: PolicySlug,
+  body: { title: string; content: string; effectiveAt: string | null },
+): Promise<PolicyVersion> {
+  const { data } = await adminApi.post<BaseResponse<PolicyVersion>>(
+    `/api/admin/policies/${slug}`,
+    body,
+  )
+  return data.data
+}

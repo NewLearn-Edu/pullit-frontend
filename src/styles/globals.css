@@ -230,3 +230,70 @@
 input[type='date']::-webkit-date-and-time-value {
   text-align: left;
 }
+
+/* ── 법적 고지문 조판 (.policy-doc — PolicyPage 마크다운 렌더) ─────────────── */
+.policy-doc {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #40454b;
+  word-break: keep-all;
+}
+.policy-doc h2 {
+  margin: 36px 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #121417;
+}
+.policy-doc h3 {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #121417;
+}
+.policy-doc p {
+  margin: 10px 0;
+}
+.policy-doc ul,
+.policy-doc ol {
+  margin: 10px 0;
+  padding-left: 22px;
+}
+.policy-doc ul { list-style: disc; }
+.policy-doc ol { list-style: decimal; }
+.policy-doc li { margin: 4px 0; }
+.policy-doc table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.policy-doc th,
+.policy-doc td {
+  border: 1px solid #e8e4e2;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.policy-doc th {
+  background: #f6f4f2;
+  font-weight: 600;
+  color: #121417;
+  white-space: nowrap;
+}
+.policy-doc hr {
+  margin: 32px 0;
+  border: none;
+  border-top: 1px solid #ebedf0;
+}
+.policy-doc a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.policy-doc strong { color: #121417; }
+
+/* 포커스된 인풋은 placeholder 를 감춘다 — 캐럿과 힌트 텍스트가 겹쳐 보이는 것 방지 */
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
+}

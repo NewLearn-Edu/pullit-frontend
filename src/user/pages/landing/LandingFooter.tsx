@@ -32,6 +32,15 @@ export default function LandingFooter() {
             주식회사 뉴런소프트 · 대표 최영재 · 사업자등록번호 591-88-03234
           </p>
           <p className="break-keep">서울특별시 관악구 봉천로 545, 서울창업센터 관악(봉천동)</p>
+          {/* 법적 고지문 — 개인정보처리방침은 관행상 굵게 구분 */}
+          <p className="mt-[4px] flex gap-[16px]">
+            <a href="/policies/terms" className="hover:underline">
+              이용약관
+            </a>
+            <a href="/policies/privacy" className="font-semibold text-[#5e6368] hover:underline">
+              개인정보처리방침
+            </a>
+          </p>
         </div>
 
         <div className="flex items-start justify-between">

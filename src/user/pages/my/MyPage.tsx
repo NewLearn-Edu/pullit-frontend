@@ -153,6 +153,16 @@ export default function MyPage() {
           </div>
         </section>
 
+        {/* 약관 — 앱 심사 요건상 서비스 내 접근 경로 필수 */}
+        <section className={styles.menuSection}>
+          <p className={styles.menuLabel}>약관</p>
+          <div className={styles.menuCard}>
+            <MenuItem label="이용약관" onClick={() => navigate('/policies/terms')} />
+            <MenuItem label="개인정보 처리방침" onClick={() => navigate('/policies/privacy')} />
+            <MenuItem label="마케팅 수신동의 안내" onClick={() => navigate('/policies/marketing')} last />
+          </div>
+        </section>
+
         {/* 로그아웃 · 회원탈퇴 · 버전 */}
         <div className={styles.footerActions}>
           <button

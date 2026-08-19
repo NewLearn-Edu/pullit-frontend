@@ -922,3 +922,72 @@
     .grid-stats, .grid-stats.cols-3 { grid-template-columns: 1fr; }
   }
 }
+
+  /* ============ 정책 관리 (법적 고지문) ============ */
+  /* 문서 선택 카드 — 스탯 카드 규격 + 선택 상태 (활성 600 / 비활성 400) */
+  .pol-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+    text-align: left; cursor: pointer; border: 1px solid transparent;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .pol-card:hover { border-color: var(--color-line); }
+  .pol-card.on { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+  .pol-card-name { font-size: 15px; font-weight: 400; color: var(--color-body); }
+  .pol-card.on .pol-card-name { font-weight: 600; color: var(--color-fg); }
+  .pol-card-ver { font-size: 26px; font-weight: 800; color: var(--color-fg); }
+  .pol-card-sub { font-size: 12.5px; color: var(--color-muted); }
+
+  .pol-editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .pol-editor-title { font-size: 16px; font-weight: 700; color: var(--color-fg); }
+  .pol-next { font-size: 13px; font-weight: 500; color: var(--color-muted); }
+
+  .pol-fields { display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-bottom: 12px; }
+  .pol-field { display: flex; flex-direction: column; gap: 6px; }
+  .pol-field label { font-size: 12.5px; font-weight: 600; color: var(--color-muted); }
+  .pol-field input {
+    width: 100%; height: 44px; padding: 0 14px;
+    border: 1px solid var(--color-line); border-radius: 12px;
+    background: var(--color-canvas); color: var(--color-fg); font-size: 14px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .pol-field input::placeholder { color: var(--color-muted); }
+  .pol-field input:not(:placeholder-shown) { border-color: var(--line-strong); }
+  .pol-field input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+
+  /* 마크다운 본문 — 고정폭 서체, 넉넉한 작성 높이 */
+  .pol-content {
+    width: 100%; min-height: 420px; padding: 14px; resize: vertical;
+    border: 1px solid var(--color-line); border-radius: 12px;
+    background: var(--color-canvas); color: var(--color-fg); outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; line-height: 1.7;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .pol-content::placeholder { color: var(--color-muted); font-family: var(--font-sans); }
+  .pol-content:not(:placeholder-shown) { border-color: var(--line-strong); }
+  .pol-content:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+
+  /* 미리보기 — 학생 페이지(.policy-doc)와 같은 조판을 어드민 토큰으로 재정의 */
+  .pol-preview {
+    min-height: 420px; padding: 20px 24px;
+    border: 1px solid var(--color-line); border-radius: 12px;
+    font-size: 14px; line-height: 1.75; color: var(--color-body); word-break: keep-all;
+  }
+  .pol-preview h1 { font-size: 20px; font-weight: 700; color: var(--color-fg); margin-bottom: 8px; }
+  .pol-preview h2 { margin: 28px 0 10px; font-size: 16px; font-weight: 700; color: var(--color-fg); }
+  .pol-preview h3 { margin: 20px 0 8px; font-size: 14.5px; font-weight: 600; color: var(--color-fg); }
+  .pol-preview p { margin: 8px 0; }
+  .pol-preview ul, .pol-preview ol { margin: 8px 0; padding-left: 22px; }
+  .pol-preview ul { list-style: disc; }
+  .pol-preview ol { list-style: decimal; }
+  .pol-preview table { width: 100%; margin: 12px 0; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+  .pol-preview th, .pol-preview td { border: 1px solid var(--color-line); padding: 8px 10px; text-align: left; vertical-align: top; white-space: normal; }
+  .pol-preview th { background: var(--table-head-bg); font-weight: 600; color: var(--color-fg); }
+  .pol-preview hr { margin: 24px 0; border: none; border-top: 1px solid var(--color-line); }
+  .pol-preview strong { color: var(--color-fg); }
+
+  .pol-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .pol-actions .btn { height: 44px; padding: 0 22px; }
+  .pol-actions .btn:disabled { opacity: .45; cursor: default; filter: none; }
+
+  @media (max-width: 900px) { .pol-fields { grid-template-columns: 1fr; } }

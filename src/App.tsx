@@ -9,6 +9,7 @@ import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnlockProgressPage from './user/pages/unlock/UnlockProgressPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
+import PolicyPage from './user/pages/policy/PolicyPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
 import SignupInfoPage from './user/pages/auth/SignupInfoPage'
@@ -44,6 +45,8 @@ export default function App() {
       <Route path="/unlock/:subject/:slug" element={<UnlockProgressPage />} />
       {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}
       <Route path="/unit-result/:subject/:unitName" element={<UnitResultPage />} />
+      {/* 법적 고지문 — terms · privacy · marketing (비로그인 열람 가능) */}
+      <Route path="/policies/:slug" element={<PolicyPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPromptPage />} />
       <Route path="/signup/info" element={<SignupInfoPage />} />
