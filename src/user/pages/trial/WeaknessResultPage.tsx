@@ -278,6 +278,9 @@ export default function WeaknessResultPage() {
   const timesDoneMs = marksDoneMs + 900 // 풀이 시간 굴림(900ms) 완료
   const displayScore = useCountUp(score, timesDoneMs)
 
+  // 약점 계산 기준 안내 ⓘ 토글
+  const [infoOpen, setInfoOpen] = useState(false)
+
   // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
   const [stamped, setStamped] = useState(false)
   useEffect(() => {
@@ -371,64 +374,106 @@ export default function WeaknessResultPage() {
   }, [rows, correctCount])
 
   return (
-    <div className="flex min-h-dvh flex-col bg-white">
-      <OnboardingHeader onClose={() => navigate('/home')} />
+    // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
+    <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
+      <OnboardingHeader showLogo onClose={() => navigate('/home')} />
 
       <main
-        className={clsx(
-          'flex w-full flex-1 flex-col items-center gap-[28px] px-[40px] py-[24px] pb-[120px] max-md:gap-xl max-md:px-lg',
-          stamped && markStyles.shake,
-        )}
+        className={clsx('flex w-full flex-1 flex-col items-center', stamped && markStyles.shake)}
       >
-        {/* 단원명 + 약점 뱃지 + 누적 점수 */}
-        <div className="flex w-full max-w-[620px] items-center justify-between gap-md">
-          <div className="flex min-w-0 items-center gap-sm">
-            <h1 className="truncate text-[24px] font-bold text-[#171211] max-md:text-[22px]">
-              {unitName}
-            </h1>
-            {weak && stamped && (
-              <span
-                className={clsx(
-                  'shrink-0 rounded-full bg-primary px-[12px] py-[5px] text-[13px] font-bold text-white',
-                  markStyles.stamp,
-                )}
-              >
-                약점
-              </span>
+        {/* 점수 요약 카드 */}
+        <div className="flex w-full justify-center px-[40px] py-[20px] max-md:px-lg">
+          <div className="relative flex w-full max-w-[620px] flex-col items-center overflow-hidden rounded-[16px] border border-[#f8f8f8] bg-white pt-[20px] shadow-[0px_4px_20px_0px_rgba(113,20,39,0.08)]">
+            {/* 약점 계산 기준 안내 ⓘ */}
+            <button
+              type="button"
+              aria-label="약점 계산 기준 보기"
+              aria-expanded={infoOpen}
+              onClick={() => setInfoOpen((v) => !v)}
+              className="absolute right-[20px] top-[20px] flex size-[20px] items-center justify-center rounded-full bg-[#d6d8db] text-[12px] font-semibold text-[#5e6368]"
+            >
+              i
+            </button>
+            {infoOpen && (
+              <div className="absolute right-[16px] top-[46px] z-10 w-[230px] rounded-[12px] border border-[#e5e7ea] bg-white p-[14px] text-left shadow-[0px_8px_24px_rgba(18,20,23,0.12)]">
+                <p className="text-[12px] font-semibold text-[#23272b]">점수 계산 기준</p>
+                <ul className="mt-[6px] flex flex-col gap-[3px] text-[12px] leading-[1.5] text-[#5e6368]">
+                  <li>· 권장 시간 내 정답 = 배점 100%</li>
+                  <li>· 권장 초과 정답 = 배점 60%</li>
+                  <li>· 오답·시간 초과 = 0점</li>
+                  <li>· 획득률 70% 이하면 약점이에요</li>
+                </ul>
+              </div>
             )}
+
+            <div className="flex flex-col items-center gap-[8px] px-[20px]">
+              {/* 약점 뱃지 — 점수 카운트업 후 도장처럼 찍힌다. 슬롯을 미리 잡아 레이아웃 점프 방지 */}
+              <div className="flex h-[27px] items-center">
+                {weak && stamped && (
+                  <span
+                    className={clsx(
+                      'rounded-full border border-primary bg-[#fff1f2] px-[8px] py-[4px] text-[12px] font-semibold leading-[1.4] text-primary',
+                      markStyles.stamp,
+                    )}
+                  >
+                    약점
+                  </span>
+                )}
+              </div>
+              <h1 className="max-w-full truncate text-[22px] font-semibold leading-[1.4] text-[#121417]">
+                {unitName}
+              </h1>
+              <p className="text-[#121417]">
+                <span className="text-[32px] font-bold tabular-nums leading-none">
+                  {displayScore}
+                </span>
+                <span className="text-[22px] font-semibold leading-[1.4]">점</span>
+              </p>
+            </div>
+
+            {/* 정답 수 · 풀이 시간 */}
+            <div className="mt-[16px] flex w-full items-center border-t border-[#e5e7ea] bg-[#f8f8f8] p-[16px]">
+              <div className="flex flex-1 flex-col items-center gap-[8px]">
+                <p className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">정답 수</p>
+                <p className="text-[20px] font-semibold tabular-nums leading-[1.4] text-[#121417]">
+                  {displayCorrect}/{rows.length}개
+                </p>
+              </div>
+              <div className="h-[32px] w-px shrink-0 bg-[#e5e7ea]" />
+              <div className="flex flex-1 flex-col items-center gap-[8px]">
+                <p className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">풀이 시간</p>
+                <p className="text-[20px] font-semibold tabular-nums leading-[1.4] text-[#121417]">
+                  {formatSummary(displayTotalSec)}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="shrink-0 text-[32px] font-bold tabular-nums text-[#121417] max-md:text-[28px]">
-            {displayScore}점
-          </p>
         </div>
 
-        {/* 정답 수 · 풀이 시간 */}
-        <div className="flex w-full max-w-[620px] gap-md">
-          <div className="flex flex-1 flex-col gap-md rounded-[12px] bg-[#f8f8f8] p-[20px] max-md:p-lg">
-            <p className="text-[12px] font-medium text-[#80858b]">정답 수</p>
-            <p className="text-[24px] font-bold tabular-nums text-[#121417] max-md:text-[22px]">
-              {displayCorrect}/{rows.length}
-            </p>
-          </div>
-          <div className="flex flex-1 flex-col gap-md rounded-[12px] bg-[#f8f8f8] p-[20px] max-md:p-lg">
-            <p className="text-[12px] font-medium text-[#80858b]">풀이 시간</p>
-            <p className="text-[24px] font-bold tabular-nums text-[#121417] max-md:text-[22px]">
-              {formatSummary(displayTotalSec)}
-            </p>
-          </div>
-        </div>
+        {/* 문항별 결과 — 흰 배경 섹션이 그라데이션을 끊고 하단을 채운다 */}
+        <section className="flex w-full flex-1 flex-col items-center gap-[16px] bg-white p-[20px] pb-[120px] max-md:px-lg">
+          <h2 className="w-full max-w-[620px] text-[18px] font-bold leading-[1.4] text-[#23272b]">
+            문항별 결과
+          </h2>
 
-        {/* 문항별 결과 */}
-        <section className="flex w-full max-w-[620px] flex-col gap-lg">
-          <h2 className="text-[18px] font-semibold text-[#23272b]">문항별 결과</h2>
-
-          <div className="flex w-full flex-col overflow-hidden rounded-[12px] border border-[#f0f1f3]">
-            <div className="flex w-full items-center bg-[#f8f8f8]">
-              {['문항', '답안', '풀이 시간', '점수', '결과'].map((label) => (
-                <div key={label} className="flex flex-1 items-center justify-center p-md">
-                  <p className="whitespace-nowrap text-[13px] text-[#80858b]">{label}</p>
-                </div>
-              ))}
+          <div className="flex w-full max-w-[620px] flex-col overflow-hidden rounded-[12px] border border-[#e5e7ea]">
+            {/* 헤더 행 — 문항·결과는 고정 폭, 나머지 균등 (Figma 2661-4619) */}
+            <div className="flex w-full items-center gap-[8px] border-b border-[#e5e7ea] bg-[#f8f8f8] px-[12px] py-[16px]">
+              <p className="w-[52px] shrink-0 text-center text-[12px] font-semibold text-[#80858b]">
+                문항
+              </p>
+              <p className="min-w-0 flex-1 text-center text-[12px] font-semibold text-[#80858b]">
+                답안
+              </p>
+              <p className="min-w-0 flex-1 text-center text-[12px] font-semibold text-[#80858b]">
+                풀이 시간
+              </p>
+              <p className="min-w-0 flex-1 text-center text-[12px] font-semibold text-[#80858b]">
+                획득 점수
+              </p>
+              <p className="w-[53px] shrink-0 text-center text-[12px] font-semibold text-[#80858b]">
+                결과
+              </p>
             </div>
 
             {rows.map(({ result, problem, subject: rowSubject, reviewIdx }, i) => {
@@ -452,9 +497,13 @@ export default function WeaknessResultPage() {
               return (
                 <div
                   key={`${result.problemId}-${i}`}
-                  className="flex min-h-[76px] w-full items-center border-t border-[#f0f1f3] py-md"
+                  className={clsx(
+                    'flex w-full items-center gap-[8px] bg-white p-[12px]',
+                    i < rows.length - 1 && 'border-b border-[#e5e7ea]',
+                  )}
                 >
-                  <div className="relative flex min-w-0 flex-1 items-center justify-center self-stretch px-sm">
+                  {/* 문항 번호 + 채점 마크 */}
+                  <div className="relative flex size-[52px] shrink-0 items-center justify-center">
                     <p className="whitespace-nowrap text-[16px] font-bold text-[#121417]">
                       {i + 1}번
                     </p>
@@ -464,44 +513,61 @@ export default function WeaknessResultPage() {
                     />
                   </div>
 
-                  {/* 답안 — 내 답만 크게 · 정답 보조줄은 틀렸을 때만 */}
-                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
-                    <p className="whitespace-nowrap text-[16px] font-medium text-[#121417]">
-                      {/* 원기호는 글리프가 작게 그려져서 20px 로 보정 */}
+                  {/* 답안 — 틀리면 두 줄 모두 빨강 (Figma 2662-5230) */}
+                  <div
+                    className={clsx(
+                      'flex min-w-0 flex-1 flex-col items-center justify-center font-semibold leading-[1.4]',
+                      isCorrect ? 'text-[#121417]' : 'text-primary',
+                    )}
+                  >
+                    <p className="whitespace-nowrap text-[14px]">
+                      내 답{' '}
+                      {/* 원기호는 글리프가 작게 그려져서 18px 로 보정 */}
                       {shortAnswer ? (
                         myAnswer
                       ) : (
-                        <span className="text-[20px] leading-none">{myAnswer}</span>
+                        <span className="text-[18px] leading-none">{myAnswer}</span>
                       )}
                     </p>
-                    {!isCorrect && (
-                      <p className="flex items-center gap-[4px] whitespace-nowrap text-[15px] font-medium text-primary">
-                        정답
-                        {shortAnswer ? (
-                          <span className="font-semibold">{correctAnswer}</span>
-                        ) : (
-                          <span className="text-[20px] leading-none">{correctAnswer}</span>
-                        )}
-                      </p>
-                    )}
+                    <p
+                      className={clsx(
+                        'whitespace-nowrap text-[12px]',
+                        isCorrect && 'text-[#a6abb1]',
+                      )}
+                    >
+                      정답{' '}
+                      {shortAnswer ? (
+                        correctAnswer
+                      ) : (
+                        <span className="text-[15px] leading-none">{correctAnswer}</span>
+                      )}
+                    </p>
                   </div>
 
-                  {/* 풀이 시간 — 권장 보조줄은 초과했을 때만 (빨간 시간의 이유) */}
-                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
-                    <p className="whitespace-nowrap text-[15px] font-semibold tabular-nums text-[#121417]">
+                  {/* 풀이 시간 — 권장 초과면 두 줄 모두 빨강 */}
+                  <div
+                    className={clsx(
+                      'flex min-w-0 flex-1 flex-col items-center justify-center font-semibold leading-[1.4] tabular-nums',
+                      overTime ? 'text-primary' : 'text-[#121417]',
+                    )}
+                  >
+                    <p className="whitespace-nowrap text-[14px]">
                       {/* 요약 카드와 같은 진행률 — 모든 시간이 동시에 차오른다 */}
                       {formatShort(Math.round(elapsedSec * countProgress))}
                     </p>
-                    {overTime && (
-                      <p className="whitespace-nowrap text-[15px] font-medium tabular-nums text-primary">
-                        권장 {formatShort(recSec)}
-                      </p>
-                    )}
+                    <p
+                      className={clsx(
+                        'whitespace-nowrap text-[12px]',
+                        !overTime && 'text-[#a6abb1]',
+                      )}
+                    >
+                      권장 {recSec > 0 ? formatShort(recSec) : '-'}
+                    </p>
                   </div>
 
-                  {/* 점수 — 획득 점수만 크게 · 배점 보조줄은 만점이 아닐 때만 */}
-                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[3px] px-sm">
-                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-[#121417]">
+                  {/* 획득 점수 — 항상 검정 + 배점 보조줄 */}
+                  <div className="flex min-w-0 flex-1 flex-col items-center justify-center font-semibold leading-[1.4] tabular-nums">
+                    <p className="whitespace-nowrap text-[14px] text-[#121417]">
                       {(() => {
                         // 풀이 시간이 끝난 뒤 상단 점수와 같은 진행률로 차오른다
                         const shown = Math.round(earned * scoreProgress * 10) / 10
@@ -509,24 +575,22 @@ export default function WeaknessResultPage() {
                       })()}
                       점
                     </p>
-                    {earned < basePoints && (
-                      <p className="whitespace-nowrap text-[12px] tabular-nums text-[#a6abb1]">
-                        배점 {basePoints}점
-                      </p>
-                    )}
+                    <p className="whitespace-nowrap text-[12px] text-[#a6abb1]">
+                      배점 {basePoints}점
+                    </p>
                   </div>
 
-                  <div className="flex min-w-0 flex-1 items-center justify-center px-sm">
+                  <div className="flex shrink-0 items-center justify-center">
                     {problem && reviewIdx >= 0 ? (
                       <button
                         type="button"
                         onClick={() => navigate(`/trial/review/${rowSubject}/${reviewIdx}`)}
-                        className="whitespace-nowrap rounded-[8px] border border-[#e5e7ea] bg-[#f8f8f8] px-[12px] py-[7px] text-[13px] font-semibold text-[#40464c] transition-colors hover:bg-[#f0f1f3]"
+                        className="whitespace-nowrap rounded-[10px] bg-[#f0f1f3] px-[12px] py-[8px] text-[12px] font-semibold leading-[1.4] text-[#5e6368] transition-colors hover:bg-[#e5e7ea]"
                       >
                         해설
                       </button>
                     ) : (
-                      <span className="text-[13px] text-[#a6abb1]">-</span>
+                      <span className="w-[53px] text-center text-[13px] text-[#a6abb1]">-</span>
                     )}
                   </div>
                 </div>
@@ -543,7 +607,7 @@ export default function WeaknessResultPage() {
           onClick={() => navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
-          완료
+          진단 완료
         </button>
       </footer>
     </div>
