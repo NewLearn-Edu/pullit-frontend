@@ -827,7 +827,7 @@
   .toast .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent); }
 
   /* ============ Credit ============ */
-  /* 유저 앱 CreditBadge 와 같은 ✦ 마크 — 숫자 왼쪽에 붙는 강조 글리프 */
+  /* 유저 앱 CreditBadge 와 같은 C 코인 마크 — 숫자 왼쪽에 붙는 브랜드 그래픽 */
   .credit-mark { display: inline-block; vertical-align: -0.18em; margin-right: 5px; }
 
   .cr-overlay {

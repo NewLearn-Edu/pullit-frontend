@@ -227,7 +227,7 @@ export function IcoEnglishTest() {
   )
 }
 
-/** 크레딧 — 유저 앱 CreditBadge 의 ✦(U+2726) 를 4각 스파클로 옮긴 것 */
+/** 크레딧 — C 코인 (유저 앱 CreditBadge 코인과 동일 모티프의 단색 버전) */
 /** 크레딧 — C 코인 (서비스 크레딧 코인 그래픽과 동일 모티프) */
 export function IcoCredit() {
   return (
