@@ -5,7 +5,6 @@ import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
-import { UnitRailList } from '@/user/components/UnitRailList'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { type Subject } from '@/user/stores/trialStore'
@@ -23,7 +22,6 @@ import {
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import { formatShort, GradeMark } from '@/user/pages/trial/WeaknessResultPage'
 import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
-import graphLock from '@/assets/home/graph-lock.png'
 import graphExample from '@/assets/home/graph-example.png'
 import styles from './styles/HomePage.module.scss'
 
@@ -101,33 +99,18 @@ export default function HomePage() {
   /** 잠금 해제 진행 페이지 — 어디까지 왔는지·오늘 뭘 하면 되는지를 여기서 본다 */
   const openUnlock = () => navigate(`/unlock/${subject}/${category.slug}`)
 
-  /** 개발용 미리보기 — 완주 전에도 완성(결론형 헤드라인 + 카드 나열) 상태를 확인 */
-  const [previewUnlocked, setPreviewUnlocked] = useState(false)
-  const unlockedView = progress.unlocked || previewUnlocked
-
   /**
-   * 하단 상시 CTA 의 여정 판정 — 홈 버튼은 하나, 탭이 아니라 여정 전체 기준.
-   * 임시 규칙: 커리큘럼 순서로 첫 미완주 대단원 진단 → 전부 완주면 전체 최저점
-   * 단원 약점 풀이. (TODO: 추천 알고리즘 확정 시 교체)
+   * 약점 그래프 해제 (Figma 2842-8069 · 2026-08-20 개편) —
+   * 이 대단원에서 하나라도 진단했으면 그래프 공개, 아니면 잠금 오버레이.
    */
-  const journey = categories.map((c) => ({ cat: c, prog: computeCategoryProgress(c, diagnosed) }))
-  const currentLeg = journey.find((j) => !j.prog.unlocked)
-  const weakestOverall = !currentLeg
-    ? journey
-        .flatMap((j) => j.prog.rows)
-        .reduce((a, b) => ((b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a))
+  const hasAnyDiagnosis = progress.rows.some((r) => r.diagnosis)
+
+  /** 대단원 완주 후 CTA 용 — 이 카테고리에서 가장 약한 유닛 */
+  const weakestInCategory = progress.unlocked
+    ? progress.rows.reduce((a, b) =>
+        (b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a,
+      )
     : null
-
-  /**
-   * 완성 시 결론은 리스트가 말한다 (2026-08-14) — 리스트는 커리큘럼 순서를
-   * 유지하고, 점수 낮은 순 상위 3개에만 약점 뱃지. 헤드라인은 한 줄 완성 선언만.
-   */
-  const weakNames = unlockedView
-    ? [...progress.rows]
-        .sort((a, b) => (a.diagnosis?.score ?? 101) - (b.diagnosis?.score ?? 101))
-        .slice(0, 3)
-        .map((r) => r.name)
-    : []
 
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
@@ -207,127 +190,148 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* 진행형 약점 레이더 (A안 2026-08-13) — 진단 축만 조각으로 이어지고,
-              완성되면 폴리곤이 닫히며 가장 약한 축이 강조된다 */}
-          <div className={styles.graphTall}>
-            {/* 약점 그래프 예시 안내 — 기존 다크 카드의 ? 버튼을 레이더 우상단으로 이전 */}
-            <button
-              type="button"
-              aria-label="약점 그래프 안내"
-              onClick={() => setInfoOpen(true)}
-              className={styles.helpChip}
-            >
-              ?
-            </button>
+          {/* 약점 그래프 카드 (Figma 2919-8728) — 흰 카드 안 레이더.
+              이 대단원에서 하나도 진단 전이면 다크 잠금 오버레이 (2842-8069) */}
+          <div className={styles.graphShell}>
             <ProgressRadar
               key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
               units={progress.rows.map((u) => ({
                 name: u.name,
-                score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 자물쇠)
+                score: u.diagnosis?.score, // undefined = 미진단 (점선 슬롯 + 미진단 라벨)
               }))}
-              className="h-full w-full"
+              className={styles.graphSvg}
             />
-          </div>
 
-          {/* ── 원복용 임시 비활성 (2026-08-13) — 기존 다크 오버레이 그래프 카드 ──
-              false && 로 꺼둠. 되살리려면 아래 블록의 false && 를 지우고
-              위 graphTall 블록을 제거하면 된다. */}
-          {false && (
-          <div className={styles.graphCard}>
-            <RadarChart
-              units={progress.rows.map((u) => ({
-                name: u.name,
-                score: u.diagnosis?.score,
-                weak: u.diagnosis?.weak,
-              }))}
-            />
-            {!progress.unlocked && (
+            {hasAnyDiagnosis ? (
+              // 열린 그래프 — ? 안내 버튼만 우상단에
+              <button
+                type="button"
+                aria-label="약점 그래프 안내"
+                onClick={() => setInfoOpen(true)}
+                className={styles.helpChip}
+              >
+                ?
+              </button>
+            ) : (
               <div className={styles.graphOverlay}>
                 <button
                   type="button"
                   aria-label="약점 그래프 안내"
                   onClick={() => setInfoOpen(true)}
-                  className={styles.helpChip}
+                  className={clsx(styles.helpChip, styles.helpChipOverlay)}
                 >
                   ?
                 </button>
                 <div className={styles.graphOverlayBody}>
-                  <img src={graphLock} alt="" className={styles.lockImage} />
-                  <p className={styles.graphOverlayTitle}>{category.name} 약점 그래프</p>
+                  <LockKeyholeIcon />
+                  <p className={styles.graphOverlayTitle}>약점 그래프 잠김</p>
                   <p className={styles.graphOverlayDesc}>
-                    {progress.remaining === 1
-                      ? `${unitLabel} 딱 하나 남았어. ${SET_SIZE}문제면 그래프가 열려`
-                      : `${unitLabel} ${progress.remaining}개만 더 풀면 그래프 열어줄게`}
+                    {unitLabel} 한 개만 진단하면 바로 열려
                   </p>
                 </div>
                 <button type="button" onClick={openUnlock} className={styles.unlockButton}>
-                  내 약점 그래프 잠금 해제하기
+                  약점 진단하기
                 </button>
               </div>
             )}
           </div>
-          )}
-          {/* ── 원복용 임시 비활성 끝 ─────────────────────────────────────── */}
 
-          {/* 소단원(수학) / 유형(영어) 리스트 — 헤드라인 + 레일 리스트 */}
+          {/* 소단원(수학) / 유형(영어) 카드 리스트 (Figma subject-card 3종) */}
           <section className={styles.subSection}>
-            {/* 헤드라인 — 채우는 동안은 진행형, 완성되면 결론형으로 전환 (A안) */}
-            <div className={styles.subHead}>
-              <h2 className={clsx(styles.subTitle, unlockedView && styles.subTitleFlush)}>
-                {unlockedView ? (
-                  <>{category.name} 약점 그래프가 완성됐어</>
-                ) : (
-                  <>
-                    {category.name} 약점 그래프 완성까지
-                    <br />
-                    {unitLabel}{' '}
-                    <span className={styles.subTitleCount}>{progress.remaining}개</span> 남았어
-                  </>
-                )}
-              </h2>
-              {/* 개발용 — 완성 상태 미리보기 토글 (실 데이터로 완주하면 자연히 완성 화면) */}
-              {!progress.unlocked && (
-                <button
-                  type="button"
-                  className={styles.devToggle}
-                  onClick={() => setPreviewUnlocked((v) => !v)}
-                >
-                  {previewUnlocked ? '진행형' : '완성 미리보기'}
-                </button>
-              )}
-            </div>
-            {unlockedView && (
-              <p className={clsx(styles.subTitleSub, styles.subTitleFlush)}>
-                내일부터 여기를 잡는 문제를 준비해둘게
-              </p>
-            )}
-            <UnitRailList
-              rows={progress.rows}
-              nextMeta={canStartToday ? '오늘 풀 차례' : '내일 열려'}
-              onDoneClick={setUnitSheet}
-              variant={unlockedView ? 'cards' : 'rail'}
-              weakNames={weakNames}
-            />
+            <h2 className={styles.subTitle}>{unitLabel}</h2>
+
+            <ol className={styles.unitCards}>
+              {progress.rows.map((row) => {
+                if (row.diagnosis) {
+                  // 진단 완료 — 흰 카드 · 메타 · 점수 + 셰브런 (상세 시트)
+                  const total = row.diagnosis.items?.length ?? SET_SIZE
+                  return (
+                    <li key={row.name}>
+                      <button
+                        type="button"
+                        onClick={() => setUnitSheet(row)}
+                        className={clsx(styles.unitCard, styles.unitCardDone)}
+                      >
+                        <span className={styles.unitCardBody}>
+                          <span className={styles.unitCardNameRow}>
+                            <span className={styles.unitCardName}>{row.name}</span>
+                            {row.diagnosis.weak && (
+                              <span className={styles.unitWeakPill}>약점</span>
+                            )}
+                          </span>
+                          <span className={styles.unitCardMeta}>
+                            <CheckCircleIcon />
+                            정답 {row.diagnosis.correct}/{total}개
+                            <span className={styles.unitMetaDivider} />
+                            <ClockIcon />
+                            {row.diagnosis.minutes}분
+                          </span>
+                        </span>
+                        <span
+                          className={clsx(
+                            styles.unitCardScore,
+                            row.diagnosis.weak && styles.unitCardScoreWeak,
+                          )}
+                        >
+                          {row.diagnosis.score}점
+                        </span>
+                        <span className={styles.unitCardChevron} aria-hidden>
+                          <ChevronIcon />
+                        </span>
+                      </button>
+                    </li>
+                  )
+                }
+                if (row.state === 'next') {
+                  // 다음 차례 — 흰 카드 + 빨간 보더 + 진단하기 버튼
+                  return (
+                    <li key={row.name}>
+                      <div className={clsx(styles.unitCard, styles.unitCardNext)}>
+                        <span className={styles.unitCardName}>{row.name}</span>
+                        <button
+                          type="button"
+                          disabled={!canStartToday}
+                          onClick={openUnlock}
+                          className={styles.unitDiagnoseBtn}
+                        >
+                          {canStartToday ? '진단하기' : '내일 열려'}
+                        </button>
+                      </div>
+                    </li>
+                  )
+                }
+                // 잠김 — 회색 카드 + 자물쇠
+                return (
+                  <li key={row.name}>
+                    <div className={clsx(styles.unitCard, styles.unitCardLocked)}>
+                      <span className={styles.unitCardNameLocked}>{row.name}</span>
+                      <span className={styles.unitLockIcon} aria-label="잠김">
+                        <LockIcon />
+                      </span>
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
           </section>
         </div>
 
-        {/* 홈의 단일 CTA — 화면 아래 상시 고정, 여정 기준으로 라벨·동작 결정.
-            TODO: 추천 알고리즘 확정 시 임시 규칙 교체 */}
+        {/* 홈 단일 CTA — 다크 시트 (Figma) · 선택한 대단원 기준 */}
         <div className={styles.solveDock}>
-          {currentLeg ? (
+          {!progress.unlocked ? (
             <button
               type="button"
               className={styles.solveDockCta}
               disabled={!canStartToday}
-              onClick={() => navigate(`/unlock/${subject}/${currentLeg.cat.slug}`)}
+              onClick={openUnlock}
             >
-              {canStartToday ? `${currentLeg.cat.name} 진단 시작하기` : '오늘 진단은 끝 — 내일 열려'}
+              {canStartToday ? `${category.name} 약점 진단하기` : '오늘 진단은 끝 — 내일 열려'}
             </button>
           ) : (
             <button
               type="button"
               className={styles.solveDockCta}
-              onClick={() => weakestOverall && startFreeSolve(weakestOverall)}
+              onClick={() => weakestInCategory && startFreeSolve(weakestInCategory)}
             >
               약점 문제 풀기
             </button>
@@ -543,70 +547,85 @@ export default function HomePage() {
   )
 }
 
-/** 잠금 상태 실루엣용 목 점수 — 진단 전에는 오버레이 뒤에 흐리게 깔린다 */
-const LOCKED_SILHOUETTE = [72, 50, 62, 40, 55, 45, 60]
+/* --- 인라인 SVG 아이콘 (소단원 카드 메타 · Figma subject-card) --- */
 
-/**
- * 약점 레이더 차트 (n각형 링 + 축 라벨).
- * scores 가 있으면 실제 진단 점수로 그리고, 없는 축(미진단)은 실루엣 값으로 채운다.
- * 약점(70점 미만) 꼭짓점은 점을 찍어 어디를 잡아야 하는지 바로 보이게 한다.
- */
-function RadarChart({
-  units,
-}: {
-  units: { name: string; score?: number; weak?: boolean }[]
-}) {
-  const labels = units.map((u) => u.name)
-  const n = Math.max(labels.length, 3)
-  const cx = 150
-  const cy = 150
-  const maxR = 95
-  const rings = [0.25, 0.5, 0.75, 1]
-
-  const point = (i: number, r: number): [number, number] => {
-    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / n
-    return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)]
-  }
-  const polygon = (r: number) =>
-    Array.from({ length: n }, (_, i) => point(i, r).join(',')).join(' ')
-
-  const ratio = (i: number) => {
-    const score = units[i]?.score
-    return (score ?? LOCKED_SILHOUETTE[i % LOCKED_SILHOUETTE.length] ?? 50) / 100
-  }
-  const dataPoints = Array.from({ length: n }, (_, i) =>
-    point(i, maxR * ratio(i)).join(','),
-  ).join(' ')
-
+/** 잠금 오버레이 자물쇠 (Figma lock-keyhole 80px) — 회색 고리 + 몸통 + 열쇠구멍 */
+function LockKeyholeIcon() {
   return (
-    <svg viewBox="0 0 300 300" className={styles.radar} aria-hidden>
-      {rings.map((f) => (
-        <polygon key={f} points={polygon(maxR * f)} fill="none" stroke="#d6d8db" strokeWidth="1" />
-      ))}
-      {Array.from({ length: n }, (_, i) => {
-        const [x, y] = point(i, maxR)
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#d6d8db" strokeWidth="1" />
-      })}
-      <polygon points={dataPoints} fill="rgba(255,56,92,0.25)" stroke="#ff385c" strokeWidth="1.5" />
-      {units.map((u, i) => {
-        if (!u.weak) return null
-        const [x, y] = point(i, maxR * ratio(i))
-        return <circle key={`dot-${u.name}`} cx={x} cy={y} r="3.5" fill="#ff385c" />
-      })}
-      {labels.map((label, i) => {
-        const [x, y] = point(i, maxR + 14)
-        const anchor = Math.abs(x - cx) < 8 ? 'middle' : x > cx ? 'start' : 'end'
-        return (
-          <text key={label} x={x} y={y} textAnchor={anchor} fontSize="9" fontWeight="700" fill="#766f73">
-            {label}
-          </text>
-        )
-      })}
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" aria-hidden>
+      <path
+        d="M25 41V30.5C25 22.4 31.7 16 40 16s15 6.4 15 14.5V41"
+        stroke="#d6d8db"
+        strokeWidth="7"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <rect x="18" y="35" width="44" height="30" rx="6" fill="#80858b" />
+      <circle cx="40" cy="46.5" r="4" fill="#f0f1f3" />
+      <rect x="38" y="48" width="4" height="8.5" rx="2" fill="#f0f1f3" />
     </svg>
   )
 }
 
-/* --- 인라인 SVG 아이콘 --- */
+function CheckCircleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M5.2 8.2 7.2 10.2 10.8 6.4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M8 4.8V8.2L10.2 9.6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M6 3.5 10.5 8 6 12.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect x="3" y="7" width="10" height="6.5" rx="1.6" fill="currentColor" />
+      <path
+        d="M5.2 7V5.4a2.8 2.8 0 0 1 5.6 0V7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        fill="none"
+      />
+    </svg>
+  )
+}
 
 
 

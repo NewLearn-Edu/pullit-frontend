@@ -18,7 +18,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 .page {
   display: flex;
   min-height: 100dvh;
-  background: $color-canvas; // 흰 배경 (2026-08-14 변경 — 기존 $bg 회색)
+  background: $row-gray; // black/50 페이지 배경 (Figma 2919-8728 · 2026-08-20)
 }
 
 .main {
@@ -93,11 +93,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include button-reset;
   padding: $space-sm $space-lg;
   border-radius: 20px;
-  // 흰 페이지 배경 위에서 칩이 구분되게 — 미선택은 옅은 회색 채움 + 차분한 글자
-  background: #f0f1f3;
-  font-size: 16px;
+  // 회색 페이지 배경 위 — 미선택 칩은 흰 채움 (Figma)
+  background: $color-canvas;
+  font-size: 14px;
   font-weight: $fw-semibold;
-  color: #5e6368;
+  color: #121417;
   white-space: nowrap;
   transition: background 150ms ease, color 150ms ease;
 }
@@ -111,40 +111,27 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // 약점 그래프 카드 — 레이더 + 잠금 오버레이
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 진행형 레이더 (A안) — 카드 프레임 없이 크게
-.graphTall {
-  position: relative; // ? 안내 버튼 앵커
+// 약점 그래프 흰 카드 (Figma Container) — 레이더 + 잠금 오버레이 앵커
+.graphShell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 420px;
-}
-
-
-// 완성 결론 헤드라인 아래 보조 문구
-.subTitleSub {
-  margin: -8px 0 0;
-  padding: 0 6px 0 28px;
-  font-size: $fs-body-sm;
-  font-weight: $fw-medium;
-  color: #80858b;
-}
-
-.graphCard {
-  position: relative;
-  height: 300px;
+  height: 360px;
   border-radius: 16px;
-  overflow: hidden;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.16));
+  background: $color-canvas;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  @include desktop-up {
+    height: 420px;
+  }
 }
 
-.radar {
-  position: absolute;
-  inset: 0;
+.graphSvg {
   width: 100%;
-  height: 100%;
-  background: $color-canvas;
+  height: 88%;
 }
+
 
 .graphOverlay {
   position: absolute;
@@ -165,13 +152,20 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   position: absolute;
   top: $space-lg;
   right: $space-lg;
+  z-index: 2;
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #ececec;
+  background: #d6d8db; // black/300 (Figma)
   font-size: $fs-body-sm;
   font-weight: $fw-medium;
-  color: #8d8f91;
+  color: #5e6368;
+}
+
+// 잠금 오버레이 위에서는 오버레이 패딩 기준으로 정렬
+.helpChipOverlay {
+  top: $space-lg;
+  right: $space-lg;
 }
 
 .graphOverlayBody {
@@ -237,59 +231,193 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   padding-bottom: 20px;
 }
 
-// 헤드라인 행 — 타이틀 + 우측 개발용 미리보기 토글
-.subHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+// 섹션 타이틀 — "소단원" / "유형" (Figma Title/M 18px Bold)
+.subTitle {
+  margin: 0;
+  padding: 0 $space-sm;
+  font-size: 18px;
+  font-weight: $fw-bold;
+  line-height: 1.4;
+  color: #121417;
 }
 
-// 개발용 완성 미리보기 토글 — 눈에 안 띄는 소형 칩
-.devToggle {
+// ── 소단원 카드 3종 (Figma subject-card) ────────────────────────────────────
+.unitCards {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unitCard {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  width: 100%;
+  min-height: 77px;
+  padding: $space-lg;
+  border-radius: 16px;
+  text-align: left;
+}
+
+// 진단 완료 — 흰 카드, 클릭 시 상세 시트
+.unitCardDone {
   @include button-reset;
-  flex-shrink: 0;
-  margin-right: 6px;
-  padding: 4px 10px;
-  border: 1px solid #e3e5e8;
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  width: 100%;
+  min-height: 77px;
+  padding: $space-lg;
+  border-radius: 16px;
   background: $color-canvas;
-  font-size: 11px;
-  font-weight: $fw-medium;
-  color: #8d8f91;
+  text-align: left;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+
+  @include hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+  }
+}
+
+// 다음 차례 — 흰 카드 + 빨간 보더
+.unitCardNext {
+  justify-content: space-between;
+  border: 1px solid $color-primary;
+  background: $color-canvas;
+}
+
+// 잠김 — 회색 카드
+.unitCardLocked {
+  justify-content: space-between;
+  background: #e5e7ea; // black/200
+}
+
+.unitCardBody {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unitCardNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.unitCardName {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: #121417;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-// 언락 페이지 타이틀과 같은 규격 — 왼쪽 시작점은 레일 카드 왼쪽 끝(레일 16px + 간격 10px)
-.subTitle {
-  margin: 0;
-  padding: 0 6px 0 28px;
-  font-size: 22px;
-  font-weight: $fw-bold;
-  line-height: 1.35;
-  color: $ink;
+.unitCardNameLocked {
+  font-size: 16px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: #80858b; // black/500
 }
 
-.subTitleCount {
+// 약점 필 — 결과 화면과 동일 규격 (red/100 배경 + red/500 보더)
+.unitWeakPill {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid $color-primary;
+  border-radius: 999px;
+  background: $red-tint;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
   color: $color-primary;
+}
+
+.unitCardMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  color: #80858b;
+  white-space: nowrap;
+
+  svg { flex-shrink: 0; }
+}
+
+.unitMetaDivider {
+  width: 1px;
+  height: 8px;
+  margin: 0 2px;
+  background: #d6d8db;
+}
+
+.unitCardScore {
+  flex-shrink: 0;
+  font-size: 20px;
+  font-weight: $fw-semibold;
   font-variant-numeric: tabular-nums;
+  color: #121417;
 }
 
-// 완주(cards) 상태 — 레일 인덴트(28px)가 사라지므로 카드 안 텍스트(20px)와 좌측 정렬
-.subTitleFlush {
-  padding-left: 20px;
+.unitCardScoreWeak {
+  color: $color-primary;
 }
 
-// 약점 문제 풀기 — 하단에서 따라다니는 CTA (언락 페이지 dock 과 같은 규격)
+.unitCardChevron {
+  @include flex-center;
+  flex-shrink: 0;
+  color: #a6abb1;
+}
+
+// 진단하기 — 빨간 소형 버튼 (Figma Button S/Secondary)
+.unitDiagnoseBtn {
+  @include button-reset;
+  flex-shrink: 0;
+  padding: $space-sm 12px;
+  border-radius: 8px;
+  background: $color-primary;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+
+  &:disabled {
+    background: #d6d8db;
+    color: #80858b;
+    cursor: default;
+  }
+}
+
+.unitLockIcon {
+  @include flex-center;
+  flex-shrink: 0;
+  color: #a6abb1;
+}
+
+// 하단 CTA — 다크 시트 (Figma · 상단 라운드 20 의 검은 바가 네비 위로 올라온 형태)
 .solveDock {
   position: sticky;
   bottom: calc(64px + env(safe-area-inset-bottom)); // 하단 네비(64px) 위
   z-index: 10;
+  display: flex;
+  justify-content: center;
   width: 100%;
   margin-top: auto;
-  padding: 12px $space-lg 16px;
-  // 리스트 위로 뜰 때 카드가 비쳐 보이지 않게 — 아래는 채우고 위는 흘려보냄
-  background: linear-gradient(to top, $color-canvas 70%, rgba(255, 255, 255, 0));
+  padding: 16px $space-lg 20px;
+  border-radius: 20px 20px 0 0;
+  background: #23272b; // black/800
 
   @include desktop-up {
     bottom: 0; // 데스크탑은 사이드바 — 하단 네비 없음
@@ -302,6 +430,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include button-reset;
   @include flex-center;
   width: 100%;
+  max-width: 620px;
   height: 56px;
   border-radius: 12px;
   background: #23272b; // black/800

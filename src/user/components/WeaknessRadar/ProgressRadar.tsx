@@ -230,19 +230,17 @@ export default function ProgressRadar({
               )}
             </text>
             {locked ? (
-              // 미진단 — 점수 대신 자물쇠
-              <g
-                transform={`translate(${anchor === 'middle' ? lx : anchor === 'start' ? lx + 12 : lx - 12}, ${subY - 9}) scale(1.25)`}
-                opacity="0.4"
+              // 미진단 — 점수 대신 "미진단" 텍스트 (Figma 2919-8728)
+              <text
+                x={lx}
+                y={subY}
+                fontSize="13"
+                fontWeight={700}
+                fill="#80858b"
+                className={styles.label}
               >
-                <rect x="-4.5" y="0" width="9" height="6.5" rx="1.4" fill="#80858b" />
-                <path
-                  d="M -2.6 0 V -1.8 A 2.6 2.6 0 0 1 2.6 -1.8 V 0"
-                  stroke="#80858b"
-                  strokeWidth="1.4"
-                  fill="none"
-                />
-              </g>
+                미진단
+              </text>
             ) : (
               <text
                 x={lx}
