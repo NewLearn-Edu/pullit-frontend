@@ -50,8 +50,8 @@ function HeroProblemCard() {
         </Link>
       </div>
 
-      {/* 하단 플로팅 라이브 pill */}
-      <div className="absolute bottom-[6%] left-1/2 flex -translate-x-1/2 items-center gap-[9px] rounded-full bg-[#211514] px-[16px] py-[11px] drop-shadow-[0px_12px_14px_rgba(24,15,14,0.24)]">
+      {/* 하단 플로팅 라이브 pill — CTA 버튼 바로 위 (카드 패딩 32 + 버튼 48 + 간격 14) */}
+      <div className="absolute bottom-[94px] left-1/2 flex -translate-x-1/2 items-center gap-[9px] rounded-full bg-[#211514] px-[16px] py-[11px] drop-shadow-[0px_12px_14px_rgba(24,15,14,0.24)]">
         <span className="relative size-[8px] rounded-[4px] bg-success">
           <span className="absolute -left-[5px] -top-[5px] size-[18px] rounded-[9px] border border-[rgba(45,212,160,0.28)]" />
         </span>
