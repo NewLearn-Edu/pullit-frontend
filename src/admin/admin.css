@@ -989,8 +989,33 @@
   .pol-preview hr { margin: 24px 0; border: none; border-top: 1px solid var(--color-line); }
   .pol-preview strong { color: var(--color-fg); }
 
-  .pol-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .pol-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
   .pol-actions .btn { height: 44px; padding: 0 22px; }
   .pol-actions .btn:disabled { opacity: .45; cursor: default; filter: none; }
+
+  /* 에디터 우상단 닫기(X) — 긴 에디터에서 하단 닫기까지 안 내려가도 되게 */
+  .pol-close {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-muted);
+    transition: background .15s, color .15s;
+  }
+  .pol-close:hover { background: var(--color-fill-hover); color: var(--color-fg); }
+
+  /* 버전 이력 로우 — 클릭하면 그 버전을 에디터로 (수정 흐름) */
+  .pol-row { cursor: pointer; }
+  .pol-row:hover td { background: var(--color-fill-soft); }
+  .pol-row.on td { background: var(--color-fill-hover); }
+
+  /* 이력 로딩 스켈레톤 — 헤더 바(44px) + 로우(58px) 자리를 그대로 잡아 레이아웃 점프 방지 */
+  .pol-skeleton span {
+    display: block; border-radius: 12px;
+    background: linear-gradient(90deg, var(--color-fill-soft) 25%, var(--color-fill-hover) 50%, var(--color-fill-soft) 75%);
+    background-size: 200% 100%;
+    animation: polShimmer 1.2s ease-in-out infinite;
+  }
+  .pol-skeleton span:first-child { height: 44px; }
+  .pol-skeleton span + span { height: 58px; margin-top: 8px; }
+  @keyframes polShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
   @media (max-width: 900px) { .pol-fields { grid-template-columns: 1fr; } }
