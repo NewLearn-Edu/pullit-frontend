@@ -1,13 +1,17 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { refreshSession } from '@/user/api/authApi'
 
-/** 백엔드 API 클라이언트 — 로컬은 localhost:8080, 배포는 백엔드 도메인(api-dev) */
+// 로컬 개발은 접속한 호스트의 8080 (localhost 또는 같은 와이파이의 맥 IP), 배포는 백엔드 도메인(api-dev)
+// — 사설 IP(172.16.x 등)로 접속해도 로컬 백엔드를 바라보도록 authApi 와 동일한 판정을 쓴다
+const isLocalHost = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(
+  window.location.hostname,
+)
+
+/** 백엔드 API 클라이언트 — 로컬은 접속 호스트:8080, 배포는 백엔드 도메인(api-dev) */
 export const adminApi = axios.create({
   baseURL:
     import.meta.env.VITE_API_BASE_URL ??
-    (window.location.hostname === 'localhost'
-      ? 'http://localhost:8080'
-      : 'https://api-dev.pullit.co.kr'),
+    (isLocalHost ? `http://${window.location.hostname}:8080` : 'https://api-dev.pullit.co.kr'),
   // 인증은 httpOnly 쿠키 자동 전송 (배포 환경 /api/admin/** 은 ROLE_ADMIN 필수.
   // 로컬은 ADMIN_OPEN=true 로 쿠키 없이도 허용)
   withCredentials: true,
