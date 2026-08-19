@@ -482,3 +482,34 @@ export async function publishAdminPolicy(
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 인증번호 (전화번호 SMS 인증 이력)
+// ---------------------------------------------------------------------------
+
+export interface PhoneVerification {
+  id: number
+  userId: number
+  userName: string | null
+  phoneNumber: string
+  code: string
+  verified: boolean
+  attemptCount: number
+  expiresAt: string
+  createdAt: string
+}
+
+export type PhoneVerificationPage = Paged<PhoneVerification>
+
+/** 인증번호 발급 이력 최신순 — q 는 전화번호 부분 일치 */
+export async function fetchPhoneVerifications(params: {
+  q?: string
+  page?: number
+  size?: number
+}): Promise<PhoneVerificationPage> {
+  const { data } = await adminApi.get<BaseResponse<PhoneVerificationPage>>(
+    '/api/admin/phone-verifications',
+    { params },
+  )
+  return data.data
+}

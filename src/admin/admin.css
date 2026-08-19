@@ -369,6 +369,8 @@
   .search-box:focus-within { border-color: var(--line-strong); }
   .search-box input { border: none; outline: none; background: none; flex: 1; font-size: 14px; color: var(--color-fg); }
   .search-box input::placeholder { color: var(--color-muted); }
+  /* 툴바의 검색·초기화 버튼은 검색박스(44px)와 높이를 맞춘다 */
+  .toolbar .btn { height: 44px; padding: 0 18px; font-size: 14px; }
   .select {
     height: 44px; padding: 0 32px 0 14px;
     background: var(--color-canvas); border: 1px solid var(--color-line);
@@ -413,6 +415,7 @@
   .badge.pending { background: var(--color-warn-soft); color: var(--warn-text); }
   .badge.hidden { background: var(--hidden-bg); color: var(--color-muted); }
   .badge.neutral { background: var(--hidden-bg); color: var(--color-muted); }  /* 렌더타입 등 중립 표시 */
+  .badge.danger { background: var(--color-primary-soft); color: var(--color-primary); }  /* 실패초과 등 차단 상태 */
 
   .diff { font-weight: 700; font-size: 13px; }
   .diff.d1 { color: var(--green-text); }

@@ -16,6 +16,7 @@ import {
   IcoMathTest,
   IcoMember,
   IcoMoon,
+  IcoOtp,
   IcoProblem,
   IcoSettings,
   IcoStats,
@@ -154,6 +155,10 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
             <NavLink to="/admin/members" end className={navClass}>
               <span className="ico"><IcoAdmin /></span>
               관리자 계정
+            </NavLink>
+            <NavLink to="/admin/members/verifications" className={navClass}>
+              <span className="ico"><IcoOtp /></span>
+              인증번호
             </NavLink>
 
             <div className="nav-label">크레딧</div>

@@ -13,6 +13,7 @@ import {
 } from '../api/adminApi'
 import { StatCard } from '../components/StatCard'
 import { CreditMark } from '../components/CreditMark'
+import { formatPhoneSearch } from '../searchFormat'
 import { useToast } from '../components/toast'
 
 const PAGE_SIZE = 20
@@ -154,13 +155,13 @@ export default function CreditsPage() {
           >
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => setQ(formatPhoneSearch(e.target.value))}
               placeholder="이름 · 이메일 · 전화번호 검색"
             />
           </form>
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost"
             onClick={() => {
               setPage(0)
               setKeyword(q.trim())
@@ -171,7 +172,7 @@ export default function CreditsPage() {
           {keyword && (
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost"
               onClick={() => {
                 setQ('')
                 setKeyword('')

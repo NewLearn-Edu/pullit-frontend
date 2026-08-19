@@ -267,3 +267,18 @@ export function IcoSearch() {
     </svg>
   )
 }
+
+/** 인증번호 — SMS 말풍선 + 코드 점 3개 */
+export function IcoOtp() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v8a2.5 2.5 0 01-2.5 2.5H9.4l-3.9 3.4a.8.8 0 01-1.3-.6V16h.3A2.5 2.5 0 014 13.5v-8z"
+        fill="currentColor"
+      />
+      <circle cx="8.5" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
+      <circle cx="12" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
+      <circle cx="15.5" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
+    </svg>
+  )
+}
