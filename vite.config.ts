@@ -15,6 +15,9 @@ export default defineConfig({
         theme_color: '#FF385C',
         background_color: '#FFFFFF',
         display: 'standalone',
+        // 홈 화면 설치 시 세로 고정 — Android 는 잠기고, iOS 는 매니페스트를 무시한다
+        // (일반 브라우저 탭에선 웹이 회전을 막을 방법이 없음 · iOS 는 추후 네이티브 래핑 시 잠금)
+        orientation: 'portrait',
         start_url: '/',
         icons: [
           {
