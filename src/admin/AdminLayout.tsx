@@ -156,9 +156,11 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
               <span className="ico"><IcoAdmin /></span>
               관리자 계정
             </NavLink>
+
+            <div className="nav-label">인증번호</div>
             <NavLink to="/admin/members/verifications" className={navClass}>
               <span className="ico"><IcoOtp /></span>
-              인증번호
+              인증번호 조회
             </NavLink>
 
             <div className="nav-label">크레딧</div>

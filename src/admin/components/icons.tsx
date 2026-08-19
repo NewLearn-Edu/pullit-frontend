@@ -228,12 +228,17 @@ export function IcoEnglishTest() {
 }
 
 /** 크레딧 — 유저 앱 CreditBadge 의 ✦(U+2726) 를 4각 스파클로 옮긴 것 */
+/** 크레딧 — C 코인 (서비스 크레딧 코인 그래픽과 동일 모티프) */
 export function IcoCredit() {
   return (
     <svg viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8.4" fill="currentColor" />
+      <circle cx="10" cy="10" r="6.1" stroke="var(--color-rail, #fff)" strokeWidth="1.1" />
       <path
-        d="M10 2.4Q11.1 8.9 17.6 10Q11.1 11.1 10 17.6Q8.9 11.1 2.4 10Q8.9 8.9 10 2.4Z"
-        fill="currentColor"
+        d="M12.6 8.1a3.2 3.2 0 100 3.8"
+        stroke="var(--color-rail, #fff)"
+        strokeWidth="1.9"
+        strokeLinecap="round"
       />
     </svg>
   )
@@ -268,17 +273,21 @@ export function IcoSearch() {
   )
 }
 
-/** 인증번호 — SMS 말풍선 + 코드 점 3개 */
+/** 인증번호 — 방패 + 체크 (본인 인증) */
 export function IcoOtp() {
   return (
     <svg viewBox="0 0 24 24" fill="none">
       <path
-        d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v8a2.5 2.5 0 01-2.5 2.5H9.4l-3.9 3.4a.8.8 0 01-1.3-.6V16h.3A2.5 2.5 0 014 13.5v-8z"
+        d="M12 2.4l7.2 2.7c.5.2.8.6.8 1.1v5.3c0 4.6-3 8.4-7.6 10a1.3 1.3 0 01-.8 0C7 19.9 4 16.1 4 11.5V6.2c0-.5.3-.9.8-1.1L12 2.4z"
         fill="currentColor"
       />
-      <circle cx="8.5" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
-      <circle cx="12" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
-      <circle cx="15.5" cy="9.5" r="1.3" fill="var(--color-rail, #fff)" />
+      <path
+        d="M8.6 11.8l2.3 2.3 4.5-4.6"
+        stroke="var(--color-rail, #fff)"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
