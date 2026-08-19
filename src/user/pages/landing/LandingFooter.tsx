@@ -26,7 +26,15 @@ export default function LandingFooter() {
           />
         </div>
 
-        <div className="flex items-start justify-between pt-[24px]">
+        {/* 사업자 정보 — 사업자등록증(2026-01-12 발급) 기준 */}
+        <div className="flex flex-col gap-[4px] border-t border-[#e5e7ea] pt-[24px] text-[14px] leading-[1.7] text-[#80858b]">
+          <p className="break-keep">
+            주식회사 뉴런소프트 · 대표 최영재 · 사업자등록번호 591-88-03234
+          </p>
+          <p className="break-keep">서울특별시 관악구 봉천로 545, 서울창업센터 관악(봉천동)</p>
+        </div>
+
+        <div className="flex items-start justify-between">
           <p className="text-[16px] text-[#80858b]">© 2026 Pullit. All rights reserved.</p>
         </div>
       </div>
