@@ -317,6 +317,11 @@ export async function withdrawAccount(): Promise<void> {
   await api.delete('/api/users/me')
 }
 
+/** 마케팅 수신동의 변경 — 동의(시각 기록) / 철회(삭제). 마이페이지 토글 */
+export async function updateMarketingConsent(agree: boolean): Promise<void> {
+  await api.patch('/api/users/me/marketing-consent', { agree })
+}
+
 // ---------------------------------------------------------------------------
 // 내 정보
 // ---------------------------------------------------------------------------
@@ -333,6 +338,8 @@ export interface MeResult {
   /** 회원인데 null 이면 추가 정보 입력(/signup/info)이 필요하다 */
   phoneNumber: string | null
   birthDate: string | null
+  /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
+  marketingConsentAt: string | null
 }
 
 export interface ProfileCompleteRequest {

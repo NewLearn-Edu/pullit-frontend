@@ -107,3 +107,16 @@ export async function fetchTrialDiagnoses(
   })
   return data.data
 }
+
+/** 마이페이지 학습 통계 — accuracyPct 는 풀이가 없으면 null ("—" 표시) */
+export interface StudyStats {
+  solvedCount: number
+  accuracyPct: number | null
+  /** 오늘(안 풀었으면 어제)까지 풀이가 이어진 연속 일수 */
+  streakDays: number
+}
+
+export async function fetchStudyStats(): Promise<StudyStats> {
+  const { data } = await api.get<BaseResponse<StudyStats>>('/api/attempts/me/stats')
+  return data.data
+}

@@ -3,15 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
-import { logout, withdrawAccount } from '@/user/api/authApi'
+import { logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
+import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
 
-/** 학습 통계 목 — 진단/기록 API 연동 시 교체 (Figma 2627-2336 예시값) */
-const MOCK_STATS = { solved: 128, accuracy: 76, streak: 5 }
-
 const APP_VERSION = 'v1.0.0'
+const SUPPORT_EMAIL = 'newlearnsoft@gmail.com'
 
 /**
  * 마이페이지 (/my · Figma 2627-2336)
@@ -35,6 +34,43 @@ export default function MyPage() {
   }, [sessionStatus, navigate])
 
   const isGuest = me?.type === 'GUEST'
+  const loadMe = useUserStore((s) => s.loadMe)
+
+  // 학습 통계 — 실데이터 (로딩 전엔 "—")
+  const [stats, setStats] = useState<StudyStats | null>(null)
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    fetchStudyStats()
+      .then(setStats)
+      .catch(() => setStats(null))
+  }, [sessionStatus])
+
+  // 준비 전 메뉴 안내용 미니 토스트
+  const [toast, setToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 2200)
+    return () => clearTimeout(timer)
+  }, [toast])
+  const comingSoon = () => setToast('아직 준비 중이에요')
+
+  // 마케팅 수신동의 토글 — 진실원은 me.marketingConsentAt, 저장 중엔 잠금
+  const marketingOn = !!me?.marketingConsentAt
+  const [consentSaving, setConsentSaving] = useState(false)
+  const toggleMarketing = async () => {
+    if (consentSaving) return
+    setConsentSaving(true)
+    const next = !marketingOn
+    try {
+      await updateMarketingConsent(next)
+      await loadMe(true) // marketingConsentAt 갱신 반영
+      setToast(next ? '마케팅 정보 수신에 동의했어요' : '마케팅 수신동의를 철회했어요')
+    } catch {
+      setToast('변경에 실패했어요. 잠시 후 다시 시도해주세요')
+    } finally {
+      setConsentSaving(false)
+    }
+  }
 
   /**
    * 이 브라우저에 남는 개인 흔적 정리 — 로그아웃·탈퇴 공용.
@@ -104,7 +140,7 @@ export default function MyPage() {
                 {isGuest ? me?.nickname ?? '게스트' : me?.name ?? '이름 없음'}
               </p>
               <p className={styles.userEmail}>
-                {isGuest ? '가입하면 푼 기록이 그대로 저장돼요' : me?.email ?? ''}
+                {isGuest ? '기록은 7일 뒤 사라져요 · 가입하면 그대로 저장돼요' : me?.email ?? ''}
               </p>
             </div>
           </div>
@@ -117,29 +153,33 @@ export default function MyPage() {
               10초만에 가입하기
             </button>
           ) : (
-            // 프로필 편집 화면은 준비 전 — POC 시각만
-            <button type="button" className={styles.editButton}>
+            // 프로필 편집 화면은 준비 전
+            <button type="button" onClick={comingSoon} className={styles.editButton}>
               프로필 편집
             </button>
           )}
         </section>
 
-        {/* 학습 통계 */}
+        {/* 학습 통계 — GET /api/attempts/me/stats 실데이터 (풀이 없으면 0 · —) */}
         <section className={styles.statsCard}>
           <div className={styles.stat}>
             <span className={styles.statLabel}>풀은 문제</span>
-            <span className={styles.statValue}>{MOCK_STATS.solved}개</span>
+            <span className={styles.statValue}>
+              {stats ? `${stats.solvedCount.toLocaleString()}개` : '—'}
+            </span>
           </div>
           <span className={styles.statDivider} />
           <div className={styles.stat}>
             <span className={styles.statLabel}>정답률</span>
-            <span className={styles.statValue}>{MOCK_STATS.accuracy}%</span>
+            <span className={styles.statValue}>
+              {stats?.accuracyPct != null ? `${stats.accuracyPct}%` : '—'}
+            </span>
           </div>
           <span className={styles.statDivider} />
           <div className={styles.stat}>
             <span className={styles.statLabel}>연속 학습</span>
             <span className={clsx(styles.statValue, styles.statValueRed)}>
-              {MOCK_STATS.streak}일
+              {stats ? `${stats.streakDays}일` : '—'}
             </span>
           </div>
         </section>
@@ -148,9 +188,9 @@ export default function MyPage() {
         <section className={styles.menuSection}>
           <p className={styles.menuLabel}>학습 관리</p>
           <div className={styles.menuCard}>
-            <MenuItem label="학습 리포트" />
             <MenuItem label="오답 노트" onClick={() => navigate('/wrong-note')} />
-            <MenuItem label="크레딧 내역" last />
+            <MenuItem label="학습 리포트" onClick={comingSoon} />
+            <MenuItem label="크레딧 내역" onClick={comingSoon} last />
           </div>
         </section>
 
@@ -158,9 +198,30 @@ export default function MyPage() {
         <section className={styles.menuSection}>
           <p className={styles.menuLabel}>계정</p>
           <div className={styles.menuCard}>
-            <MenuItem label="설정" />
-            <MenuItem label="공지사항" />
-            <MenuItem label="고객센터" last />
+            {/* 마케팅 수신동의 — 문서에 "언제든 철회 가능"을 명시했으므로 철회 수단 필수 */}
+            {!isGuest && (
+              <div className={styles.menuItem}>
+                <span>마케팅 정보 수신 동의</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={marketingOn}
+                  onClick={toggleMarketing}
+                  disabled={consentSaving}
+                  className={clsx(styles.switch, marketingOn && styles.switchOn)}
+                >
+                  <span className={styles.switchKnob} />
+                </button>
+              </div>
+            )}
+            <MenuItem label="공지사항" onClick={comingSoon} />
+            <MenuItem
+              label="고객센터"
+              onClick={() => {
+                window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[풀잇 문의]')}`
+              }}
+              last
+            />
           </div>
         </section>
 
@@ -184,7 +245,7 @@ export default function MyPage() {
           >
             {signingOut ? '로그아웃 중…' : '로그아웃'}
           </button>
-          {/* 게스트는 탈퇴 개념 없음 — 14일 미접속 시 자동 삭제 */}
+          {/* 게스트는 탈퇴 개념 없음 — 7일 미접속 시 자동 삭제 */}
           {!isGuest && (
             <button
               type="button"
@@ -201,6 +262,9 @@ export default function MyPage() {
         </div>
         </div>
       </main>
+
+      {/* 미니 토스트 — 준비 중 메뉴 · 동의 변경 결과 안내 */}
+      {toast && <div className={styles.toast}>{toast}</div>}
 
       {/* 회원탈퇴 확인 다이얼로그 */}
       {withdrawOpen && (
