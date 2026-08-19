@@ -116,9 +116,21 @@ const oauthCallbackUri = (provider: 'naver' | 'google') =>
 
 const stateKey = (provider: string) => `pullit_oauth_state_${provider}`
 
+/**
+ * OAuth state 난수 — randomUUID 는 보안 컨텍스트(HTTPS·localhost) 전용이라
+ * 사설 IP http 접속(모바일 LAN 테스트)에선 없다. 어디서나 동작하는
+ * getRandomValues 로 폴백해 같은 강도의 난수를 만든다.
+ */
+function randomOauthState(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('')
+}
+
 /** CSRF 방지 state 생성·보관 — 콜백에서 consumeOauthState로 대조 */
 function newOauthState(provider: 'naver' | 'google'): string {
-  const state = crypto.randomUUID()
+  const state = randomOauthState()
   sessionStorage.setItem(stateKey(provider), state)
   return state
 }
@@ -241,7 +253,7 @@ function composeAppleName(name?: { firstName?: string; lastName?: string }): str
 export async function loginWithApple(): Promise<void> {
   await loadAppleScript()
   const appleRedirectUri = `${window.location.origin}/auth/apple/callback`
-  const state = crypto.randomUUID()
+  const state = randomOauthState()
   window.AppleID!.auth.init({
     clientId: APPLE_CLIENT_ID,
     scope: 'name email',
