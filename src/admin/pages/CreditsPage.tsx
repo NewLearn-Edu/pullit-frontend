@@ -217,8 +217,8 @@ export default function CreditsPage() {
                   <th style={{ width: 150 }}>이름</th>
                   <th>이메일</th>
                   <th style={{ width: 140 }}>전화번호</th>
-                  <th style={{ width: 110, textAlign: 'right' }}>크레딧</th>
-                  <th style={{ width: 190 }}>관리</th>
+                  <th style={{ width: 110, textAlign: 'center' }}>크레딧</th>
+                  <th style={{ width: 190, textAlign: 'center' }}>관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,12 +227,12 @@ export default function CreditsPage() {
                     <td className="strong">{displayName(u)}</td>
                     <td>{u.email ?? '—'}</td>
                     <td className="num">{formatPhone(u.phoneNumber)}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>
+                    <td className="num" style={{ textAlign: 'center' }}>
                       <CreditMark />
                       {u.creditBalance.toLocaleString()}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
@@ -328,7 +328,7 @@ export default function CreditsPage() {
   )
 }
 
-/** 지급·차감 모달 — 방향/수량/사유를 받아 POST 한 건 */
+/** 조정 모달 — 현재 잔액에서 ±1 스테퍼로 목표값을 잡아 차이만큼 지급/차감 POST 한 건 */
 function AdjustModal({
   user,
   onClose,
@@ -339,21 +339,22 @@ function AdjustModal({
   onDone: (tx: CreditTransaction) => void
 }) {
   const toast = useToast()
-  const [type, setType] = useState<CreditTransactionType>('GRANT')
-  const [amount, setAmount] = useState('')
-  const [reason, setReason] = useState('')
+  const [value, setValue] = useState(user.creditBalance)
   const [saving, setSaving] = useState(false)
 
-  const parsed = Number(amount)
-  const valid = Number.isInteger(parsed) && parsed > 0 && reason.trim().length > 0
-  // 차감은 보유 잔액을 넘을 수 없다 (서버도 동일 검증 — 여기선 버튼을 미리 막는 용도)
-  const overDeduct = type === 'DEDUCT' && parsed > user.creditBalance
+  // 조정량 = 목표값 − 현재 잔액. 방향은 부호가 갖는다 (최소 0 — 잔액 밑으로 차감 불가)
+  const delta = value - user.creditBalance
+  const type: CreditTransactionType = delta > 0 ? 'GRANT' : 'DEDUCT'
 
   const submit = async () => {
-    if (!valid || overDeduct || saving) return
+    if (delta === 0 || saving) return
     setSaving(true)
     try {
-      const tx = await adjustCredit(user.userId, { type, amount: parsed, reason: reason.trim() })
+      const tx = await adjustCredit(user.userId, {
+        type,
+        amount: Math.abs(delta),
+        reason: `어드민 조정 (${user.creditBalance} → ${value})`,
+      })
       onDone(tx)
     } catch {
       toast('크레딧 조정에 실패했어요. 다시 시도해주세요')
@@ -376,38 +377,26 @@ function AdjustModal({
           </div>
         </div>
 
-        <div className="seg" style={{ marginBottom: 14 }}>
-          <button className={clsx(type === 'GRANT' && 'on')} onClick={() => setType('GRANT')}>
-            지급
+        <div className="cr-stepper">
+          <button
+            type="button"
+            aria-label="1 감소"
+            disabled={value <= 0}
+            onClick={() => setValue((v) => Math.max(0, v - 1))}
+          >
+            −
           </button>
-          <button className={clsx(type === 'DEDUCT' && 'on')} onClick={() => setType('DEDUCT')}>
-            차감
+          <span className="cr-value num">{value.toLocaleString()}</span>
+          <button type="button" aria-label="1 증가" onClick={() => setValue((v) => v + 1)}>
+            +
           </button>
         </div>
 
-        <label className="cr-field">
-          <span>수량</span>
-          <input
-            type="number"
-            min={1}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="예: 10"
-          />
-        </label>
-        {overDeduct && (
-          <p className="cr-error">보유 잔액({user.creditBalance.toLocaleString()})보다 많이 차감할 수 없어요</p>
-        )}
-
-        <label className="cr-field">
-          <span>사유</span>
-          <input
-            value={reason}
-            maxLength={200}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="예: 이벤트 보상 지급"
-          />
-        </label>
+        <p className={clsx('cr-delta', delta > 0 && 'grant', delta < 0 && 'deduct', delta === 0 && 'same')}>
+          {delta === 0
+            ? '현재 잔액과 같아요'
+            : `저장 시 ${TYPE_LABEL[type]} ${Math.abs(delta).toLocaleString()}`}
+        </p>
 
         <div className="cr-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
@@ -416,10 +405,10 @@ function AdjustModal({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={!valid || overDeduct || saving}
+            disabled={delta === 0 || saving}
             onClick={submit}
           >
-            {saving ? '처리 중…' : `${TYPE_LABEL[type]}하기`}
+            {saving ? '처리 중…' : '저장'}
           </button>
         </div>
       </div>
