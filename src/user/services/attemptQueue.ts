@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
+import { useUserStore } from '@/user/stores/userStore'
 
 /**
  * 풀이 전송 실패분 재시도 큐.
@@ -47,6 +48,8 @@ let flushing = false
 /** 큐 순차 재전송 — 성공분 제거, 복구 불가분 폐기, 재시도분 유지 */
 export async function flushAttemptQueue(): Promise<void> {
   if (flushing) return // 로그인 콜백·완료 화면에서 동시 호출될 수 있어 재진입 방지
+  // 익명(가입 전 맛보기)이면 보류 — 401 왕복 없이 가입·게스트 생성 시점을 기다린다
+  if (!useUserStore.getState().me) return
   const queue = read()
   if (queue.length === 0) return
 

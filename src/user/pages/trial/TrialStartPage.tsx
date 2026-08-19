@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
-import { useUserStore } from '@/user/stores/userStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import styles from './styles/TrialStartPage.module.scss'
@@ -26,39 +25,23 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
  */
 export default function TrialStartPage() {
   const navigate = useNavigate()
-  const ensureSession = useUserStore((s) => s.ensureSession)
   const reset = useTrialStore((s) => s.reset)
   const setLastSubject = useTrialStore((s) => s.setLastSubject)
   const [selected, setSelected] = useState<Subject>('math')
-  const [pending, setPending] = useState(false)
-  const [sessionFailed, setSessionFailed] = useState(false)
 
   // 맛보기를 이미 완주한 회원만 홈으로 — 미완이면 방금 가입한 회원도 퍼널을 탄다
   useTrialFunnelGuard()
 
   /**
-   * 퀴즈 직행 — 인트로(/start)가 랜딩 → 과목 선택 앞 단계로 옮겨가면서
-   * 인트로가 하던 reset·setLastSubject 를 여기(퀴즈 진입 직전)서 처리한다
+   * 퀴즈 직행 — 세션 없이 시작한다. users 로우는 결과 화면 이후 /signup 에서
+   * 건너뛰기(게스트) 또는 소셜 가입 시점에만 생성된다 (2026-08-19 확정).
+   * 풀이 기록은 큐에 쌓였다가 그 시점에 일괄 전송된다.
    */
-  const start = () => {
+  const handleNext = () => {
+    flushAttemptQueue() // 세션 있는 재도전(미완 회원)의 이전 미전송분 회수 — 익명이면 no-op
     reset()
     setLastSubject(selected)
     navigate(`/trial/quiz/${selected}/0`)
-  }
-
-  const handleNext = async () => {
-    setPending(true)
-    setSessionFailed(false)
-    // 게스트 계정이 있어야 풀이가 서버에 쌓이고 가입 시 기록이 승계된다
-    const me = await ensureSession()
-    setPending(false)
-
-    if (!me) {
-      setSessionFailed(true)   // 진행 자체는 막지 않고 "그래도 시작" 을 열어준다
-      return
-    }
-    flushAttemptQueue()        // 이전 세션 미전송분 회수 (진행을 막지 않음)
-    start()
   }
 
   return (
@@ -96,30 +79,9 @@ export default function TrialStartPage() {
         </div>
 
         <div className={styles.footer}>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={pending}
-            className={styles.nextButton}
-          >
-            {pending ? '준비 중…' : '다음'}
+          <button type="button" onClick={handleNext} className={styles.nextButton}>
+            다음
           </button>
-
-          {/* 세션 확보 실패 — 기록은 못 남기지만 진단 자체는 볼 수 있게 열어준다 */}
-          {sessionFailed && (
-            <div className="mt-md text-center">
-              <p className="text-body-sm text-body">
-                지금은 기록을 저장할 수 없어요. 결과는 볼 수 있어요.
-              </p>
-              <button
-                type="button"
-                onClick={start}
-                className="mt-sm text-body-sm font-semibold text-primary underline"
-              >
-                그래도 시작하기
-              </button>
-            </div>
-          )}
         </div>
       </main>
     </div>

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '@/user/hooks/useMe'
 import { isCompleteMember } from '@/user/stores/userStore'
+import { hasCompletedTrial } from '@/user/services/trialGate'
 import LandingNav from './LandingNav'
 import HeroSection from './HeroSection'
 import MarqueeStrip from './MarqueeStrip'
@@ -24,10 +25,22 @@ export default function LandingPage() {
   const { me } = useMe()
 
   useEffect(() => {
-    // 게스트·프로필 완료 회원만 홈으로. 프로필 미완성 회원은 랜딩을 그대로 본다 —
-    // 생년월일 입력은 소셜 로그인을 직접 눌렀을 때만 안내 (finishLogin → /signup/info)
-    if (me && (me.type === 'GUEST' || isCompleteMember(me))) {
-      navigate('/home', { replace: true })
+    // 세션이 있는 재방문자(게스트·프로필 완료 회원)는 맛보기 완주 여부로 분기 —
+    // 완주 → 홈, 미완 → 퍼널(/start). 미완주 유저가 홈에 가는 일이 없어야 한다 (2026-08-19).
+    // 프로필 미완성 회원은 랜딩을 그대로 본다 — 생년월일 입력은 소셜 로그인을
+    // 직접 눌렀을 때만 안내 (finishLogin → /signup/info). 판정 불가면 홈 (퍼널 오감금 방지)
+    if (!me) return
+    if (me.type !== 'GUEST' && !isCompleteMember(me)) return
+    let alive = true
+    hasCompletedTrial()
+      .then((done) => {
+        if (alive) navigate(done ? '/home' : '/start', { replace: true })
+      })
+      .catch(() => {
+        if (alive) navigate('/home', { replace: true })
+      })
+    return () => {
+      alive = false
     }
   }, [me, navigate])
 

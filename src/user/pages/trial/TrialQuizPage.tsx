@@ -47,17 +47,12 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
   const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTrialStore()
   const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
-  const ensureSession = useUserStore((s) => s.ensureSession)
 
   // 맛보기를 이미 완주한 회원의 딥링크 진입 방어 — 미완 유저(게스트·신규 회원)는 통과.
-  // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외
+  // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외.
+  // 맛보기는 세션 없이 진행한다 — users 로우는 결과 화면 이후 /signup 에서
+  // 건너뛰기(게스트) 또는 소셜 가입 시점에만 생성된다 (2026-08-19 확정)
   useTrialFunnelGuard(isTrial)
-
-  // 홈에서 /trial 를 거치지 않고 직행하거나 새로고침·딥링크로 들어오는 경로 방어.
-  // ensureSession 은 single-flight 라 시작 페이지에서 이미 확보했으면 요청이 나가지 않는다.
-  useEffect(() => {
-    ensureSession()
-  }, [ensureSession])
 
   // 문제 세트 — 서버(GET /api/problems) 우선, 실패·부족 시 목 폴백 (problemSet 캐시 공유)
   const [problems, setProblems] = useState<Problem[]>(() =>
@@ -182,7 +177,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
   /**
    * 풀이 1건을 서버 원장에 남긴다 — 화면 진행을 절대 막지 않는다 (fire-and-forget).
-   * 실패분은 큐에 넣어 세션 확보·로그인·완료 화면 시점에 재전송한다.
+   * 세션이 없으면(맛보기 = 가입 전) 요청 없이 큐에만 쌓는다 — 가입·게스트 생성
+   * 시점(finishLogin·/signup 건너뛰기)에 일괄 전송된다. 실패분도 같은 큐로 재시도.
    */
   const recordAttempt = (selectedChoice: number | null, elapsedMs: number) => {
     const serverId = problem.serverId
@@ -198,6 +194,12 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       timeSpentMs: Math.round(elapsedMs),
       // 무응답("모르겠어요")은 skipped 로 명시 — 서버가 오답 채점 + 찍은 오답과 구분 기록
       skipped,
+    }
+
+    // 익명(가입 전 맛보기) — 401 왕복 없이 바로 큐로. 채점은 로컬 정답으로 이미 끝났다
+    if (!useUserStore.getState().me) {
+      enqueueAttempt(req)
+      return
     }
 
     // 서버 세트 문항은 로컬에 정답이 없어(answer=0) 채점 확정 시 획득 점수를 재계산해야 한다

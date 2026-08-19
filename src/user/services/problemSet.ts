@@ -1,4 +1,9 @@
-import { fetchProblemSet, fetchTrialProblemSet, type ProblemSetItem } from '@/user/api/problemApi'
+import {
+  fetchProblemSet,
+  fetchTrialProblemSet,
+  type ProblemSetItem,
+  type TrialProblemSetItem,
+} from '@/user/api/problemApi'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -65,11 +70,29 @@ function serverSkillNodeOf(subject: Subject, nodeId: string): string | null {
   return MOCK_SKILL_NODES.find((n) => n.id === nodeId)?.name ?? null
 }
 
-/** 서버 문항 → 프론트 Problem. 정답은 서버가 안 내려주므로 answer=0 (원기호 표시는 '-') */
-function toQuizProblem(item: ProblemSetItem, index: number, subject: Subject, nodeId: string): Problem {
+/**
+ * 서버 문항 → 프론트 Problem.
+ * 문제 은행 문항은 정답이 안 내려와 answer=0 (채점은 제출 응답으로),
+ * 맛보기 문항(TrialProblemSetItem)은 정답·해설이 포함돼 로컬 채점한다 —
+ * 맛보기는 가입 전(세션 없음) 풀이라 서버 채점이 불가능하다.
+ */
+function toQuizProblem(
+  item: ProblemSetItem | TrialProblemSetItem,
+  index: number,
+  subject: Subject,
+  nodeId: string,
+): Problem {
   const points = item.points === 3 || item.points === 4 ? item.points : 2
   const [tRecSec, tMaxSec] =
     subject === 'math' ? MATH_TIME_BY_POINTS[points] : ENGLISH_TIME
+
+  // 맛보기 세트만 정답을 내려준다 — 주관식은 answerText(정수 문자열)를 파싱
+  const withAnswer = item as Partial<TrialProblemSetItem>
+  const localAnswer =
+    withAnswer.answerNumber ??
+    (withAnswer.answerText && /^-?\d+$/.test(withAnswer.answerText.trim())
+      ? parseInt(withAnswer.answerText.trim(), 10)
+      : null)
 
   return {
     id: index + 1,
@@ -83,9 +106,9 @@ function toQuizProblem(item: ProblemSetItem, index: number, subject: Subject, no
     // 영어는 발문 + 지문을 이어 붙여 렌더 (목 데이터와 같은 단일 본문 구조)
     bodyText: item.passage ? `${item.question}\n\n${item.passage}` : item.question,
     choices: item.choices,
-    answer: 0,
-    // 해설은 제출 응답(serverExplanation)으로 채워진다 — 로컬 해설 없음
-    explanation: { intent: '', correctAnalysis: '' },
+    answer: localAnswer ?? 0,
+    // 맛보기는 서버 해설을 로컬로 — 은행 문항은 제출 응답(serverExplanation)으로 채워진다
+    explanation: { intent: '', correctAnalysis: withAnswer.explanation ?? '' },
   }
 }
 

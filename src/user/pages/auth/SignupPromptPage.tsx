@@ -7,6 +7,7 @@ import {
   startNaverLogin,
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import SkipHeader from '@/user/components/SkipHeader'
@@ -17,8 +18,9 @@ import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
  * PI-PAGE-RESULT_SIGNUP · 가입 유도 (맛보기 완주 후 기록 저장 유도 · Figma 2824-5679)
  *
  * 레이아웃은 헤더(로고 + 건너뛰기) / 레이더 카드 / 안내문 / 소셜 아이콘 4개 세로 배치.
- * 게스트 계정은 맛보기 시작 시점에 이미 생성돼 있으므로 이 화면의 건너뛰기는
- * "게스트 그대로 홈 진입"이고, 소셜 로그인은 그 게스트 로우를 회원으로 승격한다.
+ * 맛보기는 세션 없이 진행되므로 users 로우는 이 화면에서 처음 생긴다 —
+ * 건너뛰기 = 게스트 생성 + 큐에 쌓인 풀이 기록 전송 후 홈, 소셜 로그인 = 회원 생성
+ * (기록 전송은 finishLogin 이 담당). (2026-08-19 확정)
  *
  * 로그인 동작은 LoginPage 와 동일한 authApi 를 그대로 사용한다
  * (카카오·네이버·구글 = 인가코드 리다이렉트, 애플 = 팝업).
@@ -26,9 +28,23 @@ import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
 export default function SignupPromptPage() {
   const navigate = useNavigate()
   const isMember = useUserStore(selectIsMember)
+  const ensureSession = useUserStore((s) => s.ensureSession)
   const [error, setError] = useState<string | null>(null)
   // 건너뛰기 확인 — 게스트 기록의 한계(브라우저 종속·7일 후 삭제)를 고지하고 진행
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
+  const [skipping, setSkipping] = useState(false)
+
+  /** 건너뛰기 확정 — 게스트 생성 + 맛보기 풀이 기록 전송 후 홈 (여기서 users 로우가 처음 생긴다) */
+  const confirmSkip = async () => {
+    if (skipping) return
+    setSkipping(true)
+    try {
+      await ensureSession() // 게스트 발급 — 실패해도 홈 진입은 막지 않는다
+      await flushAttemptQueue().catch(() => {})
+    } finally {
+      navigate('/home')
+    }
+  }
 
   // 이미 회원인데 가입 유도가 노출되는 상황 방지
   useEffect(() => {
@@ -147,10 +163,11 @@ export default function SignupPromptPage() {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/home')}
-                className="h-[46px] rounded-[12px] text-[15px] font-medium text-[#80858b] transition-colors hover:bg-[#f7f8f9]"
+                onClick={confirmSkip}
+                disabled={skipping}
+                className="h-[46px] rounded-[12px] text-[15px] font-medium text-[#80858b] transition-colors hover:bg-[#f7f8f9] disabled:opacity-60"
               >
-                사라져도 괜찮아
+                {skipping ? '이동 중…' : '사라져도 괜찮아'}
               </button>
             </div>
           </div>
