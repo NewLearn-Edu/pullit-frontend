@@ -36,13 +36,32 @@ export default function MyPage() {
 
   const isGuest = me?.type === 'GUEST'
 
+  /**
+   * 이 브라우저에 남는 개인 흔적 정리 — 로그아웃·탈퇴 공용.
+   * 특히 풀이 재전송 큐를 안 지우면 같은 브라우저에서 다른 계정으로
+   * 로그인했을 때 이전 사람의 풀이가 새 계정으로 전송된다.
+   */
+  const clearLocalTraces = () => {
+    localStorage.removeItem('pullit_trial_progress')
+    ;[
+      'pullit_trial_session',
+      'pullit_attempt_queue',
+      'pullit_signup_form', // 가입 폼 보존분 (이름·생년월일·전화번호)
+      'pullit_post_login_redirect',
+      'pullit_oauth_state_naver',
+      'pullit_oauth_state_google',
+    ].forEach((key) => sessionStorage.removeItem(key))
+  }
+
   const handleLogout = async () => {
     if (signingOut) return
     setSigningOut(true)
     try {
       await logout().catch(() => {}) // 서버 실패해도 프론트 세션은 정리하고 나간다
+      clearLocalTraces()
       clearSession()
-      navigate('/', { replace: true })
+      // 전체 리로드 — zustand 메모리 상태(trialStore 등)가 스토리지를 다시 쓰지 않게
+      window.location.replace('/')
     } finally {
       setSigningOut(false)
     }
@@ -58,15 +77,7 @@ export default function MyPage() {
     setWithdrawError(false)
     try {
       await withdrawAccount()
-      // 이 브라우저에 남는 학습 흔적 정리 (진단 기록·풀이 큐 등)
-      localStorage.removeItem('pullit_trial_progress')
-      ;[
-        'pullit_trial_session',
-        'pullit_attempt_queue',
-        'pullit_post_login_redirect',
-        'pullit_oauth_state_naver',
-        'pullit_oauth_state_google',
-      ].forEach((key) => sessionStorage.removeItem(key))
+      clearLocalTraces()
       clearSession()
       // 전체 리로드 — zustand 메모리 상태가 스토리지를 다시 쓰지 않게
       window.location.replace('/')
