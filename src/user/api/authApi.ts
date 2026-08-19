@@ -342,6 +342,8 @@ export interface ProfileCompleteRequest {
   phoneNumber: string // 010-0000-0000
   agreeTerms: boolean
   agreePrivacy: boolean
+  /** [선택] 마케팅 정보 수신 동의 — 유저가 직접 체크한 경우에만 true */
+  agreeMarketing: boolean
 }
 
 /**

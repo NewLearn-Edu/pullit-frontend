@@ -8,7 +8,7 @@ import {
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import { useMe } from '@/user/hooks/useMe'
-import { selectIsMember, useUserStore } from '@/user/stores/userStore'
+import { selectIsCompleteMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
@@ -31,10 +31,12 @@ export default function LoginPage() {
   // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
   // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
   useMe()
-  const isMember = useUserStore(selectIsMember)
+  // 프로필까지 마친 회원만 홈으로 — 미완성 회원은 이 화면에서 소셜 버튼을 다시 눌러
+  // 로그인하면 finishLogin 이 /signup/info(추가 정보)로 안내한다
+  const isCompleteMember = useUserStore(selectIsCompleteMember)
   useEffect(() => {
-    if (isMember) navigate('/home', { replace: true })
-  }, [isMember, navigate])
+    if (isCompleteMember) navigate('/home', { replace: true })
+  }, [isCompleteMember, navigate])
 
   // 로그인 후 복귀 경로 — 세션 가드가 넘겨준 출발지, 없으면 홈.
   // 랜딩('/')에서 온 경우도 홈으로 보낸다 (로그인했는데 랜딩 복귀는 어색)

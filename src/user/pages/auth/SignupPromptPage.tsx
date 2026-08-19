@@ -27,7 +27,7 @@ export default function SignupPromptPage() {
   const navigate = useNavigate()
   const isMember = useUserStore(selectIsMember)
   const [error, setError] = useState<string | null>(null)
-  // 건너뛰기 확인 — 게스트 기록의 한계(브라우저 종속·2주 후 삭제)를 고지하고 진행
+  // 건너뛰기 확인 — 게스트 기록의 한계(브라우저 종속·7일 후 삭제)를 고지하고 진행
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
 
   // 이미 회원인데 가입 유도가 노출되는 상황 방지
@@ -134,7 +134,7 @@ export default function SignupPromptPage() {
             <p className="mt-[10px] break-keep text-center text-[14px] leading-[1.6] text-[#6f686a]">
               지금 나가면 진단 기록은 이 브라우저에만 남고,
               <br />
-              <b className="font-semibold text-[#ff385c]">2주가 지나면 사라져</b>
+              <b className="font-semibold text-[#ff385c]">7일이 지나면 사라져</b>
             </p>
 
             <div className="mt-[20px] flex flex-col gap-[8px]">

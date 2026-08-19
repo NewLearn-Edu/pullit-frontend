@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMe } from '@/user/hooks/useMe'
+import { isCompleteMember } from '@/user/stores/userStore'
 import LandingNav from './LandingNav'
 import HeroSection from './HeroSection'
 import MarqueeStrip from './MarqueeStrip'
@@ -23,7 +24,11 @@ export default function LandingPage() {
   const { me } = useMe()
 
   useEffect(() => {
-    if (me) navigate('/home', { replace: true })
+    // 게스트·프로필 완료 회원만 홈으로. 프로필 미완성 회원은 랜딩을 그대로 본다 —
+    // 생년월일 입력은 소셜 로그인을 직접 눌렀을 때만 안내 (finishLogin → /signup/info)
+    if (me && (me.type === 'GUEST' || isCompleteMember(me))) {
+      navigate('/home', { replace: true })
+    }
   }, [me, navigate])
 
   // index.html 인라인 스크립트가 흰 화면 플래시 방지용으로 칠한 검은 배경을

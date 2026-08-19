@@ -49,34 +49,86 @@ function CheckMark({ on }: { on: boolean }) {
   )
 }
 
+/**
+ * 작성 중 폼 보존 — 정책 보기 등으로 화면을 떠났다 돌아와도 입력이 남게
+ * sessionStorage 에 실시간 저장한다 (탭 닫으면 소멸). 가입 완료·계정 파기·닫기(로그아웃)
+ * 시점에 지운다. 전화번호 인증 여부는 제출 시 서버가 재검증하므로 복원해도 안전하다.
+ */
+const SIGNUP_FORM_KEY = 'pullit_signup_form'
+
+interface SavedSignupForm {
+  name: string
+  birthY: string
+  birthM: string
+  birthD: string
+  phone: string
+  phoneVerified: boolean
+  /** 인증 완료 시각(ms) — 서버 유효창(30분)이 있어 복원 시 오래된 인증은 무효 처리 */
+  phoneVerifiedAt: number | null
+  agreeAge: boolean
+  agreeTerms: boolean
+  agreePrivacy: boolean
+  agreeMarketing: boolean
+  revealed: number
+}
+
+function loadSavedForm(): Partial<SavedSignupForm> {
+  try {
+    return JSON.parse(sessionStorage.getItem(SIGNUP_FORM_KEY) ?? '{}') as Partial<SavedSignupForm>
+  } catch {
+    return {}
+  }
+}
+
+export function clearSavedSignupForm() {
+  try {
+    sessionStorage.removeItem(SIGNUP_FORM_KEY)
+  } catch {
+    /* noop */
+  }
+}
+
 export default function SignupInfoPage() {
   const navigate = useNavigate()
   const loadMe = useUserStore((s) => s.loadMe)
   const clearSession = useUserStore((s) => s.clear)
 
-  const [name, setName] = useState('')
+  // 떠났다 돌아온 경우 복원 — useState 지연 초기화라 첫 렌더에서만 읽는다
+  const [saved] = useState(loadSavedForm)
+
+  const [name, setName] = useState(saved.name ?? '')
   const [birthDate, setBirthDate] = useState('')
   // 생년월일 3분할 입력 (토스 패턴) — 숫자 키패드만 뜨고, 자릿수가 차면 다음 칸으로 자동 이동
-  const [birthY, setBirthY] = useState('')
-  const [birthM, setBirthM] = useState('')
-  const [birthD, setBirthD] = useState('')
+  const [birthY, setBirthY] = useState(saved.birthY ?? '')
+  const [birthM, setBirthM] = useState(saved.birthM ?? '')
+  const [birthD, setBirthD] = useState(saved.birthD ?? '')
   const birthYRef = useRef<HTMLInputElement>(null)
   const birthMRef = useRef<HTMLInputElement>(null)
   const birthDRef = useRef<HTMLInputElement>(null)
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState(saved.phone ?? '')
   // 전화번호 SMS 인증 상태
   const [codeSent, setCodeSent] = useState(false)
   const [code, setCode] = useState('')
-  const [phoneVerified, setPhoneVerified] = useState(false)
+  // 서버는 인증 후 30분까지만 유효 — 복원은 25분(버퍼) 이내 인증만 인정, 지났으면 재인증 유도
+  const restoredVerified =
+    (saved.phoneVerified ?? false) &&
+    saved.phoneVerifiedAt != null &&
+    Date.now() - saved.phoneVerifiedAt < 25 * 60_000
+  const [phoneVerified, setPhoneVerified] = useState(restoredVerified)
+  const [phoneVerifiedAt, setPhoneVerifiedAt] = useState<number | null>(
+    restoredVerified ? (saved.phoneVerifiedAt ?? null) : null,
+  )
   const [cooldown, setCooldown] = useState(0) // 재발송 남은 초
-  const [expireLeft, setExpireLeft] = useState(0) // 인증번호 유효 남은 초 (서버 3분과 동일)
+  const [expireLeft, setExpireLeft] = useState(0) // 인증번호 유효 남은 초 (서버 1분과 동일)
   // 안내/오류 메시지 — tone 이 error 면 해당 field 인풋에 빨간 테두리 + 빨간 문구
   const [phoneMsg, setPhoneMsg] = useState<{ text: string; tone: 'info' | 'error'; field: 'phone' | 'code' } | null>(null)
   // 인증은 통과했지만 이미 다른 계정이 쓰는 번호 — 기존 소셜 로그인으로 유도
   const [dupProvider, setDupProvider] = useState<Pick<PhoneVerifyResult, 'provider' | 'providerName'> | null>(null)
-  const [agreeAge, setAgreeAge] = useState(false) // [필수] 만 14세 이상 — 명시적 확인 (서버는 생년월일로 재검증)
-  const [agreeTerms, setAgreeTerms] = useState(false)
-  const [agreePrivacy, setAgreePrivacy] = useState(false)
+  const [agreeAge, setAgreeAge] = useState(saved.agreeAge ?? false) // [필수] 만 14세 이상 — 명시적 확인 (서버는 생년월일로 재검증)
+  const [agreeTerms, setAgreeTerms] = useState(saved.agreeTerms ?? false)
+  const [agreePrivacy, setAgreePrivacy] = useState(saved.agreePrivacy ?? false)
+  // [선택] 마케팅 수신 동의 — 기본 해제. "동의하고 시작하기"가 자동으로 켜지 않는다 (명시적 체크만 유효)
+  const [agreeMarketing, setAgreeMarketing] = useState(saved.agreeMarketing ?? false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false) // 만 14세 미만 차단됨
@@ -86,8 +138,23 @@ export default function SignupInfoPage() {
    * 애니메이션과 함께 "위에서" 나타난다 (이전 단계는 아래로 쌓임).
    * 1 이름 → 2 생년월일 → 3 휴대폰 인증 → 4 약관 동의. 뒤로는 안 접는다(수정 자유).
    */
-  const [revealed, setRevealed] = useState(1)
+  const [revealed, setRevealed] = useState(saved.revealed ?? 1)
   const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
+
+  // 작성 내용 실시간 보존 — 정책 보기 등으로 떠났다 돌아와도 이어서 작성
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        SIGNUP_FORM_KEY,
+        JSON.stringify({
+          name, birthY, birthM, birthD, phone, phoneVerified, phoneVerifiedAt,
+          agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed,
+        } satisfies SavedSignupForm),
+      )
+    } catch {
+      /* noop */
+    }
+  }, [name, birthY, birthM, birthD, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed])
 
   // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
   useEffect(() => {
@@ -159,7 +226,7 @@ export default function SignupInfoPage() {
     return () => clearTimeout(t)
   }, [cooldown])
 
-  // 인증번호 유효시간 카운트다운 (3:00 → 0:00)
+  // 인증번호 유효시간 카운트다운 (1:00 → 0:00)
   useEffect(() => {
     if (expireLeft <= 0 || phoneVerified) return
     const t = setTimeout(() => setExpireLeft((s) => s - 1), 1000)
@@ -177,8 +244,8 @@ export default function SignupInfoPage() {
       setCodeSent(true)
       setCode('')
       setCooldown(60)
-      setExpireLeft(180) // 서버 PhoneVerification.EXPIRES_MINUTES(3분)와 동일하게 유지
-      setPhoneMsg({ text: '인증번호를 보냈어요. 3분 안에 입력해주세요.', tone: 'info', field: 'phone' })
+      setExpireLeft(60) // 서버 PhoneVerification.EXPIRES_MINUTES(1분)와 동일하게 유지
+      setPhoneMsg({ text: '인증번호를 보냈어요. 1분 안에 입력해주세요.', tone: 'info', field: 'phone' })
     } catch (e) {
       const errCode = isAxiosError(e) ? e.response?.data?.errorCode : null
       setPhoneMsg({
@@ -207,6 +274,7 @@ export default function SignupInfoPage() {
         return
       }
       setPhoneVerified(true)
+      setPhoneVerifiedAt(Date.now())
     } catch (e) {
       const errCode = isAxiosError(e) ? e.response?.data?.errorCode : null
       setPhoneMsg({
@@ -272,18 +340,33 @@ export default function SignupInfoPage() {
         phoneNumber: phone,
         agreeTerms: true,
         agreePrivacy: true,
+        agreeMarketing, // 선택 — 유저가 직접 체크한 값 그대로 (버튼이 자동으로 켜지 않음)
       })
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
+      clearSavedSignupForm() // 가입 완료 — 보존해둔 작성 내용 폐기
       // 맛보기 미완 신규 가입자는 퍼널(/start)부터 — 완료 유저만 복귀 경로/홈
       navigate(await resolvePostAuthDestination(), { replace: true })
     } catch (e) {
       const errCode = isAxiosError(e) ? e.response?.data?.errorCode : null
       if (errCode === 'U010') {
-        // 만 14세 미만 — 서버가 계정을 이미 파기했으므로 프론트도 세션 정리
+        // 만 14세 미만 — 서버가 계정을 이미 파기했으므로 프론트도 세션·작성 내용 정리
         setBlocked(true)
+        clearSavedSignupForm()
         await logout().catch(() => {})
         clearSession()
+      } else if (errCode === 'U016') {
+        // 인증 유효창(30분) 초과 등 — 인증 상태를 풀고 휴대폰 단계로 되돌린다
+        setConsentOpen(false)
+        setPhoneVerified(false)
+        setPhoneVerifiedAt(null)
+        setCodeSent(false)
+        setCode('')
+        setPhoneMsg({
+          text: '전화번호 인증이 만료됐어요. 인증번호를 다시 받아주세요.',
+          tone: 'error',
+          field: 'phone',
+        })
       } else if (errCode === 'U017') {
         setError('이미 가입된 전화번호예요. 기존 계정으로 로그인해주세요.')
       } else {
@@ -328,6 +411,7 @@ export default function SignupInfoPage() {
       <OnboardingHeader
         onClose={async () => {
           // 프로필 미완성 회원은 홈 이용이 막히므로, 닫기 = 로그아웃 후 랜딩으로
+          clearSavedSignupForm() // 명시적 이탈 — 다른 계정으로 다시 올 수 있으니 작성 내용 폐기
           await logout().catch(() => {})
           clearSession()
           navigate('/', { replace: true })
@@ -492,7 +576,7 @@ export default function SignupInfoPage() {
                 <input
                   type="tel"
                   inputMode="numeric"
-                  pattern="[0-9-]*"
+                  pattern="[0-9\-]*"
                   autoComplete="tel-national"
                   autoFocus
                   placeholder="010-0000-0000"
@@ -604,48 +688,93 @@ export default function SignupInfoPage() {
         </footer>
       )}
 
-      {/* 동의 바텀시트 (토스 패턴) — 배경 폼이 흐려지고 아래에서 올라온다 */}
+      {/* 동의 바텀시트 (토스 패턴) — 배경 폼이 흐려지고 아래에서 올라온다.
+          justify-center 대신 시트에 mx-auto — 화면이 350px 보다 좁아도 양쪽이 잘리지 않고
+          왼쪽 기준 + 가로 스크롤로 열린다 (body 최소폭 동작과 동일) */}
       {consentOpen && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center">
+        <div className="fixed inset-0 z-40 flex items-end overflow-x-auto">
           {/* 흰 딤 — 뒤의 폼을 흐리게. 탭하면 시트를 닫고 폼 수정 가능 */}
           <button
             type="button"
             aria-label="닫기"
             onClick={() => setConsentOpen(false)}
-            className="su-dim absolute inset-0 bg-white/75"
+            className="su-dim fixed inset-0 bg-white/75"
           />
-          <div className="su-sheet relative w-full max-w-[620px] bg-white px-[20px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[8px]">
+          {/* min-w 350 — fixed 요소는 body 의 전역 min-width 를 안 따르므로 직접 건다 (지원 최소 폭 동일) */}
+          <div className="su-sheet relative mx-auto w-full min-w-[350px] max-w-[620px] bg-white px-[20px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[8px]">
             <h2 className="break-keep pt-[16px] text-[22px] font-bold leading-[1.35] text-[#121417]">
               서비스 이용에
               <br />꼭 필요한 동의만 추렸어
             </h2>
 
-            {/* 필수 동의 리스트 — 개별 토글도 되지만 버튼 클릭이 곧 전체 동의 */}
-            <div className="mt-[20px] flex flex-col">
+            {/* 전체 동의 — 필수 3종 + 선택(마케팅)까지 일괄 토글 */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !(requiredAgreed && agreeMarketing)
+                setAgreeAge(next)
+                setAgreeTerms(next)
+                setAgreePrivacy(next)
+                setAgreeMarketing(next)
+              }}
+              className="mt-[20px] flex w-full items-center gap-[10px] border-b border-[#f0f1f3] pb-[14px] pt-[4px] text-left"
+            >
+              <CheckMark on={requiredAgreed && agreeMarketing} />
+              <span
+                className={`text-[16px] font-bold transition-colors duration-150 ${
+                  requiredAgreed && agreeMarketing ? 'text-[#121417]' : 'text-[#a6abb1]'
+                }`}
+              >
+                전체 동의
+              </span>
+            </button>
+
+            {/* 동의 리스트 — 개별 토글 가능. "동의하고 시작하기"는 필수만 자동 간주,
+                선택(마케팅)은 명시적 체크만 유효 (정보통신망법 §50) */}
+            <div className="mt-[6px] flex flex-col">
               {(
                 [
                   // 법적 진술 항목이라 서비스 반말 톤과 별개로 표준 문구(격식체) 사용
-                  { checked: agreeAge, toggle: () => setAgreeAge((v) => !v), label: '만 14세 이상입니다' },
-                  { checked: agreeTerms, toggle: () => setAgreeTerms((v) => !v), label: '이용약관 동의' },
-                  { checked: agreePrivacy, toggle: () => setAgreePrivacy((v) => !v), label: '개인정보 수집·이용 동의' },
+                  { checked: agreeAge, toggle: () => setAgreeAge((v) => !v), label: '만 14세 이상입니다', doc: null, required: true },
+                  { checked: agreeTerms, toggle: () => setAgreeTerms((v) => !v), label: '이용약관 동의', doc: '/policies/terms', required: true },
+                  { checked: agreePrivacy, toggle: () => setAgreePrivacy((v) => !v), label: '개인정보 수집·이용 동의', doc: '/policies/privacy', required: true },
+                  { checked: agreeMarketing, toggle: () => setAgreeMarketing((v) => !v), label: '마케팅 정보 수신 동의', doc: '/policies/marketing', required: false },
                 ] as const
               ).map((item) => (
-                <button
+                <div
                   key={item.label}
-                  type="button"
-                  onClick={item.toggle}
-                  className="flex items-center gap-[10px] py-[10px] text-left"
+                  // 필수 그룹과 선택 그룹 사이 구분선 + 간격
+                  className={`flex items-center ${
+                    !item.required ? 'mt-[10px] border-t border-[#f0f1f3] pt-[10px]' : ''
+                  }`}
                 >
-                  <CheckMark on={item.checked} />
-                  <span
-                    className={`text-[15px] transition-colors duration-150 ${
-                      item.checked ? 'text-[#121417]' : 'text-[#a6abb1]'
-                    }`}
+                  <button
+                    type="button"
+                    onClick={item.toggle}
+                    className="flex min-w-0 flex-1 items-center gap-[10px] py-[10px] text-left"
                   >
-                    <b className="mr-[6px] font-bold">필수</b>
-                    {item.label}
-                  </span>
-                </button>
+                    <CheckMark on={item.checked} />
+                    <span
+                      className={`text-[15px] transition-colors duration-150 ${
+                        item.checked ? 'text-[#121417]' : 'text-[#a6abb1]'
+                      }`}
+                    >
+                      <b className="mr-[6px] font-bold">{item.required ? '필수' : '선택'}</b>
+                      {item.label}
+                    </span>
+                  </button>
+                  {item.doc && (
+                    // 새 탭 — 가입 진행 상태(입력값·시트)를 잃지 않게 현재 탭을 떠나지 않는다
+                    <a
+                      href={item.doc}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 px-[8px] py-[10px] text-[13px] text-[#a6abb1] underline underline-offset-2"
+                    >
+                      보기
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
 

@@ -129,3 +129,12 @@ export const useUserStore = create<UserState>((set, get) => ({
 export const selectIsGuest = (s: UserState) => s.me?.type === 'GUEST'
 export const selectIsMember = (s: UserState) => s.me?.type === 'USER'
 export const selectCredit = (s: UserState) => s.me?.creditBalance ?? null
+
+/**
+ * 프로필까지 마친 정회원 — 랜딩·로그인 리다이렉트 기준.
+ * 프로필 미완성 회원(생년월일·전화번호 없음)은 랜딩·로그인을 자유롭게 볼 수 있고,
+ * 소셜 로그인을 직접 눌렀을 때만 finishLogin 이 /signup/info 로 보낸다 (2026-08-19 확정).
+ */
+export const isCompleteMember = (me: MeResult | null) =>
+  me?.type === 'USER' && !!me.phoneNumber && !!me.birthDate
+export const selectIsCompleteMember = (s: UserState) => isCompleteMember(s.me)
