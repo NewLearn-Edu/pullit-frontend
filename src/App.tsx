@@ -10,6 +10,7 @@ import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnlockProgressPage from './user/pages/unlock/UnlockProgressPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
 import PolicyPage from './user/pages/policy/PolicyPage'
+import EarlybirdEntryPage from './user/pages/earlybird/EarlybirdEntryPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
 import SignupInfoPage from './user/pages/auth/SignupInfoPage'
@@ -21,6 +22,7 @@ import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
+import AccessGate from './AccessGate'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
 const AdminRoutes = lazy(() => import('./admin/routes'))
@@ -32,8 +34,11 @@ const AdminRoutes = lazy(() => import('./admin/routes'))
  */
 export default function App() {
   return (
+    <AccessGate>
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}
+      <Route path="/earlybird" element={<EarlybirdEntryPage />} />
       <Route path="/home" element={<HomePage />} />
       <Route path="/wrong-note" element={<WrongNotePage />} />
       <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
@@ -69,5 +74,6 @@ export default function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AccessGate>
   )
 }

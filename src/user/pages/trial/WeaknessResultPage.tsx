@@ -10,6 +10,7 @@ import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
+import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
@@ -281,6 +282,9 @@ export default function WeaknessResultPage() {
   // 약점 계산 기준 안내 ⓘ 토글
   const [infoOpen, setInfoOpen] = useState(false)
 
+  // 얼리버드 테스트 — "진단 완료"가 가입 유도 대신 사전예약 팝업을 연다
+  const [reserveOpen, setReserveOpen] = useState(false)
+
   // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
   const [stamped, setStamped] = useState(false)
   useEffect(() => {
@@ -376,7 +380,7 @@ export default function WeaknessResultPage() {
   return (
     // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
-      <OnboardingHeader showLogo onClose={() => navigate('/home')} />
+      <OnboardingHeader showLogo onClose={() => navigate(isEarlybird() ? '/earlybird' : '/home')} />
 
       <main
         className={clsx('flex w-full flex-1 flex-col items-center', stamped && markStyles.shake)}
@@ -603,13 +607,74 @@ export default function WeaknessResultPage() {
       <footer className="fixed inset-x-0 bottom-0 flex min-w-[350px] justify-center bg-white px-[40px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[12px] max-md:px-lg">
         <button
           type="button"
-          // 잠금 해제 진행 중이던 세트면 진행 페이지로 복귀 — 방금 채운 칸을 바로 보게 한다
-          onClick={() => navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))}
+          // 얼리버드 테스트 모드 — 가입 유도 대신 사전예약 팝업.
+          // 그 외에는 잠금 해제 진행 중이던 세트면 진행 페이지로 복귀
+          onClick={() =>
+            isEarlybird()
+              ? setReserveOpen(true)
+              : navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+          }
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
           진단 완료
         </button>
       </footer>
+
+      {reserveOpen && <EarlybirdReserveModal onClose={() => setReserveOpen(false)} />}
+    </div>
+  )
+}
+
+/**
+ * 오픈 전 사전신청 팝업 (얼리버드 테스트 전용).
+ * 신청 정보는 구글폼으로 받는다 — 버튼이 폼을 새 탭으로 연다.
+ */
+function EarlybirdReserveModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="earlybird-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-md:items-end max-md:p-0"
+    >
+      <style>{`
+        @keyframes eb-fade { from { opacity: 0 } }
+        @keyframes eb-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }
+        @keyframes eb-rise { from { transform: translateY(100%) } }
+      `}</style>
+      <button
+        type="button"
+        aria-label="닫기"
+        onClick={onClose}
+        className="absolute inset-0 animate-[eb-fade_200ms_ease] bg-black/45"
+      />
+      <div className="relative w-full max-w-[400px] animate-[eb-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] rounded-[20px] bg-white px-[24px] pb-[20px] pt-[28px] max-md:max-w-none max-md:animate-[eb-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-md:rounded-b-none max-md:rounded-t-[24px] max-md:pb-[calc(20px+env(safe-area-inset-bottom))]">
+        <h2 id="earlybird-title" className="break-keep text-center text-[20px] font-bold text-[#121417]">
+          풀잇은 곧 오픈 예정이야
+        </h2>
+        <p className="mt-[10px] break-keep text-center text-[15px] leading-[1.6] text-[#6f686a]">
+          사전 예약하면 약점 문제를 더 많이 풀 수 있게
+          <br />
+          <b className="font-semibold text-[#ff385c]">크레딧을 줄게</b>
+        </p>
+
+        <div className="mt-[20px] flex flex-col gap-[8px]">
+          <button
+            type="button"
+            onClick={openEarlybirdForm}
+            className="h-[54px] w-full rounded-[12px] bg-[#ff385c] text-[16px] font-bold text-white transition-colors hover:bg-[#e6203f]"
+          >
+            사전 신청하기
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-[46px] w-full rounded-[12px] text-[15px] font-medium text-[#80858b] transition-colors hover:bg-[#f7f8f9]"
+          >
+            다음에 할게
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
+import { isEarlybird } from '@/user/services/earlybird'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import SkipHeader from '@/user/components/SkipHeader'
@@ -45,6 +46,11 @@ export default function SignupPromptPage() {
       navigate('/home')
     }
   }
+
+  // 얼리버드 테스트 모드 — 가입 경로 차단 (진단·사전예약만)
+  useEffect(() => {
+    if (isEarlybird()) navigate('/earlybird', { replace: true })
+  }, [navigate])
 
   // 이미 회원인데 가입 유도가 노출되는 상황 방지
   useEffect(() => {

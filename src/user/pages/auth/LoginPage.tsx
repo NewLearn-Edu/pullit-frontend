@@ -8,6 +8,7 @@ import {
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 import { hasCompletedTrial } from '@/user/services/trialGate'
+import { isEarlybird } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
 import { isCompleteMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
@@ -31,6 +32,11 @@ export default function LoginPage() {
 
   // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
   // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
+  // 얼리버드 테스트 모드 — 로그인·가입 경로 차단 (진단·사전예약만)
+  useEffect(() => {
+    if (isEarlybird()) navigate('/earlybird', { replace: true })
+  }, [navigate])
+
   useMe()
   // 세션 보유자(게스트·프로필 완료 회원)는 랜딩과 동일하게 완주 여부로 분기 —
   // 완주면 홈, 미완(최초 유저)이면 퍼널(/start). 웹앱(start_url=/login)의 관문 역할.

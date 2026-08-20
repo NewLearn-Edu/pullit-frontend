@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
+import { isEarlybird } from '@/user/services/earlybird'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import styles from './styles/TrialStartPage.module.scss'
 
@@ -47,7 +48,8 @@ export default function TrialStartPage() {
   return (
     <div className={styles.page}>
       {/* 시안 2824-4756 헤더 — 우측 닫기 X 만 (로고 없음) */}
-      <OnboardingHeader onClose={() => navigate('/')} />
+      {/* 얼리버드 테스터의 X 는 얼리버드 랜딩으로 — 일반 랜딩(/)은 비밀번호 게이트 뒤라 막힌다 */}
+      <OnboardingHeader onClose={() => navigate(isEarlybird() ? '/earlybird' : '/')} />
 
       <main className={styles.main}>
         <h1 className={styles.title}>어떤 과목의 약점을 볼래?</h1>
