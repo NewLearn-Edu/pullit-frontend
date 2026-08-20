@@ -1039,3 +1039,36 @@
   @keyframes polShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
   @media (max-width: 900px) { .pol-fields { grid-template-columns: 1fr; } }
+
+/* ============ 유입 통계 — 방문 상세 팝업 ============ */
+.visit-row { cursor: pointer; }
+.visit-row:hover td { background: var(--color-fill-soft); }
+
+.visit-modal-dim {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.visit-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: 72vh;
+  display: flex; flex-direction: column;
+}
+.visit-modal-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px;
+}
+.visit-modal-body { overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+
+.visit-day-label {
+  margin-bottom: 8px;
+  font-size: 13px; font-weight: 600; color: var(--color-muted);
+}
+.visit-day-label span { margin-left: 6px; color: var(--color-fg); }
+.visit-times { display: flex; flex-wrap: wrap; gap: 8px; }
+.visit-time {
+  padding: 6px 12px; border-radius: 10px;
+  background: var(--color-fill-hover);
+  font-size: 13px; font-weight: 600; color: var(--table-fg);
+}

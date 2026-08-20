@@ -77,15 +77,13 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
     pathname.includes('/review')
   const isMember =
     pathname.includes('/members') || pathname.includes('/credits') || pathname.includes('/policies')
+  const isStats = pathname.includes('/stats')
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
   // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
   const isUpload = pathname.includes('/upload') || pathname.includes('/review')
 
-  const soonMenus = [
-    { name: '통계', ico: <IcoStats /> },
-    { name: '설정', ico: <IcoSettings /> },
-  ]
+  const soonMenus = [{ name: '설정', ico: <IcoSettings /> }]
 
   const navClass = ({ isActive }: { isActive: boolean }) => clsx('nav-item', isActive && 'active')
 
@@ -93,7 +91,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
     <>
       <nav className="rail">
         <button
-          className={clsx('rail-item', !isProblem && !isMember && 'active')}
+          className={clsx('rail-item', !isProblem && !isMember && !isStats && 'active')}
           onClick={() => navigate('/admin')}
         >
           <span className="rico"><IcoHome /></span>
@@ -112,6 +110,13 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
         >
           <span className="rico"><IcoMember /></span>
           <span>회원</span>
+        </button>
+        <button
+          className={clsx('rail-item', isStats && 'active')}
+          onClick={() => navigate('/admin/stats/visits')}
+        >
+          <span className="rico"><IcoStats /></span>
+          <span>통계</span>
         </button>
         {soonMenus.map(({ name, ico }) => (
           <button
@@ -138,11 +143,21 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
           pullit <small>admin</small>
         </div>
 
-        {!isProblem && !isMember && (
+        {!isProblem && !isMember && !isStats && (
           <NavLink to="/admin" end className={navClass}>
             <span className="ico"><IcoDashboard /></span>
             대시보드
           </NavLink>
+        )}
+
+        {isStats && (
+          <>
+            <div className="nav-label">마케팅</div>
+            <NavLink to="/admin/stats/visits" className={navClass}>
+              <span className="ico"><IcoStats /></span>
+              유입 링크
+            </NavLink>
+          </>
         )}
 
         {isMember && (

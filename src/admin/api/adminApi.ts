@@ -449,6 +449,18 @@ export async function fetchVisitStats(): Promise<VisitCampaignStats[]> {
   return data.data
 }
 
+/** 캠페인 1건의 개별 방문 시각 목록 (최신순 · 최대 500) — 상세 팝업 */
+export async function fetchVisitTimes(
+  source: string,
+  medium: string | null,
+  campaign: string | null,
+): Promise<string[]> {
+  const { data } = await adminApi.get<BaseResponse<string[]>>('/api/admin/metrics/visits/detail', {
+    params: { source, medium: medium ?? undefined, campaign: campaign ?? undefined },
+  })
+  return data.data
+}
+
 // ---------------------------------------------------------------------------
 // 정책 (법적 고지문) 관리
 // ---------------------------------------------------------------------------

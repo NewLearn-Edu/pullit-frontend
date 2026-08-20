@@ -12,6 +12,7 @@ import AllMembersPage from './pages/AllMembersPage'
 import PhoneVerificationsPage from './pages/PhoneVerificationsPage'
 import CreditsPage from './pages/CreditsPage'
 import PoliciesPage from './pages/PoliciesPage'
+import VisitStatsPage from './pages/VisitStatsPage'
 import './admin.css'
 
 /**
@@ -55,6 +56,7 @@ export default function AdminRoutes() {
         <Route path="members/verifications" element={<PhoneVerificationsPage />} />
         <Route path="credits" element={<CreditsPage />} />
         <Route path="policies" element={<PoliciesPage />} />
+        <Route path="stats/visits" element={<VisitStatsPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>
