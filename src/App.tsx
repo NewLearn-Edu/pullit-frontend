@@ -19,7 +19,6 @@ import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import TrialStartPage from './user/pages/trial/TrialStartPage'
 import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
-import TrialCompletePage from './user/pages/trial/TrialCompletePage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 
@@ -58,7 +57,6 @@ export default function App() {
       <Route path="/trial" element={<TrialStartPage />} />
       <Route path="/trial/quiz/:subject/:index" element={<TrialQuizPage />} />
       <Route path="/solve/:subject/:index" element={<TrialQuizPage mode="solve" />} />
-      <Route path="/trial/complete" element={<TrialCompletePage />} />
       <Route path="/trial/review/:subject/:index" element={<TrialReviewPage />} />
       <Route path="/weakness" element={<WeaknessResultPage />} />
       <Route

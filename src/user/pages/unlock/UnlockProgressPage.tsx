@@ -52,8 +52,17 @@ export default function UnlockProgressPage() {
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const setsLeft = useTrialProgressStore(selectRemainingSetsToday)
 
-  // 홈을 안 거치고 직행·새로고침해도 서버 진단 기록과 맞춘다 (세션 확보 후)
+  // 세션(게스트·회원) 필요 — 재발급까지 끝났는데 없으면 로그인으로 (다른 세션 페이지와 동일)
   const sessionStatus = useUserStore((s) => s.status)
+  useEffect(() => {
+    if (sessionStatus === 'anonymous')
+      navigate('/login', {
+        replace: true,
+        state: { from: window.location.pathname + window.location.search },
+      })
+  }, [sessionStatus, navigate])
+
+  // 홈을 안 거치고 직행·새로고침해도 서버 진단 기록과 맞춘다 (세션 확보 후)
   useEffect(() => {
     if (sessionStatus === 'ready') hydrateFromServer()
   }, [sessionStatus, hydrateFromServer])

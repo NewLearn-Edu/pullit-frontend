@@ -20,6 +20,7 @@ import {
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
+import { hasCompletedTrial } from '@/user/services/trialGate'
 import { formatShort, GradeMark } from '@/user/pages/trial/WeaknessResultPage'
 import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
 import graphExample from '@/assets/home/graph-example.png'
@@ -63,6 +64,21 @@ export default function HomePage() {
       navigate('/signup/info', { replace: true })
     }
   }, [me, navigate])
+
+  // 홈은 맛보기 완주자 전용 — 미완주면 퍼널(/start)로 (주소 직행·이전 탭 방어).
+  // 판정 불가(네트워크)면 통과 — 홈에서 잘못 쫓아내는 것보다 낫다
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    let alive = true
+    hasCompletedTrial()
+      .then((done) => {
+        if (alive && !done) navigate('/start', { replace: true })
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus, navigate])
 
   // 과목 탭·대분류 칩은 URL 쿼리가 진실원 — 언락 등에서 뒤로가기로 돌아와도 상태가 복원된다
   const [searchParams, setSearchParams] = useSearchParams()
