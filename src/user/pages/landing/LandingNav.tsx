@@ -1,11 +1,16 @@
 import { Link, useLocation } from 'react-router-dom'
 import logoNav from '@/assets/landing/logo-nav.svg'
 import { openEarlybirdForm } from '@/user/services/earlybird'
+import { useMe } from '@/user/hooks/useMe'
 
 export default function LandingNav() {
   // 얼리버드 UI 는 /earlybird 경로에서만 — 플래그가 아니라 URL 로 판정해
   // 일반 랜딩(/)이 얼리버드 모양으로 새지 않는다
   const earlybird = useLocation().pathname === '/earlybird'
+  // 조회 전용(loadMe) — 세션 없는 방문자에게 게스트를 만들지 않는다
+  const { me } = useMe()
+  const displayName = me ? me.name ?? me.nickname ?? '회원' : null
+
   return (
     <nav className="fixed inset-x-0 top-0 z-50 flex min-w-[350px] flex-col items-center justify-center bg-[rgba(15,16,19,0.55)] backdrop-blur-md">
       <div className="w-full max-w-[1600px]">
@@ -24,6 +29,28 @@ export default function LandingNav() {
               >
                 사전 신청하기
               </button>
+            ) : me ? (
+              // 로그인 상태 — 프로필(이니셜 아바타 + 이름) + "문제 풀러 가기"
+              <>
+                <Link
+                  to="/my"
+                  className="flex items-center gap-[8px] rounded-[10px] px-[8px] py-[6px] transition-colors hover:bg-white/10"
+                  aria-label="마이페이지"
+                >
+                  <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-primary text-[14px] font-bold text-white max-md:size-[26px] max-md:text-[12px]">
+                    {displayName!.charAt(0)}
+                  </span>
+                  <span className="max-w-[120px] truncate whitespace-nowrap text-[15px] font-semibold text-white max-md:hidden">
+                    {displayName}
+                  </span>
+                </Link>
+                <Link
+                  to="/home"
+                  className="flex items-center justify-center whitespace-nowrap rounded-[10px] bg-[#e8e9eb] px-[18px] py-[11px] text-[15px] font-semibold text-[#121417] transition-colors hover:bg-white max-md:px-[12px] max-md:py-[9px] max-md:text-[13px]"
+                >
+                  문제 풀러 가기
+                </Link>
+              </>
             ) : (
               <>
                 <Link

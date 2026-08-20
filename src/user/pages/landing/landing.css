@@ -24,21 +24,27 @@
   background: radial-gradient(ellipse 62% 55% at 50% 38%, rgba(150, 30, 48, 0.42), transparent 70%);
 }
 
-/* 워드 스와이퍼 — 줄 높이 변수 + 위아래 페이드 마스크 */
-.landing-swiper-mask {
+/* 워드 스와이퍼 — 줄 높이 변수는 루트에, 마스크는 뷰포트에.
+   프리뷰 줄이 축소·페이드되어 뷰포트 위아래 절반 가까이가 빈 공간이라
+   음수 마진으로 당겨 서브카피와의 체감 간격을 좁힌다 */
+.landing-swiper {
   --row-h: 150px;
+  margin-block: calc(var(--row-h) * -0.5);
+}
+
+.landing-swiper-mask {
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
   mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
 }
 
 @media (max-width: 1280px) {
-  .landing-swiper-mask {
+  .landing-swiper {
     --row-h: 112px;
   }
 }
 
 @media (max-width: 767px) {
-  .landing-swiper-mask {
+  .landing-swiper {
     --row-h: 60px;
   }
 }
