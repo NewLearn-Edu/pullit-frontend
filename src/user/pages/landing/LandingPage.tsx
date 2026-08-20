@@ -3,26 +3,37 @@ import { useNavigate } from 'react-router-dom'
 import { useMe } from '@/user/hooks/useMe'
 import { isCompleteMember } from '@/user/stores/userStore'
 import { hasCompletedTrial } from '@/user/services/trialGate'
+import { reportUtmVisit } from '@/user/services/visitMetrics'
+import { clearEarlybird } from '@/user/services/earlybird'
 import LandingNav from './LandingNav'
 import HeroSection from './HeroSection'
-import MarqueeStrip from './MarqueeStrip'
-import IntroSection from './IntroSection'
-import FeatureSection from './FeatureSection'
-import AnalyticsSection from './AnalyticsSection'
+import RadarSection from './RadarSection'
+import UnitsSection from './UnitsSection'
+import RecommendSection from './RecommendSection'
+import GraphSection from './GraphSection'
 import ReviewsSection from './ReviewsSection'
-import CtaSection from './CtaSection'
 import FaqSection from './FaqSection'
+import CtaSection from './CtaSection'
 import LandingFooter from './LandingFooter'
-import screenshotRecommend from '@/assets/landing/screenshot-recommend.png'
-import screenshotAnalysis from '@/assets/landing/screenshot-analysis.png'
-import screenshotReminder from '@/assets/landing/screenshot-reminder.png'
+import './landing.css'
 
-/** 메인 랜딩 — Figma Landing Pages > Desktop-1920 (2032:4) 기준 */
+/** 메인 랜딩 — Figma ver.2 (2801:5435) 기준 리디자인 (2026-08-20) */
 export default function LandingPage() {
   const navigate = useNavigate()
   // 조회 전용(loadMe) — 세션이 없어도 게스트를 만들지 않는다.
   // 쿠키가 살아있는 재방문자(게스트·회원)는 마케팅 랜딩을 건너뛰고 홈으로.
   const { me } = useMe()
+
+  // UTM 유입 카운트 — 리다이렉트 전에 1회 기록 (마운트 시점의 쿼리로)
+  useEffect(() => {
+    reportUtmVisit()
+  }, [])
+
+  // 일반 랜딩(/)에 도착하면 얼리버드 모드 해제 — /earlybird 로 다시 들어가야만 켜진다.
+  // (얼리버드 진입점은 이 컴포넌트를 /earlybird 경로에서 재사용하므로 경로로 구분)
+  useEffect(() => {
+    if (window.location.pathname === '/') clearEarlybird()
+  }, [])
 
   useEffect(() => {
     // 세션이 있는 재방문자(게스트·프로필 완료 회원)는 맛보기 완주 여부로 분기 —
@@ -54,52 +65,16 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <main className="min-h-dvh bg-black">
+    <main className="min-h-dvh bg-[#131417]">
       <LandingNav />
       <HeroSection />
-      <MarqueeStrip />
-      <IntroSection />
-      <FeatureSection
-        title={
-          <>
-            추천 문제만 풀어
-            <br />
-            약점은 알아서 찾아줄게
-          </>
-        }
-        subtitle="단원 별로 현재 실력을 확인하고 약점을 파악해"
-        image={screenshotRecommend}
-        imageAlt="오늘의 추천 문제 화면"
-      />
-      <FeatureSection
-        imageFirst
-        title={
-          <>
-            어디가 약한지
-            <br />
-            한눈에 보여줄게
-          </>
-        }
-        subtitle="단원별 정답률과 연결된 단원까지 한 눈에 확인할 수 있어"
-        image={screenshotAnalysis}
-        imageAlt="단원별 약점 분석 화면"
-      />
-      <FeatureSection
-        title={
-          <>
-            약점 문제 미루면
-            <br />
-            끝까지 쫓아간다
-          </>
-        }
-        subtitle="오늘 풀 문제를 놓치지 않게 해줄게"
-        image={screenshotReminder}
-        imageAlt="학습 리마인더 알림 화면"
-      />
-      <AnalyticsSection />
+      <RadarSection />
+      <UnitsSection />
+      <RecommendSection />
+      <GraphSection />
       <ReviewsSection />
-      <CtaSection />
       <FaqSection />
+      <CtaSection />
       <LandingFooter />
     </main>
   )

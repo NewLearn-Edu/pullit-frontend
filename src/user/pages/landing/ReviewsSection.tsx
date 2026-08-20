@@ -33,27 +33,37 @@ const REVIEWS = [
   },
 ]
 
+function ReviewCard({ review }: { review: (typeof REVIEWS)[number] }) {
+  return (
+    <article className="flex w-[420px] shrink-0 flex-col gap-[10px] self-stretch rounded-[20px] bg-[#1e2025] px-[28px] py-[28px] max-md:w-[300px] max-md:px-[20px]">
+      <div className="flex items-center justify-between">
+        <span className="text-[16px] font-bold text-white">{review.name}</span>
+        <img src={starRating} alt="별점 5점" className="h-[18px] w-[90px]" />
+      </div>
+      <p className="break-keep pb-[6px] text-[16px] font-semibold text-white">{review.title}</p>
+      <p className="whitespace-pre-line break-keep text-[14px] leading-[1.65] text-[#9aa0a8]">{review.body}</p>
+    </article>
+  )
+}
+
+/** 후기 마퀴 (ver.2) — 다크 카드 스트립이 자동으로 흐른다 (트랙 2벌 무한 루프) */
 export default function ReviewsSection() {
   return (
-    <section className="flex w-full flex-col items-center justify-center gap-[40px] overflow-hidden bg-surface py-[120px] max-xl:py-[80px]">
-      <h2 className="w-full max-w-[1280px] break-keep px-[40px] text-center text-[60px] font-bold text-[#121417] max-xl:text-[40px] max-md:px-lg max-md:text-[32px]">
-        이미 경험한 학생들의 후기
+    <section className="flex w-full flex-col items-center gap-[56px] overflow-hidden py-[140px] max-xl:py-[90px]">
+      <h2 className="break-keep px-[40px] text-center text-[24px] font-medium leading-[1.6] text-[#c8cbd0] max-md:px-lg max-md:text-[17px]">
+        미리 체험해본
+        <br />
+        <span className="text-[44px] font-bold leading-[1.5] text-white max-xl:text-[34px] max-md:text-[24px]">
+          사용자들의 <span className="text-primary">후기</span>를 확인해봐
+        </span>
       </h2>
 
-      <div className="flex w-full gap-[20px] overflow-x-auto px-[24px] pb-[16px] pt-[40px]">
-        {REVIEWS.map((review, i) => (
-          <article
-            key={`${review.name}-${i}`}
-            className="flex w-[460px] shrink-0 flex-col gap-[8px] self-stretch rounded-[20px] border border-white bg-white px-[25px] py-[29px] drop-shadow-[0px_10px_12px_rgba(0,0,0,0.1)] max-xl:w-[320px] max-md:w-[240px]"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[16px] font-bold text-[#121417]">{review.name}</span>
-              <img src={starRating} alt="별점 5점" className="h-[20px] w-[100px]" />
-            </div>
-            <p className="pb-[8px] text-[16px] font-medium text-[#121417]">{review.title}</p>
-            <p className="whitespace-pre-line text-[16px] text-[#80858b]">{review.body}</p>
-          </article>
-        ))}
+      <div className="w-full overflow-hidden">
+        <div className="landing-marquee-track flex w-max gap-[20px] pr-[20px]">
+          {[...REVIEWS, ...REVIEWS].map((review, i) => (
+            <ReviewCard key={`${review.name}-${i}`} review={review} />
+          ))}
+        </div>
       </div>
     </section>
   )

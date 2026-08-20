@@ -98,10 +98,14 @@ function useAnimatedScores(targets: number[], duration = 900): number[] {
 export default function WeaknessRadar({
   units,
   className,
+  dark = false,
 }: {
   units: RadarUnit[]
   className?: string
+  /** 다크 배경용 라벨 색 (랜딩 ver.2 다크 카드) — 웹·폴리곤은 동일, 텍스트만 밝게 */
+  dark?: boolean
 }) {
+  const labelInk = dark ? '#e9ebee' : INK
   const n = Math.max(units.length, 3)
   const cx = 180
   const cy = 168
@@ -212,8 +216,8 @@ export default function WeaknessRadar({
               y={nameY}
               fontSize="14"
               fontWeight="500"
-              fill={INK}
-              opacity={unit.locked ? 0.35 : weak ? 1 : 0.55}
+              fill={labelInk}
+              opacity={unit.locked ? 0.35 : weak ? 1 : dark ? 0.85 : 0.55}
               className={styles.label}
             >
               {nameParts ? (
@@ -247,8 +251,8 @@ export default function WeaknessRadar({
                 y={subY}
                 fontSize={weak ? 16 : 13}
                 fontWeight={weak ? 700 : 500}
-                fill={weak ? RED : INK}
-                opacity={weak ? 1 : 0.55}
+                fill={weak ? RED : labelInk}
+                opacity={weak ? 1 : dark ? 0.85 : 0.55}
                 className={clsx(styles.label, 'tabular-nums')}
               >
                 {shown}점
