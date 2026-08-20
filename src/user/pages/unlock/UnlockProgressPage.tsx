@@ -49,7 +49,14 @@ export default function UnlockProgressPage() {
   const syncDay = useTrialProgressStore((s) => s.syncDay)
   const startUnit = useTrialProgressStore((s) => s.startUnit)
   const buyExtraSet = useTrialProgressStore((s) => s.buyExtraSet)
+  const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const setsLeft = useTrialProgressStore(selectRemainingSetsToday)
+
+  // 홈을 안 거치고 직행·새로고침해도 서버 진단 기록과 맞춘다 (세션 확보 후)
+  const sessionStatus = useUserStore((s) => s.status)
+  useEffect(() => {
+    if (sessionStatus === 'ready') hydrateFromServer()
+  }, [sessionStatus, hydrateFromServer])
 
   const resetTrial = useTrialStore((s) => s.reset)
   const setLastSubject = useTrialStore((s) => s.setLastSubject)

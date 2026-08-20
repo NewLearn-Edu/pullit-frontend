@@ -37,10 +37,16 @@ export default function HomePage() {
   const navigate = useNavigate()
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
   const syncDay = useTrialProgressStore((s) => s.syncDay)
+  const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const setsLeftToday = useTrialProgressStore(selectRemainingSetsToday)
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
   const credit = me?.creditBalance ?? 0
+
+  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 동기화
+  useEffect(() => {
+    if (sessionStatus === 'ready') hydrateFromServer()
+  }, [sessionStatus, hydrateFromServer])
 
   // 홈은 세션(게스트·회원)이 있어야 하는 페이지 — 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {

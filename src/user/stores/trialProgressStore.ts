@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { CurriculumCategory, CurriculumUnit } from '@/user/data/curriculum'
+import { CURRICULUM, type CurriculumCategory, type CurriculumUnit } from '@/user/data/curriculum'
+import { fetchTrialDiagnoses } from '@/user/api/attemptApi'
+import { TRIAL_GROUPS } from '@/user/services/problemSet'
+import { useUserStore } from '@/user/stores/userStore'
 
 /**
  * 맛보기 진단 진행 상태 (2026-08-12 정책)
@@ -68,16 +71,29 @@ export function todayKey(base: Date = new Date()): string {
   return `${y}-${m}-${d}`
 }
 
+/** 약점 판정 기준 — 서버 TrialDiagnosis.WEAK_THRESHOLD 와 동일 */
+const WEAK_THRESHOLD = 70
+
 /**
- * 데모 시드 — 홈 화면이 빈 상태로 보이지 않게 두 유닛만 진단된 것으로 시작한다.
- * 실서비스 연동 시 이 상수와 initial diagnosed 를 통째로 지우면 된다.
+ * 서버 진단 기록의 group_code → 커리큘럼 유닛명.
+ * diagnosed 키는 유닛 표시명('지수·로그')인데 서버 skill_node 는 정식 명칭('지수와 로그')이라
+ * 안정 식별자인 group_code(TRIAL_GROUPS 역방향)로 잇는다.
  */
-const DEMO_DIAGNOSED: Record<string, UnitDiagnosis> = {
-  // 순서 진행 정책과 어긋나지 않게 각 과목 앞 유닛부터 진단된 것으로 시드
-  '지수·로그': { score: 68, weak: true, minutes: 24, correct: 2, date: '2026-08-11' },
-  '지수·로그함수': { score: 25, weak: true, minutes: 21, correct: 1, date: '2026-08-12' },
-  목적: { score: 82, weak: false, minutes: 18, correct: 3, date: '2026-08-11' },
-}
+const UNIT_NAME_BY_GROUP: Record<string, string> = (() => {
+  const nameByNode: Record<string, string> = {}
+  for (const categories of Object.values(CURRICULUM)) {
+    for (const category of categories) {
+      for (const unit of category.units) {
+        if (unit.nodeId) nameByNode[unit.nodeId] = unit.name
+      }
+    }
+  }
+  const byGroup: Record<string, string> = {}
+  for (const [nodeId, groupCode] of Object.entries(TRIAL_GROUPS)) {
+    if (nameByNode[nodeId]) byGroup[groupCode] = nameByNode[nodeId]
+  }
+  return byGroup
+})()
 
 /** 진행 중인 세트 — 결과 화면이 "어느 유닛을 푼 건지" 알아야 진단으로 확정할 수 있다 */
 export interface PendingUnit {
@@ -106,6 +122,8 @@ export interface TrialProgressState {
   finishPendingUnit: (result: Omit<UnitDiagnosis, 'date'>) => void
   /** 크레딧을 써서 오늘 세트를 하나 더 연다 (호출 전에 잔액 확인 필요) */
   buyExtraSet: () => void
+  /** 서버 진단 기록(trial_diagnoses)으로 diagnosed 를 동기화 — 홈 진입 시 호출 */
+  hydrateFromServer: () => Promise<void>
   /** 개발용 초기화 */
   resetProgress: () => void
 }
@@ -113,7 +131,7 @@ export interface TrialProgressState {
 export const useTrialProgressStore = create<TrialProgressState>()(
   persist(
     (set, get) => ({
-      diagnosed: DEMO_DIAGNOSED,
+      diagnosed: {},
       dayKey: todayKey(),
       setsToday: 0,
       extraToday: 0,
@@ -151,13 +169,47 @@ export const useTrialProgressStore = create<TrialProgressState>()(
         set((s) => ({ extraToday: s.extraToday + 1 }))
       },
 
+      /**
+       * 서버 진단 기록으로 동기화 — 서버가 진실원이고, 같은 유닛의 로컬 항목은
+       * 문항별 재열람(items)만 보존한다 (서버엔 문항별 결과가 없다).
+       * 익명·조회 실패면 로컬 그대로 (풀이 직후 flush 지연 등 로컬이 더 최신일 수 있음).
+       */
+      hydrateFromServer: async () => {
+        if (!useUserStore.getState().me) return
+        const [math, english] = await Promise.all([
+          fetchTrialDiagnoses('math').catch(() => null),
+          fetchTrialDiagnoses('english').catch(() => null),
+        ])
+        if (math === null && english === null) return
+        const server: Record<string, UnitDiagnosis> = {}
+        for (const d of [...(math ?? []), ...(english ?? [])]) {
+          const unitName = UNIT_NAME_BY_GROUP[d.groupCode]
+          if (!unitName) continue // 커리큘럼에 없는 그룹 (구버전 데이터 등) — 표시 대상 아님
+          server[unitName] = {
+            score: d.score,
+            weak: d.score < WEAK_THRESHOLD,
+            minutes: d.timeSpentMs ? Math.max(1, Math.round(d.timeSpentMs / 60000)) : 0,
+            correct: d.correctCount,
+            date: d.completedAt.slice(0, 10),
+            items: get().diagnosed[unitName]?.items,
+          }
+        }
+        set((s) => ({ diagnosed: { ...s.diagnosed, ...server } }))
+      },
+
       resetProgress: () =>
         set({ diagnosed: {}, dayKey: todayKey(), setsToday: 0, extraToday: 0, pendingUnit: null }),
     }),
     {
       name: 'pullit_trial_progress',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      // v2: 데모 시드(DEMO_DIAGNOSED) 제거 — 기존 브라우저에 박힌 가짜 진단을 비운다
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<TrialProgressState>
+        if (version < 2) return { ...state, diagnosed: {} }
+        return state
+      },
       partialize: (s) => ({
         diagnosed: s.diagnosed,
         dayKey: s.dayKey,

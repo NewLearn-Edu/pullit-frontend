@@ -35,8 +35,9 @@ const ENGLISH_SERVER_NODES: Record<string, string> = {
  * 목 노드 id → 맛보기 세트 그룹 코드 (trial_problems.group_code = 임포트 파일명 그룹).
  * 수학은 2022 단원 코드(단원·유형 명칭 정책 §1.1), 영어는 유형 파일명 그룹.
  * 어드민이 해당 그룹의 trial-test 파일을 올리면 이 세트가 1순위로 출제된다.
+ * (trialProgressStore 가 서버 진단 기록의 group_code 를 유닛으로 되돌릴 때도 사용)
  */
-const TRIAL_GROUPS: Record<string, string> = {
+export const TRIAL_GROUPS: Record<string, string> = {
   'sn-exp-log-01': '2022_1_1_1', // 지수와 로그
   'sn-exp-log-02': '2022_1_1_2', // 지수함수와 로그함수
   'sn-trig-01': '2022_1_2_1', // 삼각함수
