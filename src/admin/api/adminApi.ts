@@ -432,6 +432,23 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   return data.data
 }
 
+/** UTM 캠페인별 유입 현황 1행 (visit_events 집계 · 최근 방문 순) */
+export interface VisitCampaignStats {
+  utmSource: string
+  utmMedium: string | null
+  utmCampaign: string | null
+  total: number
+  today: number
+  lastVisitAt: string
+}
+
+export async function fetchVisitStats(): Promise<VisitCampaignStats[]> {
+  const { data } = await adminApi.get<BaseResponse<VisitCampaignStats[]>>(
+    '/api/admin/metrics/visits',
+  )
+  return data.data
+}
+
 // ---------------------------------------------------------------------------
 // 정책 (법적 고지문) 관리
 // ---------------------------------------------------------------------------

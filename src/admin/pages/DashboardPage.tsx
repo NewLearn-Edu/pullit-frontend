@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { StatCard } from '../components/StatCard'
-import { fetchDashboardStats, type DailyActivity, type DashboardStats } from '../api/adminApi'
+import {
+  fetchDashboardStats,
+  fetchVisitStats,
+  type DailyActivity,
+  type DashboardStats,
+  type VisitCampaignStats,
+} from '../api/adminApi'
 
 /** 숫자 표시 · 로딩 중엔 — */
 const fmt = (n: number | undefined) => (n == null ? '—' : n.toLocaleString())
@@ -159,11 +165,15 @@ export default function DashboardPage() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [range, setRange] = useState<14 | 30>(14)
+  const [visits, setVisits] = useState<VisitCampaignStats[]>([])
 
   useEffect(() => {
     fetchDashboardStats()
       .then(setStats)
       .catch(() => setStats(null))
+    fetchVisitStats()
+      .then(setVisits)
+      .catch(() => setVisits([]))
   }, [])
 
   const today = new Date()
@@ -263,6 +273,51 @@ export default function DashboardPage() {
           delta="추천 세트 · 새 문제 풀기"
           tone="flat"
         />
+      </div>
+
+      {/* UTM 유입 현황 — 마케팅 링크(?utm_source=...) 캠페인별 방문 수 */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card-head">
+          <div>
+            <div className="card-title">유입 링크 현황</div>
+            <div className="card-sub">
+              www.pullit.co.kr/?utm_source=… 링크별 방문 수 · 같은 브라우저는 24시간 1회 집계
+            </div>
+          </div>
+        </div>
+        {visits.length === 0 ? (
+          <p className="page-sub" style={{ marginTop: 12 }}>
+            아직 유입 기록이 없어요. utm_source 파라미터를 붙인 링크를 배포하면 여기에 집계돼요.
+          </p>
+        ) : (
+          <div className="table-wrap" style={{ marginTop: 8 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>소스</th>
+                  <th>캠페인</th>
+                  <th style={{ width: 100, textAlign: 'right' }}>오늘</th>
+                  <th style={{ width: 100, textAlign: 'right' }}>누적</th>
+                  <th style={{ width: 160 }}>마지막 방문</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visits.map((v) => (
+                  <tr key={`${v.utmSource}:${v.utmMedium ?? ''}:${v.utmCampaign ?? ''}`}>
+                    <td className="strong">
+                      {v.utmSource}
+                      {v.utmMedium ? ` · ${v.utmMedium}` : ''}
+                    </td>
+                    <td>{v.utmCampaign ?? '—'}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{v.today.toLocaleString()}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{v.total.toLocaleString()}</td>
+                    <td className="num">{v.lastVisitAt.slice(0, 16).replace('T', ' ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </section>
   )
