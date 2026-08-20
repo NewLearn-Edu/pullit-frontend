@@ -40,6 +40,8 @@ export default function LandingPage() {
     // 완주 → 홈, 미완 → 퍼널(/start). 미완주 유저가 홈에 가는 일이 없어야 한다 (2026-08-19).
     // 프로필 미완성 회원은 랜딩을 그대로 본다 — 생년월일 입력은 소셜 로그인을
     // 직접 눌렀을 때만 안내 (finishLogin → /signup/info). 판정 불가면 홈 (퍼널 오감금 방지)
+    // 얼리버드 랜딩(/earlybird)은 제외 — 세션이 있어도 사전신청 랜딩을 그대로 보여준다
+    if (window.location.pathname !== '/') return
     if (!me) return
     if (me.type !== 'GUEST' && !isCompleteMember(me)) return
     let alive = true
