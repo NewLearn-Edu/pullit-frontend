@@ -44,8 +44,9 @@
 }
 
 @media (max-width: 767px) {
+  /* 폰트가 뷰포트 비례(clamp 32~64px)라 줄 높이도 같은 비율로 */
   .landing-swiper {
-    --row-h: 60px;
+    --row-h: clamp(44px, 13vw, 88px);
   }
 }
 

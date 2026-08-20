@@ -58,7 +58,7 @@ export default function HeroWordSwiper() {
   return (
     <div
       aria-label={`${PHRASES[step % PHRASES.length]} 15분`}
-      className="landing-swiper relative flex w-full items-center justify-center gap-[0.25em] text-[110px] font-bold leading-none tracking-[-0.03em] max-xl:text-[72px] max-md:text-[32px]"
+      className="landing-swiper relative flex w-full items-center justify-center gap-[0.25em] text-[110px] font-bold leading-none tracking-[-0.03em] max-xl:text-[72px] max-md:text-[clamp(32px,9.5vw,64px)]"
     >
       {/* 폭 측정용 히든 렌더 — 같은 폰트 크기를 상속받아 정확히 잰다 */}
       <div ref={measurerRef} aria-hidden className="invisible absolute left-0 top-0 -z-10">
