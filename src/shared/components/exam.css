@@ -15,6 +15,34 @@
   margin-top: 10px;
 }
 
+/* ── question 블록 조판 (prompt·paragraph·box·table — QuestionBlocksRender) ── */
+
+/* 발문 — 지문과 살짝 띄우고, 첫 블록이면 위 여백 없음 */
+.qb-prompt {
+  margin: 0 0 14px;
+}
+
+.qb-paragraph {
+  margin: 0;
+}
+
+/* 영어 지문 — 승인된 수능 지면 조판 (구 .pv-passage 규칙과 동일).
+   알파벳만 STIX Two Text(Times 계열), 한글은 바탕체 폴백. 양쪽 정렬 + 하이픈 분철 */
+.qb-en {
+  font-family: 'STIX Two Text', 'KoPubWorld Batang', serif;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.qb-paragraph + .qb-paragraph {
+  margin-top: 12px;
+}
+
+/* 박스(주어진 문장·안내문) 안 단락은 박스 패딩이 간격을 담당 */
+.pv-box .qb-paragraph + .qb-paragraph {
+  margin-top: 8px;
+}
+
 /* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보.
    긴 수식은 KaTeX 가 .base 단위로 줄바꿈하는데 줄끼리 붙어 한 덩어리로 보임 →
    간격은 .base 의 세로 마진이 담당.

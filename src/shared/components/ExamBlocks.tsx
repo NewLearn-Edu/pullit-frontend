@@ -429,13 +429,21 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
             // "(i) …인 경우, ~일 때 …" 수능 조판 (쉼표 시작 데이터도 자연 연결)
             const [first, ...rest] = item.blocks ?? []
             const mergeFirst = first?.type === 'paragraph'
+            // 본문이 label 과 같은 번호(①…)로 시작하는 데이터 — 중복 표기를 뗀다
+            // ("① ①(AI 도구의…)" → "① (AI 도구의…)", 영어 오답 분석 실데이터 패턴)
+            const label = item.label?.trim() ?? ''
+            const rawFirst = (first?.text ?? '').trimStart()
+            const firstText =
+              label && rawFirst.startsWith(label)
+                ? rawFirst.slice(label.length).trimStart()
+                : rawFirst
             return (
               <div key={j} className="xb-case">
                 <p className="xb-p">
                   <span className="xb-case-label">
                     <KatexText wrap text={item.label} />
                   </span>
-                  {mergeFirst && <KatexText wrap text={first.text ?? ''} />}
+                  {mergeFirst && <KatexText wrap text={firstText} />}
                 </p>
                 {(mergeFirst ? rest : item.blocks ?? []).map((c, k) => (
                   <div key={k} className="xb-case-body">

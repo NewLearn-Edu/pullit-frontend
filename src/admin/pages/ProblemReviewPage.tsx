@@ -7,6 +7,7 @@ import {
   MathProblemRender,
 } from '@/shared/components/ExamRender'
 import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { useToast } from '../components/toast'
 import {
   clearReviewQueue,
@@ -205,10 +206,6 @@ function ReviewPreview({
   const { problem, subject } = entry
   const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
   const ExplainRender = subject === 'english' ? EnglishExplainRender : MathExplainRender
-  const questionText =
-    typeof problem.question === 'string'
-      ? problem.question
-      : JSON.stringify(problem.question ?? '', null, 2)
 
   return (
     <div className={clsx('upl-preview', device)}>
@@ -219,8 +216,11 @@ function ReviewPreview({
         <div className="pv-device-inner">
           <div className={clsx('pv-body', subject === 'english' && 'en')}>
             <div className="pv-question">
-              <ProblemRender text={questionText} />
-              {problem.score != null ? <> [{problem.score}점]</> : null}
+              <QuestionRender
+                question={problem.question}
+                subject={subject}
+                scoreBadge={problem.score != null ? <>[{problem.score}점]</> : undefined}
+              />
             </div>
             {(problem.choices?.length ?? 0) > 0 && (
               <div className="pv-choices">

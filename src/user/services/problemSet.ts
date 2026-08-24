@@ -9,7 +9,6 @@ import {
   getProblemsBySkillNode,
   type Problem,
 } from '@/user/data/mockProblems'
-import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import type { Subject } from '@/user/stores/trialStore'
 
 /**
@@ -25,16 +24,10 @@ import type { Subject } from '@/user/stores/trialStore'
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
 
-/** 목 노드 id → 서버 skill_node 조회 키 (영어 유형 — 문제 생성 정책 §4.2 명칭) */
-const ENGLISH_SERVER_NODES: Record<string, string> = {
-  'en-topic': '주제', // 맛보기 고정 영역 (맛보기 테스트 정책 §2.2)
-  'en-blank': '빈칸 추론',
-}
-
 /**
- * 목 노드 id → 맛보기 세트 그룹 코드 (trial_problems.group_code = unit_code).
- * 문제 생성 정책 §4 코드 체계 — {과목}_{교육과정}_{대단원}_{중단원}_{소단원}.
- * 어드민이 해당 그룹의 trial-test 파일을 올리면 이 세트가 1순위로 출제된다.
+ * 목 노드 id → unit_code (문제 생성 정책 §4 코드 체계).
+ * 맛보기 세트(trial_problems.group_code)와 문제 은행 조회(GET /api/problems?unitCode=)가
+ * 같은 코드를 쓴다 — unit_code 가 단원 정보의 단일 진실원.
  * (trialProgressStore 가 서버 진단 기록의 group_code 를 유닛으로 되돌릴 때도 사용)
  */
 export const TRIAL_GROUPS: Record<string, string> = {
@@ -61,12 +54,6 @@ const MATH_TIME_BY_POINTS: Record<number, [number, number]> = {
   4: [180, 540],
 }
 const ENGLISH_TIME: [number, number] = [90, 270]
-
-/** 목 노드 id → 서버 skill_node 정식 명칭. 매핑이 없으면 서버 조회를 건너뛴다 */
-function serverSkillNodeOf(subject: Subject, nodeId: string): string | null {
-  if (subject === 'english') return ENGLISH_SERVER_NODES[nodeId] ?? null
-  return MOCK_SKILL_NODES.find((n) => n.id === nodeId)?.name ?? null
-}
 
 /**
  * 서버 문항 → 프론트 Problem.
@@ -146,11 +133,10 @@ export async function loadQuizProblems(subject: Subject, nodeId: string): Promis
       }
     }
 
-    // 2순위: 문제 은행 (skill_node 오름차순 상위 3개)
-    const skillNode = serverSkillNodeOf(subject, nodeId)
-    if (skillNode) {
+    // 2순위: 문제 은행 — 같은 unit_code 로 조회 (코드 오름차순 상위 3개)
+    if (trialGroup) {
       try {
-        const items = await fetchProblemSet(subject, skillNode, SET_SIZE)
+        const items = await fetchProblemSet(subject, trialGroup, SET_SIZE)
         // 세트가 성립할 만큼 문항이 있어야 서버를 채택 — 부족하면 목으로
         if (items.length >= SET_SIZE) {
           const mapped = items

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import {
   EnglishExplainRender,
   EnglishProblemRender,
@@ -474,9 +475,13 @@ export default function ProblemListPage() {
                 >
                   <div className="pv-device-inner">
                   <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
-                    {/* 수능 지면 순서: 발문(지문 통합) [N점] → 단어 주석 → 선택지 */}
+                    {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
                     <div className="pv-question">
-                      <ProblemRender text={detail.question} /> [{detail.score}점]
+                      <QuestionRender
+                        question={detail.question}
+                        subject={detail.subject}
+                        scoreBadge={<>[{detail.score}점]</>}
+                      />
                     </div>
                     {detail.glossary.length > 0 && (
                       <div className="pv-glossary">

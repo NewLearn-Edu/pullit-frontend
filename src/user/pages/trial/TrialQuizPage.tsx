@@ -6,6 +6,7 @@ import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/component
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { MathProblemRender } from '@/shared/components/ExamRender'
+import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
@@ -498,8 +499,13 @@ function ProblemBody({ problem }: { problem: Problem }) {
   return (
     <div className={styles.problemBody}>
       <div>
-        <MathProblemRender text={problem.bodyText} />
-        {!hasConditions && !hasQuestion && pointsBadge}
+        {/* 신규 규격 문항은 bodyText 가 question 블록 직렬화 — 블록 렌더러가 판별해 조판.
+            배점은 발문 끝 인라인 (수능 지면 규칙) */}
+        <QuestionRender
+          question={problem.bodyText}
+          subject={problem.subject}
+          scoreBadge={!hasConditions && !hasQuestion ? pointsBadge : undefined}
+        />
       </div>
       {hasConditions && (
         <div className={styles.conditionsBox}>

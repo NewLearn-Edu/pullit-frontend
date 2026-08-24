@@ -37,14 +37,14 @@ export interface ProblemSetItem {
   glossary: GlossaryEntry[]
 }
 
-/** 유닛(skill_node) 진단 세트 조회 — ACTIVE 문항 id 오름차순 상위 size개 */
+/** 유닛(unit_code) 진단 세트 조회 — ACTIVE 문항 코드 오름차순 상위 size개 */
 export async function fetchProblemSet(
   subject: 'math' | 'english',
-  skillNode: string,
+  unitCode: string,
   size = 3,
 ): Promise<ProblemSetItem[]> {
   const { data } = await api.get<BaseResponse<ProblemSetItem[]>>('/api/problems', {
-    params: { subject: subject.toUpperCase(), skillNode, size },
+    params: { subject: subject.toUpperCase(), unitCode, size },
   })
   return data.data
 }

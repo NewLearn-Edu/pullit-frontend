@@ -542,6 +542,13 @@
   }
   /* 좁은 폭 + 양쪽 정렬에서 단어 간격이 벌어지는 것 방지 — 하이픈 분철 (lang="en" 필요) */
   .pv-body.en .pv-passage { hyphens: auto; }
+  /* 영어 보기는 수능 지면처럼 무조건 한 줄에 하나씩 — 짧은 보기(한글 문장 등)가
+     가로로 흘러 2~3개씩 붙는 것 방지 (수학의 가로 나열은 유지) */
+  .pv-body.en .pv-choices {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
   /* 영어 보기 원기호 미세 하향 — 원문자(한글 폰트 글리프)와 STIX 영문 기준선 메트릭 차 보정 */
   .pv-body.en .choice-num { position: relative; top: 2px; }
 

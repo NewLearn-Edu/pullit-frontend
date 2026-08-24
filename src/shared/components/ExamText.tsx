@@ -33,11 +33,21 @@ function breakBeforeChoiceMarkers(text: string): string {
 export function ExamText({
   text,
   boxClassName = 'pv-box',
+  keepChoiceMarkersInline = false,
 }: {
   text: string
   boxClassName?: string
+  /**
+   * 원기호(①…⑮) 앞 강제 줄바꿈 보정을 끈다 — 신규 규격 question 블록용.
+   * 문장 삽입·무관한 문장 지문의 ①~⑤ 는 위치 마커라 본문 흐름에 남아야 한다
+   * (강제 줄바꿈은 보기가 지문에 붙어 오던 구 데이터 교정 규칙).
+   */
+  keepChoiceMarkersInline?: boolean
 }) {
-  const segments = breakBeforeChoiceMarkers(normalizeLiteralNewlines(String(text ?? ''))).split('`')
+  const normalized = normalizeLiteralNewlines(String(text ?? ''))
+  const segments = (
+    keepChoiceMarkersInline ? normalized : breakBeforeChoiceMarkers(normalized)
+  ).split('`')
   // 박스 경계의 개행 흡수 — 데이터의 \n\n 이 빈 줄로 렌더되어 박스 마진과 겹치면
   // 박스 위아래에 큰 공백이 생긴다 (간격은 박스 CSS 마진이 담당)
   const cleaned = segments.map((segment, i) => {

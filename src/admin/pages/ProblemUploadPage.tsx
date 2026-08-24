@@ -10,6 +10,7 @@ import {
 } from '@/shared/components/ExamRender'
 import { MathExplainKatexRender } from '@/shared/components/ExamRender'
 import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
+import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import JsonView from '../components/JsonView'
@@ -31,12 +32,6 @@ const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어
 
 /** 업로드 파일 1행 — 검수 큐와 같은 스키마를 쓴다 (문제 생성 정책 2026-08 규격) */
 type UploadItem = ReviewProblem
-
-/** question — 블록 배열(타입 미확정)은 원문 JSON 으로, 문자열은 그대로 렌더 */
-function questionText(question: ReviewProblem['question']): string {
-  if (question == null) return ''
-  return typeof question === 'string' ? question : JSON.stringify(question, null, 2)
-}
 
 export default function ProblemUploadPage() {
   const { subject: subjectParam = '' } = useParams()
@@ -441,7 +436,7 @@ export default function ProblemUploadPage() {
                       </div>
                       <div className={clsx('pv-body', subject === 'english' && 'en')}>
                         <div className="pv-question">
-                          <ProblemRender text={questionText(dupItem.question)} />
+                          <QuestionRender question={dupItem.question} subject={subject} />
                         </div>
                         {(dupItem.choices?.length ?? 0) > 0 && (
                           <div className="pv-choices">
@@ -549,8 +544,11 @@ export default function ProblemUploadPage() {
                 <div className="pv-device-inner">
                   <div className={clsx('pv-body', subject === 'english' && 'en')}>
                     <div className="pv-question">
-                      <ProblemRender text={questionText(item?.question)} />
-                      {item?.score != null && <> [{item.score}점]</>}
+                      <QuestionRender
+                        question={item?.question}
+                        subject={subject}
+                        scoreBadge={item?.score != null ? <>[{item.score}점]</> : undefined}
+                      />
                     </div>
                     {(item?.glossary?.length ?? 0) > 0 && (
                       <div className="pv-glossary">
