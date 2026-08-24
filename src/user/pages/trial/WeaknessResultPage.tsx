@@ -11,6 +11,7 @@ import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
+import coinRewardSvg from '@/assets/coin-reward.svg'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
@@ -284,6 +285,25 @@ export default function WeaknessResultPage() {
 
   // 얼리버드 테스트 — "진단 완료"가 가입 유도 대신 사전예약 팝업을 연다
   const [reserveOpen, setReserveOpen] = useState(false)
+
+  // 첫 진단 완료 보상(+5크레딧) 축하 — "진단 완료" 버튼을 눌렀을 때 1회만 끼어든다.
+  // 실제 지급은 서버가 진단 박제 트랜잭션에서 처리(멱등) — 여기는 안내 UI 만 담당.
+  const diagnosedCount = useTrialProgressStore((s) => Object.keys(s.diagnosed).length)
+  const [creditOpen, setCreditOpen] = useState(false)
+  const shouldCelebrateFirstCredit = () =>
+    !isEarlybird() && // 얼리버드는 가입·크레딧 흐름이 없다
+    diagnosedCount === 1 && // 방금 확정된 진단이 유저의 첫 진단일 때만
+    !localStorage.getItem(FIRST_CREDIT_SEEN_KEY)
+  // 시트의 "확인" — 1회 플래그를 박고 원래 가려던 곳(홈/가입)으로 이어간다
+  const confirmCreditSheet = () => {
+    try {
+      localStorage.setItem(FIRST_CREDIT_SEEN_KEY, '1')
+    } catch {
+      /* 저장 불가 환경 — 세션 내 상태로만 1회 처리 */
+    }
+    setCreditOpen(false)
+    navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+  }
 
   // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
   const [stamped, setStamped] = useState(false)
@@ -608,12 +628,13 @@ export default function WeaknessResultPage() {
         <button
           type="button"
           // 얼리버드 테스트 모드 — 가입 유도 대신 사전예약 팝업.
-          // 그 외에는 잠금 해제 진행 중이던 세트면 진행 페이지로 복귀
-          onClick={() =>
-            isEarlybird()
-              ? setReserveOpen(true)
-              : navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
-          }
+          // 첫 진단이면 보상 시트가 먼저 끼어들고, 그 외에는 잠금 해제 진행 중이던
+          // 세트면 진행 페이지로 복귀
+          onClick={() => {
+            if (isEarlybird()) return setReserveOpen(true)
+            if (shouldCelebrateFirstCredit()) return setCreditOpen(true)
+            navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+          }}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >
           진단 완료
@@ -621,6 +642,75 @@ export default function WeaknessResultPage() {
       </footer>
 
       {reserveOpen && <EarlybirdReserveModal onClose={() => setReserveOpen(false)} />}
+      {creditOpen && <FirstCreditSheet onClose={confirmCreditSheet} />}
+    </div>
+  )
+}
+
+/** 첫 진단 보상 축하 1회 노출 플래그 (localStorage) */
+const FIRST_CREDIT_SEEN_KEY = 'pullit_first_credit_celebrated'
+
+/**
+ * 첫 진단 완료 보상 시트 (Figma 2824-5720 · PI-SHEET-FIRST_CREDIT).
+ * 웹(1281+)은 중앙 팝업, 패드·폰은 바텀시트로 뜬다.
+ * 지급 자체는 서버(진단 박제 트랜잭션 +5, 멱등) — 이 컴포넌트는 축하 안내만.
+ */
+function FirstCreditSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="first-credit-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-xl:items-end max-xl:p-0"
+    >
+      <style>{`
+        @keyframes fc-fade { from { opacity: 0 } }
+        @keyframes fc-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }
+        @keyframes fc-rise { from { transform: translateY(100%) } }
+        @keyframes fc-coin { 0% { transform: scale(0.4); opacity: 0 } 60% { transform: scale(1.12) } 100% { transform: scale(1); opacity: 1 } }
+      `}</style>
+      <div className="absolute inset-0 animate-[fc-fade_200ms_ease] bg-black/45" aria-hidden />
+      <div className="relative flex w-full max-w-[400px] animate-[fc-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] max-xl:max-w-none max-xl:animate-[fc-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-xl:rounded-b-none max-xl:rounded-t-[32px] max-xl:pb-[calc(34px+env(safe-area-inset-bottom))]">
+        {/* 코인 + 콘페티 일러스트 (시안 좌표 근사) */}
+        <div className="relative size-[151px]" aria-hidden>
+          <span className="absolute left-[22px] top-[41px] h-[4px] w-[9px] rotate-[14deg] rounded-[2px] bg-[#ff8e38]" />
+          <span className="absolute left-[37px] top-[20px] h-[13px] w-[6px] -rotate-[28deg] rounded-[4px] bg-[#7f58ff]" />
+          <span className="absolute left-[55px] top-[29px] h-[9px] w-[9px] rotate-[42deg] rounded-[2px] bg-[#a5f086]" />
+          <span className="absolute right-[38px] top-[20px] h-[11px] w-[6px] rotate-[34deg] rounded-[4px] bg-[#58a0ff]" />
+          <span className="absolute right-[21px] top-[49px] h-[4px] w-[10px] rotate-[18deg] rounded-[2px] bg-[#ff9442]" />
+          <span className="absolute left-[16px] top-[74px] h-[6px] w-[10px] rotate-[72deg] rounded-[4px] bg-[#60a5ff]" />
+          <span className="absolute right-[14px] top-[82px] h-[7px] w-[6px] rotate-[110deg] rounded-[4px] bg-[#7f58ff]" />
+          <span className="absolute bottom-[19px] left-1/2 h-[15px] w-[73px] -translate-x-1/2 rounded-full bg-[#160f0e]/10 blur-[10px]" />
+          {/* 센터링(래퍼)과 팝 스케일(이미지)을 분리 — 애니메이션 transform 이 translate 를 덮어쓰지 않게 */}
+          <div className="absolute left-1/2 top-[calc(50%+7.5px)] -translate-x-1/2 -translate-y-1/2">
+            <img
+              src={coinRewardSvg}
+              alt=""
+              className="size-[80px] animate-[fc-coin_500ms_cubic-bezier(0.34,1.56,0.64,1)_120ms_both]"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center gap-[4px] text-[#121417]">
+          <p id="first-credit-title" className="text-[22px] font-semibold leading-[1.4]">
+            첫 진단 완료 선물 도착!
+          </p>
+          <p className="text-[32px] font-bold leading-none">5크레딧</p>
+        </div>
+
+        <div className="flex w-full flex-col items-center gap-[24px]">
+          <p className="text-center text-[16px] font-semibold leading-[1.4] text-[#121417]">
+            다음 단원도 약점 진단해봐
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-[24px] text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
+          >
+            확인
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
