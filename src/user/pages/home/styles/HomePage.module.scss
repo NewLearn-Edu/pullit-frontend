@@ -26,10 +26,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: 96px; // 하단 네비에 가리지 않게 (모바일)
+  // 하단 네비(64px) + 고정 CTA 시트(~80px)에 가리지 않게 (모바일·패드)
+  padding-bottom: calc(160px + env(safe-area-inset-bottom));
 
   @include desktop-up {
-    padding-bottom: $space-xxl;
+    padding-bottom: 120px; // 하단 고정 CTA 버튼 높이 + 여백
   }
 }
 
@@ -408,21 +409,26 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 // 하단 CTA — 다크 시트 (Figma · 상단 라운드 20 의 검은 바가 네비 위로 올라온 형태)
 .solveDock {
-  position: sticky;
-  bottom: calc(64px + env(safe-area-inset-bottom)); // 하단 네비(64px) 위
+  // 모바일·패드: 하단 네비(64px) 바로 위에 밀착된 컴팩트 다크 시트 (Figma 2919-8934)
+  // sticky 는 자연 위치에 따라 네비와 틈이 생겨 fixed 로 고정한다
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(64px + env(safe-area-inset-bottom));
   z-index: 10;
   display: flex;
   justify-content: center;
-  width: 100%;
-  margin-top: auto;
-  padding: 16px $space-lg 20px;
+  padding: 12px $space-lg;
   border-radius: 20px 20px 0 0;
   background: #23272b; // black/800
 
+  // 웹(1281+): 다크 시트 없이 화면 하단에 고정된 단독 버튼
   @include desktop-up {
-    bottom: 0; // 데스크탑은 사이드바 — 하단 네비 없음
-    max-width: 660px;
-    margin: auto auto 0;
+    bottom: 0;
+    padding: 0 $space-lg 28px;
+    border-radius: 0;
+    background: transparent;
+    pointer-events: none; // 투명 영역은 클릭 통과 — 버튼만 상호작용
   }
 }
 
@@ -431,13 +437,19 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include flex-center;
   width: 100%;
   max-width: 620px;
-  height: 56px;
+  height: 52px;
   border-radius: 12px;
   background: #23272b; // black/800
   color: #fff;
   font-size: 16px;
   font-weight: $fw-bold;
   transition: background 150ms ease;
+  pointer-events: auto; // 데스크탑 도크의 클릭 통과 예외
+
+  @include desktop-up {
+    height: 56px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); // 콘텐츠 위에 떠 있는 버튼
+  }
 
   @include hover { background: #3a3f45; }
 
