@@ -428,7 +428,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         <canvas
           ref={canvasRef}
           className={styles.canvas}
-          style={{ cursor: cursorStyle }}
+          // 비활성(모바일 등) — 터치를 아래 본문으로 통과시켜 페이지 스크롤이 살아있게 한다.
+          // touch-action:none 이 남아 있으면 캔버스가 덮은 영역 전체에서 스크롤이 죽는다
+          style={{
+            cursor: cursorStyle,
+            ...(disabled ? { pointerEvents: 'none' as const, touchAction: 'auto' } : {}),
+          }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

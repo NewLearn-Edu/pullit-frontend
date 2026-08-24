@@ -5,7 +5,7 @@ import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
-import { MathProblemRender } from '@/shared/components/ExamRender'
+import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
@@ -22,7 +22,42 @@ type Subject = 'math' | 'english'
 
 const SUBJECT_LABEL: Record<Subject, string> = {
   math: '수학 · 지수와 로그',
-  english: '영어 · 빈칸 추론',
+  english: '영어 · 주제',
+}
+
+/** 90초 → "1분 30초" · 120초 → "2분" — DB 권장시간을 올림 없이 그대로 표기 */
+function formatKoreanDuration(totalSec: number): string {
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  if (m === 0) return `${s}초`
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`
+}
+
+/** 문항별 타이머 시작 시각 저장 키 — 새로고침에도 경과 시간이 이어지게 (sessionStorage) */
+function quizStartKey(mode: QuizMode, subject: string | undefined, idx: number): string {
+  return `pullit_quiz_start:${mode}:${subject}:${idx}`
+}
+
+export function clearQuizStart(mode: QuizMode, subject: string | undefined, idx: number): void {
+  try {
+    sessionStorage.removeItem(quizStartKey(mode, subject, idx))
+  } catch {
+    /* 무시 */
+  }
+}
+
+/** 세트 새로 시작 시 잔여 타이머 스냅샷 일괄 정리 — TrialStartPage 진입에서 호출 */
+export function clearAllQuizStarts(): void {
+  try {
+    const doomed: string[] = []
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith('pullit_quiz_start:')) doomed.push(key)
+    }
+    doomed.forEach((key) => sessionStorage.removeItem(key))
+  } catch {
+    /* 무시 */
+  }
 }
 
 type QuizMode = 'trial' | 'solve'
@@ -104,24 +139,60 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const answerBarRef = useRef<HTMLDivElement>(null)
   const startAt = useRef<number>(Date.now())
 
+  // 진단 중 뒤로가기(브라우저 버튼·엣지 스와이프) 차단 — 팝이 감지되면 즉시 현재
+  // 문항으로 되돌리고(replace) 가드 엔트리를 재적재한다. 이탈은 X 버튼(확인 팝업)으로만.
+  // (가드만 쌓는 방식은 히스토리 밑단의 이전 문항 엔트리로 라우터가 되돌아가 버린다)
+  const currentQuizUrl = useRef('')
+  useEffect(() => {
+    currentQuizUrl.current = `/trial/quiz/${subject}/${idx}`
+  }, [subject, idx])
+  useEffect(() => {
+    if (!isTrial) return
+    window.history.pushState(null, '', window.location.href) // 첫 back 흡수용 가드
+    const onPop = () => {
+      navigate(currentQuizUrl.current, { replace: true }) // 팝된 엔트리를 현재 문항으로 교체
+      window.history.pushState(null, '', currentQuizUrl.current) // 가드 재적재
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [isTrial, navigate])
+
   // 가상 키보드가 열리면 하단 답안 바를 키보드 위로 올린다.
   // iOS·iPadOS(웹앱 standalone 포함)와 안드로이드 크롬 모두 키보드가 열려도
   // position:fixed 는 레이아웃 뷰포트 기준이라 바가 키보드 뒤에 가려진다.
+  //
+  // ★ 입력창 포커스 중에만 보정한다 — iOS 는 스크롤로 주소창이 접히고 펴질 때도
+  // visualViewport 가 계속 바뀌는데, 그때 보정이 돌면 바가 위로 날아간다
+  // (모웹 스크롤 시 바텀 점프 버그, 2026-08-24)
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
+    const keyboardOpen = () => {
+      const el = document.activeElement
+      return el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
+    }
     const onViewportChange = () => {
       const bar = answerBarRef.current
       if (!bar) return
+      if (!keyboardOpen()) {
+        // 키보드 상황이 아니면 항상 제자리 — 주소창 접힘·러버밴드 스크롤 무시
+        bar.style.transform = 'translate(-50%, 0)'
+        return
+      }
       const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
       // 가로 센터링(translateX -50%)을 유지한 채 세로만 보정
       bar.style.transform = `translate(-50%, -${overlap}px)`
     }
     vv.addEventListener('resize', onViewportChange)
     vv.addEventListener('scroll', onViewportChange)
+    // 포커스가 풀리는 즉시 원위치 — 키보드 닫힘 애니메이션 중 잔여 보정 방지
+    window.addEventListener('focusin', onViewportChange)
+    window.addEventListener('focusout', onViewportChange)
     return () => {
       vv.removeEventListener('resize', onViewportChange)
       vv.removeEventListener('scroll', onViewportChange)
+      window.removeEventListener('focusin', onViewportChange)
+      window.removeEventListener('focusout', onViewportChange)
     }
   }, [])
 
@@ -129,10 +200,24 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     setSelected(null)
     setInputValue('')
     setSkipConfirmOpen(false)
-    setElapsedSec(0)
     canvasRef.current?.clear()
-    startAt.current = Date.now()
-  }, [idx, subject])
+    // 새로고침 내성 — 문항별 시작 시각을 sessionStorage 에 박아 경과 시간이 이어진다.
+    // 삭제는 명시적 진행 지점(다음 문항 이동·이탈·완료)에서만 — 언마운트 cleanup 으로
+    // 지우면 StrictMode 이중 마운트가 복원 직후 키를 지워 새로고침 복원이 깨진다
+    const key = quizStartKey(mode, subject, idx)
+    const saved = Number(sessionStorage.getItem(key))
+    if (saved > 0 && saved <= Date.now()) {
+      startAt.current = saved
+    } else {
+      startAt.current = Date.now()
+      try {
+        sessionStorage.setItem(key, String(startAt.current))
+      } catch {
+        /* 저장 불가 환경 — 메모리 시각으로만 진행 */
+      }
+    }
+    setElapsedSec(Math.max(0, Math.floor((Date.now() - startAt.current) / 1000)))
+  }, [idx, subject, mode])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -261,19 +346,23 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     goNext()
   }
 
-  // 맛보기: 마지막 문제(채점하기) → 결과 페이지 · 일반 풀이: 완료 → 홈 (결과 화면 후속)
+  // 맛보기: 마지막 문제(채점하기) → 결과 페이지 · 일반 풀이: 완료 → 홈 (결과 화면 후속).
+  // 진단(trial)은 문항 이동을 replace 로 — 이전 문항이 history 에 안 남아 뒤로가기로
+  // 되돌아가 다시 풀 수 없다 (앞 문제 수정 불가, 2026-08-24 확정)
   const goNext = () => {
+    clearQuizStart(mode, subject, idx) // 이 문항의 타이머 스냅샷 소진 — 재진입 시 새로 잰다
     const nextIdx = idx + 1
     if (nextIdx < problems.length) {
-      navigate(`${isTrial ? '/trial/quiz' : '/solve'}/${subject}/${nextIdx}`)
+      navigate(`${isTrial ? '/trial/quiz' : '/solve'}/${subject}/${nextIdx}`, { replace: isTrial })
       return
     }
-    navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'))
+    navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'), { replace: isTrial })
   }
 
   const handleClose = () => {
     // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
     if (window.confirm('나가면 풀이가 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
+      clearQuizStart(mode, subject, idx)
       navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
     }
   }
@@ -340,8 +429,9 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
                 <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>
               </div>
               <div className={styles.problemMeta}>
+                {/* 제한시간은 표기하지 않는다 — 타이머 색 단계(경고·초과)로만 인지 */}
                 <div className={styles.problemTime}>
-                  권장 {Math.max(1, Math.round(problem.tRecSec / 60))}분 · 제한 {Math.max(1, Math.round(problem.tMaxSec / 60))}분
+                  권장 {formatKoreanDuration(problem.tRecSec)}
                 </div>
                 <TimerBadge
                   elapsedSec={elapsedSec}
@@ -352,31 +442,35 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
               </div>
             </div>
 
-            <div className={styles.canvasArea}>
-              <div className={styles.bodyWrap}>
-                <ProblemBody problem={problem} />
-              </div>
+            {/* 어드민 미리보기와 100% 동일 조판 — 같은 공용 클래스(pv-body 계열, exam.css) 사용 */}
+            <div className={clsx(styles.canvasArea, 'exam-paper')}>
+              <div className={clsx('pv-body', subject === 'english' && 'en')}>
+                <div className={styles.bodyWrap}>
+                  <ProblemBody problem={problem} />
 
-              {/* 보기 — 시험지처럼 읽기 전용 (선택은 하단 고정 바에서 · 주관식은 보기 없음) */}
-              {!isShortAnswer && (
-                <div className={styles.choicesWrap}>
-                  <div className={styles.choicesGrid}>
-                    {problem.choices.map((choice, i) => {
-                      const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
-                      return (
-                        <span key={i} className={styles.choiceItem}>
-                          <span className={styles.choiceNum}>
-                            {String.fromCodePoint(0x2460 + i)}
+                  {/* 보기 — 시험지처럼 읽기 전용 (선택은 하단 고정 바에서 · 주관식은 보기 없음).
+                      bodyWrap 안에 두어 본문과 같은 좌우 패딩을 공유한다 */}
+                  {!isShortAnswer && (
+                    <div className="pv-choices">
+                      {problem.choices.map((choice, i) => {
+                        const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
+                        const ChoiceRender =
+                          subject === 'english' ? EnglishProblemRender : MathProblemRender
+                        return (
+                          <span key={i} className="choice">
+                            <span className="choice-num">
+                              {String.fromCodePoint(0x2460 + i)}
+                            </span>
+                            <span>
+                              <ChoiceRender text={answerText} />
+                            </span>
                           </span>
-                          <span className={styles.choiceValue}>
-                            <MathProblemRender text={answerText} />
-                          </span>
-                        </span>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className={styles.spacer} />
 
@@ -490,23 +584,20 @@ function PenToggleIcon() {
 }
 
 function ProblemBody({ problem }: { problem: Problem }) {
-  const pointsBadge = (
-    <span className={styles.pointsBadge}>[{problem.points}점]</span>
-  )
+  // 어드민 미리보기와 동일 — 배점은 스타일 없는 [N점] 그대로 발문 끝에
+  const pointsBadge = <>[{problem.points}점]</>
   const hasConditions = !!problem.conditions && problem.conditions.length > 0
   const hasQuestion = !!problem.question
+  const glossary = problem.glossary ?? []
 
   return (
-    <div className={styles.problemBody}>
-      <div>
-        {/* 신규 규격 문항은 bodyText 가 question 블록 직렬화 — 블록 렌더러가 판별해 조판.
-            배점은 발문 끝 인라인 (수능 지면 규칙) */}
-        <QuestionRender
-          question={problem.bodyText}
-          subject={problem.subject}
-          scoreBadge={!hasConditions && !hasQuestion ? pointsBadge : undefined}
-        />
-      </div>
+    // 수능 지면 순서: 발문 [N점] → 지문(통합 question) → 단어 주석 (어드민 pv-body 와 동일 구조)
+    <div className="pv-question">
+      <QuestionRender
+        question={problem.bodyText}
+        subject={problem.subject}
+        scoreBadge={!hasConditions && !hasQuestion ? pointsBadge : undefined}
+      />
       {hasConditions && (
         <div className={styles.conditionsBox}>
           {problem.conditions!.map((c, i) => (
@@ -518,8 +609,14 @@ function ProblemBody({ problem }: { problem: Problem }) {
       )}
       {hasQuestion && (
         <div>
-          <MathProblemRender text={problem.question!} />
-          {pointsBadge}
+          <MathProblemRender text={problem.question!} /> {pointsBadge}
+        </div>
+      )}
+      {glossary.length > 0 && (
+        <div className="pv-glossary">
+          {glossary
+            .map((g, i) => `${'*'.repeat(i + 1)} ${g.term}: ${g.meaning}`)
+            .join('   ')}
         </div>
       )}
     </div>

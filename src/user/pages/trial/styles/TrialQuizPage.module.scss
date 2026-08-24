@@ -147,6 +147,12 @@
   gap: $space-sm;
 }
 
+// 영어 보기 — 수능 지면처럼 무조건 한 줄에 하나씩 (긴 문장 보기가 가로로 흘러 잘리는 것 방지)
+.choicesGridEn {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
 // 본문 보기 — 시험지처럼 읽기 전용 (선택은 하단 answerBar) · 캔버스 아래라 필기 가능
 .choiceItem {
   display: inline-flex;
@@ -155,6 +161,13 @@
   gap: 8px;
   min-height: 44px;
   padding: $space-md $space-sm;
+}
+
+// 영어 보기 항목 — 좌측 정렬 + 여러 줄 허용
+.choiceItemEn {
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 4px $space-sm;
 }
 
 // 리뷰 화면용 칩 — 정답/오답 스트로크 표시 (TrialReviewPage)
@@ -267,15 +280,16 @@
   width: 100%;
 }
 
-// 번호 선택 박스 — 1~5 일반 숫자 · 액션 버튼과 같은 radius
+// 번호 선택 박스 — 1~5 일반 숫자 · 액션 버튼과 같은 radius.
+// 바가 뷰포트 고정(fixed)이라 vw 기준 clamp — 350px=40px/15px ~ 500px=48px/18px 선형
 .answerNum {
   @include button-reset;
   @include flex-center;
-  height: 48px;
+  height: clamp(40px, calc(21.333px + 5.3333vw), 48px);
   border-radius: 12px;
   border: 1.5px solid $color-line;
   background: $color-canvas;
-  font-size: 18px;
+  font-size: clamp(15px, calc(8px + 2vw), 18px);
   font-weight: $fw-semibold;
   font-variant-numeric: tabular-nums;
   color: $color-foreground;
@@ -288,16 +302,17 @@
   color: #fff;
 }
 
-// 액션 슬롯 — 선택 전 모르겠어요 / 선택 후 다음·채점하기 (같은 높이라 점프 없음)
+// 액션 슬롯 — 선택 전 모르겠어요 / 선택 후 다음·채점하기 (같은 높이라 점프 없음).
+// 번호 박스와 같은 vw 기준 clamp — 350px=46px ~ 500px=52px 선형
 .nextButton {
   @include button-reset;
   @include flex-center;
   width: 100%;
-  height: 52px;
+  height: clamp(46px, calc(32px + 4vw), 52px);
   border-radius: 12px;
   background: #23272b;
   color: #fff;
-  font-size: $fs-body;
+  font-size: clamp(14px, calc(9.333px + 1.3333vw), 16px);
   font-weight: $fw-bold;
   transition: opacity 150ms ease;
 
@@ -308,12 +323,12 @@
   @include button-reset;
   @include flex-center;
   width: 100%;
-  height: 52px;
+  height: clamp(46px, calc(32px + 4vw), 52px);
   border: 1px dashed $color-line;
   border-radius: 12px;
   background: $color-canvas;
   color: $color-muted;
-  font-size: $fs-body-sm;
+  font-size: clamp(13px, calc(10.667px + 0.6667vw), 14px);
   font-weight: $fw-semibold;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 

@@ -193,6 +193,23 @@ export default function WeaknessResultPage() {
     flushAttemptQueue()
   }, [])
 
+  // 모바일 상단(시계·배터리 상태바 영역)을 페이지 그라데이션 톤으로.
+  // iOS 는 이 영역을 theme-color 가 아니라 html 배경색으로 칠한다 — 랜딩(검정)과 동일 패턴.
+  // 안드로이드 크롬은 theme-color 를 쓰므로 둘 다 지정, 떠날 때 원복
+  useEffect(() => {
+    // body 가 전역 흰 배경(bg-canvas)을 갖고 있어 html 만 칠하면 iOS 가 흰색을 샘플링한다
+    document.documentElement.style.background = '#fff1f2'
+    document.body.style.background = '#fff1f2'
+    const meta = document.querySelector('meta[name="theme-color"]')
+    const prev = meta?.getAttribute('content') ?? null
+    meta?.setAttribute('content', '#fff1f2')
+    return () => {
+      document.documentElement.style.background = ''
+      document.body.style.background = ''
+      if (prev) meta?.setAttribute('content', prev)
+    }
+  }, [])
+
   useEffect(() => {
     if (!hydrated) return
     if (!hasCompletedSession()) {

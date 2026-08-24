@@ -72,7 +72,10 @@ export const useTrialStore = create<TrialState>()(
       addResult: (subject, result) =>
         set((state) => {
           const key = subject === 'math' ? 'mathResults' : 'englishResults'
-          return { [key]: [...state[key], result] } as Partial<TrialState>
+          // 같은 문제 재제출(뒤로가기로 돌아가 다시 풀기)은 기존 결과를 교체 —
+          // 중복 append 되면 3문항 세트가 4개 결과로 집계되던 버그 (2026-08-24)
+          const rest = state[key].filter((r) => r.problemId !== result.problemId)
+          return { [key]: [...rest, result] } as Partial<TrialState>
         }),
 
       /** 서버 채점 응답이 도착하면 해당 문항 결과를 덧씌운다 (전송은 비동기라 나중에 도착) */

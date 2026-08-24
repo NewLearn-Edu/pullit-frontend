@@ -6,6 +6,7 @@ import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
+import { clearAllQuizStarts } from '@/user/pages/trial/TrialQuizPage'
 import styles from './styles/TrialStartPage.module.scss'
 
 interface SubjectOption {
@@ -41,6 +42,7 @@ export default function TrialStartPage() {
   const handleNext = () => {
     flushAttemptQueue() // 세션 있는 재도전(미완 회원)의 이전 미전송분 회수 — 익명이면 no-op
     reset()
+    clearAllQuizStarts() // 잔여 문항 타이머 스냅샷 정리 — 새 세트는 0초부터
     setLastSubject(selected)
     navigate(`/trial/quiz/${selected}/0`)
   }
