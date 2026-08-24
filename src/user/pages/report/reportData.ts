@@ -21,10 +21,10 @@ const SCORE_BY_CATEGORY: Record<string, ScoreComparison> = {
   대수: { average: 51, mine: 76 },
   '미적분 I': { average: 58, mine: 44 },
   '확률과 통계': { average: 47, mine: 62 },
-  '내용 파악': { average: 55, mine: 71 },
-  '글의 흐름': { average: 49, mine: 38 },
-  '어휘·추론': { average: 52, mine: 58 },
-  '정보 확인': { average: 61, mine: 66 },
+  '중심 내용 파악': { average: 55, mine: 71 },
+  '논리 구조 이해': { average: 49, mine: 38 },
+  '종합·추론 능력': { average: 52, mine: 58 },
+  '정보 확인 능력': { average: 61, mine: 66 },
 }
 
 export function getScoreComparison(category: string): ScoreComparison | null {

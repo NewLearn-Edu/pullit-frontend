@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { Problem } from '@/user/data/mockProblems'
 import { MathExplainRender } from '@/shared/components/ExamRender'
-import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { ProblemExplain, parseExplainBlocks } from '@/shared/components/ProblemExplain'
 import styles from './styles/ExplainPanel.module.scss'
 
 interface ExplainPanelProps {
@@ -100,6 +100,14 @@ export function ExplainPanel({
                 /* 서버 해설 — 어드민 업로드·검수 화면과 동일 렌더러 */
                 <div className={styles.sections}>
                   <ProblemExplain explanation={serverExplanation} subject={problem.subject} />
+                </div>
+              ) : parseExplainBlocks(problem.explanation.correctAnalysis) ? (
+                /* 맛보기(익명) 서버 문항 — 로컬 채점용으로 받은 해설이 블록 직렬화 문자열 */
+                <div className={styles.sections}>
+                  <ProblemExplain
+                    explanation={problem.explanation.correctAnalysis}
+                    subject={problem.subject}
+                  />
                 </div>
               ) : (
                 <div className={styles.sections}>

@@ -169,11 +169,6 @@ export default function WrongNoteDetailPage() {
               <div className={styles.cardPreview}>
                 <div className={styles.cardProblem} aria-hidden>
                   <ProblemRender text={item.question ?? ''} />
-                  {item.passage && (
-                    <div className={styles.cardPassage}>
-                      <ProblemRender text={item.passage} />
-                    </div>
-                  )}
                 </div>
                 <div className={styles.cardTint} aria-hidden />
                 <div className={styles.cardFade} aria-hidden />
@@ -194,7 +189,7 @@ export default function WrongNoteDetailPage() {
                     {item.unitLarge && <>{item.unitLarge} · </>}문제 {i + 1}
                   </p>
                   <p className={styles.cardSub}>
-                    {item.points != null && <>{item.points}점 · </>}
+                    {item.score != null && <>{item.score}점 · </>}
                     {item.difficulty && <>{difficultyLabel(item.difficulty)} · </>}
                     {formatWrongAt(item.lastWrongAt)}
                   </p>

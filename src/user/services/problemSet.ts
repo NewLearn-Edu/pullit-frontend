@@ -25,39 +25,36 @@ import type { Subject } from '@/user/stores/trialStore'
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
 
-/** 목 노드 id → 서버 skill_node 조회 키 (영어 유형) */
+/** 목 노드 id → 서버 skill_node 조회 키 (영어 유형 — 문제 생성 정책 §4.2 명칭) */
 const ENGLISH_SERVER_NODES: Record<string, string> = {
   'en-topic': '주제', // 맛보기 고정 영역 (맛보기 테스트 정책 §2.2)
-  'en-blank': '빈칸',
+  'en-blank': '빈칸 추론',
 }
 
 /**
- * 목 노드 id → 맛보기 세트 그룹 코드 (trial_problems.group_code = 임포트 파일명 그룹).
- * 수학은 2022 단원 코드(단원·유형 명칭 정책 §1.1), 영어는 유형 파일명 그룹.
+ * 목 노드 id → 맛보기 세트 그룹 코드 (trial_problems.group_code = unit_code).
+ * 문제 생성 정책 §4 코드 체계 — {과목}_{교육과정}_{대단원}_{중단원}_{소단원}.
  * 어드민이 해당 그룹의 trial-test 파일을 올리면 이 세트가 1순위로 출제된다.
  * (trialProgressStore 가 서버 진단 기록의 group_code 를 유닛으로 되돌릴 때도 사용)
  */
 export const TRIAL_GROUPS: Record<string, string> = {
-  'sn-exp-log-01': '2022_1_1_1', // 지수와 로그
-  'sn-exp-log-02': '2022_1_1_2', // 지수함수와 로그함수
-  'sn-trig-01': '2022_1_2_1', // 삼각함수
-  'sn-trig-02': '2022_1_2_2', // 사인법칙과 코사인법칙
-  'sn-seq-01': '2022_1_3_1', // 등차수열과 등비수열
-  'sn-seq-02': '2022_1_3_2', // 수열의 합
-  'sn-diff-01': '2022_2_2_1', // 미분계수
-  'sn-diff-02': '2022_2_2_3', // 도함수의 활용
-  'sn-int-01': '2022_2_3_1', // 부정적분
-  'sn-int-02': '2022_2_3_3', // 정적분의 활용
-  'sn-stat-01': '2022_3_2_2', // 조건부확률
-  'sn-stat-02': '2022_3_3_1', // 확률분포
-  'en-topic': '01_topic', // 영어 주제 — 실제 임포트 파일명 그룹과 일치해야 함
-  'en-blank': 'r12_blank',
+  'sn-exp-log-01': 'math_2022_1_1_1', // 지수와 로그
+  'sn-exp-log-02': 'math_2022_1_1_2', // 지수함수와 로그함수
+  'sn-trig-01': 'math_2022_1_2_1', // 삼각함수
+  'sn-trig-02': 'math_2022_1_2_2', // 사인법칙과 코사인법칙
+  'sn-seq-01': 'math_2022_1_3_1', // 등차수열과 등비수열
+  'sn-seq-02': 'math_2022_1_3_2', // 수열의 합
+  'sn-diff-01': 'math_2022_2_2_1', // 미분계수
+  'sn-diff-02': 'math_2022_2_2_3', // 도함수의 활용
+  'sn-int-01': 'math_2022_2_3_1', // 부정적분
+  'sn-int-02': 'math_2022_2_3_3', // 정적분의 활용
+  'sn-stat-01': 'math_2022_3_2_2', // 조건부확률
+  'sn-stat-02': 'math_2022_3_3_1', // 확률분포
+  'en-topic': 'english_2015_1_0_1', // 주제
+  'en-blank': 'english_2015_3_0_1', // 빈칸 추론
 }
 
-/**
- * 권장/최대 풀이 시간 — 서버 스키마에 없어 배점 기준 로컬 정책으로 채운다.
- * 목 데이터와 같은 값 (2점 30/90 · 3점 90/270 · 4점 180/540, 영어는 일괄 90/270).
- */
+/** 서버 recommendedTimeSec 미수신 시 폴백 (배점 기준 · 목 데이터와 동일 값) */
 const MATH_TIME_BY_POINTS: Record<number, [number, number]> = {
   2: [30, 90],
   3: [90, 270],
@@ -83,17 +80,17 @@ function toQuizProblem(
   subject: Subject,
   nodeId: string,
 ): Problem {
-  const points = item.points === 3 || item.points === 4 ? item.points : 2
-  const [tRecSec, tMaxSec] =
+  // 배점은 소수 허용(1.5·2.5) — 로컬 Problem.points(2|3|4)는 시간 폴백용으로만 근사한다
+  const points = item.score >= 4 ? 4 : item.score >= 3 ? 3 : 2
+  // 권장 시간은 서버 문항값이 정본, 제한시간 = ×3 (문제 생성 정책 §2)
+  const [fallbackRec, fallbackMax] =
     subject === 'math' ? MATH_TIME_BY_POINTS[points] : ENGLISH_TIME
+  const tRecSec = item.recommendedTimeSec > 0 ? item.recommendedTimeSec : fallbackRec
+  const tMaxSec = item.recommendedTimeSec > 0 ? item.recommendedTimeSec * 3 : fallbackMax
 
-  // 맛보기 세트만 정답을 내려준다 — 주관식은 answerText(정수 문자열)를 파싱
+  // 맛보기 세트만 정답을 내려준다 — 객관식 answerIndex(1~5) · 단답형 answerValue(정답 숫자값)
   const withAnswer = item as Partial<TrialProblemSetItem>
-  const localAnswer =
-    withAnswer.answerNumber ??
-    (withAnswer.answerText && /^-?\d+$/.test(withAnswer.answerText.trim())
-      ? parseInt(withAnswer.answerText.trim(), 10)
-      : null)
+  const localAnswer = withAnswer.answerIndex ?? withAnswer.answerValue ?? null
 
   return {
     id: index + 1,
@@ -104,8 +101,8 @@ function toQuizProblem(
     points,
     tRecSec,
     tMaxSec,
-    // 영어는 발문 + 지문을 이어 붙여 렌더 (목 데이터와 같은 단일 본문 구조)
-    bodyText: item.passage ? `${item.question}\n\n${item.passage}` : item.question,
+    // question = 발문·지문·조판 통합 원문 (블록 배열 직렬화면 렌더러가 파싱)
+    bodyText: item.question,
     choices: item.choices,
     answer: localAnswer ?? 0,
     // 맛보기는 서버 해설을 로컬로 — 은행 문항은 제출 응답(serverExplanation)으로 채워진다

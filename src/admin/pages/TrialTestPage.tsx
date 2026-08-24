@@ -40,15 +40,15 @@ const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.')
 /** 트리 정렬 — 교육과정/정책 확정 순서 (문제 목록 페이지와 동일 규칙) */
 const NODE_ORDER: Record<string, string[]> = {
   'MATH:': ['대수', '미적분Ⅰ', '확률과 통계'],
-  'MATH:대수': ['지수함수와 로그함수', '삼각함수', '수열'],
-  'MATH:미적분Ⅰ': ['함수의 극한과 연속', '미분', '적분'],
+  'MATH:대수': ['지수·로그함수', '삼각함수', '수열'],
+  'MATH:미적분Ⅰ': ['극한·연속', '미분', '적분'],
   'MATH:확률과 통계': ['경우의 수', '확률', '통계'],
-  // 영어 4영역 × 4유형 = 16유형 (2026-08-14 확정 — 축약 영역명이 정식 명칭, 어휘 쓰임 포함)
-  'ENGLISH:': ['내용 파악', '글의 흐름', '어휘·추론', '정보 확인'],
-  'ENGLISH:내용 파악': ['목적', '주제', '제목', '요지'],
-  'ENGLISH:글의 흐름': ['주장', '순서', '삽입', '무관한 문장'],
-  'ENGLISH:어휘·추론': ['빈칸', '요약', '어휘 의미', '어휘 쓰임'],
-  'ENGLISH:정보 확인': ['안내문 일치', '안내문 불일치', '내용 불일치', '도표'],
+  // 영어 4영역 × 15유형 (문제 생성 정책 §4.2) — 명칭이 곧 DB unit_large/skill_node
+  'ENGLISH:': ['중심 내용 파악', '논리 구조 이해', '종합·추론 능력', '정보 확인 능력'],
+  'ENGLISH:중심 내용 파악': ['주제', '제목', '요지', '목적'],
+  'ENGLISH:논리 구조 이해': ['주장', '문장 삽입', '글의 순서', '무관한 문장'],
+  'ENGLISH:종합·추론 능력': ['빈칸 추론', '요약문', '함축 의미'],
+  'ENGLISH:정보 확인 능력': ['안내문 내용 일치', '안내문 내용 불일치', '본문 내용 불일치', '도표'],
 }
 
 /** 교육과정 고정 목록 + 은행 트리 병합 — 은행에 문제가 없는 단원도 항상 노출 */
@@ -356,7 +356,7 @@ export default function TrialTestPage() {
           </b>
           <p>
             파일명으로 {isMath ? '단원' : '유형'}·세트 번호가 자동 인식돼요 · 예:{' '}
-            {isMath ? '2022_1_1_1_trial-test_01.jsonl' : 'corrected_r12_blank_trial-test_01.jsonl'}
+            {isMath ? 'math_2022_1_1_1_trial-test_01.jsonl' : 'english_2015_1_0_1_trial-test_01.jsonl'}
           </p>
           <div className="formats">
             <span className="chip">JSONL</span>
@@ -497,7 +497,7 @@ export default function TrialTestPage() {
                     <td className="num">{it.sequence}</td>
                     <td className="num" style={{ color: 'var(--color-muted)' }}>{it.problem.id}</td>
                     <td className="strong">{it.problem.skillNode}</td>
-                    <td className="num">{it.problem.points}점</td>
+                    <td className="num">{it.problem.score}점</td>
                     <td>
                       <span className={`badge ${STATUS_BADGE[it.problem.status]}`}>
                         {STATUS_LABEL[it.problem.status]}
@@ -552,26 +552,21 @@ export default function TrialTestPage() {
                     >
                       <div className="pv-device-inner">
                         <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
-                          {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
+                          {/* 수능 지면 순서: 발문(지문 통합) [N점] → 단어 주석 → 선택지 */}
                           <div className="pv-question">
-                            <ProblemRender text={detail.question} /> [{detail.points}점]
+                            <ProblemRender text={detail.question} /> [{detail.score}점]
                           </div>
-                          {detail.passage && (
-                            <div className="pv-passage">
-                              <ProblemRender text={detail.passage} />
-                            </div>
-                          )}
-                          {Object.keys(detail.glossary).length > 0 && (
+                          {detail.glossary.length > 0 && (
                             <div className="pv-glossary">
-                              {Object.entries(detail.glossary)
-                                .map(([word, meaning], i) => `${'*'.repeat(i + 1)} ${word}: ${meaning}`)
+                              {detail.glossary
+                                .map((g, i) => `${'*'.repeat(i + 1)} ${g.term}: ${g.meaning}`)
                                 .join('   ')}
                             </div>
                           )}
                           {detail.choices.length > 0 && (
                             <div className="pv-choices">
                               {detail.choices.map((c, i) => {
-                                const correct = detail.answerNumber === i + 1
+                                const correct = detail.answerIndex === i + 1
                                 return (
                                   <span key={i} className={clsx('choice', correct && 'correct')}>
                                     {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
@@ -591,8 +586,8 @@ export default function TrialTestPage() {
                     <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
                       <p className="pv-label">정답</p>
                       <div className="pv-explain-body pv-explain-answer">
-                        {detail.choices.length > 0 ? (
-                          String.fromCodePoint(0x245f + detail.answerNumber)
+                        {detail.choices.length > 0 && detail.answerIndex != null ? (
+                          String.fromCodePoint(0x245f + detail.answerIndex)
                         ) : (
                           <ExplainRender text={detail.answerText} />
                         )}

@@ -13,7 +13,7 @@ import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import JsonView from '../components/JsonView'
-import { codeToPath } from '../data/mockAdmin'
+import { unitCodeToPath } from '@/shared/data/unitCatalog'
 import {
   importProblemFile,
   overwriteProblems,
@@ -29,11 +29,14 @@ import {
 
 const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어' }
 
-/** 배점 미리보기 — 임포터와 동일 규칙 (수학 difficulty 매핑 · 영어 2점) */
-const POINTS_BY_DIFFICULTY: Record<string, number> = { basic: 2, normal: 3, advanced: 4 }
-
-/** 업로드 파일 1행 — 검수 큐와 같은 스키마를 쓴다 */
+/** 업로드 파일 1행 — 검수 큐와 같은 스키마를 쓴다 (문제 생성 정책 2026-08 규격) */
 type UploadItem = ReviewProblem
+
+/** question — 블록 배열(타입 미확정)은 원문 JSON 으로, 문자열은 그대로 렌더 */
+function questionText(question: ReviewProblem['question']): string {
+  if (question == null) return ''
+  return typeof question === 'string' ? question : JSON.stringify(question, null, 2)
+}
 
 export default function ProblemUploadPage() {
   const { subject: subjectParam = '' } = useParams()
@@ -60,10 +63,10 @@ export default function ProblemUploadPage() {
   const [overwriting, setOverwriting] = useState<string | 'all' | null>(null)
   const [confirmAllOpen, setConfirmAllOpen] = useState(false)
 
-  // 파일 원본 행을 id 로 찾는 인덱스 — 덮어쓰기 요청 body 는 원본 행 그대로 보낸다
+  // 파일 원본 행을 problem_code 로 찾는 인덱스 — 덮어쓰기 요청 body 는 원본 행 그대로 보낸다
   const rowById = useMemo(() => {
     const map = new Map<string, UploadItem>()
-    items.forEach((it) => map.set(String(it.id), it))
+    items.forEach((it) => map.set(String(it.problem_code), it))
     return map
   }, [items])
 
@@ -122,8 +125,13 @@ export default function ProblemUploadPage() {
       setFile(file)
       setResult(null)
       setFileName(file.name)
-      const code = file.name.replace(/\.(jsonl|json)$/i, '')
-      setFilePath(codeToPath(code) ?? '단원 자동 인식 실패 — 파일명이 2022_x_x_x 형식인지 확인해주세요')
+      // 파일명보다 내용이 정본 — 첫 행의 unit_code 우선, 실패 시 파일명으로 인식
+      const rows = parsed as UploadItem[]
+      const code = rows[0]?.unit_code ?? file.name.replace(/\.(jsonl|json)$/i, '')
+      setFilePath(
+        unitCodeToPath(code) ??
+          '단원 자동 인식 실패 — unit_code 가 math_2022_x_x_x 형식인지 확인해주세요',
+      )
     }
     reader.readAsText(file)
   }
@@ -135,7 +143,7 @@ export default function ProblemUploadPage() {
       .sort((a, b) => a - b)
       .map((i) => ({
         key: makeReviewKey(fileName, items[i], i),
-        problemId: String(items[i]?.id ?? `${fileName}#${i + 1}`),
+        problemId: String(items[i]?.problem_code ?? `${fileName}#${i + 1}`),
         fileName,
         filePath,
         subject,
@@ -433,17 +441,12 @@ export default function ProblemUploadPage() {
                       </div>
                       <div className={clsx('pv-body', subject === 'english' && 'en')}>
                         <div className="pv-question">
-                          <ProblemRender text={dupItem.question ?? ''} />
+                          <ProblemRender text={questionText(dupItem.question)} />
                         </div>
-                        {dupItem.passage && (
-                          <div className="pv-passage">
-                            <ProblemRender text={dupItem.passage} />
-                          </div>
-                        )}
                         {(dupItem.choices?.length ?? 0) > 0 && (
                           <div className="pv-choices">
                             {(dupItem.choices ?? []).map((c, i) => {
-                              const correct = dupItem.answer_no === i + 1
+                              const correct = dupItem.answer_index === i + 1
                               return (
                                 <span key={i} className={clsx('choice', correct && 'correct')}>
                                   <span className="choice-num">
@@ -458,10 +461,10 @@ export default function ProblemUploadPage() {
                       </div>
                       <p className="pv-label" style={{ marginTop: 16 }}>정답</p>
                       <div className="pv-explain-body pv-explain-answer">
-                        {(dupItem.choices?.length ?? 0) > 0 && dupItem.answer_no != null ? (
-                          String.fromCodePoint(0x245f + dupItem.answer_no)
+                        {(dupItem.choices?.length ?? 0) > 0 && dupItem.answer_index != null ? (
+                          String.fromCodePoint(0x245f + dupItem.answer_index)
                         ) : (
-                          <ExplainRender text={String(dupItem.answer_text ?? dupItem.answer_no ?? '-')} />
+                          <ExplainRender text={String(dupItem.answer_text ?? dupItem.answer_value ?? '-')} />
                         )}
                       </div>
                       <p className="pv-label" style={{ marginTop: 16 }}>해설</p>
@@ -504,7 +507,7 @@ export default function ProblemUploadPage() {
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                     }}
                   />{' '}
-                  / {items.length}{item?.id ? ` · ${item.id}` : ''}
+                  / {items.length}{item?.problem_code ? ` · ${item.problem_code}` : ''}
                 </div>
                 {checked.size > 0 && (
                   <span className="badge neutral upl-check-count">검수 {checked.size}</span>
@@ -546,22 +549,20 @@ export default function ProblemUploadPage() {
                 <div className="pv-device-inner">
                   <div className={clsx('pv-body', subject === 'english' && 'en')}>
                     <div className="pv-question">
-                      <ProblemRender text={item?.question ?? ''} />
-                      {(() => {
-                        const points =
-                          subject === 'english' ? 2 : POINTS_BY_DIFFICULTY[item?.difficulty ?? '']
-                        return points ? <> [{points}점]</> : null
-                      })()}
+                      <ProblemRender text={questionText(item?.question)} />
+                      {item?.score != null && <> [{item.score}점]</>}
                     </div>
-                    {item?.passage && (
-                      <div className="pv-passage">
-                        <ProblemRender text={item.passage} />
+                    {(item?.glossary?.length ?? 0) > 0 && (
+                      <div className="pv-glossary">
+                        {(item?.glossary ?? [])
+                          .map((g, i) => `${'*'.repeat(i + 1)} ${g.term}: ${g.meaning}`)
+                          .join('   ')}
                       </div>
                     )}
                     {(item?.choices?.length ?? 0) > 0 && (
                       <div className="pv-choices">
                         {(item?.choices ?? []).map((c, i) => {
-                          const correct = item?.answer_no === i + 1
+                          const correct = item?.answer_index === i + 1
                           return (
                             <span key={i} className={clsx('choice', correct && 'correct')}>
                               {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
@@ -582,10 +583,10 @@ export default function ProblemUploadPage() {
               <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
                 <p className="pv-label">정답</p>
                 <div className="pv-explain-body pv-explain-answer">
-                  {(item?.choices?.length ?? 0) > 0 && item?.answer_no != null ? (
-                    String.fromCodePoint(0x245f + item.answer_no)
+                  {(item?.choices?.length ?? 0) > 0 && item?.answer_index != null ? (
+                    String.fromCodePoint(0x245f + item.answer_index)
                   ) : (
-                    <ExplainRender text={String(item?.answer_text ?? item?.answer_no ?? '-')} />
+                    <ExplainRender text={String(item?.answer_text ?? item?.answer_value ?? '-')} />
                   )}
                 </div>
                 <p className="pv-label" style={{ marginTop: 20 }}>
@@ -622,7 +623,7 @@ export default function ProblemUploadPage() {
             <div className="card upl-json">
               <div className="upl-json-head">
                 <span className="card-title">
-                  원본 JSON · 문항 {idx + 1}{item?.id ? ` · ${item.id}` : ''}
+                  원본 JSON · 문항 {idx + 1}{item?.problem_code ? ` · ${item.problem_code}` : ''}
                 </span>
                 <button className="btn btn-ghost btn-sm" onClick={copyJson}>복사</button>
               </div>

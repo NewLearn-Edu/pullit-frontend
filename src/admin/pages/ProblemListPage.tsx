@@ -33,18 +33,15 @@ const PAGE_SIZE = 30
 /** 트리 정렬 — 교육과정/정책 확정 순서 (API 는 가나다순이라 화면에서 재정렬) */
 const NODE_ORDER: Record<string, string[]> = {
   'MATH:': ['대수', '미적분Ⅰ', '확률과 통계'],
-  'MATH:대수': ['지수함수와 로그함수', '삼각함수', '수열'],
-  'MATH:미적분Ⅰ': ['함수의 극한과 연속', '미분', '적분'],
+  'MATH:대수': ['지수·로그함수', '삼각함수', '수열'],
+  'MATH:미적분Ⅰ': ['극한·연속', '미분', '적분'],
   'MATH:확률과 통계': ['경우의 수', '확률', '통계'],
-  // 영어 4영역 × 4유형 = 16유형 (2026-08-14 확정 — 축약 영역명이 정식 명칭, 어휘 쓰임 포함)
-  // 유형 이름은 DB skill_node 명 그대로 — 유저 표시명과 다른 것들:
-  //   순서→글의 순서 · 삽입→문장 삽입 · 어휘 의미→밑줄 함의(voca01·voca04 통합)
-  //   여기서 표시명으로 바꾸면 트리 매칭이 끊겨 문항이 0건으로 잡힌다 (DB 개명 시 함께 교체)
-  'ENGLISH:': ['내용 파악', '글의 흐름', '어휘·추론', '정보 확인'],
-  'ENGLISH:내용 파악': ['목적', '주제', '제목', '요지'],
-  'ENGLISH:글의 흐름': ['주장', '순서', '삽입', '무관한 문장'],
-  'ENGLISH:어휘·추론': ['빈칸', '요약', '어휘 의미', '어휘 쓰임'],
-  'ENGLISH:정보 확인': ['안내문 일치', '안내문 불일치', '내용 불일치', '도표'],
+  // 영어 4영역 × 15유형 (문제 생성 정책 §4.2) — 명칭이 곧 DB unit_large/skill_node
+  'ENGLISH:': ['중심 내용 파악', '논리 구조 이해', '종합·추론 능력', '정보 확인 능력'],
+  'ENGLISH:중심 내용 파악': ['주제', '제목', '요지', '목적'],
+  'ENGLISH:논리 구조 이해': ['주장', '문장 삽입', '글의 순서', '무관한 문장'],
+  'ENGLISH:종합·추론 능력': ['빈칸 추론', '요약문', '함축 의미'],
+  'ENGLISH:정보 확인 능력': ['안내문 내용 일치', '안내문 내용 불일치', '본문 내용 불일치', '도표'],
 }
 
 /** 교육과정 고정 목록 + 은행 트리 병합 — 은행에 문제가 없는 단원/영역도 항상 노출 (맛보기 페이지와 동일) */
@@ -58,29 +55,26 @@ function fixedNodes(subject: ApiSubject, parent: string, treeNodes: FilterNode[]
 
 const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.')
 
-/** 영어 유형 영문 표기 (16유형 분류표 기준) — 목록에서 한글명 아래 보조 표시 */
+/** 영어 유형 영문 표기 (문제 생성 정책 §4.2 15유형) — 목록에서 한글명 아래 보조 표시 */
 const EN_TYPE_LABEL: Record<string, string> = {
   주제: 'Topic',
   제목: 'Title',
   요지: 'Gist',
-  주장: 'Claim',
-  순서: 'Order',
-  삽입: 'Insertion',
-  요약: 'Summary',
-  빈칸: 'Blank',
-  '안내문 일치': 'Notice Match',
-  '안내문 불일치': 'Notice Mismatch',
-  '내용 불일치': 'Content Mismatch',
   목적: 'Purpose',
-  도표: 'Chart',
+  주장: 'Claim',
+  '문장 삽입': 'Insertion',
+  '글의 순서': 'Order',
   '무관한 문장': 'Irrelevant Sentence',
+  '빈칸 추론': 'Blank',
+  요약문: 'Summary',
+  '함축 의미': 'Implied Meaning',
+  '안내문 내용 일치': 'Notice Match',
+  '안내문 내용 불일치': 'Notice Mismatch',
+  '본문 내용 불일치': 'Content Mismatch',
+  도표: 'Chart',
 }
 
-// 어휘는 skill_node 한글명(어휘 의미/쓰임)만으론 원본 유형(voca01·03·04) 구분이 안 됨
-// — id 앞부분(2015_english_voca_03-S0001)에 원본 코드가 남아있어 여기서 파생
-function enTypeLabel(id: string, skillNode: string): string | undefined {
-  const vocaMatch = id.match(/_voca(?:_(\d+))?-/)
-  if (vocaMatch) return `Voca_${vocaMatch[1] ?? '01'}`
+function enTypeLabel(_id: string, skillNode: string): string | undefined {
   return EN_TYPE_LABEL[skillNode]
 }
 
@@ -417,7 +411,7 @@ export default function ProblemListPage() {
                         <span className="sub">{enTypeLabel(p.id, p.skillNode)}</span>
                       )}
                     </td>
-                    <td className="num">{p.points}점</td>
+                    <td className="num">{p.score}점</td>
                     <td><span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span></td>
                     {/* ?? 0 방어 — 구버전 백엔드(통계 필드 없음) 응답에도 페이지가 깨지지 않게 */}
                     <td className="num col-solves">
@@ -480,26 +474,21 @@ export default function ProblemListPage() {
                 >
                   <div className="pv-device-inner">
                   <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
-                    {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
+                    {/* 수능 지면 순서: 발문(지문 통합) [N점] → 단어 주석 → 선택지 */}
                     <div className="pv-question">
-                      <ProblemRender text={detail.question} /> [{detail.points}점]
+                      <ProblemRender text={detail.question} /> [{detail.score}점]
                     </div>
-                    {detail.passage && (
-                      <div className="pv-passage">
-                        <ProblemRender text={detail.passage} />
-                      </div>
-                    )}
-                    {Object.keys(detail.glossary).length > 0 && (
+                    {detail.glossary.length > 0 && (
                       <div className="pv-glossary">
-                        {Object.entries(detail.glossary)
-                          .map(([word, meaning], i) => `${'*'.repeat(i + 1)} ${word}: ${meaning}`)
+                        {detail.glossary
+                          .map((g, i) => `${'*'.repeat(i + 1)} ${g.term}: ${g.meaning}`)
                           .join('   ')}
                       </div>
                     )}
                     {detail.choices.length > 0 && (
                       <div className="pv-choices">
                         {detail.choices.map((c, i) => {
-                          const correct = detail.answerNumber === i + 1
+                          const correct = detail.answerIndex === i + 1
                           return (
                             <span key={i} className={clsx('choice', correct && 'correct')}>
                               {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
@@ -520,8 +509,8 @@ export default function ProblemListPage() {
                 <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
                   <p className="pv-label">정답</p>
                   <div className="pv-explain-body pv-explain-answer">
-                    {detail.choices.length > 0 ? (
-                      String.fromCodePoint(0x245f + detail.answerNumber)
+                    {detail.choices.length > 0 && detail.answerIndex != null ? (
+                      String.fromCodePoint(0x245f + detail.answerIndex)
                     ) : (
                       <ExplainRender text={detail.answerText} />
                     )}

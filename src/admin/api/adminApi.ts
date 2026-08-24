@@ -108,11 +108,14 @@ export type Difficulty = 'BASIC' | 'NORMAL' | 'ADVANCED'
 
 export interface ProblemListItem {
   id: string
+  unitCode: string | null
   unitLarge: string | null
   unitMid: string | null
   skillNode: string
-  points: number
-  renderCode: string
+  /** 배점 — 소수 허용 (1.5·2.5) */
+  score: number
+  /** 세부 개념 (수학만 · 영어 null) */
+  concept: string | null
   difficulty: Difficulty | null
   status: ProblemStatus
   createdAt: string
@@ -142,21 +145,30 @@ export interface FilterNode {
 export interface ProblemDetail {
   id: string
   subject: ApiSubject
+  unitCode: string | null
   unitLarge: string | null
   unitMid: string | null
   skillNode: string
-  points: number
-  renderCode: string
+  /** 배점 — 소수 허용 (1.5·2.5) */
+  score: number
+  /** 권장 풀이시간(초) — 제한시간은 ×3 */
+  recommendedTimeSec: number | null
+  concept: string | null
+  /** 발문·지문·조판 통합 원문 — '[' 로 시작하면 블록 배열 직렬화 */
   question: string
-  passage: string | null
   choices: string[]
-  answerNumber: number
+  answerType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER'
+  /** 객관식 정답 선지 번호 1~5 (단답형 null) */
+  answerIndex: number | null
+  /** 단답형 정답 숫자값 (객관식 null) */
+  answerValue: number | null
   answerText: string
   explanation: string
   difficulty: Difficulty | null
   status: ProblemStatus
-  /** 지문 하단 단어 주석 (예: { mandate: "명령" }) — 수능 "* 단어: 뜻" 렌더링용 */
-  glossary: Record<string, string>
+  /** 용어 주석 — 순서 보존 배열 (문제 생성 정책 §2) */
+  glossary: { term: string; meaning: string }[]
+  sourceId: string | null
 }
 
 export interface ProblemListParams {
@@ -219,7 +231,7 @@ export interface TrialTestSetSummary {
   inactiveCount: number
 }
 
-/** 맛보기 그룹 = 원본 파일명 단위 (수학: 2022_1_1_1 · 영어: r12_blank 등) */
+/** 맛보기 그룹 = unit_code 단위 (수학: math_2022_1_1_1 · 영어: english_2015_1_0_1) */
 export interface TrialTestGroup {
   groupCode: string
   unitLarge: string | null

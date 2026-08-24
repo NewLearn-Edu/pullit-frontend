@@ -16,7 +16,10 @@ export interface AttemptSubmitRequest {
 export interface AttemptSubmitResponse {
   attemptId: number
   isCorrect: boolean
-  answerNumber: number | null
+  /** 객관식 정답 선지 번호 1~5 (단답형은 null) */
+  answerIndex: number | null
+  /** 단답형 정답 숫자값 (객관식은 null) */
+  answerValue: number | null
   answerText: string | null
   explanation: string | null
 }
@@ -37,17 +40,19 @@ export async function submitAttempt(req: AttemptSubmitRequest): Promise<AttemptS
 export interface WrongNoteItem {
   problemId: string
   subject: 'MATH' | 'ENGLISH'
+  unitCode: string | null
   unitLarge: string | null
   unitMid: string | null
   skillNode: string | null
-  points: number | null
-  renderCode: string | null
+  /** 배점 — 소수 허용 */
+  score: number | null
+  recommendedTimeSec: number | null
   difficulty: string | null
   question: string | null
-  passage: string | null
   choices: string[]
   answerType: string | null
-  glossary: Record<string, string>
+  /** 용어 주석 — 순서 보존 배열 (문제 생성 정책 §2) */
+  glossary: { term: string; meaning: string }[]
   wrongCount: number
   lastWrongAt: string
 }

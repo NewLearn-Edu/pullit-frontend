@@ -13,18 +13,26 @@ const KEY = 'pullit_admin_review_queue'
 /** 저장 상한 — localStorage(약 5MB)를 해설 블록이 금방 채우므로 넉넉히 잘라 둔다 */
 const MAX_ITEMS = 300
 
-/** 업로드 파일 1행 = 문항 하나 (jsonl 원본 스키마) */
+/** 업로드 파일 1행 = 문항 하나 (문제 생성 정책 2026-08 JSONL 규격) */
 export interface ReviewProblem {
-  id?: string | number
+  problem_code?: string
   subject?: string
-  question?: string
-  passage?: string
+  unit_code?: string
+  /** 블록 배열(내부 타입 미확정) 또는 자리표시자 문자열 */
+  question?: string | unknown[]
   choices?: string[]
-  answer_no?: number
+  answer_type?: string
+  answer_index?: number | null
+  answer_value?: number | null
   answer_text?: string
-  /** 구 포맷 = 마크다운 문자열 · 신 포맷(2026-08-09~) = 블록 배열 */
+  /** 블록 배열 — 과목 공통 (문자열은 구 데이터 잔재) */
   explanation?: string | ExplainBlock[]
-  difficulty?: string
+  difficulty?: string | null
+  score?: number
+  recommended_time_sec?: number
+  concept?: string | null
+  glossary?: { term: string; meaning: string }[] | null
+  source_id?: string | null
 }
 
 export interface ReviewEntry {
@@ -68,7 +76,7 @@ export function reviewQueueCount(): number {
 }
 
 export function makeReviewKey(fileName: string, problem: ReviewProblem, index: number): string {
-  return `${fileName}#${problem.id ?? index}`
+  return `${fileName}#${problem.problem_code ?? index}`
 }
 
 /**

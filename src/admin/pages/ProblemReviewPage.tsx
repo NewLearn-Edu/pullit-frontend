@@ -15,9 +15,6 @@ import {
   type ReviewEntry,
 } from '../data/reviewQueue'
 
-/** 배점 미리보기 — 임포터와 동일 규칙 (업로드 화면과 같은 표) */
-const POINTS_BY_DIFFICULTY: Record<string, number> = { basic: 2, normal: 3, advanced: 4 }
-
 /**
  * 문제 검수 (/admin/review)
  *
@@ -208,7 +205,10 @@ function ReviewPreview({
   const { problem, subject } = entry
   const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
   const ExplainRender = subject === 'english' ? EnglishExplainRender : MathExplainRender
-  const points = subject === 'english' ? 2 : POINTS_BY_DIFFICULTY[problem.difficulty ?? '']
+  const questionText =
+    typeof problem.question === 'string'
+      ? problem.question
+      : JSON.stringify(problem.question ?? '', null, 2)
 
   return (
     <div className={clsx('upl-preview', device)}>
@@ -219,18 +219,13 @@ function ReviewPreview({
         <div className="pv-device-inner">
           <div className={clsx('pv-body', subject === 'english' && 'en')}>
             <div className="pv-question">
-              <ProblemRender text={problem.question ?? ''} />
-              {points ? <> [{points}점]</> : null}
+              <ProblemRender text={questionText} />
+              {problem.score != null ? <> [{problem.score}점]</> : null}
             </div>
-            {problem.passage && (
-              <div className="pv-passage">
-                <ProblemRender text={problem.passage} />
-              </div>
-            )}
             {(problem.choices?.length ?? 0) > 0 && (
               <div className="pv-choices">
                 {(problem.choices ?? []).map((c, i) => {
-                  const correct = problem.answer_no === i + 1
+                  const correct = problem.answer_index === i + 1
                   return (
                     <span key={i} className={clsx('choice', correct && 'correct')}>
                       {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
@@ -255,10 +250,10 @@ function ReviewPreview({
       <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
         <p className="pv-label">정답</p>
         <div className="pv-explain-body pv-explain-answer">
-          {(problem.choices?.length ?? 0) > 0 && problem.answer_no != null ? (
-            String.fromCodePoint(0x245f + problem.answer_no)
+          {(problem.choices?.length ?? 0) > 0 && problem.answer_index != null ? (
+            String.fromCodePoint(0x245f + problem.answer_index)
           ) : (
-            <ExplainRender text={String(problem.answer_text ?? problem.answer_no ?? '-')} />
+            <ExplainRender text={String(problem.answer_text ?? problem.answer_value ?? '-')} />
           )}
         </div>
         <p className="pv-label" style={{ marginTop: 20 }}>

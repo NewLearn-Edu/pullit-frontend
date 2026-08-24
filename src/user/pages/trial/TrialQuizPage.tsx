@@ -220,7 +220,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         updateResult(subject as Subject, problem.id, {
           attemptId: res.attemptId,
           serverCorrect: res.isCorrect,
-          serverAnswerNo: res.answerNumber,
+          serverAnswerNo: res.answerIndex ?? res.answerValue,
           serverExplanation: res.explanation,
           earnedPoints: rescored.earnedPoints,
           timeoverFlag: rescored.timeoverFlag,

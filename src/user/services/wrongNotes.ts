@@ -75,7 +75,7 @@ export function formatWrongAt(iso: string): string {
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-// 난이도별 권장/제한 시간 (초) — 서버 문제에는 시간 정보가 없어 POC 기본값
+// 난이도별 권장/제한 시간 (초) — recommendedTimeSec 미수신 시 폴백
 const TIME_BY_DIFFICULTY: Record<string, { rec: number; max: number }> = {
   basic: { rec: 120, max: 240 },
   normal: { rec: 180, max: 300 },
@@ -85,18 +85,23 @@ const TIME_BY_DIFFICULTY: Record<string, { rec: number; max: number }> = {
 /**
  * 오답노트 항목 → 풀이 화면(Problem) 변환.
  * 서버는 정답을 목록에 내려주지 않으므로 answer 는 0 (채점은 제출 API 가 담당).
+ * 시간은 문항의 recommendedTimeSec(제한 = ×3)이 정본, 없으면 난이도 폴백.
  */
 export function toSolveProblem(item: WrongNoteItem, index: number): Problem {
   const time = TIME_BY_DIFFICULTY[item.difficulty?.toLowerCase() ?? ''] ?? TIME_BY_DIFFICULTY.normal
-  const points = item.points === 2 || item.points === 3 || item.points === 4 ? item.points : 3
+  const tRecSec = item.recommendedTimeSec && item.recommendedTimeSec > 0 ? item.recommendedTimeSec : time.rec
+  const tMaxSec = item.recommendedTimeSec && item.recommendedTimeSec > 0 ? item.recommendedTimeSec * 3 : time.max
+  // 배점은 소수 허용 — 로컬 Problem.points(2|3|4)는 근사값으로만 쓴다
+  const score = item.score ?? 3
+  const points = score >= 4 ? 4 : score >= 3 ? 3 : 2
   return {
     id: index + 1,
     serverId: item.problemId,
     subject: item.subject === 'ENGLISH' ? 'english' : 'math',
     points,
-    tRecSec: time.rec,
-    tMaxSec: time.max,
-    bodyText: [item.question, item.passage].filter(Boolean).join('\n\n'),
+    tRecSec,
+    tMaxSec,
+    bodyText: item.question ?? '',
     choices: item.choices ?? [],
     answer: 0, // 미공개 — 서버 채점 결과(submitAttempt 응답)만 신뢰
     explanation: { intent: '', correctAnalysis: '' },

@@ -204,10 +204,11 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       name: 'pullit_trial_progress',
       storage: createJSONStorage(() => localStorage),
       // v2: 데모 시드(DEMO_DIAGNOSED) 제거 — 기존 브라우저에 박힌 가짜 진단을 비운다
-      version: 2,
+      // v3: 문제 생성 정책 개편(unit_code 그룹·명칭 변경) — 구 명칭 기반 진단 캐시를 비운다
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Partial<TrialProgressState>
-        if (version < 2) return { ...state, diagnosed: {} }
+        if (version < 3) return { ...state, diagnosed: {} }
         return state
       },
       partialize: (s) => ({
