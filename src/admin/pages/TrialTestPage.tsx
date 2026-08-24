@@ -33,8 +33,8 @@ const API_SUBJECT: Record<string, ApiSubject> = { math: 'MATH', english: 'ENGLIS
 const STATUS_LABEL: Record<ProblemStatus, string> = { ACTIVE: '게시 중', INACTIVE: '비공개' }
 const STATUS_BADGE: Record<ProblemStatus, string> = { ACTIVE: 'live', INACTIVE: 'hidden' }
 
-/** 맛보기 파일명 규칙 — 백엔드와 동일 (corrected_ 접두사 허용) */
-const FILENAME_PATTERN = /^(?:corrected_)?(.+)_trial-test_(\d+)\.jsonl?$/
+/** 맛보기 파일명 규칙 — 백엔드와 동일. {unit_code}_test{N} (구 *_trial-test_NN 표기도 허용) */
+const FILENAME_PATTERN = /^(?:corrected_)?(.+?)_(?:trial-test_|test)(\d+)\.jsonl?$/
 
 const formatDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '.')
 
@@ -215,7 +215,7 @@ export default function TrialTestPage() {
       .sort((a, b) => a.name.localeCompare(b.name))
     const skipped = files.length - valid.length
     if (valid.length === 0) {
-      toast('맛보기 파일명 형식(*_trial-test_NN.jsonl)이 아니에요')
+      toast('맛보기 파일명 형식(*_testN.jsonl)이 아니에요')
       return
     }
     const failed: string[] = []
@@ -357,7 +357,7 @@ export default function TrialTestPage() {
           </b>
           <p>
             파일명으로 {isMath ? '단원' : '유형'}·세트 번호가 자동 인식돼요 · 예:{' '}
-            {isMath ? 'math_2022_1_1_1_trial-test_01.jsonl' : 'english_2015_1_0_1_trial-test_01.jsonl'}
+            {isMath ? 'math_2022_1_1_1_test1.jsonl' : 'english_2015_1_0_1_test1.jsonl'}
           </p>
           <div className="formats">
             <span className="chip">JSONL</span>
