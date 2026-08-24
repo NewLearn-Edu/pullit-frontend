@@ -15,7 +15,7 @@ type Subject = 'math' | 'english'
 
 const SUBJECT_LABEL: Record<Subject, string> = {
   math: '수학 · 지수와 로그',
-  english: '영어 · 빈칸 추론',
+  english: '영어 · 주제',
 }
 
 /**
@@ -107,9 +107,15 @@ export default function TrialReviewPage() {
                 </div>
               )}
 
-              {/* 보기 — 읽기 전용 · 정답은 검정, 내 오답은 빨강으로 표시 */}
+              {/* 보기 — 읽기 전용 · 정답은 검정, 내 오답은 빨강으로 표시.
+                  영어는 수능 지면처럼 한 줄에 하나씩 */}
               <div className={styles.choicesWrap}>
-                <div className={styles.choicesGrid}>
+                <div
+                  className={clsx(
+                    styles.choicesGrid,
+                    subject === 'english' && styles.choicesGridEn,
+                  )}
+                >
                   {problem.choices.map((choice, i) => {
                     const choiceNo = i + 1
                     const isAnswer = choiceNo === problem.answer

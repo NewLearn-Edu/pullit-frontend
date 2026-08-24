@@ -103,6 +103,7 @@ export function toSolveProblem(item: WrongNoteItem, index: number): Problem {
     tMaxSec,
     bodyText: item.question ?? '',
     choices: item.choices ?? [],
+    glossary: item.glossary?.length ? item.glossary : undefined,
     answer: 0, // 미공개 — 서버 채점 결과(submitAttempt 응답)만 신뢰
     explanation: { intent: '', correctAnalysis: '' },
   }

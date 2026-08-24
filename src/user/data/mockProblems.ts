@@ -24,6 +24,8 @@ export interface Problem {
   question?: string // 마지막 질문 문장
   choices: string[] // 객관식 5개 · 주관식(단답형)은 빈 배열
   answer: number // 객관식 1-5 · 주관식은 정답값 자체 (음수 가능)
+  /** 용어 주석 [{term, meaning}] — 서버 문항(주로 영어)만. 지문 하단 "* 단어: 뜻" 렌더링 */
+  glossary?: { term: string; meaning: string }[]
   explanation: {
     intent: string
     correctAnalysis: string

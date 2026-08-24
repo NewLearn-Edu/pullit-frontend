@@ -91,6 +91,7 @@ function toQuizProblem(
     // question = 발문·지문·조판 통합 원문 (블록 배열 직렬화면 렌더러가 파싱)
     bodyText: item.question,
     choices: item.choices,
+    glossary: item.glossary?.length ? item.glossary : undefined,
     answer: localAnswer ?? 0,
     // 맛보기는 서버 해설을 로컬로 — 은행 문항은 제출 응답(serverExplanation)으로 채워진다
     explanation: { intent: '', correctAnalysis: withAnswer.explanation ?? '' },
