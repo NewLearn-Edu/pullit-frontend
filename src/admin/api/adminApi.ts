@@ -321,7 +321,7 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<Ad
 // 크레딧
 // ---------------------------------------------------------------------------
 
-export type CreditTransactionType = 'GRANT' | 'DEDUCT'
+export type CreditTransactionType = 'ADMIN_GRANT' | 'ADMIN_DEDUCT'
 
 export interface CreditStats {
   totalBalance: number
