@@ -28,9 +28,12 @@ const INK = '#23272b'
 export default function ProgressRadar({
   units,
   className,
+  onSelectUnit,
 }: {
   units: ProgressRadarUnit[]
   className?: string
+  /** 축 라벨 클릭 — 홈이 해당 소단원 카드로 스크롤하는 데 사용 */
+  onSelectUnit?: (name: string) => void
 }) {
   const n = Math.max(units.length, 3)
   const cx = 180
@@ -114,12 +117,13 @@ export default function ProgressRadar({
       {/* ── 채우는 중 — 진단 조각 + 빈 슬롯 (조각은 중심에서 자라난다) ── */}
       {!complete && partialPts.length > 0 && (
         <g className={styles.pieceIn}>
-          {wedgePath && <path d={wedgePath} fill="rgba(255, 56, 92, 0.18)" />}
+          {/* 채움 = 검정 20% (Figma Fill #000000 20%) · 선 = Black/900 1px */}
+          {wedgePath && <path d={wedgePath} fill="rgba(0, 0, 0, 0.2)" />}
           {edgePath && (
             <path
               d={edgePath}
               stroke="#121417"
-              strokeWidth="2"
+              strokeWidth="1"
               fill="none"
               strokeLinejoin="round"
             />
@@ -161,9 +165,9 @@ export default function ProgressRadar({
       {full && (
         <path
           d={full.d}
-          fill="rgba(0, 0, 0, 0.16)"
+          fill="rgba(0, 0, 0, 0.2)"
           stroke="#121417"
-          strokeWidth="1.6"
+          strokeWidth="1"
           className={styles.pieceIn}
           style={{ filter: 'drop-shadow(0 6px 9px rgba(0, 0, 0, 0.25))' }}
         />
@@ -208,7 +212,24 @@ export default function ProgressRadar({
         const nameOpacity = locked ? 0.35 : mutedByConclusion ? 0.55 : 1
 
         return (
-          <g key={unit.name} textAnchor={anchor}>
+          <g
+            key={unit.name}
+            textAnchor={anchor}
+            onClick={onSelectUnit ? () => onSelectUnit(unit.name) : undefined}
+            style={onSelectUnit ? { cursor: 'pointer' } : undefined}
+            role={onSelectUnit ? 'button' : undefined}
+            aria-label={onSelectUnit ? `${unit.name} 카드로 이동` : undefined}
+          >
+            {/* 투명 히트 영역 — SVG 텍스트만으로는 터치 타깃이 너무 좁다 */}
+            {onSelectUnit && (
+              <rect
+                x={anchor === 'start' ? lx - 8 : anchor === 'end' ? lx - 72 : lx - 40}
+                y={nameY - 18}
+                width="80"
+                height={subY - nameY + 28}
+                fill="transparent"
+              />
+            )}
             <text
               x={lx}
               y={nameY}
