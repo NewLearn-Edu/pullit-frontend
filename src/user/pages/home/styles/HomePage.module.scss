@@ -558,8 +558,13 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   min-width: 350px;
   display: flex;
   align-items: flex-end;
-  background: transparent;
+  background: rgba(21, 17, 18, 0.38); // Figma #151112 38% — 시트 뒤 딤
+  animation: unitDimIn 240ms ease;
   z-index: 60;
+}
+
+@keyframes unitDimIn {
+  from { background: rgba(21, 17, 18, 0); }
 }
 
 .unitSheet {
@@ -567,34 +572,45 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   flex-direction: column;
   gap: $space-lg;
   width: 100%;
-  margin-bottom: 64px; // 하단 네비 위에서 시작 (지도와 동일)
   max-height: calc(100dvh - 140px); // 문항별 결과까지 길어지면 시트 내부 스크롤
   overflow-y: auto;
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
   border-radius: 26px 26px 0 0;
   background: $color-canvas;
-  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
-  animation: infoIn 280ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  // filter: drop-shadow 는 transform 마다 전체 리페인트를 일으켜 드래그 잔상의 원인 —
+  // box-shadow 는 컴포짓 레이어에서 함께 이동해 매끄럽다
+  box-shadow: 0 -16px 25px rgba(0, 0, 0, 0.12);
+  animation: unitSheetRise 320ms cubic-bezier(0.22, 0.9, 0.3, 1);
   transform: translateY(var(--drag-y, 0px));
-  transition: transform 200ms ease;
+  transition: transform 220ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  will-change: transform;
   touch-action: none;
 
-  // 웹 — 바텀시트 대신 우측 고정 패널 (스와이프·드래그 없음)
+  // 웹 — 바텀시트 대신 우측 고정 패널 (스와이프·드래그 없음).
+  // 높이는 딤(fixed, 뷰포트 크기) 기준 % 고정 — 콘텐츠 양과 무관하게 항상 꽉 차고,
+  // dvh 계산이 어긋나는 환경에서도 뷰포트 밖으로 잘리지 않는다
   @include desktop-up {
     position: absolute;
     top: 20px;
     right: 20px;
-    bottom: 20px;
+    bottom: auto;
     width: 400px;
+    height: calc(100% - 40px);
+    max-height: none;
     margin-bottom: 0;
     padding: 24px 20px;
     border-radius: 20px;
     overflow-y: auto;
     transform: none;
     transition: none;
-    filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.12));
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
     animation: unitSheetInSide 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
   }
+}
+
+// 등장 — 화면 아래에서 온전히 올라온다 (기존 24px 페이드는 "떠오르는" 느낌이 없었다)
+@keyframes unitSheetRise {
+  from { transform: translateY(100%); }
 }
 
 @keyframes unitSheetInSide {
