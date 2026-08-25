@@ -118,6 +118,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 16px;
   height: 360px;
   border-radius: 16px;
   background: $color-canvas;
@@ -228,7 +229,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   flex-direction: column;
   gap: $space-lg;
-  margin-top: 10px; // 그래프 카드와 소단원 헤드라인 사이 여백
+  margin-top: 16px; // 그래프 카드와 소단원 헤드라인 사이 여백
   padding-bottom: 20px;
 }
 
