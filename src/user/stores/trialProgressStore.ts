@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { CURRICULUM, type CurriculumCategory, type CurriculumUnit } from '@/user/data/curriculum'
 import { fetchTrialDiagnoses } from '@/user/api/attemptApi'
+import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { TRIAL_GROUPS } from '@/user/services/problemSet'
 import { useUserStore } from '@/user/stores/userStore'
 
@@ -92,6 +93,17 @@ const UNIT_NAME_BY_GROUP: Record<string, string> = (() => {
   return byGroup
 })()
 
+/** 유닛 표시명 → 과목 — hydrate 때 과목별 서버 응답 성공 여부로 로컬 폐기 범위를 가른다 */
+const UNIT_SUBJECT_BY_NAME: Record<string, 'math' | 'english'> = (() => {
+  const map: Record<string, 'math' | 'english'> = {}
+  for (const [subject, categories] of Object.entries(CURRICULUM)) {
+    for (const category of categories) {
+      for (const unit of category.units) map[unit.name] = subject as 'math' | 'english'
+    }
+  }
+  return map
+})()
+
 /** 진행 중인 세트 — 결과 화면이 "어느 유닛을 푼 건지" 알아야 진단으로 확정할 수 있다 */
 export interface PendingUnit {
   unitName: string
@@ -149,6 +161,8 @@ export const useTrialProgressStore = create<TrialProgressState>()(
        */
       hydrateFromServer: async () => {
         if (!useUserStore.getState().me) return
+        // 미전송 풀이를 먼저 반영 — 방금 푼 진단이 서버에 도착하기 전에 폐기되는 역전 방지
+        await flushAttemptQueue().catch(() => {})
         const [math, english] = await Promise.all([
           fetchTrialDiagnoses('math').catch(() => null),
           fetchTrialDiagnoses('english').catch(() => null),
@@ -167,11 +181,22 @@ export const useTrialProgressStore = create<TrialProgressState>()(
             items: get().diagnosed[unitName]?.items,
           }
         }
-        set((s) => ({ diagnosed: { ...s.diagnosed, ...server } }))
+        set((s) => {
+          // 조회 실패 과목·커리큘럼 밖 항목만 로컬 보존 — 성공 과목은 서버 목록으로 대체
+          const kept: Record<string, UnitDiagnosis> = {}
+          for (const [name, diag] of Object.entries(s.diagnosed)) {
+            const unitSubject = UNIT_SUBJECT_BY_NAME[name]
+            const fetched =
+              unitSubject === 'math' ? math !== null
+              : unitSubject === 'english' ? english !== null
+              : false
+            if (!fetched) kept[name] = diag
+          }
+          return { diagnosed: { ...kept, ...server } }
+        })
       },
 
-      resetProgress: () =>
-        set({ diagnosed: {}, dayKey: todayKey(), setsToday: 0, extraToday: 0, pendingUnit: null }),
+      resetProgress: () => set({ diagnosed: {}, pendingUnit: null }),
     }),
     {
       name: 'pullit_trial_progress',
