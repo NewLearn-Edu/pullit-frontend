@@ -11,6 +11,15 @@ import './styles/globals.css'
 // KaTeX 렌더링 CSS · 이거 없으면 \sqrt[n], \frac, ^ 등이 배치되지 않아 수식이 깨져 보임
 import 'katex/dist/katex.min.css'
 
+// QA 전용 URL 리셋 (dev 빌드 한정) — 모바일 실기기는 콘솔을 열 수 없어
+// 주소에 ?qa-reset 을 붙여 열면 1회성 로컬 플래그·맛보기 세션 잔재를 지운다.
+// 프로덕션 번들에서는 import.meta.env.DEV 가 false 라 코드째 제거된다.
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('qa-reset')) {
+  localStorage.removeItem('pullit_first_credit_celebrated') // 첫 크레딧 시트 1회 노출 플래그
+  localStorage.removeItem('pullit_trial_progress') // 단원 진단 캐시·오늘 세트 카운터·pendingUnit
+  sessionStorage.clear() // 맛보기 결과·풀이 큐·문항 타이머 스냅샷
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
