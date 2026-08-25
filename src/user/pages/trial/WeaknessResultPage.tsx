@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { useMe } from '@/user/hooks/useMe'
 import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
@@ -175,6 +176,9 @@ interface Row {
  */
 export default function WeaknessResultPage() {
   const navigate = useNavigate()
+  // 세션 로드 — 이 페이지는 익명 퍼널에서도 열리지만, 로그인 유저의 "진단 완료"가
+  // 회원 판정(isMember) 없이 /signup 으로 새던 버그 방지 (조회 전용, 게스트 생성 없음)
+  useMe()
   const isMember = useUserStore(selectIsMember)
   const {
     mathSkillNodeId,
