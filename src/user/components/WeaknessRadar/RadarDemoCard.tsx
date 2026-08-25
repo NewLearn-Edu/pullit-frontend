@@ -4,6 +4,7 @@ import { fetchSkillScores } from '@/user/api/attemptApi'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
+import { useUserStore } from '@/user/stores/userStore'
 import WeaknessRadar from '@/user/components/WeaknessRadar/WeaknessRadar'
 
 /**
@@ -48,8 +49,11 @@ function useDiagnosedScore(): { unitName: string | null; score: number | null } 
   const [serverScore, setServerScore] = useState<number | null>(null)
   const [localScore, setLocalScore] = useState<number | null>(null)
 
+  // 세션이 확보된 경우에만 서버 점수를 조회 — 익명 퍼널(로그인·가입 유도 화면)에서
+  // 무조건 쏘면 401 → 재발급 401 콘솔 소음만 남는다. 익명은 아래 로컬 폴백으로 충분.
+  const me = useUserStore((s) => s.me)
   useEffect(() => {
-    if (!unitName) return
+    if (!unitName || !me) return
     let alive = true
     fetchSkillScores('math')
       .then((list) => {
@@ -61,7 +65,7 @@ function useDiagnosedScore(): { unitName: string | null; score: number | null } 
     return () => {
       alive = false
     }
-  }, [unitName])
+  }, [unitName, me])
 
   useEffect(() => {
     if (!unitName || !mathSkillNodeId) return
