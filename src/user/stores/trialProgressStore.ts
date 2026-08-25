@@ -118,7 +118,9 @@ export interface TrialProgressState {
   syncDay: () => void
   /** 세트 시작 — 어느 유닛을 푸는 중인지 표시만 한다 (카운터는 완료 시 소진) */
   startUnit: (pending: PendingUnit) => void
-  /** 진행 중이던 세트를 진단 완료로 확정 — 오늘 세트를 1 소진한다. 없으면 no-op */
+  /** 진행 표식 제거 — 진행 페이지를 거치지 않는 맛보기 퍼널 시작 시 stale 잔재 정리 */
+  clearPendingUnit: () => void
+  /** 진행 중이던 세트를 진단 완료로 확정. 없으면 no-op */
   finishPendingUnit: (result: Omit<UnitDiagnosis, 'date'>) => void
   /** 크레딧을 써서 오늘 세트를 하나 더 연다 (호출 전에 잔액 확인 필요) */
   buyExtraSet: () => void
@@ -140,6 +142,8 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       syncDay: () => {
         const key = todayKey()
         if (get().dayKey !== key) set({ dayKey: key, setsToday: 0, extraToday: 0 })
+      clearPendingUnit: () => set({ pendingUnit: null }),
+
       },
 
       startUnit: (pending) => {
@@ -148,9 +152,9 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       },
 
       /**
-       * 세트를 "완료" 시점에 소진한다 (시작 시점이 아니라).
-       * 중간에 이탈한 유저가 하루를 날리지 않게 하려는 것 — 어차피 완료해야 진도가 나가므로
-       * 재시작 반복으로 얻는 이득이 없다.
+       * 진행 중 표식만 비운다 — 진행 페이지를 거치지 않는 세트(맛보기 퍼널)를 시작할 때 호출.
+       * 이전에 unlock 에서 시작하고 이탈한 잔재가 남아 있으면 맛보기 완주를 그 유닛의
+       * 완료로 오인해 세트를 소진하고 unlock 으로 복귀시키던 버그 (2026-08-25)
        */
       finishPendingUnit: (result) => {
         const pending = get().pendingUnit

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
+import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
@@ -43,6 +44,9 @@ export default function TrialStartPage() {
     flushAttemptQueue() // 세션 있는 재도전(미완 회원)의 이전 미전송분 회수 — 익명이면 no-op
     reset()
     clearAllQuizStarts() // 잔여 문항 타이머 스냅샷 정리 — 새 세트는 0초부터
+    // 맛보기는 진행 페이지(unlock)를 거치지 않는다 — unlock 에서 시작하고 이탈한
+    // pendingUnit 잔재가 남아 있으면 결과 화면이 이 세트를 그 유닛 완료로 오인한다
+    useTrialProgressStore.getState().clearPendingUnit()
     setLastSubject(selected)
     navigate(`/trial/quiz/${selected}/0`)
   }
