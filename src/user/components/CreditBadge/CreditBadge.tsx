@@ -8,7 +8,7 @@ interface CreditBadgeProps {
 }
 
 /** 크레딧 코인 — 서비스 크레딧 그래픽(노란 동전 + C)의 미니 버전. 브랜드 고정색 */
-function CreditCoin() {
+export function CreditCoin() {
   return (
     <svg className={styles.coin} viewBox="0 0 20 20" fill="none" aria-hidden>
       <circle cx="10" cy="10" r="9.2" fill="#F8D558" />

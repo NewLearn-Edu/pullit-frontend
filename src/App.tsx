@@ -5,6 +5,7 @@ import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import WrongNoteDetailPage from './user/pages/wrongnote/WrongNoteDetailPage'
 import MyPage from './user/pages/my/MyPage'
+import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnlockProgressPage from './user/pages/unlock/UnlockProgressPage'
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
         <Route path="/report" element={<ReportPage />} />
         <Route path="/my" element={<MyPage />} />
+      <Route path="/my/profile" element={<ProfileEditPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
         <Route path="/unlock/:subject/:slug" element={<UnlockProgressPage />} />

@@ -5,12 +5,28 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
 import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
+import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
 
 const APP_VERSION = 'v1.0.0'
 const SUPPORT_EMAIL = 'newlearnsoft@gmail.com'
+
+/**
+ * 생년월일 → 학년 라벨 (한국 나이 = 올해 − 출생년 + 1).
+ * 서비스 대상(중2~고3) 밖이거나 생일 미입력이면 null — 메타 줄에서 숨긴다.
+ */
+function gradeLabel(birthDate: string | null | undefined): string | null {
+  if (!birthDate) return null
+  const birthYear = Number(birthDate.slice(0, 4))
+  if (!birthYear) return null
+  const koreanAge = new Date().getFullYear() - birthYear + 1
+  const map: Record<number, string> = {
+    15: '중2', 16: '중3', 17: '고1', 18: '고2', 19: '고3',
+  }
+  return map[koreanAge] ?? null
+}
 
 /**
  * 마이페이지 (/my · Figma 2627-2336)
@@ -131,19 +147,29 @@ export default function MyPage() {
         <PageHeader backTo="history" />
 
         <div className={styles.content}>
-        {/* 프로필 카드 */}
+        {/* 프로필 헤더 — 토스 프로필형 세로 중앙 배치 (아바타 · 이름 · 학년|코인 메타) */}
         <section className={styles.profileCard}>
-          <div className={styles.profileInfo}>
-            <span className={styles.avatar}>🦊</span>
-            <div className={styles.userDetails}>
-              <p className={styles.userName}>
-                {isGuest ? me?.nickname ?? '게스트' : me?.name ?? '이름 없음'}
-              </p>
-              <p className={styles.userEmail}>
-                {isGuest ? '기록은 7일 뒤 사라져요 · 가입하면 그대로 저장돼요' : me?.email ?? ''}
-              </p>
-            </div>
-          </div>
+          <span className={styles.avatar}>🦊</span>
+          <p className={styles.userName}>
+            {/* 표시명은 닉네임 우선 — 프로필 편집에서 바꾸는 값 (없으면 실명) */}
+            {isGuest ? me?.nickname ?? '게스트' : me?.nickname ?? me?.name ?? '이름 없음'}
+          </p>
+          {isGuest ? (
+            <p className={styles.profileMeta}>기록은 7일 뒤 사라져요 · 가입하면 그대로 저장돼요</p>
+          ) : (
+            <p className={styles.profileMeta}>
+              {gradeLabel(me?.birthDate) && (
+                <>
+                  <span>{gradeLabel(me?.birthDate)}</span>
+                  <span className={styles.metaDivider} aria-hidden />
+                </>
+              )}
+              <span className={styles.metaCredit}>
+                <CreditCoin />
+                {me?.creditBalance ?? 0}
+              </span>
+            </p>
+          )}
           {isGuest ? (
             <button
               type="button"
@@ -153,8 +179,11 @@ export default function MyPage() {
               10초만에 가입하기
             </button>
           ) : (
-            // 프로필 편집 화면은 준비 전
-            <button type="button" onClick={comingSoon} className={styles.editButton}>
+            <button
+              type="button"
+              onClick={() => navigate('/my/profile')}
+              className={styles.editButton}
+            >
               프로필 편집
             </button>
           )}

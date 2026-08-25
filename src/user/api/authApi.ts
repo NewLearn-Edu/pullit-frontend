@@ -322,6 +322,11 @@ export async function updateMarketingConsent(agree: boolean): Promise<void> {
   await api.patch('/api/users/me/marketing-consent', { agree })
 }
 
+/** 닉네임 변경 (프로필 편집) — 형식·중복·90일 잠금 위반 시 4xx (message = UX 카피) */
+export async function updateNickname(nickname: string): Promise<void> {
+  await api.patch('/api/users/me/nickname', { nickname })
+}
+
 // ---------------------------------------------------------------------------
 // 내 정보
 // ---------------------------------------------------------------------------
@@ -340,6 +345,8 @@ export interface MeResult {
   birthDate: string | null
   /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
   marketingConsentAt: string | null
+  /** 마지막 닉네임 변경 시각 — 90일 재변경 잠금 판정용 (한 번도 안 바꿨으면 null) */
+  nicknameChangedAt: string | null
 }
 
 export interface ProfileCompleteRequest {

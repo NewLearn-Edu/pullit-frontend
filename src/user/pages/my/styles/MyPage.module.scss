@@ -17,7 +17,7 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
 .page {
   display: flex;
   min-height: 100dvh;
-  background: $bg;
+  background: #f8f8f8; // black/50 — 홈과 동일한 페이지 배경 (HomePage $row-gray)
 }
 
 .main {
@@ -49,42 +49,29 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
 // 프로필 카드
 // ─────────────────────────────────────────────────────────────────────────────
 
+// 토스 프로필형 헤더 — 아바타·이름·메타(학년 | 코인) 세로 중앙, 카드 프레임 없음
 .profileCard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-  border: 1px solid $line;
-  border-radius: 16px;
-  background: $color-canvas;
-}
-
-.profileInfo {
-  display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  padding: 12px 0 8px;
 }
 
 .avatar {
   @include flex-center;
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   border-radius: $radius-full;
   background: $red-tint;
-  font-size: 28px;
-}
-
-.userDetails {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  font-size: 36px;
 }
 
 .userName {
-  margin: 0;
-  font-size: 20px;
+  max-width: 100%;
+  margin: 4px 0 0;
+  font-size: 22px;
   font-weight: $fw-bold;
   color: $ink;
   overflow: hidden;
@@ -92,26 +79,43 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   white-space: nowrap;
 }
 
-.userEmail {
+// 이름 아래 메타 줄 — "고2 | 🪙 5" (게스트는 안내 문구)
+.profileMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: $fs-body-sm;
-  font-weight: $fw-normal;
+  font-size: 15px;
+  font-weight: $fw-semibold;
   color: $sub;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.metaDivider {
+  width: 1px;
+  height: 12px;
+  background: $line;
+}
+
+.metaCredit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+
+  svg { width: 16px; height: 16px; }
 }
 
 .editButton {
   @include button-reset;
   @include flex-center;
   width: 100%;
-  padding: 10px 0;
-  border-radius: 10px;
-  background: #f8f8f8;
-  font-size: $fs-body-sm;
+  margin-top: 8px;
+  padding: 12px 0;
+  border-radius: 12px;
+  background: #f2f4f6;
+  font-size: 15px;
   font-weight: $fw-semibold;
-  color: $sub;
+  color: #4e5968;
   transition: background 150ms ease;
 
   @include hover { background: $bg; }
