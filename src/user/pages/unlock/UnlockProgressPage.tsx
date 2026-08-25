@@ -12,8 +12,7 @@ import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import {
   computeCategoryProgress,
-  EXTRA_SET_CREDIT_COST,
-  selectRemainingSetsToday,
+  SET_CREDIT_COST,
   useTrialProgressStore,
 } from '@/user/stores/trialProgressStore'
 import { findCategoryBySlug, UNIT_LABEL } from '@/user/data/curriculum'
@@ -32,7 +31,7 @@ const SET_SIZE = 3
  *
  * 진행 규칙 (trialProgressStore 정책 주석 참고)
  *  - 유닛 1개 = 맛보기 3문제, 커리큘럼 순서대로만 열린다
- *  - 하루 1세트. 더 풀려면 크레딧으로 추가 세트를 연다
+ *  - 세트 시작 = 크레딧 차감 (일일 제한 없음 — 2026-08-25 확정)
  *  - 카테고리 유닛을 전부 진단하면 약점 그래프가 열린다
  */
 export default function UnlockProgressPage() {
@@ -46,11 +45,8 @@ export default function UnlockProgressPage() {
   const credit = me?.creditBalance ?? 0
 
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
-  const syncDay = useTrialProgressStore((s) => s.syncDay)
   const startUnit = useTrialProgressStore((s) => s.startUnit)
-  const buyExtraSet = useTrialProgressStore((s) => s.buyExtraSet)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
-  const setsLeft = useTrialProgressStore(selectRemainingSetsToday)
 
   // 세션(게스트·회원) 필요 — 재발급까지 끝났는데 없으면 로그인으로 (다른 세션 페이지와 동일)
   const sessionStatus = useUserStore((s) => s.status)
@@ -78,13 +74,6 @@ export default function UnlockProgressPage() {
   })
 
 
-  // 자정을 넘겨 페이지를 계속 열어둔 경우까지 커버 (진입 시 1회 + 자정 시점 1회)
-  useEffect(() => {
-    syncDay()
-    const timer = window.setTimeout(syncDay, msUntilMidnight())
-    return () => clearTimeout(timer)
-  }, [syncDay])
-
   // 잘못된 slug 로 들어오면 홈으로
   useEffect(() => {
     if (!category) navigate('/home', { replace: true })
@@ -95,17 +84,14 @@ export default function UnlockProgressPage() {
     [category, diagnosed],
   )
 
-  const countdown = useMidnightCountdown()
-
   if (!category || !progress) return null
 
   const unitLabel = UNIT_LABEL[subject]
-  const canStartToday = setsLeft > 0
 
-  /** 다음 유닛 3문제 시작 — 맛보기 퀴즈 플로우를 그대로 태운다 */
+  /** 다음 유닛 3문제 시작 — 맛보기 퀴즈 플로우를 그대로 태운다 (크레딧 차감 후 호출) */
   const startNextSet = () => {
     const next = progress.nextUnit
-    if (!next || !canStartToday) return
+    if (!next) return
 
     resetTrial()
     setLastSubject(subject)
@@ -116,24 +102,21 @@ export default function UnlockProgressPage() {
     navigate(`/trial/quiz/${subject}/0`)
   }
 
-  /** 하단 진단 시작 CTA — 오늘 몫이 남았으면 바로 시작, 다 썼으면 크레딧 시트 */
-  const onStartCta = () => {
-    if (canStartToday) startNextSet()
-    else setCreditSheetOpen(true)
-  }
+  /** 하단 진단 시작 CTA — 세트마다 크레딧을 쓰므로 항상 확인 시트부터 */
+  const onStartCta = () => setCreditSheetOpen(true)
 
-  // 크레딧 이어풀기 — 서버 차감(POST /api/credits/extra-set) 성공 시에만 세트를 연다
+  // 세트 시작 — 서버 차감(POST /api/credits/extra-set) 성공 시에만 퀴즈로 진입한다
   const [buying, setBuying] = useState(false)
   const [buyError, setBuyError] = useState<string | null>(null)
-  const confirmBuyExtraSet = async () => {
+  const confirmStartSet = async () => {
     if (buying) return
     setBuying(true)
     setBuyError(null)
     try {
       await useCreditForExtraSet()
-      buyExtraSet() // 오늘 세트 카운터 +1 (로컬 진행 상태)
-      loadMe(true) // 크레딧 배지 잔액 갱신
+      loadMe(true) // 크레딧 배지 잔액 갱신 (fire-and-forget)
       setCreditSheetOpen(false)
+      startNextSet()
     } catch {
       setBuyError('크레딧 사용에 실패했어. 잔액을 확인하고 다시 시도해줘')
     } finally {
@@ -169,10 +152,7 @@ export default function UnlockProgressPage() {
 
           {/* ── 유닛 리스트 — 홈과 공용 레일 리스트 (UnitRailList) ─────────── */}
           <section className={styles.listSection}>
-            <UnitRailList
-              rows={progress.rows}
-              nextMeta={!canStartToday ? `${countdown} 뒤에 열려` : undefined}
-            />
+            <UnitRailList rows={progress.rows} />
           </section>
 
           {progress.unlocked && (
@@ -210,7 +190,7 @@ export default function UnlockProgressPage() {
         )}
       </main>
 
-      {/* ── 크레딧 추가 세트 확인 시트 ─────────────────────────────────────── */}
+      {/* ── 세트 시작 크레딧 확인 시트 ─────────────────────────────────────── */}
       {creditSheetOpen && (
         <div className={styles.sheetDim} onClick={() => setCreditSheetOpen(false)}>
           <div
@@ -227,21 +207,21 @@ export default function UnlockProgressPage() {
               <span className={styles.sheetHandle} />
             </button>
 
-            <h2 className={styles.sheetTitle}>지금 이어서 풀까?</h2>
+            <h2 className={styles.sheetTitle}>이 {unitLabel} 진단할까?</h2>
             <p className={styles.sheetDesc}>
-              크레딧 {EXTRA_SET_CREDIT_COST}개를 쓰면 다음 {unitLabel}(
-              {progress.nextUnit?.name}) {SET_SIZE}문제를 바로 풀 수 있어
+              크레딧 {SET_CREDIT_COST}개를 쓰면 {unitLabel}({progress.nextUnit?.name}) {SET_SIZE}
+              문제를 바로 풀 수 있어
             </p>
 
             <div className={styles.sheetCard}>
               <span className={styles.sheetCardLabel}>보유 크레딧</span>
               <span className={styles.sheetCardValue}>
-                {credit} → {Math.max(0, credit - EXTRA_SET_CREDIT_COST)}
+                {credit} → {Math.max(0, credit - SET_CREDIT_COST)}
               </span>
             </div>
 
-            {credit < EXTRA_SET_CREDIT_COST ? (
-              <p className={styles.sheetWarn}>크레딧이 부족해. 내일 무료 세트로 이어서 풀자</p>
+            {credit < SET_CREDIT_COST ? (
+              <p className={styles.sheetWarn}>크레딧이 부족해</p>
             ) : buyError ? (
               <p className={styles.sheetWarn}>{buyError}</p>
             ) : null}
@@ -252,15 +232,15 @@ export default function UnlockProgressPage() {
                 onClick={() => setCreditSheetOpen(false)}
                 className={styles.sheetCancel}
               >
-                내일 할래
+                다음에 할래
               </button>
               <button
                 type="button"
-                onClick={confirmBuyExtraSet}
-                disabled={credit < EXTRA_SET_CREDIT_COST || buying}
+                onClick={confirmStartSet}
+                disabled={credit < SET_CREDIT_COST || buying}
                 className={styles.sheetConfirm}
               >
-                {buying ? '처리 중…' : '크레딧 쓰기'}
+                {buying ? '처리 중…' : '크레딧 쓰고 시작'}
               </button>
             </div>
           </div>
@@ -271,33 +251,4 @@ export default function UnlockProgressPage() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 카피 · 시간 헬퍼
-// ─────────────────────────────────────────────────────────────────────────────
-
-function msUntilMidnight(base: Date = new Date()): number {
-  const midnight = new Date(base)
-  midnight.setHours(24, 0, 0, 0)
-  return midnight.getTime() - base.getTime()
-}
-
-/** 자정까지 남은 시간 ("5시간 12분") — 1분마다 갱신 */
-function useMidnightCountdown(): string {
-  const [label, setLabel] = useState(() => formatRemain(msUntilMidnight()))
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setLabel(formatRemain(msUntilMidnight())), 60_000)
-    return () => clearInterval(timer)
-  }, [])
-
-  return label
-}
-
-function formatRemain(ms: number): string {
-  const totalMin = Math.max(0, Math.ceil(ms / 60_000))
-  const h = Math.floor(totalMin / 60)
-  const m = totalMin % 60
-  if (h === 0) return `${m}분`
-  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
-}
 
