@@ -13,6 +13,12 @@
   align-items: center;
   min-height: 100dvh;
   background: $color-canvas;
+
+  // 모바일 — 스크롤 없이 보이는 화면 높이에 딱 맞춘다 (레이더가 남는 높이를 채움)
+  @include below-tablet {
+    height: 100dvh;
+    overflow: clip;
+  }
 }
 
 // 중앙 컨텐츠 컬럼 — 헤더를 제외한 나머지 공간에서 세로 중앙 정렬 (margin auto)
@@ -25,6 +31,14 @@
   max-width: 620px;
   margin: auto;
   padding: 0 $space-lg $space-xl;
+
+  @include below-tablet {
+    flex: 1;
+    min-height: 0;
+    margin: 0 auto;
+    // 레이더가 상한(480px)에 닿아 남는 높이가 생기면 위아래로 고르게 — 세로 가운데
+    justify-content: center;
+  }
 }
 
 // 풀잇 워드마크 로고 — 레이더 카드가 주인공이라 기존(128px)보다 작게
@@ -35,9 +49,48 @@
   @include tablet-up { width: 96px; }
 }
 
-// 약점 레이더 데모 카드 (RadarDemoCard 공용 컴포넌트) — 로고와의 세로 호흡만 여기서
-.radar {
-  margin-top: 24px;
+// 약점 레이더 데모 카드 (RadarDemoCard 공용 컴포넌트)
+// 브레이크포인트별 사이징 (.content .radar 2단 셀렉터 — 카드의 tailwind w-full 을 이김)
+// · 폰(~767): 남는 화면 높이를 카드가 채움 — 화면 높이에 딱 맞는 고정 레이아웃
+// · 패드(768~1280) · 웹(1281~): 세로 중앙 정렬 유지, 카드 높이를 뷰포트 절반으로
+//   캡해 어떤 창 높이에서도 스크롤 없이 균형 있게 (기존 480px 상한 유지)
+.content .radar {
+  @include below-tablet {
+    flex: 1 1 0;
+    min-height: 0;
+    width: auto;
+    max-width: 100%;
+  }
+
+  @include tablet-up {
+    height: min(480px, 50dvh);
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+// 카피 (Figma 3297-4363) — 헤드라인 24 Bold + 서브 16 Medium, 가운데 정렬
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.headline {
+  margin: 0;
+  font-size: 24px;
+  font-weight: $fw-bold;
+  color: #121417;
+}
+
+.sub {
+  margin: 0;
+  font-size: 16px;
+  font-weight: $fw-medium;
+  line-height: 1.4;
+  color: #5e6368;
 }
 
 // 소셜 아이콘 행 (SocialLoginButtons 공용 컴포넌트) — 배지 영역(pt-36)이 위 여백을 겸한다
@@ -68,9 +121,3 @@
 }
 
 // 하단 안내 문구
-.note {
-  margin: $space-xl 0 0;
-  font-size: $fs-body-sm;
-  color: $color-muted;
-  text-align: center;
-}

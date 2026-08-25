@@ -96,12 +96,16 @@ export default function SignupPromptPage() {
       {/* 상단바 — 우측 건너뛰기만 (온보딩 공용 SkipHeader) */}
       <SkipHeader onSkip={() => setSkipConfirmOpen(true)} />
 
-      <main className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-[24px] overflow-hidden px-[40px] py-[40px] max-md:px-lg max-md:py-[24px]">
-        {/* 레이더 카드 — 라운드 40 + 핑크 블롭 배경 + 데모 morph (공용 RadarDemoCard) */}
-        <RadarDemoCard />
+      <main className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden px-[40px] py-[40px] max-md:px-lg max-md:py-[24px]">
+        {/* 레이더 카드 — 배경색 없이 그래프만 (2026-08-25).
+            사이징은 로그인과 동일: 폰 = 남는 높이 채움 · 패드/웹 = min(480px, 50dvh) */}
+        <RadarDemoCard
+          tinted={false}
+          className="max-md:min-h-0 max-md:w-auto max-md:max-w-full max-md:flex-1 md:h-[min(480px,50dvh)] md:w-auto md:max-w-full"
+        />
 
-        {/* 안내문 + 소셜 버튼 — 전 기기 단일 중앙 컬럼 */}
-        <div className="flex w-full max-w-[620px] shrink-0 flex-col items-center gap-[24px]">
+        {/* 안내문 + 소셜 버튼 — 전 기기 단일 중앙 컬럼 (카피↔버튼 16px, 로그인과 동일) */}
+        <div className="flex w-full max-w-[620px] shrink-0 flex-col items-center gap-[16px]">
           {/* 안내문 — 그래프 아래 타이틀 + 서브카피 (시안 배치) */}
           <div className="flex w-full shrink-0 flex-col gap-[8px] text-center">
             <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">

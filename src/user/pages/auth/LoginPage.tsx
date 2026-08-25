@@ -100,6 +100,12 @@ export default function LoginPage() {
         {/* 약점 레이더 데모 — 가입 유도와 같은 카드, 배경 블롭 없이 그래프만 */}
         <RadarDemoCard className={styles.radar} tinted={false} />
 
+        {/* 카피 (Figma 3297-4363) — 헤드라인 + 서브 */}
+        <div className={styles.copy}>
+          <h1 className={styles.headline}>하루 15분, 필요한 3문제만 풀어</h1>
+          <p className={styles.sub}>가입하면 매일 약점 문제만 골라줄게</p>
+        </div>
+
         {/* 소셜 로그인 — 원형 아이콘 4개 + "3초만에 가입" 배지 (가입 유도 페이지와 동일) */}
         <SocialLoginButtons
           onKakao={withReturn(startKakaoLogin)}
@@ -119,8 +125,6 @@ export default function LoginPage() {
         >
           비회원으로 약점보기
         </button>
-
-        <p className={styles.note}>하루 3문제 1등급 가능해.</p>
       </div>
     </div>
   )
