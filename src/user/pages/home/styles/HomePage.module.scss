@@ -346,7 +346,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: $fw-semibold;
   color: #80858b;
   white-space: nowrap;
@@ -363,7 +363,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 .unitCardScore {
   flex-shrink: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: $fw-semibold;
   font-variant-numeric: tabular-nums;
   color: #121417;

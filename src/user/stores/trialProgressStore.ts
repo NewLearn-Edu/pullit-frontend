@@ -54,6 +54,8 @@ export interface UnitDiagnosis {
   correct: number
   /** 진단일 (YYYY-MM-DD) */
   date: string
+  /** 진단 시각 (HH:mm) — 최근 학습 카드 표기용 (구버전 데이터엔 없을 수 있음) */
+  time?: string
   /** 문항별 결과 — 재열람 페이지용 (구버전 데이터엔 없을 수 있음) */
   items?: DiagnosisItem[]
 }
@@ -116,9 +118,13 @@ export interface TrialProgressState {
   diagnosed: Record<string, UnitDiagnosis>
   /** 풀이 중인 세트 (결과 화면에서 확정) */
   pendingUnit: PendingUnit | null
+  /** "이 단원 안배웠어요" 건너뛴 유닛명 — 순서 잠금 해제용, 언제든 재진단 가능 */
+  skippedUnits: string[]
 
   /** 세트 시작 — 어느 유닛을 푸는 중인지 표시한다 (크레딧 차감은 호출부가 서버로) */
   startUnit: (pending: PendingUnit) => void
+  /** 유닛 건너뛰기 — 다음 소단원의 잠금이 풀린다 (2842-10966 시트) */
+  skipUnit: (name: string) => void
   /** 진행 표식 제거 — 진행 페이지를 거치지 않는 맛보기 퍼널 시작 시 stale 잔재 정리 */
   clearPendingUnit: () => void
   /** 진행 중이던 세트를 진단 완료로 확정. 없으면 no-op */
@@ -134,8 +140,16 @@ export const useTrialProgressStore = create<TrialProgressState>()(
     (set, get) => ({
       diagnosed: {},
       pendingUnit: null,
+      skippedUnits: [],
 
       startUnit: (pending) => set({ pendingUnit: pending }),
+
+      skipUnit: (name) =>
+        set((s) => ({
+          skippedUnits: s.skippedUnits.includes(name)
+            ? s.skippedUnits
+            : [...s.skippedUnits, name],
+        })),
 
       /**
        * 진행 중 표식만 비운다 — 진행 페이지를 거치지 않는 세트(맛보기 퍼널)를 시작할 때 호출.
@@ -147,8 +161,10 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       finishPendingUnit: (result) => {
         const pending = get().pendingUnit
         if (!pending) return // 이미 확정됐거나 진행 페이지를 안 거친 세션 (맛보기 온보딩 등)
+        const now = new Date()
+        const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
         set((s) => ({
-          diagnosed: { ...s.diagnosed, [pending.unitName]: { ...result, date: todayKey() } },
+          diagnosed: { ...s.diagnosed, [pending.unitName]: { ...result, date: todayKey(), time } },
           pendingUnit: null,
         }))
       },
@@ -178,6 +194,7 @@ export const useTrialProgressStore = create<TrialProgressState>()(
             minutes: d.timeSpentMs ? Math.max(1, Math.round(d.timeSpentMs / 60000)) : 0,
             correct: d.correctCount,
             date: d.completedAt.slice(0, 10),
+            time: d.completedAt.slice(11, 16) || undefined,
             items: get().diagnosed[unitName]?.items,
           }
         }
@@ -196,7 +213,7 @@ export const useTrialProgressStore = create<TrialProgressState>()(
         })
       },
 
-      resetProgress: () => set({ diagnosed: {}, pendingUnit: null }),
+      resetProgress: () => set({ diagnosed: {}, pendingUnit: null, skippedUnits: [] }),
     }),
     {
       name: 'pullit_trial_progress',
@@ -217,6 +234,7 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       partialize: (s) => ({
         diagnosed: s.diagnosed,
         pendingUnit: s.pendingUnit,
+        skippedUnits: s.skippedUnits,
       }),
     },
   ),
@@ -255,12 +273,19 @@ export interface CategoryProgress {
 export function computeCategoryProgress(
   category: CurriculumCategory,
   diagnosed: Record<string, UnitDiagnosis>,
+  /** "이 단원 안배웠어요" 로 건너뛴 유닛 — 잠금 판정에서 제외, 언제든 재진단 가능 */
+  skipped: string[] = [],
 ): CategoryProgress {
-  const firstUnsolved = category.units.findIndex((u) => !diagnosed[u.name])
+  const skippedSet = new Set(skipped)
+  const firstUnsolved = category.units.findIndex(
+    (u) => !diagnosed[u.name] && !skippedSet.has(u.name),
+  )
 
   const rows: UnitProgressRow[] = category.units.map((u, i) => {
     const diagnosis = diagnosed[u.name]
     if (diagnosis) return { ...u, state: 'done', diagnosis }
+    // 건너뛴 유닛 — 순서 잠금에서 빠지고 진단하기 버튼 유지 (재진단 허용 정책)
+    if (skippedSet.has(u.name)) return { ...u, state: 'next' }
     return { ...u, state: i === firstUnsolved ? 'next' : 'locked' }
   })
 
@@ -275,6 +300,7 @@ export function computeCategoryProgress(
     remaining,
     percent: total === 0 ? 0 : Math.round((doneCount / total) * 100),
     unlocked: remaining === 0,
-    nextUnit: rows.find((r) => r.state === 'next'),
+    // 진행 경로상 "다음 풀 유닛" — 건너뛴 유닛(재진단 가능 상태)은 제외
+    nextUnit: firstUnsolved >= 0 ? rows[firstUnsolved] : undefined,
   }
 }

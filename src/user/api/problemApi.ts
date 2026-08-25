@@ -37,17 +37,6 @@ export interface ProblemSetItem {
   glossary: GlossaryEntry[]
 }
 
-/** 유닛 은행 규모 (GET /api/problems/count) — 홈 소단원 상세 시트 "N문제 중 M문제 풀었어" 표기용 */
-export async function fetchProblemCount(
-  subject: 'math' | 'english',
-  unitCode: string,
-): Promise<number> {
-  const { data } = await api.get<BaseResponse<{ count: number }>>('/api/problems/count', {
-    params: { subject: subject.toUpperCase(), unitCode },
-  })
-  return data.data.count
-}
-
 /** 유닛(unit_code) 진단 세트 조회 — ACTIVE 문항 코드 오름차순 상위 size개 */
 export async function fetchProblemSet(
   subject: 'math' | 'english',
