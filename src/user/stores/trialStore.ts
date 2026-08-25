@@ -31,12 +31,21 @@ interface TrialState {
   englishResults: QuizItemResult[]
   /** 이번 세션에서 실제로 푼 과목 — 완주 가드 판정 기준 */
   lastSubject: Subject | null
+  /**
+   * 첫 진단 보상 지급 확정 — 제출 응답의 grantedReward(TRIAL_FIRST_CLEAR)로만 켜진다.
+   * 서버 원장이 진실원이라 로컬 추측 없이 축하 시트 노출 근거가 된다 (회원 경로).
+   */
+  firstRewardGranted: boolean
+  /** 축하 시트 노출 완료 — 같은 세션에서 결과 화면을 재방문해도 다시 뜨지 않게 */
+  firstCreditCelebrated: boolean
 
   setMathSkillNode: (id: string) => void
   setEnglishType: (id: string) => void
   setLastSubject: (subject: Subject) => void
   addResult: (subject: Subject, result: QuizItemResult) => void
   updateResult: (subject: Subject, problemId: number, patch: Partial<QuizItemResult>) => void
+  markFirstRewardGranted: () => void
+  markFirstCreditCelebrated: () => void
   reset: () => void
 
   isMathComplete: () => boolean
@@ -60,6 +69,8 @@ export const useTrialStore = create<TrialState>()(
       mathResults: [],
       englishResults: [],
       lastSubject: null,
+      firstRewardGranted: false,
+      firstCreditCelebrated: false,
 
       setMathSkillNode: (id) =>
         set({ mathSkillNodeId: id, mathResults: [] }),
@@ -87,6 +98,11 @@ export const useTrialStore = create<TrialState>()(
           } as Partial<TrialState>
         }),
 
+      markFirstRewardGranted: () => set({ firstRewardGranted: true }),
+      markFirstCreditCelebrated: () => set({ firstCreditCelebrated: true }),
+
+      // 보상 플래그 2종은 reset 대상이 아니다 — 세트 재시작마다 초기화되면
+      // 같은 세션에서 축하 시트가 다시 뜰 수 있다 (탭 닫으면 자연 소멸)
       reset: () =>
         set({
           mathSkillNodeId: POC_MATH_SKILL_NODE,
@@ -133,6 +149,8 @@ export const useTrialStore = create<TrialState>()(
         mathResults: state.mathResults,
         englishResults: state.englishResults,
         lastSubject: state.lastSubject,
+        firstRewardGranted: state.firstRewardGranted,
+        firstCreditCelebrated: state.firstCreditCelebrated,
       }),
     },
   ),

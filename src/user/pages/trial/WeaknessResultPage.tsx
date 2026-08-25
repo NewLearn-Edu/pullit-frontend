@@ -7,7 +7,7 @@ import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
-import { fetchSkillScores, fetchTrialDiagnoses, type SkillScore } from '@/user/api/attemptApi'
+import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
@@ -311,32 +311,21 @@ export default function WeaknessResultPage() {
   // 실제 지급은 서버가 진단 박제 트랜잭션에서 처리(멱등) — 여기는 안내 UI 만 담당.
   const diagnosedCount = useTrialProgressStore((s) => Object.keys(s.diagnosed).length)
   const [creditOpen, setCreditOpen] = useState(false)
-  // "생애 첫 진단" 판정 — 회원은 서버 기록이 진실원 (로컬 캐시는 지난 테스트
-  // 잔재로 부풀 수 있어 첫 진단인데도 시트가 안 뜨던 버그, 2026-08-25).
-  // 익명(가입 전 맛보기)은 서버 기록이 없으므로 로컬 판정 폴백.
-  const shouldCelebrateFirstCredit = async (): Promise<boolean> => {
+  // 판정 근거 (2026-08-26 재설계 — localStorage 플래그 제거):
+  // - 회원: 제출 응답의 grantedReward(TRIAL_FIRST_CLEAR)가 켠 firstRewardGranted. 서버 원장이 진실원.
+  // - 익명(가입 전): 유저 로우가 없어 지급 자체가 불가하므로 로컬 진단 1건 = 첫 진단으로 판정.
+  // - firstCreditCelebrated 는 같은 세션 재방문 시 재노출 방지 (sessionStorage — 탭 닫으면 소멸).
+  const firstRewardGranted = useTrialStore((s) => s.firstRewardGranted)
+  const firstCreditCelebrated = useTrialStore((s) => s.firstCreditCelebrated)
+  const shouldCelebrateFirstCredit = (): boolean => {
     if (isEarlybird()) return false // 얼리버드는 가입·크레딧 흐름이 없다
-    if (localStorage.getItem(FIRST_CREDIT_SEEN_KEY)) return false
-    if (isMember) {
-      try {
-        const [math, english] = await Promise.all([
-          fetchTrialDiagnoses('math').catch(() => []),
-          fetchTrialDiagnoses('english').catch(() => []),
-        ])
-        return math.length + english.length === 1 // 방금 박제된 1건뿐 = 첫 진단
-      } catch {
-        /* 판정 불가 — 아래 로컬 폴백 */
-      }
-    }
-    return diagnosedCount === 1
+    if (firstCreditCelebrated) return false
+    if (firstRewardGranted) return true
+    return !isMember && diagnosedCount === 1
   }
-  // 시트의 "확인" — 1회 플래그를 박고 원래 가려던 곳(홈/가입)으로 이어간다
+  // 시트의 "확인" — 노출 완료를 기록하고 원래 가려던 곳(홈/가입)으로 이어간다
   const confirmCreditSheet = () => {
-    try {
-      localStorage.setItem(FIRST_CREDIT_SEEN_KEY, '1')
-    } catch {
-      /* 저장 불가 환경 — 세션 내 상태로만 1회 처리 */
-    }
+    useTrialStore.getState().markFirstCreditCelebrated()
     setCreditOpen(false)
     navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
   }
@@ -666,9 +655,9 @@ export default function WeaknessResultPage() {
           // 얼리버드 테스트 모드 — 가입 유도 대신 사전예약 팝업.
           // 첫 진단이면 보상 시트가 먼저 끼어들고, 그 외에는 잠금 해제 진행 중이던
           // 세트면 진행 페이지로 복귀
-          onClick={async () => {
+          onClick={() => {
             if (isEarlybird()) return setReserveOpen(true)
-            if (await shouldCelebrateFirstCredit()) return setCreditOpen(true)
+            if (shouldCelebrateFirstCredit()) return setCreditOpen(true)
             navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
           }}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
@@ -682,9 +671,6 @@ export default function WeaknessResultPage() {
     </div>
   )
 }
-
-/** 첫 진단 보상 축하 1회 노출 플래그 (localStorage) */
-const FIRST_CREDIT_SEEN_KEY = 'pullit_first_credit_celebrated'
 
 /**
  * 첫 진단 완료 보상 시트 (Figma 2824-5720 · PI-SHEET-FIRST_CREDIT).

@@ -22,6 +22,8 @@ export interface AttemptSubmitResponse {
   answerValue: number | null
   answerText: string | null
   explanation: string | null
+  /** 이 제출로 실제 지급된 보상 (null = 없음) — TRIAL_FIRST_CLEAR 면 첫 진단 축하 시트 신호 */
+  grantedReward: 'TRIAL_FIRST_CLEAR' | null
 }
 
 interface BaseResponse<T> {

@@ -294,6 +294,12 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
     submitAttempt(req)
       .then((res) => {
+        // 첫 진단 보상 지급 확정 신호 — 서버 원장 기준이라 로컬 추측 없이 축하 시트를 띄운다.
+        // 잔액(me.creditBalance)도 즉시 재조회 — 캐시된 me 로 홈 배지가 낡은 잔액을 보여주지 않게
+        if (res.grantedReward === 'TRIAL_FIRST_CLEAR') {
+          useTrialStore.getState().markFirstRewardGranted()
+          useUserStore.getState().loadMe(true)
+        }
         if (!isTrial) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
         const rescored = computeScore({
           points,

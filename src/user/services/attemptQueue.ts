@@ -56,15 +56,20 @@ export async function flushAttemptQueue(): Promise<void> {
   flushing = true
   try {
     const remain: AttemptSubmitRequest[] = []
+    let rewardGranted = false
     for (const req of queue) {
       try {
-        await submitAttempt(req)
+        const res = await submitAttempt(req)
+        if (res.grantedReward === 'TRIAL_FIRST_CLEAR') rewardGranted = true
       } catch (error) {
         if (isRetryableAttemptError(error)) remain.push(req)
         // 복구 불가(404 등)는 버린다
       }
     }
     write(remain)
+    // flush 중 보상이 지급됐으면(게스트 생성·가입 직후 경로) 잔액을 재조회 —
+    // 캐시된 me 로 홈 크레딧 배지가 낡은 잔액을 보여주지 않게 (2026-08-26)
+    if (rewardGranted) await useUserStore.getState().loadMe(true)
   } finally {
     flushing = false
   }
