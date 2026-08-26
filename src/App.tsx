@@ -23,6 +23,7 @@ import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
+import TodayPage from './user/pages/today/TodayPage'
 import AccessGate from './AccessGate'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
@@ -44,6 +45,8 @@ export default function App() {
       {/* 회원 영역 — 맛보기 미완주면 /my 포함 어디든 /start 퍼널로 (RequireTrialDone) */}
       <Route element={<RequireTrialDone />}>
         <Route path="/home" element={<HomePage />} />
+        {/* 오늘의 추천 랜딩 — 알림톡 딥링크(과목 선택) · 나브 추천 버튼(?subject= 로 선택 생략) */}
+        <Route path="/today" element={<TodayPage />} />
         <Route path="/wrong-note" element={<WrongNotePage />} />
         <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
         <Route path="/report" element={<ReportPage />} />

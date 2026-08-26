@@ -146,6 +146,30 @@ export default function HomePage() {
     setStartSheet(row)
   }
 
+  // 추천 딥링크 (?start=unitCode) — /today(알림톡·나브 추천 버튼)가 넘겨준 유닛의
+  // 시트를 상태에 맞게 자동으로 연다. 대분류 칩이 다르면 먼저 맞춘 뒤 재실행된다.
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    const startCode = searchParams.get('start')
+    if (!startCode) return
+    const targetCat = categories.find((c) => c.units.some((u) => u.unitCode === startCode))
+    const next = new URLSearchParams(searchParams)
+    if (targetCat && targetCat.slug !== category.slug) {
+      if (targetCat.slug === categories[0].slug) next.delete('cat')
+      else next.set('cat', targetCat.slug)
+      setSearchParams(next, { replace: true }) // cat 이 바뀌면 이 effect 가 다시 돈다
+      return
+    }
+    next.delete('start')
+    setSearchParams(next, { replace: true })
+    const row = progress.rows.find((r) => r.unitCode === startCode)
+    if (!row) return
+    if (row.state === 'done') setUnitSheet(row)
+    else if (row.state === 'next' || (row.state === 'off' && row.offHead)) openStartSheet(row)
+    else setLockedSheet(row)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionStatus, searchParams, setSearchParams, categories, category.slug, progress.rows])
+
   // 예상 시간 — 세트 문항의 권장 시간 합 (문제 세트 캐시 공유라 보통 즉시)
   const [estimatedSec, setEstimatedSec] = useState<number | null>(null)
   useEffect(() => {

@@ -146,3 +146,33 @@
   color: $color-primary;
   font-weight: $fw-semibold;
 }
+
+// 가운데 추천 원형 버튼 슬롯 — 다른 아이템과 같은 flex 폭을 차지하고
+// 버튼만 위로 띄운다 (2026-08-26 추천 정책 · 오늘의 3문제 진입점)
+.bottomCenter {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+// 원은 바 위로 살짝만 뜬다 — 홈의 다크 도크가 나브에 밀착돼 있어
+// 크게 띄우면 도크 문구를 가린다. 캔버스색 링으로 경계를 분리.
+.bottomCircle {
+  @include flex-center;
+  position: absolute;
+  top: -12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 4px solid $color-canvas;
+  background: $color-primary;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(255, 56, 92, 0.35);
+
+  &:active {
+    transform: scale(0.94);
+  }
+}

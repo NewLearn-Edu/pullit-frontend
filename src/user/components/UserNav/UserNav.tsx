@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useUserStore } from '@/user/stores/userStore'
+import { useTrialStore } from '@/user/stores/trialStore'
 import styles from './styles/UserNav.module.scss'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { HomeIcon, MapIcon, ProfileIcon, ReportIcon } from '@/user/components/icons/NavIcons'
@@ -20,6 +21,9 @@ interface UserNavProps {
 export function UserNav({ active }: UserNavProps) {
   // 실제 세션 권한 — 이전 authStore 스텁(role:'admin' 하드코딩)은 모든 방문자에게 어드민 버튼을 노출했다
   const isAdmin = useUserStore((s) => s.me?.role === 'ADMIN')
+  // 나브 추천 버튼은 과목 선택 뷰를 건너뛴다 (2026-08-26 정책) — 마지막 학습 과목으로
+  const lastSubject = useTrialStore((s) => s.lastSubject)
+  const todayLink = `/today?subject=${lastSubject ?? 'math'}`
 
   return (
     <>
@@ -30,6 +34,7 @@ export function UserNav({ active }: UserNavProps) {
         </Link>
         <nav className={styles.nav}>
           <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
+          <NavItem to={todayLink} icon={<BoltIcon />} label="오늘의 추천" />
           <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
           <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 리포트" active={active === 'report'} />
@@ -60,6 +65,12 @@ export function UserNav({ active }: UserNavProps) {
           <MapIcon filled={active === 'map'} />
           약점 지도
         </Link>
+        {/* 가운데 추천 원형 버튼 — 살짝 떠서 바로 오늘의 3문제 (선택 뷰 생략) */}
+        <span className={styles.bottomCenter}>
+          <Link to={todayLink} className={styles.bottomCircle} aria-label="오늘의 추천 3문제">
+            <BoltIcon size={22} />
+          </Link>
+        </span>
         <Link
           to="/report"
           // 오답노트는 학습 리포트 섹션 소속 — 하단 네비에서는 리포트를 활성 표시 (시안 2632-7566)
@@ -70,6 +81,14 @@ export function UserNav({ active }: UserNavProps) {
         >
           <ReportIcon filled={active === 'report' || active === 'wrongNote'} />
           학습 리포트
+        </Link>
+        {/* 마이페이지 — 가운데 추천 원 좌우 균형을 위한 5슬롯 구성 (2026-08-26) */}
+        <Link
+          to="/my"
+          className={clsx(styles.bottomItem, active === 'my' && styles.bottomItemActive)}
+        >
+          <ProfileIcon filled={active === 'my'} />
+          마이
         </Link>
       </nav>
     </>
@@ -113,6 +132,21 @@ function NavItem({
 
 
 
+
+/** 오늘의 추천 번개 — 추천 진입점 공용 (사이드바 · 하단 원형 버튼) */
+function BoltIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M13.2 2.6 5.4 13.1c-.3.4 0 1 .5 1h4.3l-1.3 6.9c-.1.6.7 1 1.1.5l7.8-10.5c.3-.4 0-1-.5-1h-4.3l1.3-6.9c.1-.6-.7-1-1.1-.5Z" />
+    </svg>
+  )
+}
 
 function GearIcon() {
   return (
