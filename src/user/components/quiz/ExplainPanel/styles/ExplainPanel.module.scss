@@ -143,10 +143,12 @@
 }
 
 // 정답 뷰
+// 정답 · 해설 섹션 타이틀 (2026-08-26 — 본문과 같은 15px · 볼드 · 블랙)
 .answerLabel {
   margin: 0;
-  font-size: $fs-body-sm;
-  color: $color-muted;
+  font-size: 15px;
+  font-weight: 700;
+  color: #121417;
 }
 
 .answerValue {

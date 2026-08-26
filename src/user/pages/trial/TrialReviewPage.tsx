@@ -4,8 +4,9 @@ import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
-import { MathProblemRender } from '@/shared/components/ExamRender'
+import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
+import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
@@ -54,13 +55,15 @@ export default function TrialReviewPage() {
     return results.find((r) => r.problemId === problem?.id) ?? null
   }, [subject, mathResults, englishResults, problem])
   const myChoice = myResult?.selectedChoice ?? null
+  // 정답 번호 — 서버 세트 문항은 로컬 answer 가 0 이라 서버 채점 응답을 우선
+  const resolvedAnswerNo =
+    myResult?.serverAnswerNo ?? (problem && problem.answer !== 0 ? problem.answer : null)
 
   // 풀이 기록 없이 접근하면 결과 페이지로 (세트 로드가 끝난 뒤에만 판정)
   useEffect(() => {
     if (problems && !problem) navigate('/weakness', { replace: true })
   }, [problems, problem, navigate])
 
-  const [tab, setTab] = useState<'answer' | 'explanation'>('explanation')
   const [panelWidth, setPanelWidth] = useState(420)
   const [resizing, setResizing] = useState(false)
 
@@ -84,64 +87,43 @@ export default function TrialReviewPage() {
             </div>
 
             <div className={styles.canvasArea}>
-              <div className={styles.bodyWrap}>
-                <ReviewProblemBody problem={problem} />
-              </div>
+              {/* 500px 기준 고정 조판 → 폭 비례 확대 (줄바꿈 불변 · 퀴즈와 동일 정책).
+                  보기도 퀴즈·어드민과 같은 시험지형(pv-choices) — 칩 박스 없음.
+                  정답 = 채운 원문자 ❶~❺ · 내 오답 = 빨강 */}
+              <ExamScaleFrame>
+              <div className={clsx('pv-body', subject === 'english' && 'en')}>
+                <div className={styles.bodyWrap}>
+                  <ReviewProblemBody problem={problem} />
 
-              {/* 주관식 — 정답·내 답을 칩으로 표시 */}
-              {problem.choices.length === 0 && (
-                <div className={styles.choicesWrap}>
-                  <div className={styles.choicesGrid} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                    <span className={clsx(styles.choiceChip, styles.choiceChipCorrect)}>
-                      <span className={styles.choiceValue}>정답 {problem.answer}</span>
-                    </span>
-                    <span
-                      className={clsx(
-                        styles.choiceChip,
-                        myChoice !== problem.answer && styles.choiceChipWrong,
-                      )}
-                    >
-                      <span className={styles.choiceValue}>내 답 {myChoice ?? '-'}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* 보기 — 읽기 전용 · 정답은 검정, 내 오답은 빨강으로 표시.
-                  영어는 수능 지면처럼 한 줄에 하나씩 */}
-              <div className={styles.choicesWrap}>
-                <div
-                  className={clsx(
-                    styles.choicesGrid,
-                    subject === 'english' && styles.choicesGridEn,
+                  {problem.choices.length > 0 && (
+                    <div className="pv-choices">
+                      {problem.choices.map((choice, i) => {
+                        const choiceNo = i + 1
+                        const isAnswer = choiceNo === resolvedAnswerNo
+                        const isMyWrong = choiceNo === myChoice && !isAnswer
+                        const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
+                        const ChoiceRender =
+                          subject === 'english' ? EnglishProblemRender : MathProblemRender
+                        return (
+                          <span
+                            key={choiceNo}
+                            className={clsx('choice', isAnswer && 'correct')}
+                            style={isMyWrong ? { color: '#ff385c' } : undefined}
+                          >
+                            <span className="choice-num">
+                              {String.fromCodePoint((isAnswer ? 0x2775 : 0x245f) + choiceNo)}
+                            </span>
+                            <span>
+                              <ChoiceRender text={answerText} />
+                            </span>
+                          </span>
+                        )
+                      })}
+                    </div>
                   )}
-                >
-                  {problem.choices.map((choice, i) => {
-                    const choiceNo = i + 1
-                    const isAnswer = choiceNo === problem.answer
-                    const isMyWrong = choiceNo === myChoice && !isAnswer
-                    const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
-                    return (
-                      <span
-                        key={choiceNo}
-                        className={clsx(
-                          styles.choiceChip,
-                          isAnswer && styles.choiceChipCorrect,
-                          isMyWrong && styles.choiceChipWrong,
-                        )}
-                      >
-                        {/* 정답은 채운 원문자 ❶~❺ (U+2776) — 어드민 미리보기와 동일 규칙 */}
-                        <span className={styles.choiceNum}>
-                          {String.fromCodePoint((isAnswer ? 0x2775 : 0x245f) + choiceNo)}
-                        </span>
-                        <span className={styles.choiceValue}>
-                          <MathProblemRender text={answerText} />
-                        </span>
-                      </span>
-                    )
-                  })}
                 </div>
               </div>
+              </ExamScaleFrame>
 
               <div className={styles.spacer} />
             </div>
@@ -160,9 +142,8 @@ export default function TrialReviewPage() {
         <ExplainPanel
           open
           onClose={() => navigate('/weakness')}
-          tab={tab}
-          onTabChange={setTab}
           problem={problem}
+          answerNo={myResult?.serverAnswerNo}
           serverExplanation={myResult?.serverExplanation}
           revealed
           width={panelWidth}
