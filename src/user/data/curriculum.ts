@@ -24,6 +24,8 @@ export interface CurriculumUnit {
    * 진단 저장(diagnosed) 키로도 쓰인다.
    */
   name: string
+  /** 서버 unit_code (UnitCode enum) — 잠금(unit_locks)·추천 API 와 대조하는 안정 식별자 */
+  unitCode: string
   /**
    * 맛보기 문제 조회 키 (POC 목 데이터용).
    * 목이 준비된 유닛만 실제 문항이 나오고, 나머지는 과목 fallback 문항으로 흐름만 유지된다.
@@ -44,13 +46,13 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     name: '대수',
     slug: 'algebra',
     units: [
-      { name: '지수·로그', nodeId: 'sn-exp-log-01' },
-      { name: '지수·로그함수', nodeId: 'sn-exp-log-02' },
-      { name: '삼각함수', nodeId: 'sn-trig-01' },
-      { name: '사인·코사인법칙', nodeId: 'sn-trig-02' },
-      { name: '등차·등비수열', nodeId: 'sn-seq-01' },
-      { name: '수열의 합', nodeId: 'sn-seq-02' },
-      { name: '수학적 귀납법' },
+      { name: '지수·로그', unitCode: 'math_2022_1_1_1', nodeId: 'sn-exp-log-01' },
+      { name: '지수·로그함수', unitCode: 'math_2022_1_1_2', nodeId: 'sn-exp-log-02' },
+      { name: '삼각함수', unitCode: 'math_2022_1_2_1', nodeId: 'sn-trig-01' },
+      { name: '사인·코사인법칙', unitCode: 'math_2022_1_2_2', nodeId: 'sn-trig-02' },
+      { name: '등차·등비수열', unitCode: 'math_2022_1_3_1', nodeId: 'sn-seq-01' },
+      { name: '수열의 합', unitCode: 'math_2022_1_3_2', nodeId: 'sn-seq-02' },
+      { name: '수학적 귀납법', unitCode: 'math_2022_1_3_3' },
     ],
   },
   {
@@ -58,14 +60,14 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     slug: 'calculus',
     // 약점 지도(mathWeaknessMap) 노드 구성과 동일 — 홈 그래프 축·소단원 리스트가 지도와 맞아야 한다
     units: [
-      { name: '함수의 극한' },
-      { name: '함수의 연속' },
-      { name: '미분계수', nodeId: 'sn-diff-01' },
-      { name: '도함수' },
-      { name: '도함수 활용', nodeId: 'sn-diff-02' },
-      { name: '부정적분' },
-      { name: '정적분' },
-      { name: '정적분 활용' },
+      { name: '함수의 극한', unitCode: 'math_2022_2_1_1' },
+      { name: '함수의 연속', unitCode: 'math_2022_2_1_2' },
+      { name: '미분계수', unitCode: 'math_2022_2_2_1', nodeId: 'sn-diff-01' },
+      { name: '도함수', unitCode: 'math_2022_2_2_2' },
+      { name: '도함수 활용', unitCode: 'math_2022_2_2_3', nodeId: 'sn-diff-02' },
+      { name: '부정적분', unitCode: 'math_2022_2_3_1' },
+      { name: '정적분', unitCode: 'math_2022_2_3_2' },
+      { name: '정적분 활용', unitCode: 'math_2022_2_3_3' },
     ],
   },
   {
@@ -73,12 +75,12 @@ const MATH_CATEGORIES: CurriculumCategory[] = [
     slug: 'statistics',
     // 약점 지도(mathWeaknessMap) 노드 구성과 동일
     units: [
-      { name: '순열·조합' },
-      { name: '이항정리' },
-      { name: '확률의 뜻·이용' },
-      { name: '조건부확률', nodeId: 'sn-stat-01' },
-      { name: '확률분포' },
-      { name: '통계적 추정' },
+      { name: '순열·조합', unitCode: 'math_2022_3_1_1' },
+      { name: '이항정리', unitCode: 'math_2022_3_1_2' },
+      { name: '확률의 뜻·이용', unitCode: 'math_2022_3_2_1' },
+      { name: '조건부확률', unitCode: 'math_2022_3_2_2', nodeId: 'sn-stat-01' },
+      { name: '확률분포', unitCode: 'math_2022_3_3_1' },
+      { name: '통계적 추정', unitCode: 'math_2022_3_3_2' },
     ],
   },
 ]
@@ -93,7 +95,12 @@ const ENGLISH_NODE_IDS: Record<string, string> = {
 const ENGLISH_CATEGORIES: CurriculumCategory[] = ENGLISH_ABILITIES.map((ability, i) => ({
   name: ability.name,
   slug: `ability-${i + 1}`,
-  units: ability.types.map((name) => ({ name, nodeId: ENGLISH_NODE_IDS[name] })),
+  // unit_code = english_2015_{영역}_0_{유형} — enum 선언 순서와 동일 (§4.2)
+  units: ability.types.map((name, j) => ({
+    name,
+    unitCode: `english_2015_${i + 1}_0_${j + 1}`,
+    nodeId: ENGLISH_NODE_IDS[name],
+  })),
 }))
 
 export const CURRICULUM: Record<Subject, CurriculumCategory[]> = {

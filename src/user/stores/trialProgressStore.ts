@@ -3,7 +3,6 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { CURRICULUM, type CurriculumCategory, type CurriculumUnit } from '@/user/data/curriculum'
 import { fetchTrialDiagnoses } from '@/user/api/attemptApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
-import { TRIAL_GROUPS } from '@/user/services/problemSet'
 import { useUserStore } from '@/user/stores/userStore'
 
 /**
@@ -75,22 +74,16 @@ export function todayKey(base: Date = new Date()): string {
 const WEAK_THRESHOLD = 70
 
 /**
- * 서버 진단 기록의 group_code → 커리큘럼 유닛명.
+ * 서버 진단 기록의 group_code(=unit_code) → 커리큘럼 유닛명.
  * diagnosed 키는 유닛 표시명('지수·로그')인데 서버 skill_node 는 정식 명칭('지수와 로그')이라
- * 안정 식별자인 group_code(TRIAL_GROUPS 역방향)로 잇는다.
+ * 안정 식별자인 unit_code 로 잇는다 (커리큘럼 전 유닛에 unitCode 부여 — 2026-08-26).
  */
 const UNIT_NAME_BY_GROUP: Record<string, string> = (() => {
-  const nameByNode: Record<string, string> = {}
+  const byGroup: Record<string, string> = {}
   for (const categories of Object.values(CURRICULUM)) {
     for (const category of categories) {
-      for (const unit of category.units) {
-        if (unit.nodeId) nameByNode[unit.nodeId] = unit.name
-      }
+      for (const unit of category.units) byGroup[unit.unitCode] = unit.name
     }
-  }
-  const byGroup: Record<string, string> = {}
-  for (const [nodeId, groupCode] of Object.entries(TRIAL_GROUPS)) {
-    if (nameByNode[nodeId]) byGroup[groupCode] = nameByNode[nodeId]
   }
   return byGroup
 })()
@@ -118,13 +111,8 @@ export interface TrialProgressState {
   diagnosed: Record<string, UnitDiagnosis>
   /** 풀이 중인 세트 (결과 화면에서 확정) */
   pendingUnit: PendingUnit | null
-  /** "이 단원 안배웠어요" 건너뛴 유닛명 — 순서 잠금 해제용, 언제든 재진단 가능 */
-  skippedUnits: string[]
-
   /** 세트 시작 — 어느 유닛을 푸는 중인지 표시한다 (크레딧 차감은 호출부가 서버로) */
   startUnit: (pending: PendingUnit) => void
-  /** 유닛 건너뛰기 — 다음 소단원의 잠금이 풀린다 (2842-10966 시트) */
-  skipUnit: (name: string) => void
   /** 진행 표식 제거 — 진행 페이지를 거치지 않는 맛보기 퍼널 시작 시 stale 잔재 정리 */
   clearPendingUnit: () => void
   /** 진행 중이던 세트를 진단 완료로 확정. 없으면 no-op */
@@ -140,16 +128,8 @@ export const useTrialProgressStore = create<TrialProgressState>()(
     (set, get) => ({
       diagnosed: {},
       pendingUnit: null,
-      skippedUnits: [],
 
       startUnit: (pending) => set({ pendingUnit: pending }),
-
-      skipUnit: (name) =>
-        set((s) => ({
-          skippedUnits: s.skippedUnits.includes(name)
-            ? s.skippedUnits
-            : [...s.skippedUnits, name],
-        })),
 
       /**
        * 진행 중 표식만 비운다 — 진행 페이지를 거치지 않는 세트(맛보기 퍼널)를 시작할 때 호출.
@@ -213,7 +193,7 @@ export const useTrialProgressStore = create<TrialProgressState>()(
         })
       },
 
-      resetProgress: () => set({ diagnosed: {}, pendingUnit: null, skippedUnits: [] }),
+      resetProgress: () => set({ diagnosed: {}, pendingUnit: null }),
     }),
     {
       name: 'pullit_trial_progress',
@@ -234,7 +214,6 @@ export const useTrialProgressStore = create<TrialProgressState>()(
       partialize: (s) => ({
         diagnosed: s.diagnosed,
         pendingUnit: s.pendingUnit,
-        skippedUnits: s.skippedUnits,
       }),
     },
   ),
@@ -244,11 +223,13 @@ export const useTrialProgressStore = create<TrialProgressState>()(
 // 진행도 계산 — 순수 함수 (스토어 없이 서버 점수 맵으로도 계산 가능)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type UnitState = 'done' | 'next' | 'locked'
+export type UnitState = 'done' | 'next' | 'locked' | 'off'
 
 export interface UnitProgressRow extends CurriculumUnit {
   state: UnitState
   diagnosis?: UnitDiagnosis
+  /** off 구간의 시작 소단원 — "다시 풀면 열려" (재개 진입점, 2026-08-26 정책) */
+  offHead?: boolean
 }
 
 export interface CategoryProgress {
@@ -266,26 +247,30 @@ export interface CategoryProgress {
 }
 
 /**
- * 카테고리 진행도.
+ * 카테고리 진행도 (2026-08-26 정책).
  * 순서대로 진행이라 "아직 진단 안 된 첫 유닛" 만 next, 그 뒤는 전부 locked.
- * (중간 유닛을 서버 점수로 먼저 채운 유저가 있어도 순서 판정은 유지된다)
+ * "안배웠어요"(unit_locks)가 선언된 카테고리는 offFrom 소단원부터 끝까지 off —
+ * off 구간 첫 유닛(offHead)만 "다시 풀면 열려" 재개 진입점이 된다.
  */
 export function computeCategoryProgress(
   category: CurriculumCategory,
   diagnosed: Record<string, UnitDiagnosis>,
-  /** "이 단원 안배웠어요" 로 건너뛴 유닛 — 잠금 판정에서 제외, 언제든 재진단 가능 */
-  skipped: string[] = [],
+  /** 서버 unit_locks 의 off 시작 소단원 unit_code (이 카테고리에 잠금이 없으면 null) */
+  offFromUnitCode: string | null = null,
 ): CategoryProgress {
-  const skippedSet = new Set(skipped)
+  const offFromIdx = offFromUnitCode
+    ? category.units.findIndex((u) => u.unitCode === offFromUnitCode)
+    : -1
+  const isOff = (i: number) => offFromIdx >= 0 && i >= offFromIdx
+
   const firstUnsolved = category.units.findIndex(
-    (u) => !diagnosed[u.name] && !skippedSet.has(u.name),
+    (u, i) => !diagnosed[u.name] && !isOff(i),
   )
 
   const rows: UnitProgressRow[] = category.units.map((u, i) => {
     const diagnosis = diagnosed[u.name]
+    if (isOff(i)) return { ...u, state: 'off', diagnosis, offHead: i === offFromIdx }
     if (diagnosis) return { ...u, state: 'done', diagnosis }
-    // 건너뛴 유닛 — 순서 잠금에서 빠지고 진단하기 버튼 유지 (재진단 허용 정책)
-    if (skippedSet.has(u.name)) return { ...u, state: 'next' }
     return { ...u, state: i === firstUnsolved ? 'next' : 'locked' }
   })
 
@@ -300,7 +285,7 @@ export function computeCategoryProgress(
     remaining,
     percent: total === 0 ? 0 : Math.round((doneCount / total) * 100),
     unlocked: remaining === 0,
-    // 진행 경로상 "다음 풀 유닛" — 건너뛴 유닛(재진단 가능 상태)은 제외
+    // 진행 경로상 "다음 풀 유닛" — off 구간은 제외 (재개는 offHead 로만)
     nextUnit: firstUnsolved >= 0 ? rows[firstUnsolved] : undefined,
   }
 }

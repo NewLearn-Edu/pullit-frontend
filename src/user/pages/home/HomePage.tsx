@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
@@ -9,6 +9,7 @@ import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { useCreditForExtraSet } from '@/user/api/creditApi'
+import { declareUnitLock, fetchUnitLocks } from '@/user/api/recommendApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
@@ -36,8 +37,6 @@ const SET_SIZE = 3
 export default function HomePage() {
   const navigate = useNavigate()
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
-  const skippedUnits = useTrialProgressStore((s) => s.skippedUnits)
-  const skipUnit = useTrialProgressStore((s) => s.skipUnit)
   const startUnit = useTrialProgressStore((s) => s.startUnit)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const { me } = useMe()
@@ -97,20 +96,40 @@ export default function HomePage() {
 
   const categories = CURRICULUM[subject]
   const category = categories.find((c) => c.slug === catSlug) ?? categories[0]
-  const progress = computeCategoryProgress(category, diagnosed, skippedUnits)
+
+  // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 유닛코드 → off 시작점 매핑
+  const [locks, setLocks] = useState<Record<string, string>>({}) // categoryCode → offFromUnitCode
+  const refreshLocks = useCallback(() => {
+    fetchUnitLocks(subject)
+      .then((list) => {
+        const map: Record<string, string> = {}
+        for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
+        setLocks(map)
+      })
+      .catch(() => {})
+  }, [subject])
+  useEffect(() => {
+    if (sessionStatus === 'ready') refreshLocks()
+  }, [sessionStatus, refreshLocks])
+
+  const categoryCodeOf = (cat: (typeof categories)[number]) =>
+    cat.units[0].unitCode.split('_').slice(0, 3).join('_')
+  const progress = computeCategoryProgress(
+    category,
+    diagnosed,
+    locks[categoryCodeOf(category)] ?? null,
+  )
   const unitLabel = UNIT_LABEL[subject]
 
-  // ── 진단 시작 시트 (Figma 2842-10194) + 건너뛰기(2842-10966) + 선행 안내(3082-5687) ──
+  // ── 진단 시작 시트 (Figma 2842-10194) + 잠금 확인 + 선행 안내(3082-5687) ──
   const [startSheet, setStartSheet] = useState<UnitProgressRow | null>(null)
-  const [skipMode, setSkipMode] = useState(false) // 시작 시트 안에서 건너뛰기 화면으로 전환
-  const [skipChoice, setSkipChoice] = useState<'unit' | 'category'>('unit')
+  const [skipMode, setSkipMode] = useState(false) // 시작 시트 안에서 잠금 확인 화면으로 전환
   const [lockedSheet, setLockedSheet] = useState<UnitProgressRow | null>(null)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const closeStartSheet = () => {
     setStartSheet(null)
     setSkipMode(false)
-    setSkipChoice('unit')
     setStartError(null)
   }
   const startDrag = useSheetDrag(closeStartSheet, {
@@ -123,7 +142,6 @@ export default function HomePage() {
   const openStartSheet = (row: UnitProgressRow | undefined) => {
     if (!row) return
     setSkipMode(false)
-    setSkipChoice('unit')
     setStartError(null)
     setStartSheet(row)
   }
@@ -172,17 +190,23 @@ export default function HomePage() {
     }
   }
 
-  /** 건너뛰기 확정 — 단원만 스킵(다음 소단원 해제) 또는 대단원 진단 종료(다음 칩으로) */
-  const confirmSkip = () => {
-    if (!startSheet) return
-    if (skipChoice === 'unit') {
-      skipUnit(startSheet.name)
-    } else {
-      const idx = categories.findIndex((c) => c.slug === category.slug)
-      const nextCat = categories[idx + 1]
-      if (nextCat) changeCat(nextCat.slug)
+  /**
+   * "안배웠어요" 확정 (2026-08-26 정책) — 이 소단원부터 대단원 끝까지 서버에 잠금 선언.
+   * 해제는 잠금 시작 소단원을 다시 풀어 박제될 때 서버가 자동 처리.
+   */
+  const [lockSaving, setLockSaving] = useState(false)
+  const confirmSkip = async () => {
+    if (!startSheet || lockSaving) return
+    setLockSaving(true)
+    try {
+      await declareUnitLock(subject, startSheet.unitCode)
+      refreshLocks()
+      closeStartSheet()
+    } catch {
+      setStartError('잠금 저장에 실패했어. 다시 시도해줘')
+    } finally {
+      setLockSaving(false)
     }
-    closeStartSheet()
   }
 
   /** 레이더 축 라벨 클릭 → 아래 소단원 카드로 부드럽게 스크롤 (Figma 2842-11896 리스트) */
@@ -223,6 +247,15 @@ export default function HomePage() {
     })
     navigate(`/solve/${subject}/0`)
   }
+
+  /**
+   * 잠긴 카드 안내 시트의 "먼저 풀어야 할" 유닛 —
+   * off 구간(안배웠어요)은 잠금 시작 소단원(offHead), 순서 잠금은 다음 진단 유닛.
+   */
+  const lockedIsOff = lockedSheet?.state === 'off'
+  const lockedRequired = lockedIsOff
+    ? progress.rows.find((r) => r.offHead)
+    : progress.nextUnit
 
   /** 유닛 시트 요약값 — 문항별 기록이 있으면 초 단위 합산, 없으면(구버전) 분 근사 */
   const sheetItems = unitSheet?.diagnosis?.items ?? []
@@ -336,6 +369,32 @@ export default function HomePage() {
 
             <ol className={styles.unitCards}>
               {progress.rows.map((row) => {
+                if (row.state === 'off') {
+                  // "안배웠어요" 잠금 구간 — 시작 소단원(offHead)만 재개 진입점
+                  return (
+                    <li key={row.name} data-unit-card={row.name}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          row.offHead ? openStartSheet(row) : setLockedSheet(row)
+                        }
+                        className={clsx(styles.unitCard, styles.unitCardLocked)}
+                      >
+                        <span className="flex min-w-0 flex-col items-start gap-[4px] text-left">
+                          <span className={styles.unitCardNameLocked}>{row.name}</span>
+                          {row.offHead && (
+                            <span className="text-[12px] font-medium text-[#a6abb1]">
+                              안배운 단원 · 다시 풀면 열려
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.unitLockIcon} aria-label="잠김">
+                          <LockIcon />
+                        </span>
+                      </button>
+                    </li>
+                  )
+                }
                 if (row.diagnosis) {
                   // 진단 완료 — 흰 카드 · 메타 · 점수 + 셰브런 (상세 시트)
                   const total = row.diagnosis.items?.length ?? SET_SIZE
@@ -758,23 +817,8 @@ export default function HomePage() {
                     아직 안배운 단원이야?
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    아직 배우지 않은 내용이면 지금은 건너뛰어도 돼
+                    {startSheet.name}부터 {category.name} 끝까지 잠가둘게
                   </p>
-                </div>
-
-                <div className="flex w-full flex-col gap-[12px]">
-                  <SkipOption
-                    selected={skipChoice === 'unit'}
-                    onSelect={() => setSkipChoice('unit')}
-                    title={`${startSheet.name} 단원만 건너뛰기`}
-                    desc={`다음 ${unitLabel}부터 계속 진단`}
-                  />
-                  <SkipOption
-                    selected={skipChoice === 'category'}
-                    onSelect={() => setSkipChoice('category')}
-                    title={`${category.name} 진단 끝내기`}
-                    desc="다음 대단원으로 이동"
-                  />
                 </div>
 
                 <div className="flex w-full items-center justify-center gap-[6px] rounded-[12px] bg-[#f8f8f8] p-[12px]">
@@ -782,9 +826,16 @@ export default function HomePage() {
                     i
                   </span>
                   <p className="text-[13px] font-medium text-[#80858b]">
-                    건너뛴 단원은 언제든 다시 진단할 수 있어
+                    {startSheet.name}
+                    {josaEulReul(startSheet.name)} 다시 풀면 언제든 열려
                   </p>
                 </div>
+
+                {startError && (
+                  <p className="w-full text-center text-[13px] font-medium text-primary">
+                    {startError}
+                  </p>
+                )}
 
                 <div className="flex w-full gap-[8px]">
                   <button
@@ -797,9 +848,10 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={confirmSkip}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
+                    disabled={lockSaving}
+                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
-                    건너뛰기
+                    {lockSaving ? '저장 중…' : '잠그기'}
                   </button>
                 </div>
               </>
@@ -835,18 +887,20 @@ export default function HomePage() {
 
             <div className="flex w-full flex-col gap-[8px]">
               <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
-                먼저 풀어야 할 단원이 있어
+                {lockedIsOff ? '잠가둔 단원이야' : '먼저 풀어야 할 단원이 있어'}
               </h2>
               <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                {progress.nextUnit
-                  ? `${progress.nextUnit.name}${josaEulReul(progress.nextUnit.name)} 풀면 이 단원을 시작할 수 있어`
+                {lockedRequired
+                  ? lockedIsOff
+                    ? `${lockedRequired.name}${josaEulReul(lockedRequired.name)} 다시 풀면 여기까지 열려`
+                    : `${lockedRequired.name}${josaEulReul(lockedRequired.name)} 풀면 이 단원을 시작할 수 있어`
                   : '앞 단원부터 순서대로 진단할 수 있어'}
               </p>
             </div>
 
-            {/* 학습 경로 — 직전 완료 → 다음 풀 단원(빨강) → 클릭한 단원 */}
+            {/* 학습 경로 — 직전 완료 → 먼저 풀 단원(빨강) → 클릭한 단원 */}
             <div className="flex w-full flex-col rounded-[16px] border border-[#e5e7ea] p-[20px]">
-              {buildLockedPath(progress.rows, progress.nextUnit, lockedSheet).map((p, i) => (
+              {buildLockedPath(progress.rows, lockedRequired, lockedSheet).map((p, i) => (
                 <div key={p.name} className="flex items-stretch gap-[12px]">
                   <div className="flex w-[10px] flex-col items-center">
                     {i > 0 && (
@@ -884,13 +938,15 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => {
-                const next = progress.nextUnit
+                const next = lockedRequired
                 setLockedSheet(null)
                 openStartSheet(next)
               }}
               className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
             >
-              {progress.nextUnit ? `${progress.nextUnit.name} 먼저 풀기` : '확인'}
+              {lockedRequired
+                ? `${lockedRequired.name} ${lockedIsOff ? '다시 풀기' : '먼저 풀기'}`
+                : '확인'}
             </button>
           </div>
         </div>
@@ -923,45 +979,6 @@ function buildLockedPath(
   }
   if (!path.some((p) => p.name === clicked.name)) path.push({ name: clicked.name, current: false })
   return path.slice(0, 3)
-}
-
-/** 건너뛰기 라디오 옵션 (2842-10966) — 선택 시 핑크 배경 + 빨간 보더 + 채운 라디오 */
-function SkipOption({
-  selected,
-  onSelect,
-  title,
-  desc,
-}: {
-  selected: boolean
-  onSelect: () => void
-  title: string
-  desc: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={clsx(
-        'flex w-full items-center justify-between rounded-[16px] border p-[16px] text-left transition-colors',
-        selected ? 'border-primary bg-[#fff1f2]' : 'border-[#e5e7ea] bg-white',
-      )}
-    >
-      <span className="flex min-w-0 flex-col gap-[4px]">
-        <span className="truncate text-[15px] font-bold text-[#121417]">{title}</span>
-        <span className="text-[13px] font-medium text-[#80858b]">{desc}</span>
-      </span>
-      <span
-        className={clsx(
-          'ml-[12px] flex size-[22px] shrink-0 items-center justify-center rounded-full border-2',
-          selected ? 'border-primary' : 'border-[#d6d8db]',
-        )}
-        aria-hidden
-      >
-        {selected && <span className="size-[11px] rounded-full bg-primary" />}
-      </span>
-    </button>
-  )
 }
 
 /** 보유 크레딧 코인 (20px) — CreditBadge 코인과 동일 그래픽 */
