@@ -296,10 +296,9 @@ export default function WeaknessResultPage() {
 
   const score = skillScore?.score ?? local
   const weak = skillScore?.weak ?? score < 70
-  // 시퀀스: 채점 마크 → 풀이 시간 → 점수 → 약점 도장
-  const marksDoneMs = 300 + Math.max(0, rows.length - 1) * 350 + 700 // 마크 완료
-  const timesDoneMs = marksDoneMs + 900 // 풀이 시간 굴림(900ms) 완료
-  const displayScore = useCountUp(score, timesDoneMs)
+  // 연출은 전부 동시 시작 (순차 시퀀스 제거 — 2026-08-26)
+  const START_MS = 150
+  const displayScore = useCountUp(score, START_MS)
 
   // 약점 계산 기준 안내 ⓘ 토글
   const [infoOpen, setInfoOpen] = useState(false)
@@ -330,16 +329,16 @@ export default function WeaknessResultPage() {
     navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
   }
 
-  // 약점 도장 — 점수 카운트업(900ms)까지 끝난 직후 쿵 찍힌다
+  // 약점 도장 — 다른 연출과 같이 바로 찍힌다
   const [stamped, setStamped] = useState(false)
   useEffect(() => {
     if (!weak) {
       setStamped(false)
       return
     }
-    const timer = window.setTimeout(() => setStamped(true), timesDoneMs + 950)
+    const timer = window.setTimeout(() => setStamped(true), START_MS)
     return () => clearTimeout(timer)
-  }, [weak, timesDoneMs])
+  }, [weak])
 
   const correctCount = rows.filter(({ result }) => result.serverCorrect ?? result.correct).length
   const totalSec = Math.round(rows.reduce((s, { result }) => s + result.elapsedMs, 0) / 1000)
@@ -395,12 +394,12 @@ export default function WeaknessResultPage() {
     })
   }, [hydrated, rows.length, score, weak, totalSec, correctCount, diagnosisItems, finishPendingUnit])
 
-  // 풀이 시간 — 채점 마크가 끝난 뒤, 요약 카드와 문항별 셀이 같은 진행률로 동시에 차오른다
-  const countProgress = useCountProgress(marksDoneMs)
+  // 풀이 시간 — 요약 카드와 문항별 셀이 같은 진행률로 동시에 차오른다
+  const countProgress = useCountProgress(START_MS)
   const displayTotalSec = Math.round(totalSec * countProgress)
 
-  // 문항별 획득 점수 — 풀이 시간이 다 오른 뒤 상단 점수와 함께 굴린다
-  const scoreProgress = useCountProgress(timesDoneMs)
+  // 문항별 획득 점수 — 상단 점수와 함께 굴린다
+  const scoreProgress = useCountProgress(START_MS)
 
   // 정답 수 — 채점 마크에서 동그라미가 쳐지는 순간마다 +1
   const [displayCorrect, setDisplayCorrect] = useState(0)
@@ -416,8 +415,8 @@ export default function WeaknessResultPage() {
       if (!(result.serverCorrect ?? result.correct)) return
       counted += 1
       const next = counted
-      // 원이 거의 다 그려지는 시점(시작 300ms + 스태거 + 450ms)에 카운트
-      timers.push(window.setTimeout(() => setDisplayCorrect(next), 300 + i * 350 + 450))
+      // 원이 거의 다 그려지는 시점(시작 + 450ms)에 카운트 — 마크는 전부 동시에 그려진다
+      timers.push(window.setTimeout(() => setDisplayCorrect(next), 150 + 450 + i * 40))
     })
     return () => timers.forEach(clearTimeout)
   }, [rows, correctCount])
@@ -425,7 +424,8 @@ export default function WeaknessResultPage() {
   return (
     // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
-      <OnboardingHeader showLogo onClose={() => navigate(isEarlybird() ? '/earlybird' : '/home')} />
+      {/* 로고 없이 닫기 X 만 (시안 2886-29391 — 헤더 좌측 비움) */}
+      <OnboardingHeader onClose={() => navigate(isEarlybird() ? '/earlybird' : '/home')} />
 
       <main
         className={clsx('flex w-full flex-1 flex-col items-center', stamped && markStyles.shake)}
@@ -443,32 +443,17 @@ export default function WeaknessResultPage() {
             >
               i
             </button>
-            {infoOpen && (
-              <div className="absolute right-[16px] top-[46px] z-10 w-[230px] rounded-[12px] border border-[#e5e7ea] bg-white p-[14px] text-left shadow-[0px_8px_24px_rgba(18,20,23,0.12)]">
-                <p className="text-[12px] font-semibold text-[#23272b]">점수 계산 기준</p>
-                <ul className="mt-[6px] flex flex-col gap-[3px] text-[12px] leading-[1.5] text-[#5e6368]">
-                  <li>· 권장 시간 내 정답 = 배점 100%</li>
-                  <li>· 권장 초과 정답 = 배점 60%</li>
-                  <li>· 오답·시간 초과 = 0점</li>
-                  <li>· 획득률 70% 이하면 약점이에요</li>
-                </ul>
-              </div>
+
+            {/* 약점 도장 — 점수 카운트업 후 카드 좌측에 인주 도장처럼 쿵 찍힌다 (흔들림 유지) */}
+            {weak && stamped && (
+              <span className="pointer-events-none absolute left-[16px] top-[14px] z-10 mix-blend-multiply md:left-[28px]">
+                <span className={clsx('block', markStyles.stamp)}>
+                  <WeakStampSeal />
+                </span>
+              </span>
             )}
 
-            <div className="flex flex-col items-center gap-[8px] px-[20px]">
-              {/* 약점 뱃지 — 점수 카운트업 후 도장처럼 찍힌다. 슬롯을 미리 잡아 레이아웃 점프 방지 */}
-              <div className="flex h-[27px] items-center">
-                {weak && stamped && (
-                  <span
-                    className={clsx(
-                      'rounded-full border border-primary bg-[#fff1f2] px-[8px] py-[4px] text-[12px] font-semibold leading-[1.4] text-primary',
-                      markStyles.stamp,
-                    )}
-                  >
-                    약점
-                  </span>
-                )}
-              </div>
+            <div className="flex flex-col items-center gap-[8px] px-[20px] pt-[8px]">
               <h1 className="max-w-full truncate text-[22px] font-semibold leading-[1.4] text-[#121417]">
                 {unitName}
               </h1>
@@ -558,7 +543,7 @@ export default function WeaknessResultPage() {
                     </p>
                     <GradeMark
                       kind={isCorrect ? (overTime ? 'triangle' : 'circle') : 'slash'}
-                      delayMs={300 + i * 350}
+                      delayMs={START_MS}
                     />
                   </div>
 
@@ -668,6 +653,123 @@ export default function WeaknessResultPage() {
 
       {reserveOpen && <EarlybirdReserveModal onClose={() => setReserveOpen(false)} />}
       {creditOpen && <FirstCreditSheet onClose={confirmCreditSheet} />}
+      {infoOpen && <ScoreInfoSheet onClose={() => setInfoOpen(false)} />}
+    </div>
+  )
+}
+
+/**
+ * 약점 인주 도장 — 이중 링 + 원호 텍스트 + 가운데 "약점" (러버 스탬프 룩).
+ * 착지 회전(-6deg)은 markStyles.stamp 키프레임이 담당한다.
+ */
+function WeakStampSeal() {
+  return (
+    <svg viewBox="0 0 100 100" width="88" height="88" aria-label="약점" role="img">
+      <defs>
+        {/* 원호 텍스트 경로 — 위쪽 반원(왼→오) · 아래쪽 반원(왼→오, 글자가 뒤집히지 않게 역방향) */}
+        <path id="stamp-arc-top" d="M 50 50 m -33 0 a 33 33 0 1 1 66 0" fill="none" />
+        <path id="stamp-arc-bottom" d="M 50 50 m -33 0 a 33 33 0 1 0 66 0" fill="none" />
+      </defs>
+      <g fill="none" stroke="#ff385c" opacity="0.92">
+        <circle cx="50" cy="50" r="46.5" strokeWidth="5" />
+        <circle cx="50" cy="50" r="40" strokeWidth="1.6" />
+      </g>
+      <g fill="#ff385c" opacity="0.92" fontWeight="700" letterSpacing="2.5" fontSize="8.5">
+        <text textAnchor="middle">
+          <textPath href="#stamp-arc-top" startOffset="50%">PULLIT</textPath>
+        </text>
+        <text textAnchor="middle">
+          <textPath href="#stamp-arc-bottom" startOffset="50%">WEAK POINT</textPath>
+        </text>
+        {/* 좌우 구분점 */}
+        <circle cx="13.5" cy="50" r="1.6" />
+        <circle cx="86.5" cy="50" r="1.6" />
+      </g>
+      <text
+        x="50"
+        y="59"
+        textAnchor="middle"
+        fontSize="24"
+        fontWeight="800"
+        fill="#ff385c"
+        opacity="0.94"
+      >
+        약점
+      </text>
+    </svg>
+  )
+}
+
+/**
+ * 진단 결과 계산 안내 (Figma 2886-29391 · PI-POPUP-RESULT_01).
+ * ⓘ 버튼 → 모바일 바텀시트 · 패드/웹 중앙 다이얼로그.
+ */
+function ScoreInfoSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="score-info-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-md:items-end max-md:p-0"
+    >
+      <style>{`
+        @keyframes pi-info-fade { from { opacity: 0 } }
+        @keyframes pi-info-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }
+        @keyframes pi-info-rise { from { transform: translateY(100%) } }
+      `}</style>
+      {/* 배경 딤 — 탭하면 닫힘 */}
+      <button
+        type="button"
+        aria-label="닫기"
+        onClick={onClose}
+        className="absolute inset-0 animate-[pi-info-fade_200ms_ease] bg-[rgba(21,17,18,0.38)]"
+      />
+
+      <div className="relative w-full max-w-[480px] animate-[pi-info-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] rounded-[24px] bg-white p-[20px] shadow-[0px_-16px_25px_rgba(0,0,0,0.12)] max-md:max-w-none max-md:animate-[pi-info-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-md:rounded-b-none max-md:rounded-t-[32px] max-md:pb-[calc(20px+env(safe-area-inset-bottom))]">
+        {/* 핸들 바 — 모바일만 */}
+        <div className="mb-[16px] hidden justify-center max-md:flex">
+          <span className="h-[5px] w-[42px] rounded-full bg-[#d6d8db]" />
+        </div>
+
+        <h2 id="score-info-title" className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+          진단 결과
+        </h2>
+
+        <p className="mt-[8px] text-[14px] font-medium leading-[1.4] text-[#5e6368]">
+          문제마다 배점과 풀이 시간을 함께 반영해서 점수를 계산해,
+          <br />- 권장 시간 안에 맞히면 배점 100%
+          <br />- 권장 시간을 넘겨서 맞히면 60%
+          <br />- 권장 시간의 3배를 넘기면 0점이야
+        </p>
+
+        {/* 총 점수 공식 — 분수 표기 */}
+        <div className="mt-[24px] flex items-center justify-center rounded-[8px] bg-[#f8f8f8] p-[20px]">
+          <div className="flex items-center gap-[6px] text-[14px] font-bold text-[#5e6368]">
+            <span>총 점수 =</span>
+            <span className="flex flex-col items-center gap-[2px] px-[4px] leading-[1.4]">
+              <span>획득 점수</span>
+              <span className="h-[1.5px] w-full bg-[#5e6368]" />
+              <span>총 배점</span>
+            </span>
+            <span>× 100</span>
+          </div>
+        </div>
+
+        <p className="mt-[24px] text-[14px] font-medium leading-[1.4] text-[#5e6368]">
+          단원 점수는 이번에 푼 문제만 보는 게 아니라
+          <br />
+          지금까지 이 단원에서 푼 모든 문제를 합쳐서 계산해, 3문제 이상 푼 뒤 단원 점수가 70점
+          이하면 약점이야
+        </p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-[20px] flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
+        >
+          확인
+        </button>
+      </div>
     </div>
   )
 }
