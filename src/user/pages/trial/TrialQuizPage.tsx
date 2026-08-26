@@ -7,6 +7,7 @@ import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
+import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
@@ -448,8 +449,10 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
               </div>
             </div>
 
-            {/* 어드민 미리보기와 100% 동일 조판 — 같은 공용 클래스(pv-body 계열, exam.css) 사용 */}
+            {/* 어드민 미리보기와 100% 동일 조판 — 같은 공용 클래스(pv-body 계열, exam.css) 사용.
+                ExamScaleFrame: 375px 기준 고정 조판을 폭에 비례해 확대 (줄바꿈 불변) */}
             <div className={clsx(styles.canvasArea, 'exam-paper')}>
+              <ExamScaleFrame>
               <div className={clsx('pv-body', subject === 'english' && 'en')}>
                 <div className={styles.bodyWrap}>
                   <ProblemBody problem={problem} />
@@ -477,6 +480,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
                   )}
                 </div>
               </div>
+              </ExamScaleFrame>
 
               <div className={styles.spacer} />
 

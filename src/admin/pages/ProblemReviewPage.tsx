@@ -8,6 +8,7 @@ import {
 } from '@/shared/components/ExamRender'
 import { ProblemExplain } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
+import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
 import {
   clearReviewQueue,
@@ -214,6 +215,8 @@ function ReviewPreview({
         style={device === 'pad' ? { width: padWidth } : undefined}
       >
         <div className="pv-device-inner">
+          {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변) */}
+          <ExamScaleFrame>
           <div className={clsx('pv-body', subject === 'english' && 'en')}>
             <div className="pv-question">
               <QuestionRender
@@ -241,6 +244,7 @@ function ReviewPreview({
               </div>
             )}
           </div>
+          </ExamScaleFrame>
         </div>
       </div>
 
@@ -248,6 +252,7 @@ function ReviewPreview({
       {device === 'pad' && <div className="pv-divider" onMouseDown={onPadDrag} />}
 
       <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
+        <ExamScaleFrame>
         <p className="pv-label">정답</p>
         <div className="pv-explain-body pv-explain-answer">
           {(problem.choices?.length ?? 0) > 0 && problem.answer_index != null ? (
@@ -262,6 +267,7 @@ function ReviewPreview({
         <div className="pv-explain-body">
           <ProblemExplain explanation={problem.explanation} subject={subject} />
         </div>
+        </ExamScaleFrame>
       </div>
     </div>
   )

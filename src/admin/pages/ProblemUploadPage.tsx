@@ -11,6 +11,7 @@ import {
 import { MathExplainKatexRender } from '@/shared/components/ExamRender'
 import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
+import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
 import { IcoUpload } from '../components/icons'
 import JsonView from '../components/JsonView'
@@ -434,6 +435,7 @@ export default function ProblemUploadPage() {
                           닫기
                         </button>
                       </div>
+                      <ExamScaleFrame>
                       <div className={clsx('pv-body', subject === 'english' && 'en')}>
                         <div className="pv-question">
                           <QuestionRender question={dupItem.question} subject={subject} />
@@ -470,6 +472,7 @@ export default function ProblemUploadPage() {
                           <ExplainRender text={dupItem.explanation || '해설이 없어요'} />
                         )}
                       </div>
+                      </ExamScaleFrame>
                     </>
                   )}
                 </div>
@@ -542,6 +545,8 @@ export default function ProblemUploadPage() {
                 style={device === 'pad' ? { width: padWidth } : undefined}
               >
                 <div className="pv-device-inner">
+                  {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변) */}
+                  <ExamScaleFrame>
                   <div className={clsx('pv-body', subject === 'english' && 'en')}>
                     <div className="pv-question">
                       <QuestionRender
@@ -574,11 +579,13 @@ export default function ProblemUploadPage() {
                       </div>
                     )}
                   </div>
+                  </ExamScaleFrame>
                 </div>
               </div>
               {/* 패드: 가운데 디바이더 드래그로 좌우 폭 조절 */}
               {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
               <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
+                <ExamScaleFrame>
                 <p className="pv-label">정답</p>
                 <div className="pv-explain-body pv-explain-answer">
                   {(item?.choices?.length ?? 0) > 0 && item?.answer_index != null ? (
@@ -613,6 +620,7 @@ export default function ProblemUploadPage() {
                     <ExplainRender text={item?.explanation || '해설이 없어요'} />
                   )}
                 </div>
+                </ExamScaleFrame>
               </div>
             </div>
 

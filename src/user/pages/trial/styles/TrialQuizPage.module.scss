@@ -231,12 +231,11 @@
   color: $color-foreground;
 }
 
+// 배점 [N점] — 어드민 미리보기와 동일: 별도 스타일 없이 본문(바탕체·크기·색) 상속
 .pointsBadge {
   margin-left: $space-xs;
-  font-family: $font-sans;
-  font-size: $fs-body-sm;
-  font-weight: $fw-normal;
-  color: $color-body;
+  font: inherit;
+  color: inherit;
   white-space: nowrap;
 }
 

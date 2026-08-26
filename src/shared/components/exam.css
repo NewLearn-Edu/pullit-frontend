@@ -53,16 +53,17 @@
   container-type: inline-size;
 }
 
-/* 문제 본문 반응형 폰트 — 컨테이너(문제 영역) 500px=15.5px ~ 350px=13px 선형.
-   내부 타이포는 em 으로 상속돼 같은 비율로 줄어든다 (해설과 동일 방식) */
+/* 문제 본문 폰트 — 기준 폭(ExamScaleFrame base=500)에서 15px 고정 (2026-08-26 확정).
+   폭 변화는 프레임 zoom 이 비율로 처리하므로 반응형 clamp 가 필요 없다.
+   내부 타이포는 em 으로 상속돼 같은 비율로 움직인다 */
 .pv-body {
   padding-top: 4px;
-  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
+  font-size: 15px;
 }
 
-/* 영어 문항 — 긴 지문 가독을 위해 더 크게: 350px=15px ~ 500px+=16px (2026-08-24 확정) */
+/* 영어 문항 — 수학과 동일 15px (2026-08-26, 기존 16px 은 과대) */
 .pv-body.en {
-  font-size: clamp(15px, calc(12.667px + 0.6667cqw), 16px);
+  font-size: 15px;
 }
 
 /* 풀잇 문제 렌더링 스펙: KoPubWorld Batang 16px / 500 / lh 1.85 / #120c0b */
@@ -194,8 +195,8 @@
   container-type: inline-size;
 }
 .exam-explain-scale {
-  /* size = 7.167px + 1.6667% × 컨테이너폭 → 350px→13px · 500px→15.5px */
-  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
+  /* 기준 폭(500)에서 15px 고정 — 문제 본문과 동일 (폭 변화는 프레임 zoom 담당) */
+  font-size: 15px;
 }
 
 /* ── 해설 레이아웃 — 영역 대비가 핵심 ───────────────────────────
@@ -343,9 +344,9 @@ span.katex-block {
 
 .exam-blocks {
   font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', serif);
-  /* .exam-explain-scale 과 동일 공식 — 350px→13px · 500px→15.5px 선형.
+  /* 기준 폭(500)에서 15px 고정 — 문제 본문과 동일 (폭 변화는 프레임 zoom 담당).
      수식(em)이 이 크기를 따라가므로 해설 전체가 한 크기로 움직인다 */
-  font-size: clamp(13px, calc(7.167px + 1.6667cqw), 15.5px);
+  font-size: 15px;
   font-weight: 500;
   line-height: 1.85;
   color: var(--pv-fg, #120c0b);

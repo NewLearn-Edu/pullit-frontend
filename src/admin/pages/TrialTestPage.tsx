@@ -5,6 +5,7 @@ import axios from 'axios'
 import clsx from 'clsx'
 import { ProblemExplain } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
+import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
   EnglishExplainRender,
   EnglishProblemRender,
@@ -552,6 +553,8 @@ export default function TrialTestPage() {
                       style={device === 'pad' ? { width: padWidth } : undefined}
                     >
                       <div className="pv-device-inner">
+                        {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변) */}
+                        <ExamScaleFrame>
                         <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
                           {/* 수능 지면 순서: 발문 [N점] → 지문 → 단어 주석 → 선택지 */}
                           <div className="pv-question">
@@ -585,10 +588,12 @@ export default function TrialTestPage() {
                             </div>
                           )}
                         </div>
+                        </ExamScaleFrame>
                       </div>
                     </div>
                     {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
                     <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
+                      <ExamScaleFrame>
                       <p className="pv-label">정답</p>
                       <div className="pv-explain-body pv-explain-answer">
                         {detail.choices.length > 0 && detail.answerIndex != null ? (
@@ -601,6 +606,7 @@ export default function TrialTestPage() {
                       <div className="pv-explain-body">
                         <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
                       </div>
+                      </ExamScaleFrame>
                     </div>
                   </div>
                 )}
