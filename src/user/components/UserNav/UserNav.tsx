@@ -24,7 +24,7 @@ export function UserNav({ active }: UserNavProps) {
   const isAdmin = useUserStore((s) => s.me?.role === 'ADMIN')
   // 나브 추천 버튼은 과목 선택 뷰를 건너뛴다 (2026-08-26 정책) — 마지막 학습 과목으로
   const lastSubject = useTrialStore((s) => s.lastSubject)
-  const todayLink = `/today?subject=${lastSubject ?? 'math'}`
+  const recommendLink = `/recommend?subject=${lastSubject ?? 'math'}`
 
   return (
     <>
@@ -62,7 +62,7 @@ export function UserNav({ active }: UserNavProps) {
           <MapIcon size={21} filled />
         </BottomItem>
         {/* 추천 문제 — 아이콘 자리는 언덕 위로 뜬 FAB 가 대신한다 (시안도 아이콘 프레임이 비어 있음) */}
-        <Link to={todayLink} className={clsx(styles.bottomItem, styles.bottomCenter)}>
+        <Link to={recommendLink} className={clsx(styles.bottomItem, styles.bottomCenter)}>
           <span className={styles.bottomIcon} aria-hidden />
           추천 문제
           <span className={styles.bottomFab} aria-hidden>

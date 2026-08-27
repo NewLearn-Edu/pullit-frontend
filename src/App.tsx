@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
@@ -23,12 +23,21 @@ import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
-import TodayPage from './user/pages/today/TodayPage'
+import RecommendPage from './user/pages/recommend/RecommendPage'
 import AccessGate from './AccessGate'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
 const AdminRoutes = lazy(() => import('./admin/routes'))
+
+/**
+ * 구 추천 경로 (/today) → /recommend.
+ * 이미 발송된 알림톡 링크가 /today 라 살려 둔다. ?subject= 같은 쿼리를 그대로 넘긴다.
+ */
+function TodayRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={`/recommend${search}`} replace />
+}
 
 /**
  * POC 단계에서는 skill_node · 유형 선택 페이지를 스킵하고
@@ -45,8 +54,10 @@ export default function App() {
       {/* 회원 영역 — 맛보기 미완주면 /my 포함 어디든 /start 퍼널로 (RequireTrialDone) */}
       <Route element={<RequireTrialDone />}>
         <Route path="/home" element={<HomePage />} />
-        {/* 오늘의 추천 랜딩 — 알림톡 딥링크(과목 선택) · 나브 추천 버튼(?subject= 로 선택 생략) */}
-        <Route path="/today" element={<TodayPage />} />
+        {/* 추천 랜딩 — 알림톡 딥링크(과목 선택) · 나브 추천 버튼(?subject= 로 선택 생략) */}
+        <Route path="/recommend" element={<RecommendPage />} />
+        {/* 구 경로 — 이미 발송된 알림톡 링크가 /today 라 쿼리까지 실어 넘긴다 */}
+        <Route path="/today" element={<TodayRedirect />} />
         <Route path="/wrong-note" element={<WrongNotePage />} />
         <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
         <Route path="/report" element={<ReportPage />} />

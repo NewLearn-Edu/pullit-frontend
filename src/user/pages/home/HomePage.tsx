@@ -147,7 +147,7 @@ export default function HomePage() {
     setStartSheet(row)
   }
 
-  // 추천 딥링크 (?start=unitCode) — /today(알림톡·나브 추천 버튼)가 넘겨준 유닛의
+  // 추천 딥링크 (?start=unitCode) — /recommend(알림톡·나브 추천 버튼)가 넘겨준 유닛의
   // 시트를 상태에 맞게 자동으로 연다. 대분류 칩이 다르면 먼저 맞춘 뒤 재실행된다.
   useEffect(() => {
     if (sessionStatus !== 'ready') return
@@ -490,13 +490,13 @@ export default function HomePage() {
         {/*
           웹 전용 추천 문제 진입점 — 모바일·패드는 하단 네비의 추천 FAB 가 같은 역할을 해서
           도크를 띄우지 않는다 (시안 3450-8896 적용, 2026-08-27).
-          목적지는 나브 FAB 와 동일한 /today · 지금 보고 있는 과목을 그대로 넘긴다.
+          목적지는 나브 FAB 와 동일한 /recommend · 지금 보고 있는 과목을 그대로 넘긴다.
         */}
         <div className={styles.solveDock}>
           <button
             type="button"
             className={styles.solveDockCta}
-            onClick={() => navigate(`/today?subject=${subject}`)}
+            onClick={() => navigate(`/recommend?subject=${subject}`)}
           >
             {/* size 42 → 글리프 약 26px · 문제지 면이 16px 텍스트와 비슷한 높이가 된다 */}
             <RecommendIcon size={42} />

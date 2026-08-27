@@ -5,7 +5,7 @@ import RecommendReveal from './RecommendReveal'
 import { SET_CREDIT_COST } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
 import type { Subject } from '@/user/stores/trialStore'
-import styles from './styles/TodayPage.module.scss'
+import styles from './styles/RecommendPage.module.scss'
 
 interface SubjectOption {
   value: Subject
@@ -20,7 +20,7 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
 ]
 
 /**
- * 오늘의 추천 랜딩 (/today) — 알림톡 버튼·나브 추천 버튼의 공용 진입점 (2026-08-26 정책)
+ * 추천 랜딩 (/recommend) — 알림톡 버튼·나브 추천 버튼의 공용 진입점 (2026-08-26 정책)
  *
  * - 쿼리 없이 오면(알림톡) 과목 선택 카드 2장 "뭐부터 풀래?"
  * - ?subject=math|english 로 오면(앱 나브 버튼·홈 추천 CTA) 선택 뷰를 건너뛰고
@@ -28,7 +28,7 @@ const SUBJECT_OPTIONS: SubjectOption[] = [
  *
  * 과목은 따로 돈다 (수학 탭에서는 수학, 영어 탭에서는 영어).
  */
-export default function TodayPage() {
+export default function RecommendPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionStatus = useUserStore((s) => s.status)
