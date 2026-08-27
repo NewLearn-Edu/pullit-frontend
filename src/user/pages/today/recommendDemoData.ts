@@ -25,10 +25,7 @@ function done(score: number, minutes: number): UnitDiagnosis {
   }
 }
 
-/**
- * ?rec-demo=1 — 서버 없이 고정 데이터로 연출을 끝까지 돌려 본다.
- * 세션 가드도 건너뛴다 (백엔드가 떠 있지 않아도 디자인 리뷰가 되도록).
- */
+/** ?rec-demo=1 — 서버 대신 고정 데이터로 연출을 끝까지 돌려 본다 (세션은 그대로 필요) */
 export function isRecommendDemo(): boolean {
   if (typeof window === 'undefined') return false
   return new URLSearchParams(window.location.search).get('rec-demo') === '1'

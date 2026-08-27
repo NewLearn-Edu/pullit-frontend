@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import RecommendReveal from './RecommendReveal'
-import { isRecommendDemo } from './recommendDemoData'
 import { SET_CREDIT_COST } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
 import type { Subject } from '@/user/stores/trialStore'
@@ -37,24 +36,21 @@ export default function TodayPage() {
   const raw = searchParams.get('subject')
   const subject: Subject | null = raw === 'math' || raw === 'english' ? raw : null
 
-  // 데모(?rec-demo=1)는 서버를 타지 않으므로 세션 없이도 연출을 볼 수 있다
-  const demo = isRecommendDemo()
-
   // 로그인 필요 페이지 — 세션 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {
-    if (!demo && sessionStatus === 'anonymous')
+    if (sessionStatus === 'anonymous')
       navigate('/login', {
         replace: true,
         state: { from: window.location.pathname + window.location.search },
       })
-  }, [demo, sessionStatus, navigate])
+  }, [sessionStatus, navigate])
 
   const closeToHome = () => navigate('/home', { replace: true })
 
   // ── 추천 리빌 ──────────────────────────────────────────────────────────────
   // 세션이 준비돼야 진단 기록·크레딧을 함께 읽을 수 있다
   if (subject) {
-    if (!demo && sessionStatus !== 'ready') {
+    if (sessionStatus !== 'ready') {
       return (
         <div className={styles.page}>
           <OnboardingHeader onClose={closeToHome} />
