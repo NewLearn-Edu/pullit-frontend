@@ -324,15 +324,6 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, reduceMotion, scanned, scanSteps])
 
-  /** 화면 아무 데나 눌러 연출 건너뛰기 — 재방문 유저가 매번 2.7초를 기다리지 않게 */
-  const skip = () => {
-    if (phase === 'ready' || !target || qaPhase()) return
-    clearTimers()
-    setInstant(true)
-    setScanned(scanSteps)
-    setPhase('ready')
-  }
-
   // ── 무대 좌표 ─────────────────────────────────────────────────────────────
   const bodyRef = useRef<HTMLDivElement>(null)
   const detailRef = useRef<HTMLDivElement>(null)
@@ -577,8 +568,6 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           '--rec-chip-type': geo.typeScale,
         } as CSSProperties
       }
-      onClick={skip}
-      role="presentation"
     >
       <OnboardingHeader onClose={closeToHome} showLogo />
 
@@ -751,8 +740,6 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       {/* 하단 고정 — 연출이 끝나야 뜬다 */}
       <footer
         className={clsx(styles.dock, revealed && styles.dockIn)}
-        onClick={(e) => e.stopPropagation()}
-        role="presentation"
       >
         {!skipMode ? (
           <>
