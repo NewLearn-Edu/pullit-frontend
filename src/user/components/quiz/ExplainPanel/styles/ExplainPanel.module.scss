@@ -46,6 +46,9 @@
     position: static;
     z-index: auto;
     height: auto;
+    // 모바일 fixed 전용 최소 폭 해제 — 안 풀면 --pw 가 350 아래로 내려가도
+    // 패널만 350 에 걸려 우측에 빈 띠가 생기고(드래그 하한 300), 닫힘(--pw:0)에도 350 이 남는다
+    min-width: 0;
     max-width: none;
     box-shadow: none;
     transform: none;
@@ -98,10 +101,11 @@
   gap: $space-md;
 }
 
+// 좌측 "문제 N" 타이틀(.problemTitle)과 같은 크기·굵기 — 두 패널 헤더가 한 줄로 읽히게
 .tabButton {
   @include button-reset;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
   color: $color-muted;
   transition: color 150ms ease;
 
@@ -153,8 +157,9 @@
 
 .answerValue {
   margin: $space-md 0 0;
-  font-size: $fs-h2;
-  line-height: $lh-h2;
+  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', 'Nanum Myeongjo', serif);
+  font-size: 20px;
+  line-height: 1.4;
   font-weight: $fw-bold;
   color: $color-primary;
 }
