@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
+import { RecommendIcon } from '@/user/components/icons/RecommendIcon'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
@@ -246,13 +247,6 @@ export default function HomePage() {
    */
   const hasAnyDiagnosis = progress.rows.some((r) => r.diagnosis)
 
-  /** 대단원 완주 후 CTA 용 — 이 카테고리에서 가장 약한 유닛 */
-  const weakestInCategory = progress.unlocked
-    ? progress.rows.reduce((a, b) =>
-        (b.diagnosis?.score ?? 101) < (a.diagnosis?.score ?? 101) ? b : a,
-      )
-    : null
-
   /**
    * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
    * 열려 있으면 해당 유닛 문제로 FREE 세션을 만들어 /solve 로 진입.
@@ -380,9 +374,6 @@ export default function HomePage() {
                     {unitLabel} 한 개만 진단하면 바로 열려
                   </p>
                 </div>
-                <button type="button" onClick={() => openStartSheet(progress.nextUnit)} className={styles.unlockButton}>
-                  약점 진단하기
-                </button>
               </div>
             )}
           </div>
@@ -496,21 +487,21 @@ export default function HomePage() {
           </section>
         </div>
 
-        {/* 홈 단일 CTA — 다크 시트 (Figma) · 선택한 대단원 기준 */}
+        {/*
+          웹 전용 추천 문제 진입점 — 모바일·패드는 하단 네비의 추천 FAB 가 같은 역할을 해서
+          도크를 띄우지 않는다 (시안 3450-8896 적용, 2026-08-27).
+          목적지는 나브 FAB 와 동일한 /today · 지금 보고 있는 과목을 그대로 넘긴다.
+        */}
         <div className={styles.solveDock}>
-          {!progress.unlocked ? (
-            <button type="button" className={styles.solveDockCta} onClick={() => openStartSheet(progress.nextUnit)}>
-              {category.name} 약점 진단하기
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={styles.solveDockCta}
-              onClick={() => weakestInCategory && startFreeSolve(weakestInCategory)}
-            >
-              약점 문제 풀기
-            </button>
-          )}
+          <button
+            type="button"
+            className={styles.solveDockCta}
+            onClick={() => navigate(`/today?subject=${subject}`)}
+          >
+            {/* size 42 → 글리프 약 26px · 문제지 면이 16px 텍스트와 비슷한 높이가 된다 */}
+            <RecommendIcon size={42} />
+            추천 문제
+          </button>
         </div>
       </main>
 

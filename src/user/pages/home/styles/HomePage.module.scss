@@ -26,8 +26,8 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   min-width: 0;
   display: flex;
   flex-direction: column;
-  // 하단 네비(64px) + 고정 CTA 시트(~80px)에 가리지 않게 (모바일·패드)
-  padding-bottom: calc(160px + env(safe-area-inset-bottom));
+  // 하단 네비에 가리지 않게 (모바일·패드) — CTA 도크는 웹 전용이라 여기선 뺀다
+  padding-bottom: calc(var(--nav-bottom-h) + 32px);
 
   @include desktop-up {
     padding-bottom: 120px; // 하단 고정 CTA 버튼 높이 + 여백
@@ -135,13 +135,14 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 }
 
 
+// 잠금 오버레이 — 자물쇠·문구만 (진단 CTA 는 아래 소단원 카드가 담당, 2026-08-27)
 .graphOverlay {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: $space-lg;
   border-radius: 16px;
   background: rgba(18, 20, 23, 0.8);
@@ -200,24 +201,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   font-weight: $fw-medium;
   color: #999;
   text-align: center;
-}
-
-.unlockButton {
-  @include button-reset;
-  @include flex-center;
-  width: 100%;
-  max-width: 620px;
-  height: 56px;
-  padding: 0 $space-md;
-  border-radius: $radius-btn-md;
-  background: $color-primary;
-  color: #fff;
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  white-space: nowrap; // 350px 에서도 줄바꿈 금지
-  transition: background 150ms ease;
-
-  @include hover { background: $color-primary-hover; }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -408,68 +391,45 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   color: #a6abb1;
 }
 
-// 하단 CTA — 다크 시트 (Figma · 상단 라운드 20 의 검은 바가 네비 위로 올라온 형태)
+// 하단 추천 문제 CTA — 웹 전용.
+// 모바일·패드는 하단 네비의 추천 FAB 가 같은 진입점이라 도크를 띄우지 않는다 (2026-08-27).
 .solveDock {
-  // 모바일·패드: 하단 네비(64px) 바로 위에 밀착된 컴팩트 다크 시트 (Figma 2919-8934)
-  // sticky 는 자연 위치에 따라 네비와 틈이 생겨 fixed 로 고정한다
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom));
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  padding: 8px $space-lg;
-  border-radius: 20px 20px 0 0;
-  background: #23272b; // black/800
+  display: none;
 
-  // 웹(1281+): 다크 시트 없이 화면 하단에 고정된 단독 버튼.
+  // 웹(1281+): 화면 하단에 고정된 단독 버튼.
   // left 는 사이드바(224px) 보정 — 뷰포트가 아니라 콘텐츠 영역 기준 중앙 정렬
   @include desktop-up {
+    position: fixed;
     left: 224px;
+    right: 0;
     bottom: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
     padding: 0 $space-lg 28px;
-    border-radius: 0;
-    background: transparent;
     pointer-events: none; // 투명 영역은 클릭 통과 — 버튼만 상호작용
   }
 }
 
+// 도크 자체가 웹 전용이라 분기 없이 웹 규격만 둔다
 .solveDockCta {
   @include button-reset;
   @include flex-center;
+  // gap 없음 — 글리프 상자가 오른쪽에 이미 ~14px 여백을 품고 있다
   width: 100%;
   max-width: 620px;
-  height: 48px;
+  height: 56px;
   border-radius: 12px;
-  // 시트 안에서는 배경 없이 텍스트만 — 옅은 사각형이 떠 보이지 않게 (호버 변화도 없음)
-  background: transparent;
+  // 모바일 하단 네비의 추천 FAB 와 같은 primary 톤 — 같은 진입점이니 색도 맞춘다
+  background: $color-primary;
+  box-shadow: 0 8px 24px rgba(255, 56, 92, 0.32); // 콘텐츠 위에 떠 있는 버튼
   color: #fff;
   font-size: 16px;
   font-weight: $fw-bold;
   transition: background 150ms ease;
-  pointer-events: auto; // 데스크탑 도크의 클릭 통과 예외
+  pointer-events: auto; // 도크의 클릭 통과 예외
 
-  @include desktop-up {
-    height: 56px;
-    background: #23272b; // black/800 — 웹은 단독 버튼이라 배경 필요
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); // 콘텐츠 위에 떠 있는 버튼
-
-    @include hover { background: #3a3f45; }
-  }
-
-  // 시트 안에서는 비활성도 박스 없이 회색 텍스트만 (웹 단독 버튼만 회색 박스)
-  &:disabled {
-    background: transparent;
-    color: #80858b;
-    cursor: default;
-
-    @include desktop-up {
-      background: #e3e5e8;
-      color: #a6abb1;
-      box-shadow: none;
-    }
-  }
+  @include hover { background: $color-primary-hover; }
 }
 
 

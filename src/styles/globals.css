@@ -74,6 +74,12 @@
 }
 
 @layer base {
+  :root {
+    /* 하단 네비 높이 (Figma 3450-8896) — 시안 94px 안에 30px 의 홈 인디케이터 자리가
+       이미 들어있고, 그보다 깊은 기기에서만 늘어난다. UserNav 의 padding-bottom 과 짝. */
+    --nav-bottom-h: calc(94px + max(0px, env(safe-area-inset-bottom) - 30px));
+  }
+
   html {
     font-family: 'Pretendard Variable', Pretendard, -apple-system,
       'Apple SD Gothic Neo', sans-serif;

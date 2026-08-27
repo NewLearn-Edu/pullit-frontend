@@ -29,7 +29,7 @@ $red-tint: #fff1f2;
   background-image: radial-gradient(#dcdee1 1.5px, transparent 1.5px);
   background-size: 28px 28px;
 
-  // 하단 네비(64px)에 가리지 않게 컨트롤 여백은 각 요소에서 처리
+  // 하단 네비(--nav-bottom-h)에 가리지 않게 컨트롤 여백은 각 요소에서 처리
 }
 
 // 피그마식 핸드 툴 — 스페이스 홀드 중 grab, 드래그 중 grabbing (자식 커서까지 통일)
@@ -288,7 +288,7 @@ $red-tint: #fff1f2;
 .legend {
   position: absolute;
   left: 20px;
-  bottom: 84px; // 하단 네비 위
+  bottom: calc(var(--nav-bottom-h) + 20px); // 하단 네비 위
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -338,7 +338,7 @@ $red-tint: #fff1f2;
 .controls {
   position: absolute;
   right: 20px;
-  bottom: 84px;
+  bottom: calc(var(--nav-bottom-h) + 20px);
   display: flex;
   flex-direction: column;
   gap: $space-sm;
@@ -376,7 +376,7 @@ $red-tint: #fff1f2;
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 64px; // 하단 네비 위에서 시작
+  bottom: var(--nav-bottom-h); // 하단 네비 위에서 시작
   display: flex;
   flex-direction: column;
   gap: $space-lg;

@@ -23,7 +23,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: 96px; // 하단 네비에 가리지 않게 (모바일)
+  padding-bottom: calc(var(--nav-bottom-h) + 32px); // 하단 네비에 가리지 않게 (모바일)
 
   @include desktop-up {
     padding-bottom: $space-xxl;

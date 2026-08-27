@@ -38,7 +38,7 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 0 16px calc(40px + 96px); // 하단 네비에 가리지 않게 (모바일)
+  padding: 0 16px calc(var(--nav-bottom-h) + 40px); // 하단 네비에 가리지 않게 (모바일)
 
   @include desktop-up {
     padding: $space-md 16px 40px;
@@ -384,7 +384,7 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
 
 .toast {
   position: fixed;
-  bottom: calc(88px + env(safe-area-inset-bottom));
+  bottom: calc(var(--nav-bottom-h) + 24px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;

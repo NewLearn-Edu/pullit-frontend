@@ -5,6 +5,7 @@ import { useTrialStore } from '@/user/stores/trialStore'
 import styles from './styles/UserNav.module.scss'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { HomeIcon, MapIcon, ProfileIcon, ReportIcon } from '@/user/components/icons/NavIcons'
+import { RecommendIcon } from '@/user/components/icons/RecommendIcon'
 
 export type UserNavKey = 'recommend' | 'map' | 'wrongNote' | 'report' | 'my'
 
@@ -33,8 +34,8 @@ export function UserNav({ active }: UserNavProps) {
           풀잇
         </Link>
         <nav className={styles.nav}>
+          {/* 오늘의 추천은 홈의 추천 문제 CTA 가 담당 — 사이드바에서는 뺀다 (2026-08-27) */}
           <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
-          <NavItem to={todayLink} icon={<BoltIcon />} label="오늘의 추천" />
           <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
           <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 리포트" active={active === 'report'} />
@@ -50,46 +51,35 @@ export function UserNav({ active }: UserNavProps) {
         </div>
       </aside>
 
-      {/* iPad · 모바일 하단 네비 (Figma 2431-17022 — 홈 · 약점 지도 · 학습 기록) */}
+      {/* iPad · 모바일 하단 네비 (Figma 3450-8896 — 홈 · 약점 지도 · 추천 문제 · 학습 기록 · 마이) */}
       <nav className={styles.bottomNav} aria-label="메인 메뉴">
-        <Link
-          to="/home"
-          className={clsx(styles.bottomItem, active === 'recommend' && styles.bottomItemActive)}
-        >
-          <HomeIcon filled={active === 'recommend'} />홈
+        {/* 가운데 FAB 자리에 솟은 언덕 — 바 상단선이 그대로 이어진다 */}
+        <NavHump />
+        <BottomItem to="/home" label="홈" active={active === 'recommend'}>
+          <HomeIcon size={21} filled />
+        </BottomItem>
+        <BottomItem to="/weakness-map" label="약점 지도" active={active === 'map'}>
+          <MapIcon size={21} filled />
+        </BottomItem>
+        {/* 추천 문제 — 아이콘 자리는 언덕 위로 뜬 FAB 가 대신한다 (시안도 아이콘 프레임이 비어 있음) */}
+        <Link to={todayLink} className={clsx(styles.bottomItem, styles.bottomCenter)}>
+          <span className={styles.bottomIcon} aria-hidden />
+          추천 문제
+          <span className={styles.bottomFab} aria-hidden>
+            <RecommendIcon size={48} />
+          </span>
         </Link>
-        <Link
-          to="/weakness-map"
-          className={clsx(styles.bottomItem, active === 'map' && styles.bottomItemActive)}
-        >
-          <MapIcon filled={active === 'map'} />
-          약점 지도
-        </Link>
-        {/* 가운데 추천 원형 버튼 — 살짝 떠서 바로 오늘의 3문제 (선택 뷰 생략) */}
-        <span className={styles.bottomCenter}>
-          <Link to={todayLink} className={styles.bottomCircle} aria-label="오늘의 추천 3문제">
-            <BoltIcon size={22} />
-          </Link>
-        </span>
-        <Link
+        {/* 오답노트는 학습 기록 섹션 소속 — 하단 네비에서는 학습 기록을 활성 표시 */}
+        <BottomItem
           to="/report"
-          // 오답노트는 학습 리포트 섹션 소속 — 하단 네비에서는 리포트를 활성 표시 (시안 2632-7566)
-          className={clsx(
-            styles.bottomItem,
-            (active === 'report' || active === 'wrongNote') && styles.bottomItemActive,
-          )}
+          label="학습 기록"
+          active={active === 'report' || active === 'wrongNote'}
         >
-          <ReportIcon filled={active === 'report' || active === 'wrongNote'} />
-          학습 리포트
-        </Link>
-        {/* 마이페이지 — 가운데 추천 원 좌우 균형을 위한 5슬롯 구성 (2026-08-26) */}
-        <Link
-          to="/my"
-          className={clsx(styles.bottomItem, active === 'my' && styles.bottomItemActive)}
-        >
-          <ProfileIcon filled={active === 'my'} />
-          마이
-        </Link>
+          <ReportIcon size={21} filled />
+        </BottomItem>
+        <BottomItem to="/my" label="마이" active={active === 'my'}>
+          <ProfileIcon size={21} filled />
+        </BottomItem>
       </nav>
     </>
   )
@@ -127,26 +117,54 @@ function NavItem({
   )
 }
 
+/** 하단 네비 한 칸 — 21px 아이콘 + 5px 간격 + 12px SemiBold 라벨 */
+function BottomItem({
+  to,
+  label,
+  active,
+  children,
+}: {
+  to: string
+  label: string
+  active?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      to={to}
+      className={clsx(styles.bottomItem, active && styles.bottomItemActive)}
+      aria-current={active ? 'page' : undefined}
+    >
+      <span className={styles.bottomIcon}>{children}</span>
+      {label}
+    </Link>
+  )
+}
+
 /* --- 인라인 SVG 아이콘 --- */
 
+/**
+ * 하단 네비 상단 곡선 (Figma Union 3450:8848).
+ * 바 상단선(y=11)에서 시작해 가운데 32.97px 지점에서 11px 솟았다가 다시 내려온다.
+ * 양 끝 컨트롤 포인트가 수평이라 바의 border-top 과 이음매 없이 이어진다.
+ * 좌표는 stroke 1px 이 border-top 행(바 기준 y 0~1)에 정확히 얹히도록 0.5 내렸다.
+ */
+const HUMP_PATH =
+  'M0 11.5C5.937 11.5 11.37 8.53 16.372 5.33C21.149 2.275 26.85 0.5 32.973 0.5C39.096 0.5 44.797 2.275 49.574 5.33C54.576 8.53 60.009 11.5 65.946 11.5'
 
-
-
-
-/** 오늘의 추천 번개 — 추천 진입점 공용 (사이드바 · 하단 원형 버튼) */
-function BoltIcon({ size = 20 }: { size?: number }) {
+function NavHump() {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M13.2 2.6 5.4 13.1c-.3.4 0 1 .5 1h4.3l-1.3 6.9c-.1.6.7 1 1.1.5l7.8-10.5c.3-.4 0-1-.5-1h-4.3l1.3-6.9c.1-.6-.7-1-1.1-.5Z" />
+    <svg className={styles.bottomHump} viewBox="0 0 65.946 12" fill="none" aria-hidden>
+      <path d={`${HUMP_PATH}V12H0V11.5Z`} fill="#fff" />
+      <path d={HUMP_PATH} stroke="#E5E7EA" strokeWidth="1" />
     </svg>
   )
 }
+
+
+
+
+
 
 function GearIcon() {
   return (
