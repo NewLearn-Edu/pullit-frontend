@@ -124,7 +124,7 @@ export default function WeaknessMapPage() {
     [],
   )
 
-  const sheetRef = useRef<HTMLDivElement>(null)
+  const sheetRef = useRef<HTMLDivElement | null>(null)
   /** 팀 기준 데스크탑 분기 (1281~) — 시트가 우측 패널로 배치되는 구간 */
   const isDesktop = () => window.matchMedia('(min-width: 1281px)').matches
 
@@ -269,6 +269,20 @@ export default function WeaknessMapPage() {
 
   // 시트 아래로 스와이프 닫기 (공용 훅) — 웹은 우측 고정 패널이라 제스처 제외
   const sheetDragGesture = useSheetDrag(closeSheet, { disabled: isDesktop })
+
+  /**
+   * 시트에 ref 가 둘 필요하다 — 드래그 제스처용(sheetProps.ref)과 지도 여백 계산용(sheetRef).
+   * ref 를 따로 주면 스프레드가 뒤에서 덮어써 sheetRef 가 늘 null 이 되고(포커스 여백이 0),
+   * 빌드도 TS2783 으로 깨진다. 스프레드에서 ref 를 분리하고 콜백으로 둘 다 채운다.
+   */
+  const { ref: dragSheetRef, ...sheetHandlers } = sheetDragGesture.sheetProps
+  const bindSheet = useCallback(
+    (el: HTMLDivElement | null) => {
+      sheetRef.current = el
+      dragSheetRef.current = el
+    },
+    [dragSheetRef],
+  )
 
   /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 (점·텍스트가 각 단원 상태 반영) */
   const path = useMemo(() => {
@@ -519,8 +533,8 @@ export default function WeaknessMapPage() {
         {/* 노드 상세 바텀시트 */}
         {selected && (
           <div
-            ref={sheetRef}
-            {...sheetDragGesture.sheetProps}
+            {...sheetHandlers}
+            ref={bindSheet}
             className={clsx(styles.sheet, sheetDragGesture.dragging && styles.sheetDragging)}
             onClick={(e) => e.stopPropagation()}
           >
