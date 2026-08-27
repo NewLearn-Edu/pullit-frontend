@@ -528,7 +528,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   if (failed) {
     return (
       <div className={styles.page}>
-        <OnboardingHeader onClose={closeToHome} showLogo />
+        <OnboardingHeader onClose={closeToHome} />
         <main className={styles.errorMain}>
           <p className={styles.errorTitle}>추천 문제를 못 불러왔어</p>
           <p className={styles.errorDesc}>잠깐 후에 다시 시도해줄래?</p>
@@ -569,7 +569,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         } as CSSProperties
       }
     >
-      <OnboardingHeader onClose={closeToHome} showLogo />
+      <OnboardingHeader onClose={closeToHome} />
 
       <main className={styles.main}>
         {/* 문구 크로스페이드 — 훑는 중 ↔ 찾았다 */}
