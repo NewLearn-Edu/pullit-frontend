@@ -38,6 +38,12 @@ interface TrialState {
   firstRewardGranted: boolean
   /** 축하 시트 노출 완료 — 같은 세션에서 결과 화면을 재방문해도 다시 뜨지 않게 */
   firstCreditCelebrated: boolean
+  /**
+   * 결과 화면(/weakness) 열람권 — 세트를 막 끝낸 직후에만 유효한 1회용 패스.
+   * 세트 완료 시 발급하고, 결과를 다 보고 홈으로 나갈 때 소비한다.
+   * 해설 왕복·소셜 로그인 왕복은 결과 화면으로 되돌아오므로 유지된다.
+   */
+  resultPass: boolean
 
   setMathSkillNode: (id: string) => void
   setEnglishType: (id: string) => void
@@ -46,6 +52,8 @@ interface TrialState {
   updateResult: (subject: Subject, problemId: number, patch: Partial<QuizItemResult>) => void
   markFirstRewardGranted: () => void
   markFirstCreditCelebrated: () => void
+  grantResultPass: () => void
+  consumeResultPass: () => void
   reset: () => void
 
   isMathComplete: () => boolean
@@ -71,6 +79,7 @@ export const useTrialStore = create<TrialState>()(
       lastSubject: null,
       firstRewardGranted: false,
       firstCreditCelebrated: false,
+      resultPass: false,
 
       setMathSkillNode: (id) =>
         set({ mathSkillNodeId: id, mathResults: [] }),
@@ -101,6 +110,9 @@ export const useTrialStore = create<TrialState>()(
       markFirstRewardGranted: () => set({ firstRewardGranted: true }),
       markFirstCreditCelebrated: () => set({ firstCreditCelebrated: true }),
 
+      grantResultPass: () => set({ resultPass: true }),
+      consumeResultPass: () => set({ resultPass: false }),
+
       // 보상 플래그 2종은 reset 대상이 아니다 — 세트 재시작마다 초기화되면
       // 같은 세션에서 축하 시트가 다시 뜰 수 있다 (탭 닫으면 자연 소멸)
       reset: () =>
@@ -110,6 +122,7 @@ export const useTrialStore = create<TrialState>()(
           mathResults: [],
           englishResults: [],
           lastSubject: null,
+          resultPass: false,
         }),
 
       // 맛보기 세트 = 3문항 (정책 · mockProblems TRIAL_PROBLEM_COUNT 와 동일)
@@ -151,6 +164,7 @@ export const useTrialStore = create<TrialState>()(
         lastSubject: state.lastSubject,
         firstRewardGranted: state.firstRewardGranted,
         firstCreditCelebrated: state.firstCreditCelebrated,
+        resultPass: state.resultPass,
       }),
     },
   ),

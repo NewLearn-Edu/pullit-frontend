@@ -214,12 +214,34 @@ export default function WeaknessResultPage() {
     }
   }, [])
 
+  /**
+   * 이 화면은 "방금 끝낸 세트"의 결과 전용 (2026-08-27) — 지난 결과 재열람은
+   * /unit-result 가 담당한다. 세트 완료 시 발급한 1회용 열람권(resultPass)이
+   * 없으면 되돌린다. 주소창에 /weakness 를 직접 쳐서 sessionStorage 에 남은
+   * 지난 세트 결과가 계속 열리던 문제를 막는다.
+   * 열람권은 새로고침·해설 왕복·소셜 로그인 왕복에는 유지되고, 결과를 다 보고
+   * 홈으로 나갈 때 소비된다.
+   */
+  const resultPass = useTrialStore((s) => s.resultPass)
   useEffect(() => {
     if (!hydrated) return
     if (!hasCompletedSession()) {
       navigate('/trial', { replace: true })
+      return
     }
-  }, [hydrated, hasCompletedSession, navigate])
+    // 회원을 /trial 로 보내면 온보딩 퍼널로 새므로 홈으로 되돌린다
+    if (!resultPass) navigate(isMember ? '/home' : '/trial', { replace: true })
+  }, [hydrated, hasCompletedSession, resultPass, isMember, navigate])
+
+  /**
+   * 결과 화면에서 나간다 — 열람권을 소비하고 이동.
+   * 가입(/signup)만 예외로 남겨둔다 — 소셜 로그인이 외부 도메인을 왕복한 뒤
+   * postLoginRedirect 로 이 화면에 다시 돌아오기 때문이다.
+   */
+  const leaveResult = (to: string) => {
+    if (to !== '/signup') useTrialStore.getState().consumeResultPass()
+    navigate(to)
+  }
 
   const subject = lastSubject ?? 'math'
 
@@ -326,7 +348,7 @@ export default function WeaknessResultPage() {
   const confirmCreditSheet = () => {
     useTrialStore.getState().markFirstCreditCelebrated()
     setCreditOpen(false)
-    navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+    leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
   }
 
   // 약점 도장 — 다른 연출과 같이 바로 찍힌다
@@ -425,7 +447,7 @@ export default function WeaknessResultPage() {
     // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
       {/* 로고 없이 닫기 X 만 (시안 2886-29391 — 헤더 좌측 비움) */}
-      <OnboardingHeader onClose={() => navigate(isEarlybird() ? '/earlybird' : '/home')} />
+      <OnboardingHeader onClose={() => leaveResult(isEarlybird() ? '/earlybird' : '/home')} />
 
       <main
         className={clsx('flex w-full flex-1 flex-col items-center', stamped && markStyles.shake)}
@@ -643,7 +665,7 @@ export default function WeaknessResultPage() {
           onClick={() => {
             if (isEarlybird()) return setReserveOpen(true)
             if (shouldCelebrateFirstCredit()) return setCreditOpen(true)
-            navigate(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+            leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
           }}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >

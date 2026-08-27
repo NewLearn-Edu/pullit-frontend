@@ -363,6 +363,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       navigate(`${isTrial ? '/trial/quiz' : '/solve'}/${subject}/${nextIdx}`, { replace: isTrial })
       return
     }
+    // 결과 화면은 세트를 막 끝낸 직후에만 열린다 — 여기서 1회용 열람권을 발급한다
+    if (isTrial) useTrialStore.getState().grantResultPass()
     navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'), { replace: isTrial })
   }
 
