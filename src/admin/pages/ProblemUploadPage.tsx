@@ -447,7 +447,7 @@ export default function ProblemUploadPage() {
                               return (
                                 <span key={i} className={clsx('choice', correct && 'correct')}>
                                   <span className="choice-num">
-                                    {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                                    {i + 1}
                                   </span>
                                   <span><ProblemRender text={c} /></span>
                                 </span>
@@ -570,7 +570,7 @@ export default function ProblemUploadPage() {
                             <span key={i} className={clsx('choice', correct && 'correct')}>
                               {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
                               <span className="choice-num">
-                                {String.fromCodePoint((correct ? 0x2775 : 0x245f) + i + 1)}
+                                {i + 1}
                               </span>
                               <span><ProblemRender text={c} /></span>
                             </span>

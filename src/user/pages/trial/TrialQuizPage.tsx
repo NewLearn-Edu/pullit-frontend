@@ -470,7 +470,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
                         return (
                           <span key={i} className="choice">
                             <span className="choice-num">
-                              {String.fromCodePoint(0x2460 + i)}
+                              {i + 1}
                             </span>
                             <span>
                               <ChoiceRender text={answerText} />

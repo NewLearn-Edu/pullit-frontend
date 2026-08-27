@@ -108,17 +108,40 @@
   color: var(--pv-fg, #120c0b);
 }
 
-/* 수능 지면과 동일한 유니코드 원문자 (①~⑤) — 정답은 채운 원문자(❶) + primary */
+/* 보기 번호 — 유니코드 원문자(①·❶) 대신 원을 직접 그리고 숫자만 얹는다.
+   유니코드 글리프는 빈 원(①)과 채운 원(❶)의 지름·잉크 메트릭이 서로 달라
+   정답만 작고 어긋나 보였다. 직접 그리면 두 상태의 지름이 정확히 같다.
+   숫자는 본문과 같은 KoPubWorld Batang (영어 보기에서도 STIX 로 넘어가지 않게 명시). */
 .choice-num {
   flex-shrink: 0;
-  font-family: inherit;
-  font-size: 1.125em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1.3em;
+  height: 1.3em;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', 'Nanum Myeongjo', serif);
+  font-size: 0.76em;
   font-weight: 500;
+  line-height: 1;
   color: var(--pv-fg, #120c0b);
-  /* 원문자 글리프는 일반 숫자보다 시각 중심이 낮아 baseline 정렬 시
-     내려앉아 보임 — 광학 보정으로 살짝 올림 */
+  /* 숫자를 원 정중앙에 — KoPub 은 어센트(12)가 디센트(6)의 두 배라
+     단순 center 정렬이면 숫자 잉크가 원 중심보다 위로 뜬다 (패딩 절반만큼 내림) */
+  padding-top: 0.19em;
+  /* 원의 세로 위치 — inline-flex 의 baseline 은 안쪽 숫자의 baseline 이라
+     그대로 두면 원 중심이 baseline 근처로 내려앉는다.
+     보기 값의 시각 중심(cap height 의 절반)에 원 중심을 맞춘다 */
   position: relative;
-  top: -0.1em;
+  top: -0.07em;
+}
+
+/* 정답 — 같은 지름 그대로 원 안을 채우고 숫자를 반전 */
+.choice.correct .choice-num {
+  border-color: var(--pv-fg, #120c0b);
+  background: var(--pv-fg, #120c0b);
+  color: #fff;
 }
 
 /* 서체는 지정하지 않는다 — 한글 컨텍스트는 부모(.pv-question 등)의 바탕체를 상속,
@@ -171,10 +194,11 @@
   gap: 10px;
 }
 
-/* 영어 보기 원기호 미세 하향 — 원문자(한글 폰트 글리프)와 STIX 영문 기준선 메트릭 차 보정 */
+/* 영어 보기 번호 — 값이 STIX 라 cap height 가 KoPub 보다 높다.
+   원 중심을 영문 대문자 높이의 절반에 맞추려면 수학보다 조금 더 올린다
+   (두 줄 보기도 첫 줄 기준선에 맞으므로 동작은 그대로) */
 .pv-body.en .choice-num {
-  position: relative;
-  top: 2px;
+  top: -0.16em;
 }
 
 /* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보.

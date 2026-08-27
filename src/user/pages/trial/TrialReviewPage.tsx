@@ -111,7 +111,7 @@ export default function TrialReviewPage() {
                             style={isMyWrong ? { color: '#ff385c' } : undefined}
                           >
                             <span className="choice-num">
-                              {String.fromCodePoint((isAnswer ? 0x2775 : 0x245f) + choiceNo)}
+                              {choiceNo}
                             </span>
                             <span>
                               <ChoiceRender text={answerText} />
