@@ -1,0 +1,248 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// TodayPage · 오늘의 추천 랜딩 (/today)
+// -----------------------------------------------------------------------------
+// [헤더: ×]
+// [타이틀 / 서브타이틀]
+// [과목 카드 2개 — 탭 즉시 추천 계산]
+// [크레딧 안내]
+// 규격은 과목 선택 페이지(TrialStartPage · Figma 2824-4756)와 동일한 리듬:
+// 컨텐츠 620px 컬럼 · 타이틀 24px · 카드 padding 22/20 · radius 16.
+// -----------------------------------------------------------------------------
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: $color-canvas;
+}
+
+// 하단 CTA 가 없는 화면(카드 자체가 액션)이라 위로 붙이면 아래가 크게 빈다 —
+// 세로 중앙 정렬. padding-bottom 은 헤더 높이(≈76px)만큼의 광학 보정으로,
+// 콘텐츠가 화면 전체 기준 가운데 오게 한다.
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: $space-xl $space-lg calc(76px + #{$space-xl});
+}
+
+.title {
+  margin: 0;
+  font-size: 24px; // Heading/M — 전 기기 24px 고정 (온보딩 계열 공통)
+  line-height: 1.4;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.subtitle {
+  margin: $space-md 0 0;
+  font-size: $fs-body;
+  color: $color-body;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 과목 카드 — 라디오가 아니라 탭 즉시 진입 (알림톡 랜딩은 탭 수가 곧 이탈률)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: $space-xxl;
+}
+
+.card {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  width: 100%;
+  padding: 22px 20px;
+  border: 1px solid #d6d8db; // black/300
+  border-radius: 16px;
+  background: $color-canvas;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease;
+
+  @include hover {
+    border-color: $color-primary;
+    background: #fff1f2; // red/100
+  }
+
+  &:active {
+    border-color: $color-primary;
+    background: #fff1f2;
+  }
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cardTitle {
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.cardSub {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: $fw-medium;
+  color: #5e6368; // black/600
+}
+
+// 우측 셰브런 — 카드 자체가 액션이라는 표식
+.cardChevron {
+  @include flex-center;
+  flex: none;
+  margin-left: auto;
+  color: #a6abb1; // black/400
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 크레딧 안내 — 아침 세트도 유료라 진입 전에 비용을 밝힌다
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 홈 시트의 ⓘ 안내 박스와 동일 규격 (원형 18px 배지 + 13px 본문)
+.creditNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  margin-top: $space-xl;
+  padding: 12px;
+  border-radius: 12px;
+  background: $color-surface;
+}
+
+.creditNoteIcon {
+  @include flex-center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: $radius-full;
+  background: #d6d8db; // black/300
+  font-size: 11px;
+  font-weight: $fw-semibold;
+  color: #5e6368; // black/600
+}
+
+.creditNoteText {
+  margin: 0;
+  font-size: 13px;
+  font-weight: $fw-medium;
+  color: #5e6368; // black/600
+}
+
+.creditNoteStrong {
+  font-weight: $fw-semibold;
+  color: $color-foreground;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 추천 계산 중 · 실패
+// ─────────────────────────────────────────────────────────────────────────────
+
+// main 이 이미 세로 중앙 정렬이라 여기서는 가로 정렬만 담당
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid $color-line;
+  border-top-color: $color-primary;
+  border-radius: $radius-full;
+  animation: today-spin 700ms linear infinite;
+}
+
+@keyframes today-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.statusText {
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: $color-body;
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.errorDesc {
+  margin: 0;
+  font-size: $fs-body-sm;
+  color: $color-body;
+}
+
+.errorActions {
+  display: flex;
+  gap: $space-md;
+  width: 100%;
+  max-width: 320px;
+  margin-top: $space-md;
+}
+
+// 버튼 규격은 온보딩 계열과 동일 (높이 56 · radius 12 · 16px 볼드)
+.buttonGhost {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  border-radius: 12px;
+  background: $color-surface;
+  color: $color-foreground;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  transition: background-color 150ms ease;
+
+  @include hover {
+    background: $color-line;
+  }
+}
+
+.buttonPrimary {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b; // black/800
+  color: #fff;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  transition: background-color 150ms ease;
+
+  @include hover {
+    background: #121417; // black/900
+  }
+
+  &:active {
+    background: #121417;
+  }
+}
