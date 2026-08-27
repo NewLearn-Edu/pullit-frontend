@@ -171,19 +171,20 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 // 대단원 칩 — 블록 머리. 홈 대단원 칩과 같은 비율(padding 6/16 · radius 20 @ 14px).
-// 격자 안에 있어 배율을 타므로 글자는 카드와 같은 --rec-type 보정을 받는다
-// (화면에서 카드 이름과 같은 크기로 읽힌다). 높이는 격자 단위로 못 박혀 있고
-// 그 안에서 세로 가운데 정렬 — 위치 계산이 폰트에 흔들리지 않게.
+// 격자 안에 있어 배율을 타므로 글자는 캔버스 배수(--rec-chip-type)로 보정한다
+// — 화면에서 카드 이름과 같은 크기로 읽힌다. 카드와 달리 확대돼도 이 배수를 유지하므로
+// 크기가 움직이지 않는다. 높이는 격자 단위로 못 박고 그 안에서 세로 가운데 정렬 —
+// 위치 계산이 폰트에 흔들리지 않게.
 .columnChip {
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
   max-width: 100%;
   overflow: hidden;
-  padding: 0 calc(16px * var(--rec-type, 1));
+  padding: 0 calc(16px * var(--rec-chip-type, 1));
   border-radius: 999px;
   background: #eff1f3;
-  font-size: calc(16px * var(--rec-type, 1));
+  font-size: calc(16px * var(--rec-chip-type, 1));
   font-weight: $fw-semibold;
   line-height: 1.4;
   color: $muted;

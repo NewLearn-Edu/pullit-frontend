@@ -572,6 +572,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           '--rec-sheet-w': `${geo.sheetW}px`,
           // 캔버스에서는 축소를 상쇄할 만큼 키워 두고, 확대되는 동안 상세 카드 크기까지 줄어든다
           '--rec-type': onCanvas ? geo.typeScale : ZOOM_TYPE,
+          // 대단원 칩은 단계와 무관하게 캔버스 배수를 유지한다 — --rec-type 을 같이 쓰면
+          // 확대가 시작되는 프레임에 값만 바뀌고(트랜지션 없음) 칩이 팍 작아진다
+          '--rec-chip-type': geo.typeScale,
         } as CSSProperties
       }
       onClick={skip}
