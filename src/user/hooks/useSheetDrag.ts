@@ -7,6 +7,7 @@ import { useRef, useState } from 'react'
  *   (setState 로 하면 pointermove 마다 페이지 전체가 리렌더돼 프레임이 밀리고 잔상이 생긴다)
  * - threshold 초과 후 놓으면 시트가 화면 아래로 슬라이드 아웃한 뒤 onClose (즉시 언마운트 금지)
  * - 미달이면 복귀 트랜지션으로 제자리
+ * - 딤 탭·닫기 버튼은 close() 로 같은 슬라이드 아웃을 재생한 뒤 닫는다
  * - 드래그로 끝난 제스처의 잔여 click 무시 (시트 안 버튼 오발동 방지)
  * - disabled() 가 true 면 제스처 비활성 (예: 웹에서 사이드 패널/다이얼로그로 배치될 때)
  *
@@ -49,26 +50,36 @@ export function useSheetDrag(
     if (d.active) setY(Math.max(0, dy))
   }
 
+  /**
+   * 슬라이드 아웃 후 닫기 — 즉시 언마운트하면 시트가 뚝 사라진다.
+   * 드래그로 놓았을 때뿐 아니라 딤 탭·닫기 버튼도 이 퇴장 연출을 공유한다.
+   * 웹(disabled)은 바텀시트가 아니라 우측 패널·다이얼로그라 아래로 내려갈 자리가
+   * 없다 — CSS 도 transform: none 이므로 지연 없이 바로 닫는다.
+   */
+  const close = () => {
+    if (closing.current) return
+    if (disabled?.()) return onClose()
+
+    closing.current = true
+    setDragging(false)
+    const el = elRef.current
+    const distance = el ? el.offsetHeight + 40 : window.innerHeight
+    requestAnimationFrame(() => setY(distance))
+    window.setTimeout(() => {
+      closing.current = false
+      setY(0)
+      onClose()
+    }, 240)
+  }
+
   const onPointerUp = (e: React.PointerEvent) => {
     const d = drag.current
     drag.current = null
     if (!d?.active || closing.current) return
     setDragging(false) // 복귀/퇴장 트랜지션 재활성
 
-    if (e.clientY - d.startY > threshold) {
-      // 슬라이드 아웃 후 닫기 — 즉시 언마운트하면 시트가 뚝 사라진다
-      closing.current = true
-      const el = elRef.current
-      const distance = el ? el.offsetHeight + 40 : window.innerHeight
-      requestAnimationFrame(() => setY(distance))
-      window.setTimeout(() => {
-        closing.current = false
-        setY(0)
-        onClose()
-      }, 240)
-    } else {
-      setY(0)
-    }
+    if (e.clientY - d.startY > threshold) close()
+    else setY(0)
   }
 
   const onClickCapture = (e: React.MouseEvent) => {
@@ -81,6 +92,8 @@ export function useSheetDrag(
 
   return {
     dragging,
+    /** 딤 탭·닫기 버튼에서 호출 — 슬라이드 아웃 뒤 onClose */
+    close,
     sheetProps: {
       ref: elRef,
       onPointerDown,

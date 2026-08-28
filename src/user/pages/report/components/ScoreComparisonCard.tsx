@@ -92,7 +92,7 @@ export function ScoreComparisonCard({
       )}
 
       {infoOpen && (
-        <div className={styles.infoDim} onClick={() => setInfoOpen(false)}>
+        <div className={styles.infoDim} onClick={infoDrag.close}>
           <div
             role="dialog"
             aria-label="점수 계산 방식"
@@ -107,7 +107,7 @@ export function ScoreComparisonCard({
               어려운 문제를 맞힐수록 점수가 크게 오르고, 오답 다시 풀기는 점수에 반영되지 않아.
             </p>
             <div className={styles.infoFormula}>맞힌 배점 합 ÷ 푼 배점 합 × 100</div>
-            <button type="button" onClick={() => setInfoOpen(false)} className={styles.infoClose}>
+            <button type="button" onClick={infoDrag.close} className={styles.infoClose}>
               확인했어
             </button>
           </div>

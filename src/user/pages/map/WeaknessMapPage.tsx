@@ -335,7 +335,11 @@ export default function WeaknessMapPage() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClick={() => {
-          if (!gesture.current.moved && !spaceRef.current) closeSheet() // 빈 캔버스 탭 = 선택 해제
+          // 빈 캔버스 탭 = 선택 해제 — 시트가 열려 있으면 슬라이드 아웃부터
+          if (!gesture.current.moved && !spaceRef.current) {
+            if (selectedId) sheetDragGesture.close()
+            else closeSheet()
+          }
         }}
       >
         {/* 캔버스 (팬/줌 대상) */}
@@ -538,11 +542,11 @@ export default function WeaknessMapPage() {
             className={clsx(styles.sheet, sheetDragGesture.dragging && styles.sheetDragging)}
             onClick={(e) => e.stopPropagation()}
           >
-            <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetHandleWrap}>
+            <button type="button" aria-label="닫기" onClick={sheetDragGesture.close} className={styles.sheetHandleWrap}>
               <span className={styles.sheetHandle} />
             </button>
             {/* 웹(우측 패널) 전용 닫기 버튼 — 모바일은 핸들·스와이프로 닫음 */}
-            <button type="button" aria-label="닫기" onClick={closeSheet} className={styles.sheetClose}>
+            <button type="button" aria-label="닫기" onClick={sheetDragGesture.close} className={styles.sheetClose}>
               ×
             </button>
             <div className={styles.sheetTitleRow}>

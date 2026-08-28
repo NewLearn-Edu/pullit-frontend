@@ -506,7 +506,7 @@ export default function HomePage() {
 
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
       {infoOpen && (
-        <div className={styles.infoDim} onClick={() => setInfoOpen(false)}>
+        <div className={styles.infoDim} onClick={infoDrag.close}>
           <div
             {...infoDrag.sheetProps}
             className={clsx(styles.infoSheet, infoDrag.dragging && styles.infoSheetDragging)}
@@ -515,7 +515,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setInfoOpen(false)}
+              onClick={infoDrag.close}
               className={styles.infoHandleWrap}
             >
               <span className={styles.infoHandle} />
@@ -528,7 +528,7 @@ export default function HomePage() {
             <div className={styles.infoCard}>
               <img src={graphExample} alt="약점 그래프 예시" className={styles.infoImage} />
             </div>
-            <button type="button" onClick={() => setInfoOpen(false)} className={styles.infoClose}>
+            <button type="button" onClick={infoDrag.close} className={styles.infoClose}>
               닫기
             </button>
           </div>
@@ -537,7 +537,7 @@ export default function HomePage() {
 
       {/* 진단 완료 유닛 상세 — 약점지도 노드 시트와 동일: 웹 우측 패널 · 모바일 바텀시트 */}
       {unitSheet?.diagnosis && (
-        <div className={styles.unitDim} onClick={() => setUnitSheet(null)}>
+        <div className={styles.unitDim} onClick={unitDrag.close}>
           <div
             {...unitDrag.sheetProps}
             className={clsx(styles.unitSheet, unitDrag.dragging && styles.infoSheetDragging)}
@@ -546,7 +546,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setUnitSheet(null)}
+              onClick={unitDrag.close}
               className={styles.infoHandleWrap}
             >
               <span className={styles.infoHandle} />
@@ -555,7 +555,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setUnitSheet(null)}
+              onClick={unitDrag.close}
               className={styles.unitClose}
             >
               ×
@@ -702,7 +702,7 @@ export default function HomePage() {
 
       {/* ── 진단 시작 시트 (2842-10194) ↔ 건너뛰기 화면 (2842-10966) ─────────── */}
       {startSheet && (
-        <div className={styles.unitDim} onClick={closeStartSheet}>
+        <div className={styles.unitDim} onClick={startDrag.close}>
           <div
             {...startDrag.sheetProps}
             className={clsx(styles.unitSheet, startDrag.dragging && styles.infoSheetDragging)}
@@ -711,7 +711,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={closeStartSheet}
+              onClick={startDrag.close}
               className={styles.infoHandleWrap}
             >
               <span className={styles.infoHandle} />
@@ -719,7 +719,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={closeStartSheet}
+              onClick={startDrag.close}
               className={styles.unitClose}
             >
               ×
@@ -842,7 +842,7 @@ export default function HomePage() {
 
       {/* ── 선행 단원 안내 시트 (3082-5687) — 잠긴 단원 클릭 ─────────────────── */}
       {lockedSheet && (
-        <div className={styles.unitDim} onClick={() => setLockedSheet(null)}>
+        <div className={styles.unitDim} onClick={lockedDrag.close}>
           <div
             {...lockedDrag.sheetProps}
             className={clsx(styles.unitSheet, lockedDrag.dragging && styles.infoSheetDragging)}
@@ -851,7 +851,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setLockedSheet(null)}
+              onClick={lockedDrag.close}
               className={styles.infoHandleWrap}
             >
               <span className={styles.infoHandle} />
@@ -859,7 +859,7 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setLockedSheet(null)}
+              onClick={lockedDrag.close}
               className={styles.unitClose}
             >
               ×

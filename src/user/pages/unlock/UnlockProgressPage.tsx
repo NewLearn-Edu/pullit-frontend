@@ -192,7 +192,7 @@ export default function UnlockProgressPage() {
 
       {/* ── 세트 시작 크레딧 확인 시트 ─────────────────────────────────────── */}
       {creditSheetOpen && (
-        <div className={styles.sheetDim} onClick={() => setCreditSheetOpen(false)}>
+        <div className={styles.sheetDim} onClick={creditDrag.close}>
           <div
             {...creditDrag.sheetProps}
             className={clsx(styles.sheet, creditDrag.dragging && styles.sheetDragging)}
@@ -201,7 +201,7 @@ export default function UnlockProgressPage() {
             <button
               type="button"
               aria-label="닫기"
-              onClick={() => setCreditSheetOpen(false)}
+              onClick={creditDrag.close}
               className={styles.sheetHandleWrap}
             >
               <span className={styles.sheetHandle} />
@@ -229,7 +229,7 @@ export default function UnlockProgressPage() {
             <div className={styles.sheetActions}>
               <button
                 type="button"
-                onClick={() => setCreditSheetOpen(false)}
+                onClick={creditDrag.close}
                 className={styles.sheetCancel}
               >
                 다음에 할래
