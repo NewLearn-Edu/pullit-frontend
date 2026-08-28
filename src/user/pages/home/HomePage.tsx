@@ -727,8 +727,8 @@ export default function HomePage() {
 
             {!skipMode ? (
               <>
-                <div className="flex w-full flex-col gap-[8px]">
-                  <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
+                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
                     {startSheet.name} 약점 진단하기
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
@@ -737,24 +737,24 @@ export default function HomePage() {
                 </div>
 
                 {/* 문제 수 · 예상 시간 · 필요 크레딧 */}
-                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[16px]">
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[20px]">
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
                     <span className="text-[12px] font-semibold text-[#80858b]">문제</span>
-                    <span className="text-[18px] font-bold text-[#121417]">{SET_SIZE}문제</span>
+                    <span className="text-[22px] font-semibold text-[#121417]">{SET_SIZE}문제</span>
                   </div>
-                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
                     <span className="text-[12px] font-semibold text-[#80858b]">예상 시간</span>
-                    <span className="text-[18px] font-bold text-[#121417]">
+                    <span className="whitespace-nowrap text-[22px] font-semibold text-[#121417]">
                       {estimatedSec != null
                         ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
                         : '약 —분'}
                     </span>
                   </div>
-                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
                     <span className="text-[12px] font-semibold text-[#80858b]">필요 크레딧</span>
-                    <span className="text-[18px] font-bold text-[#121417]">
+                    <span className="text-[22px] font-semibold text-[#121417]">
                       {SET_CREDIT_COST}개
                     </span>
                   </div>
@@ -762,8 +762,8 @@ export default function HomePage() {
 
                 <div className="flex w-full items-center justify-center gap-[6px]">
                   <SheetCoinIcon />
-                  <span className="text-[14px] font-medium text-[#80858b]">보유 크레딧:</span>
-                  <span className="text-[14px] font-semibold text-[#80858b]">{credit}개</span>
+                  <span className="text-[12px] font-semibold text-[#80858b]">보유 크레딧:</span>
+                  <span className="text-[12px] font-semibold text-[#121417]">{credit}개</span>
                 </div>
 
                 {(startError || credit < SET_CREDIT_COST) && (
@@ -776,7 +776,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setSkipMode(true)}
-                    className="flex h-[55px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
                   >
                     이 단원 안배웠어요
                   </button>
@@ -792,8 +792,8 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <div className="flex w-full flex-col gap-[8px]">
-                  <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
+                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
                     아직 안배운 단원이야?
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
@@ -821,7 +821,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setSkipMode(false)}
-                    className="flex h-[55px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
                   >
                     이전
                   </button>
