@@ -418,7 +418,7 @@ export default function HomePage() {
                       <button
                         type="button"
                         onClick={() => setUnitSheet(row)}
-                        className={clsx(styles.unitCard, styles.unitCardDone)}
+                        className={clsx(styles.unitCard, styles.unitCardTap, styles.unitCardDone)}
                       >
                         <span className={styles.unitCardBody}>
                           <span className={styles.unitCardNameRow}>
@@ -454,16 +454,15 @@ export default function HomePage() {
                   // 다음 차례 — 흰 카드 + 빨간 보더 + 진단하기 버튼 → 진단 시작 시트
                   return (
                     <li key={row.name} data-unit-card={row.name}>
-                      <div className={clsx(styles.unitCard, styles.unitCardNext)}>
+                      {/* 카드 전체가 버튼 — 안쪽 알약은 표식이라 span (버튼 중첩 불가) */}
+                      <button
+                        type="button"
+                        onClick={() => openStartSheet(row)}
+                        className={clsx(styles.unitCard, styles.unitCardTap, styles.unitCardNext)}
+                      >
                         <span className={styles.unitCardName}>{row.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => openStartSheet(row)}
-                          className={styles.unitDiagnoseBtn}
-                        >
-                          진단하기
-                        </button>
-                      </div>
+                        <span className={styles.unitDiagnoseBtn}>진단하기</span>
+                      </button>
                     </li>
                   )
                 }
