@@ -613,41 +613,7 @@ export default function HomePage() {
               <h3 className="px-[8px] text-[18px] font-bold leading-[1.4] text-[#121417]">
                 학습 경로
               </h3>
-              <div className="flex w-full flex-col rounded-[16px] border border-[#e5e7ea] p-[20px]">
-                {buildNeighborPath(progress.rows, unitSheet.name).map((p, i, arr) => (
-                  <div key={p.name} className="flex items-stretch gap-[12px]">
-                    <div className="flex w-[10px] flex-col items-center">
-                      {i > 0 && (
-                        <span
-                          className="w-px flex-1 border-l border-dashed border-[#d6d8db]"
-                          aria-hidden
-                        />
-                      )}
-                      <span
-                        className={clsx(
-                          'my-[2px] size-[10px] shrink-0 rounded-full',
-                          p.current ? 'bg-[#121417]' : 'bg-[#d6d8db]',
-                        )}
-                      />
-                      {i < arr.length - 1 && (
-                        <span
-                          className="w-px flex-1 border-l border-dashed border-[#d6d8db]"
-                          aria-hidden
-                        />
-                      )}
-                    </div>
-                    <span
-                      className={clsx(
-                        'text-[14px] leading-none',
-                        i > 0 ? 'pt-[14px]' : 'pt-[2px]',
-                        p.current ? 'font-bold text-[#121417]' : 'font-medium text-[#5e6368]',
-                      )}
-                    >
-                      {p.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <LearningPath items={buildNeighborPath(progress.rows, unitSheet.name)} />
             </div>
 
             {/* 섹션 구분 — 시트 좌우 패딩(20px)을 뚫는 두꺼운 띠 */}
@@ -914,41 +880,10 @@ export default function HomePage() {
             </div>
 
             {/* 학습 경로 — 직전 완료 → 먼저 풀 단원(빨강) → 클릭한 단원 */}
-            <div className="flex w-full flex-col rounded-[16px] border border-[#e5e7ea] p-[20px]">
-              {buildLockedPath(progress.rows, lockedRequired, lockedSheet).map((p, i) => (
-                <div key={p.name} className="flex items-stretch gap-[12px]">
-                  <div className="flex w-[10px] flex-col items-center">
-                    {i > 0 && (
-                      <span
-                        className="w-px flex-1 border-l border-dashed border-[#d6d8db]"
-                        aria-hidden
-                      />
-                    )}
-                    <span
-                      className={clsx(
-                        'my-[2px] size-[10px] shrink-0 rounded-full',
-                        p.current ? 'bg-primary' : 'bg-[#d6d8db]',
-                      )}
-                    />
-                    {i < 2 && (
-                      <span
-                        className="w-px flex-1 border-l border-dashed border-[#d6d8db]"
-                        aria-hidden
-                      />
-                    )}
-                  </div>
-                  <span
-                    className={clsx(
-                      'text-[14px] leading-none',
-                      i > 0 ? 'pt-[14px]' : 'pt-[2px]',
-                      p.current ? 'font-bold text-[#121417]' : 'font-medium text-[#5e6368]',
-                    )}
-                  >
-                    {p.name}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <LearningPath
+              items={buildLockedPath(progress.rows, lockedRequired, lockedSheet)}
+              currentDotClass="bg-primary"
+            />
 
             <button
               type="button"
@@ -971,6 +906,63 @@ export default function HomePage() {
 }
 
 /* --- 진단 시작·건너뛰기·선행 안내 시트 헬퍼 (2842-10194 · 2842-10966 · 3082-5687) --- */
+
+/**
+ * 학습 경로 타임라인 (Figma 3361-5402) — 점 + 점선 커넥터.
+ *
+ * 점 중심을 라벨 첫 줄 중심(위에서 10px)에 맞추고, 커넥터는 행 높이 전체를 써서
+ * 다음 점까지 끊김 없이 잇는다. 이전 구현은 라벨 pt 매직값(2px·14px)으로 높이를
+ * 만들어 라벨과 점이 어긋났고, 첫 행만 높이가 낮아 커넥터가 짧게 잘렸다.
+ */
+function LearningPath({
+  items,
+  currentDotClass = 'bg-[#121417]',
+}: {
+  items: { name: string; current: boolean }[]
+  currentDotClass?: string
+}) {
+  return (
+    <div className="flex w-full flex-col rounded-[16px] border border-[#e5e7ea] p-[20px]">
+      {items.map((p, i) => {
+        const last = i === items.length - 1
+        return (
+          <div key={p.name} className="flex items-stretch gap-[12px]">
+            <div className="relative flex w-[10px] flex-none justify-center">
+              {/* 커넥터 — 첫 행은 점 중심에서 시작하고 마지막 행은 점 중심에서 끝난다 */}
+              {items.length > 1 && (
+                <span
+                  aria-hidden
+                  className={clsx(
+                    'absolute left-1/2 w-px -translate-x-1/2 border-l border-dashed border-[#d6d8db]',
+                    i === 0 && 'bottom-0 top-[10px]',
+                    i > 0 && !last && 'inset-y-0',
+                    last && 'top-0 h-[10px]',
+                  )}
+                />
+              )}
+              <span
+                className={clsx(
+                  'relative mt-[5px] size-[10px] shrink-0 self-start rounded-full',
+                  p.current ? currentDotClass : 'bg-[#d6d8db]',
+                )}
+              />
+            </div>
+            {/* 행 간격은 라벨 아래 패딩으로 — 레일이 그 높이까지 늘어나 커넥터가 이어진다 */}
+            <span
+              className={clsx(
+                'text-[14px] leading-[20px]',
+                !last && 'pb-[14px]',
+                p.current ? 'font-bold text-[#121417]' : 'font-medium text-[#5e6368]',
+              )}
+            >
+              {p.name}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 /** 을/를 조사 — 받침 유무로 판정 */
 function josaEulReul(word: string): string {
