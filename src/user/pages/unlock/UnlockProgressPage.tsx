@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
+import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import { PageHeader } from '@/user/components/PageHeader'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { UnitRailList } from '@/user/components/UnitRailList'
@@ -108,8 +109,14 @@ export default function UnlockProgressPage() {
   // 세트 시작 — 서버 차감(POST /api/credits/extra-set) 성공 시에만 퀴즈로 진입한다
   const [buying, setBuying] = useState(false)
   const [buyError, setBuyError] = useState<string | null>(null)
+  // 크레딧 부족 팝업 (2856-17959) — 시작 버튼을 눌렀을 때 안내 (버튼 비활성 대신)
+  const [shortageOpen, setShortageOpen] = useState(false)
   const confirmStartSet = async () => {
     if (buying) return
+    if (credit < SET_CREDIT_COST) {
+      setShortageOpen(true)
+      return
+    }
     setBuying(true)
     setBuyError(null)
     try {
@@ -220,11 +227,7 @@ export default function UnlockProgressPage() {
               </span>
             </div>
 
-            {credit < SET_CREDIT_COST ? (
-              <p className={styles.sheetWarn}>크레딧이 부족해</p>
-            ) : buyError ? (
-              <p className={styles.sheetWarn}>{buyError}</p>
-            ) : null}
+            {buyError && <p className={styles.sheetWarn}>{buyError}</p>}
 
             <div className={styles.sheetActions}>
               <button
@@ -237,7 +240,7 @@ export default function UnlockProgressPage() {
               <button
                 type="button"
                 onClick={confirmStartSet}
-                disabled={credit < SET_CREDIT_COST || buying}
+                disabled={buying}
                 className={styles.sheetConfirm}
               >
                 {buying ? '처리 중…' : '크레딧 쓰고 시작'}
@@ -247,6 +250,13 @@ export default function UnlockProgressPage() {
         </div>
       )}
 
+      {/* 크레딧 부족 (Figma 2856-17959) — 시작을 눌렀는데 크레딧이 모자랄 때 */}
+      {shortageOpen && (
+        <CreditShortagePopup
+          required={SET_CREDIT_COST}
+          onClose={() => setShortageOpen(false)}
+        />
+      )}
     </div>
   )
 }

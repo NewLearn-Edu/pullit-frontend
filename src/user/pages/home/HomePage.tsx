@@ -8,14 +8,15 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
-import { useCreditForExtraSet } from '@/user/api/creditApi'
 import { declareUnitLock, fetchUnitLocks } from '@/user/api/recommendApi'
+import { fetchActiveProblemSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
 import {
   computeCategoryProgress,
   SET_CREDIT_COST,
@@ -147,6 +148,24 @@ export default function HomePage() {
     setStartSheet(row)
   }
 
+  // 진행 중(ACTIVE) 진단 세트 감지 — 시트 버튼이 "이어서 풀기"로 바뀌고 크레딧 안내를 숨긴다
+  const [resumable, setResumable] = useState(false)
+  // 크레딧 부족 팝업 (2856-17959) — 시작하기를 눌렀을 때 안내 (버튼 비활성 대신)
+  const [shortageOpen, setShortageOpen] = useState(false)
+  useEffect(() => {
+    setResumable(false)
+    if (!startSheet) return
+    let alive = true
+    fetchActiveProblemSet(subject, startSheet.unitCode, 'TRIAL')
+      .then((active) => {
+        if (alive) setResumable(!!active)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [startSheet, subject])
+
   // 추천 딥링크 (?start=unitCode) — /recommend(알림톡·나브 추천 버튼)가 넘겨준 유닛의
   // 시트를 상태에 맞게 자동으로 연다. 대분류 칩이 다르면 먼저 맞춘 뒤 재실행된다.
   useEffect(() => {
@@ -194,23 +213,48 @@ export default function HomePage() {
   const setMathSkillNode = useTrialStore((s) => s.setMathSkillNode)
   const setEnglishType = useTrialStore((s) => s.setEnglishType)
 
-  /** 시작하기 — 서버 크레딧 차감 성공 시에만 퀴즈 진입 (UnlockProgressPage 와 동일 규칙) */
+  /**
+   * 시작하기 — 세트 발급 (2026-08-30). 크레딧 차감·문항 구성·박제가 서버 한 트랜잭션이고,
+   * 진행 중(ACTIVE) 세트가 있으면 그대로 돌아와(재차감 없음) 첫 미제출 문항부터 재개된다.
+   */
   const confirmStartSet = async () => {
     if (!startSheet || starting) return
+    // 새 발급(이어풀기 아님)인데 크레딧이 모자라면 — 진행 대신 부족 팝업
+    if (!resumable && credit < SET_CREDIT_COST) {
+      setShortageOpen(true)
+      return
+    }
     setStarting(true)
     setStartError(null)
     try {
-      await useCreditForExtraSet()
-      loadMe(true)
+      const nodeId = startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
+      const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
+        subject, nodeId, startSheet.unitCode, 'TRIAL')
+      loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
       resetTrial()
       setLastSubject(subject)
-      const nodeId = startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
       if (subject === 'math') setMathSkillNode(nodeId)
       else setEnglishType(nodeId)
+      useTrialStore.getState().setActiveSetId(set.setId)
+      // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
+      set.items.forEach((item, i) => {
+        if (!item.submitted) return
+        const problem = problems[i]
+        useTrialStore.getState().addResult(subject, {
+          problemId: problem.id,
+          selectedChoice: null,
+          correct: item.correct ?? false,
+          serverCorrect: item.correct ?? false,
+          earnedPoints: item.correct ? problem.points : 0,
+          timeoverFlag: false,
+          peekedBeforeAnswer: false,
+          elapsedMs: 0,
+        })
+      })
       startUnit({ unitName: startSheet.name, returnTo: `/home${window.location.search}` })
-      navigate(`/trial/quiz/${subject}/0`)
-    } catch {
-      setStartError('크레딧 사용에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      navigate(`/trial/quiz/${subject}/${firstUnsolvedIdx}`)
+    } catch (error) {
+      setStartError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
       setStarting(false)
     }
   }
@@ -253,17 +297,21 @@ export default function HomePage() {
    */
   const startSolveSession = useSolveStore((s) => s.startSession)
   const startFreeSolve = async (row: UnitProgressRow) => {
-    const problems = await loadQuizProblems(
-      subject,
-      row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
-    )
-    if (problems.length === 0) return
-    startSolveSession({
-      problems,
-      source: 'FREE',
-      returnTo: `/home${window.location.search}`,
-    })
-    navigate(`/solve/${subject}/0`)
+    try {
+      const nodeId = row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
+      const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
+        subject, nodeId, row.unitCode, 'FREE')
+      loadMe(true)
+      startSolveSession({
+        problems,
+        source: 'FREE',
+        returnTo: `/home${window.location.search}`,
+        setId: set.setId,
+      })
+      navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
+    } catch (error) {
+      window.alert(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+    }
   }
 
   /**
@@ -504,6 +552,14 @@ export default function HomePage() {
         </div>
       </main>
 
+      {/* 크레딧 부족 (Figma 2856-17959) — 시작하기 눌렀는데 크레딧이 모자랄 때 */}
+      {shortageOpen && (
+        <CreditShortagePopup
+          required={SET_CREDIT_COST}
+          onClose={() => setShortageOpen(false)}
+        />
+      )}
+
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
       {infoOpen && (
         <div className={styles.infoDim} onClick={infoDrag.close}>
@@ -696,6 +752,9 @@ export default function HomePage() {
             >
               추천 {SET_SIZE}문제 풀기
             </button>
+            <p className={styles.unitButtonHint}>
+              크레딧 {SET_CREDIT_COST}개가 사용돼 · 풀다 만 세트는 이어서 풀 수 있어
+            </p>
           </div>
         </div>
       )}
@@ -766,9 +825,14 @@ export default function HomePage() {
                   <span className="text-[12px] font-semibold text-[#121417]">{credit}개</span>
                 </div>
 
-                {(startError || credit < SET_CREDIT_COST) && (
+                {startError && (
                   <p className="w-full text-center text-[13px] font-medium text-primary">
-                    {startError ?? '크레딧이 부족해'}
+                    {startError}
+                  </p>
+                )}
+                {resumable && !startError && (
+                  <p className="w-full text-center text-[13px] font-medium text-[#80858b]">
+                    풀다 만 세트가 있어 — 크레딧 차감 없이 이어서 풀 수 있어
                   </p>
                 )}
 
@@ -783,10 +847,10 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={confirmStartSet}
-                    disabled={starting || credit < SET_CREDIT_COST}
+                    disabled={starting}
                     className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
-                    {starting ? '시작 중…' : '시작하기'}
+                    {starting ? '시작 중…' : resumable ? '이어서 풀기' : '시작하기'}
                   </button>
                 </div>
               </>
@@ -902,6 +966,15 @@ export default function HomePage() {
       )}
     </div>
   )
+}
+
+/** 서버 에러 응답(BaseResponse.message) 우선 추출 — 크레딧 부족 등 서버 문구를 그대로 보여준다 */
+function extractApiMessage(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const res = (error as { response?: { data?: { message?: string } } }).response
+    return res?.data?.message ?? null
+  }
+  return null
 }
 
 /* --- 진단 시작·건너뛰기·선행 안내 시트 헬퍼 (2842-10194 · 2842-10966 · 3082-5687) --- */

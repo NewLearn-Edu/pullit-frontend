@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import {
   declareUnitLock,
   fetchRecommendation,
@@ -478,12 +479,18 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
   const [skipMode, setSkipMode] = useState(false)
   const [starting, setStarting] = useState(false)
+  // 크레딧 부족 팝업 (2856-17959) — 시작하기를 눌렀을 때 안내 (버튼 비활성 대신)
+  const [shortageOpen, setShortageOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   /** 시작하기 — 홈 시작 시트와 같은 규칙 (서버 크레딧 차감 성공 시에만 진입) */
   const confirmStart = async () => {
     if (!target || starting) return
+    if (credit < SET_CREDIT_COST) {
+      setShortageOpen(true)
+      return
+    }
     setStarting(true)
     setActionError(null)
     try {
@@ -748,9 +755,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
               <span className={styles.creditLabel}>보유 크레딧:</span>
               <span className={styles.creditValue}>{credit}개</span>
             </div>
-            {(actionError || credit < SET_CREDIT_COST) && (
-              <p className={styles.actionError}>{actionError ?? '크레딧이 부족해'}</p>
-            )}
+            {actionError && <p className={styles.actionError}>{actionError}</p>}
             <div className={styles.dockButtons}>
               <button
                 type="button"
@@ -762,7 +767,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
               <button
                 type="button"
                 onClick={confirmStart}
-                disabled={starting || credit < SET_CREDIT_COST}
+                disabled={starting}
                 className={styles.primaryButton}
               >
                 {starting ? '시작 중…' : '시작하기'}
@@ -796,6 +801,14 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           </>
         )}
       </footer>
+
+      {/* 크레딧 부족 (Figma 2856-17959) — 시작하기 눌렀는데 크레딧이 모자랄 때 */}
+      {shortageOpen && (
+        <CreditShortagePopup
+          required={SET_CREDIT_COST}
+          onClose={() => setShortageOpen(false)}
+        />
+      )}
     </div>
   )
 }
