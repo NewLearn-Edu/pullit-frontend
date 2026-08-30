@@ -10,6 +10,8 @@ import {
   startGoogleLogin,
   startKakaoLogin,
   startNaverLogin,
+  GRADE_LABEL,
+  type Grade,
   type PhoneVerifyResult,
 } from '@/user/api/authApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
@@ -30,9 +32,24 @@ import OnboardingHeader from '@/user/components/OnboardingHeader'
 const STEP_TITLES = [
   { title: '이름을 알려줄래?', sub: '가입에 필요한 것들을 하나씩 물어볼게' },
   { title: '생년월일을 알려줘', sub: '만 14세 이상부터 가입할 수 있어' },
+  { title: '지금 어디에 해당해?', sub: '딱 맞는 문제를 추천하는 데 필요해' },
   { title: '휴대폰 번호를 인증해줘', sub: '학습 알림을 받을 번호가 필요해' },
   { title: '마지막 단계야!', sub: '서비스 이용에 꼭 필요한 동의만 추렸어' },
 ] as const
+
+/**
+ * 학년 선택 2단계 — 그룹(중학생·고등학생·기타) 탭을 누르면 탭이 왼쪽으로
+ * 작아지며 오른쪽에 세부 칩이 슬라이드 인 (2026-08-30 UX).
+ * 중1 은 뺀다: 사실상 전원 만 14세 미만이라 연령 게이트에서 가입이 차단되는
+ * 선택지. 보호자 동의 플로우가 생기면 되살린다 (enum 은 유지).
+ */
+const GRADE_GROUPS = [
+  { key: 'middle', label: '중학생', options: ['MIDDLE_2', 'MIDDLE_3'] },
+  { key: 'high', label: '고등학생', options: ['HIGH_1', 'HIGH_2', 'HIGH_3'] },
+  { key: 'etc', label: '기타', options: ['RETAKE', 'PARENT', 'TEACHER', 'GENERAL'] },
+] as const satisfies readonly { key: string; label: string; options: readonly Grade[] }[]
+
+type GradeGroupKey = (typeof GRADE_GROUPS)[number]['key']
 
 /** 토스식 동의 리스트 체크 — 체크박스 대신 가벼운 ✓ 글리프 (on: 진회색 · off: 연회색) */
 function CheckMark({ on }: { on: boolean }) {
@@ -61,6 +78,7 @@ interface SavedSignupForm {
   birthY: string
   birthM: string
   birthD: string
+  grade: Grade | null
   phone: string
   phoneVerified: boolean
   /** 인증 완료 시각(ms) — 서버 유효창(30분)이 있어 복원 시 오래된 인증은 무효 처리 */
@@ -97,6 +115,8 @@ export default function SignupInfoPage() {
   const [saved] = useState(loadSavedForm)
 
   const [name, setName] = useState(saved.name ?? '')
+  // 가입 소셜 — 애플이면 이름 칸을 잠근다 (Apple 정책: SSO 제공 이름 사용). loadMe 로 채운다
+  const [provider, setProvider] = useState<'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null>(null)
   const [birthDate, setBirthDate] = useState('')
   // 생년월일 3분할 입력 (토스 패턴) — 숫자 키패드만 뜨고, 자릿수가 차면 다음 칸으로 자동 이동
   const [birthY, setBirthY] = useState(saved.birthY ?? '')
@@ -105,6 +125,15 @@ export default function SignupInfoPage() {
   const birthYRef = useRef<HTMLInputElement>(null)
   const birthMRef = useRef<HTMLInputElement>(null)
   const birthDRef = useRef<HTMLInputElement>(null)
+  const [grade, setGrade] = useState<Grade | null>(saved.grade ?? null)
+  // 칩 마운트 지연 — 탭 축소 중 투명 칩이 자리를 차지해 줄바꿈되면
+  // 아래 인풋들이 내려갔다 올라오는 점프가 생긴다. 축소가 끝난 뒤 마운트
+  const [chipsShown, setChipsShown] = useState(false)
+  const [gradeGroup, setGradeGroup] = useState<GradeGroupKey | null>(() =>
+    saved.grade
+      ? (GRADE_GROUPS.find((gr) => (gr.options as readonly Grade[]).includes(saved.grade!))?.key ?? null)
+      : null,
+  )
   const [phone, setPhone] = useState(saved.phone ?? '')
   // 전화번호 SMS 인증 상태
   const [codeSent, setCodeSent] = useState(false)
@@ -147,22 +176,23 @@ export default function SignupInfoPage() {
       sessionStorage.setItem(
         SIGNUP_FORM_KEY,
         JSON.stringify({
-          name, birthY, birthM, birthD, phone, phoneVerified, phoneVerifiedAt,
+          name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt,
           agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed,
         } satisfies SavedSignupForm),
       )
     } catch {
       /* noop */
     }
-  }, [name, birthY, birthM, birthD, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed])
+  }, [name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed])
 
   // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
   useEffect(() => {
     loadMe().then((loaded) => {
-      if (!loaded || loaded.type !== 'USER') navigate('/login', { replace: true })
-      else if (loaded.phoneNumber && loaded.birthDate) navigate('/home', { replace: true })
-      else if (loaded.name) {
-        setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (수정 가능)
+      if (!loaded || loaded.type !== 'USER') { navigate('/login', { replace: true }); return }
+      if (loaded.phoneNumber && loaded.birthDate) { navigate('/home', { replace: true }); return }
+      setProvider(loaded.provider) // 애플이면 이름 칸 잠금 근거
+      if (loaded.name) {
+        setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (애플은 수정 불가로 잠김)
         if (loaded.name.trim().length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
       }
     })
@@ -178,7 +208,7 @@ export default function SignupInfoPage() {
   // 단계 자동 진행 — 휴대폰 인증 완료가 신호 (동의 시트도 함께 올라온다)
   useEffect(() => {
     if (phoneVerified) {
-      reveal(4)
+      reveal(5)
       setConsentOpen(true)
     }
   }, [phoneVerified])
@@ -202,8 +232,12 @@ export default function SignupInfoPage() {
       monthNum <= 12 &&
       dayNum >= 1 &&
       dayNum <= 31
-    setBirthDate(valid ? `${birthY}-${birthM.padStart(2, '0')}-${birthD.padStart(2, '0')}` : '')
-    if (valid && birthD.length === 2) reveal(3)
+    const composed = valid ? `${birthY}-${birthM.padStart(2, '0')}-${birthD.padStart(2, '0')}` : ''
+    setBirthDate(composed)
+    // 만 14세 미만은 여기서 즉시 안내하고 진행을 멈춘다 — 학년·SMS 인증까지 다 마친 뒤
+    // 제출에서야 차단당하는 흐름 방지 (서버 게이트는 제출 시 재검증하는 이중 방어)
+    if (valid && birthD.length === 2 && koreanAge(composed) >= 14) reveal(3) // 다음: 학년 선택
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [birthY, birthM, birthD])
 
   /** 숫자만 남기고 010-0000-0000 형태로 자동 하이픈. 번호가 바뀌면 인증 무효 */
@@ -317,13 +351,48 @@ export default function SignupInfoPage() {
         ? 'border-[#a6abb1] focus:border-[#a6abb1]'
         : 'border-[#ebedf0] focus:border-[#a6abb1]'
 
+  /**
+   * 생년(4자리) 기준 추천 학년 — 한국 학제: 그 해에 (출생연도+13)살이면 중1.
+   * 13~18 → 중1~고3, 19 → 재수 후보. 그 밖(성인·학부모 등)은 추천 없음.
+   */
+  const gradeByAge: Record<number, Grade> = {
+    14: 'MIDDLE_2', 15: 'MIDDLE_3',
+    16: 'HIGH_1', 17: 'HIGH_2', 18: 'HIGH_3', 19: 'RETAKE',
+  }
+  const recommendedGrade =
+    birthY.length === 4 ? (gradeByAge[new Date().getFullYear() - Number(birthY)] ?? null) : null
+
+  useEffect(() => {
+    if (gradeGroup == null) {
+      setChipsShown(false)
+      return
+    }
+    const t = setTimeout(() => setChipsShown(true), 280)
+    return () => clearTimeout(t)
+  }, [gradeGroup])
+
+
+  /** 만 나이 — 서버 게이트(Period.between)와 같은 규칙. 생일 안 지났으면 -1 */
+  const koreanAge = (dateStr: string) => {
+    const b = new Date(dateStr)
+    const t = new Date()
+    let age = t.getFullYear() - b.getFullYear()
+    if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) age--
+    return age
+  }
+
   const nameValid = name.trim().length >= 2
+  // 애플 가입자는 이름 수정 불가 (Apple 정책 — SSO 가 내려준 이름 사용). 애플이 이름을
+  // 안 준 예외(재가입 등, name 빈값)에는 잠그지 않아 사용자가 직접 입력할 수 있게 둔다
+  const nameLocked = provider === 'APPLE' && name.trim().length > 0
   const phoneValid = /^01[0-9]-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
+  const under14 = birthValid && koreanAge(birthDate) < 14
   /** 필수 동의 3종 체크 여부 — 버튼 라벨(시작하기 vs 동의하고 시작하기) 분기용 */
   const requiredAgreed = agreeAge && agreeTerms && agreePrivacy
   /** 동의 단계까지 왔고 제출 가능한 상태 — 동의 자체는 버튼 클릭이 의사표시 (토스 패턴) */
-  const readyForConsent = nameValid && birthValid && phoneVerified && !pending
+  const readyForConsent =
+    nameValid && birthValid && !under14 && grade != null && phoneVerified && !pending
 
   const submit = async () => {
     if (!readyForConsent) return
@@ -337,6 +406,7 @@ export default function SignupInfoPage() {
       await completeProfile({
         name: name.trim(),
         birthDate,
+        grade: grade!, // readyForConsent 가 null 을 걸러준다
         phoneNumber: phone,
         agreeTerms: true,
         agreePrivacy: true,
@@ -441,6 +511,29 @@ export default function SignupInfoPage() {
             backface-visibility: hidden;
             animation: su-step-in 480ms cubic-bezier(0.33, 1, 0.68, 1) both;
           }
+          /* 학년 그룹 탭 — 한 줄 3등분. 하나를 고르면 그 탭이 왼쪽으로 작아지고
+             나머지 둘은 폭 0 으로 접혀 사라지며, 오른쪽에 세부 칩이 순서대로 슬라이드 인 */
+          /* flex 전환은 남는 공간 재계산이 프레임마다 얽혀 덜컥거린다 —
+             명시적 width(calc↔px 보간)로 단일 속성만 움직여 곡선을 예측 가능하게 */
+          .su-cat {
+            flex: none;
+            width: calc((100% - 16px) / 3);
+            min-width: 0;
+            margin-right: 8px;
+            overflow: hidden;
+            white-space: nowrap;
+            transition:
+              width 420ms cubic-bezier(0.33, 1, 0.68, 1),
+              margin 420ms cubic-bezier(0.33, 1, 0.68, 1),
+              border-width 420ms cubic-bezier(0.33, 1, 0.68, 1),
+              opacity 200ms ease,
+              border-color 150ms ease, background-color 150ms ease;
+          }
+          .su-cat:last-of-type { margin-right: 0 }
+          .su-cat-open { width: 96px; margin-right: 8px !important }
+          .su-cat-hidden { width: 0; margin-right: 0; opacity: 0; border-width: 0; pointer-events: none }
+          @keyframes su-chip-in { from { opacity: 0; transform: translateX(14px) } to { opacity: 1; transform: translateX(0) } }
+          .su-subchip { animation: su-chip-in 360ms cubic-bezier(0.33, 1, 0.68, 1) both }
           /* 동의 바텀시트 — 아래에서 위로 상승 · 배경 폼은 흰 딤으로 흐려진다 (토스 패턴) */
           @keyframes su-sheet-rise { from { transform: translateY(100%) translateZ(0) } to { transform: translateY(0) translateZ(0) } }
           @keyframes su-dim-in { from { opacity: 0 } }
@@ -451,18 +544,19 @@ export default function SignupInfoPage() {
           }
           .su-dim { animation: su-dim-in 320ms ease both }
           @media (prefers-reduced-motion: reduce) {
-            .su-step, .su-step-inner, .su-step-in, .su-sheet, .su-dim { animation: none }
+            .su-step, .su-step-inner, .su-step-in, .su-sheet, .su-dim, .su-subchip { animation: none }
+            .su-cat { transition: none }
           }
         `}</style>
         <div className="flex w-full max-w-[620px] flex-col gap-md">
           {/* 단계별 타이틀 — key 교체로 단계가 바뀔 때마다 다시 슬라이드 인.
               동의 단계 헤드라인은 바텀시트가 가지므로 본문 타이틀은 3단계까지 */}
-          <div key={`step-title-${Math.min(revealed, 3)}`} className="su-step-in flex flex-col gap-md">
+          <div key={`step-title-${Math.min(revealed, 4)}`} className="su-step-in flex flex-col gap-md">
             <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">
-              {STEP_TITLES[Math.min(revealed, 3) - 1].title}
+              {STEP_TITLES[Math.min(revealed, 4) - 1].title}
             </h1>
             <p className="break-keep text-[16px] text-[#5e6368] max-md:text-[15px]">
-              {STEP_TITLES[Math.min(revealed, 3) - 1].sub}
+              {STEP_TITLES[Math.min(revealed, 4) - 1].sub}
             </p>
           </div>
 
@@ -476,14 +570,25 @@ export default function SignupInfoPage() {
                 <input
                   type="text"
                   autoComplete="name"
-                  autoFocus
+                  autoFocus={!nameLocked}
+                  readOnly={nameLocked}
+                  aria-disabled={nameLocked}
                   placeholder="이름을 입력해주세요"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => !nameLocked && setName(e.target.value)}
                   onBlur={() => nameValid && reveal(2)}
                   onKeyDown={(e) => e.key === 'Enter' && nameValid && reveal(2)}
-                  className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(name.trim().length > 0)}`}
+                  className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${
+                    nameLocked
+                      ? 'cursor-not-allowed border-[#ebedf0] bg-[#f7f8f9] text-[#80858b]'
+                      : `text-[#121417] ${borderOf(name.trim().length > 0)}`
+                  }`}
                 />
+                {nameLocked && (
+                  <span className="text-[13px] text-[#80858b]">
+                    Apple 계정으로 가입해 이름은 수정할 수 없어요
+                  </span>
+                )}
               </label>
             </div>
             </div>
@@ -508,7 +613,7 @@ export default function SignupInfoPage() {
                     setBirthY(digits)
                     if (digits.length === 4) birthMRef.current?.focus() // 4자리 차면 월로
                   }}
-                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthY.length > 0, birthPartsFilled && !birthValid)}`}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthY.length > 0, (birthPartsFilled && !birthValid) || under14)}`}
                 />
                 <input
                   ref={birthMRef}
@@ -535,7 +640,7 @@ export default function SignupInfoPage() {
                   // 함수형 업데이트 필수 — onChange 에서 다음 칸 focus 를 동기로 옮기면
                   // blur 가 리렌더 전에 발화해 옛 상태("0")를 "00"으로 패딩해버린다
                   onBlur={() => setBirthM((m) => (m.length === 1 ? m.padStart(2, '0') : m))}
-                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthM.length > 0, birthPartsFilled && !birthValid)}`}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthM.length > 0, (birthPartsFilled && !birthValid) || under14)}`}
                 />
                 <input
                   ref={birthDRef}
@@ -558,17 +663,93 @@ export default function SignupInfoPage() {
                     if (e.key === 'Backspace' && birthD === '') birthMRef.current?.focus()
                   }}
                   onBlur={() => setBirthD((d) => (d.length === 1 ? d.padStart(2, '0') : d))}
-                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthD.length > 0, birthPartsFilled && !birthValid)}`}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border text-center text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(birthD.length > 0, (birthPartsFilled && !birthValid) || under14)}`}
                 />
               </div>
               {birthPartsFilled && !birthValid && (
                 <p className="text-[13px] text-danger">생년월일을 다시 확인해줘</p>
+              )}
+              {under14 && (
+                <p className="text-[13px] text-danger">
+                  만 14세 미만은 아직 가입할 수 없어 — 가입 없이 문제 풀이는 이용할 수 있어
+                </p>
               )}
             </div>
             </div>
             )}
 
             {revealed >= 3 && (
+            <div className="su-step">
+            <div className="su-step-inner flex flex-col gap-sm">
+              <span className="text-[14px] font-semibold text-[#23272b]">학년</span>
+              <div className="flex items-start">
+                {GRADE_GROUPS.map((group) => {
+                  const open = gradeGroup === group.key
+                  const hidden = gradeGroup != null && !open
+                  return (
+                    <button
+                      key={group.key}
+                      type="button"
+                      aria-expanded={open}
+                      tabIndex={hidden ? -1 : 0}
+                      onClick={() => {
+                        if (open) {
+                          // 열린 탭 재탭 = 그룹 선택으로 복귀
+                          setGradeGroup(null)
+                          setGrade(null)
+                          return
+                        }
+                        setGradeGroup(group.key)
+                        if (grade && !(group.options as readonly Grade[]).includes(grade)) setGrade(null)
+                      }}
+                      className={`su-cat flex h-[52px] items-center justify-center rounded-[14px] border text-[15px] font-semibold ${
+                        open
+                          ? 'su-cat-open border-[#a6abb1] text-[#121417]'
+                          : hidden
+                            ? 'su-cat-hidden border-[#ebedf0] text-[#23272b]'
+                            : 'border-[#ebedf0] text-[#23272b] hover:bg-[#f7f8f9]'
+                      }`}
+                    >
+                      {group.label}
+                    </button>
+                  )
+                })}
+                {gradeGroup != null && chipsShown && (
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-[8px]">
+                    {GRADE_GROUPS.find((gr) => gr.key === gradeGroup)!.options.map((g, i) => {
+                      const on = grade === g
+                      const hinted = !on && grade == null && recommendedGrade === g
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          aria-pressed={on}
+                          style={{ animationDelay: `${i * 45}ms` }}
+                          onClick={() => {
+                            setGrade(g)
+                            reveal(4) // 다음: 휴대폰 인증
+                          }}
+                          className={`su-subchip flex h-[52px] min-w-[64px] items-center justify-center gap-[5px] rounded-[14px] border px-[18px] text-[15px] font-semibold transition-colors duration-150 ${
+                            on
+                              ? 'border-[#23272b] bg-[#23272b] text-white'
+                              : hinted
+                                ? 'border-[#a6abb1] bg-white text-[#23272b]'
+                                : 'border-[#ebedf0] bg-white text-[#23272b] hover:bg-[#f7f8f9]'
+                          }`}
+                        >
+                          {GRADE_LABEL[g]}
+                          {hinted && <span className="text-[12px] font-semibold text-[#80858b]">추천</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            </div>
+            )}
+
+            {revealed >= 4 && (
             <div className="su-step">
             <div className="su-step-inner flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">휴대폰 번호</span>
@@ -680,7 +861,7 @@ export default function SignupInfoPage() {
           <button
             type="button"
             onClick={() => readyForConsent && setConsentOpen(true)}
-            disabled={!readyForConsent || revealed < 4}
+            disabled={!readyForConsent || revealed < 5}
             className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-30"
           >
             동의하고 시작하기
