@@ -149,7 +149,12 @@ export default function MyPage() {
         <div className={styles.content}>
         {/* 프로필 헤더 — 토스 프로필형 세로 중앙 배치 (아바타 · 이름 · 학년|코인 메타) */}
         <section className={styles.profileCard}>
-          <span className={styles.avatar}>🦊</span>
+          {/* 프로필 이미지 — 없으면 기본 아바타 (게스트는 항상 기본) */}
+          {me?.profileImageUrl ? (
+            <img src={me.profileImageUrl} alt="" className={styles.avatarImage} />
+          ) : (
+            <span className={styles.avatar}>🦊</span>
+          )}
           <p className={styles.userName}>
             {/* 표시명은 닉네임 우선 — 프로필 편집에서 바꾸는 값 (없으면 실명) */}
             {isGuest ? me?.nickname ?? '게스트' : me?.nickname ?? me?.name ?? '이름 없음'}

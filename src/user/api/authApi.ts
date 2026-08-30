@@ -327,6 +327,22 @@ export async function updateNickname(nickname: string): Promise<void> {
   await api.patch('/api/users/me/nickname', { nickname })
 }
 
+/**
+ * 프로필 이미지 변경 (POST /api/users/me/profile-image).
+ * 원본을 그대로 보내지 말고 resizeProfileImage 로 줄인 Blob 을 넘긴다 —
+ * 서버 상한은 5MB 이고, 타입은 JPG · PNG · WebP 만 받는다.
+ */
+export async function updateProfileImage(image: Blob): Promise<void> {
+  const form = new FormData()
+  form.append('file', image, 'profile')
+  await api.post('/api/users/me/profile-image', form)
+}
+
+/** 프로필 이미지 삭제 — 기본 아바타로 되돌린다 */
+export async function deleteProfileImage(): Promise<void> {
+  await api.delete('/api/users/me/profile-image')
+}
+
 // ---------------------------------------------------------------------------
 // 내 정보
 // ---------------------------------------------------------------------------
@@ -347,6 +363,8 @@ export interface MeResult {
   marketingConsentAt: string | null
   /** 마지막 닉네임 변경 시각 — 90일 재변경 잠금 판정용 (한 번도 안 바꿨으면 null) */
   nicknameChangedAt: string | null
+  /** 프로필 이미지 URL — null 이면 기본 아바타(🦊)로 폴백 */
+  profileImageUrl: string | null
 }
 
 export interface ProfileCompleteRequest {
