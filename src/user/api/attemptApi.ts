@@ -11,6 +11,8 @@ export interface AttemptSubmitRequest {
   timeSpentMs: number
   /** 무응답 제출("모르겠어요") — 오답 채점 + 원장에서 찍은 오답과 구분 기록 */
   skipped?: boolean
+  /** 발급 세트 id — 세트 풀이면 첨부(완료 판정·이어풀기 근거), 세트 밖 풀이는 생략 */
+  setId?: number | null
 }
 
 export interface AttemptSubmitResponse {
@@ -24,6 +26,8 @@ export interface AttemptSubmitResponse {
   explanation: string | null
   /** 이 제출로 실제 지급된 보상 (null = 없음) — TRIAL_FIRST_CLEAR 면 첫 진단 축하 시트 신호 */
   grantedReward: 'TRIAL_FIRST_CLEAR' | null
+  /** 이 제출로 세트가 완료되며 일어난 난이도 레벨 변동 (null = 없음) */
+  levelChange: 'UP' | 'DOWN' | null
 }
 
 interface BaseResponse<T> {

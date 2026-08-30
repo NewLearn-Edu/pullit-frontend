@@ -4,6 +4,7 @@ import {
   type ProblemSetItem,
   type TrialProblemSetItem,
 } from '@/user/api/problemApi'
+import { issueProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -162,6 +163,26 @@ export async function loadQuizProblems(subject: Subject, nodeId: string): Promis
 
   inflight.set(key, promise)
   return promise
+}
+
+/**
+ * 발급 세트 로드 (2026-08-30) — 세트 발급 API 를 태우고 결과를 세션 캐시에 심는다.
+ *
+ * 발급은 서버에서 크레딧 차감+구성+박제가 한 트랜잭션이고, ACTIVE 세트가 있으면
+ * 그대로 반환된다(이어풀기·재차감 없음) — 몇 번을 불러도 안전하다.
+ * 캐시를 같은 키(subject:nodeId)에 심어 풀이·결과·해설 화면이 같은 배열을 본다.
+ */
+export async function loadIssuedSet(
+  subject: Subject,
+  nodeId: string,
+  unitCode: string,
+  source: 'TRIAL' | 'FREE' | 'DAILY',
+): Promise<{ set: IssuedProblemSet; problems: Problem[]; firstUnsolvedIdx: number }> {
+  const set = await issueProblemSet(subject, unitCode, source)
+  const problems = set.items.map((item, i) => toQuizProblem(item, i, subject, nodeId))
+  cache.set(`${subject}:${nodeId}`, problems)
+  const firstUnsolvedIdx = Math.max(0, set.items.findIndex((item) => !item.submitted))
+  return { set, problems, firstUnsolvedIdx }
 }
 
 /** 이미 로드된 세트 동기 조회 — 캐시가 없으면(새로고침 직행 등) null */

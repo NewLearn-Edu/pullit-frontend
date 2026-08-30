@@ -11,7 +11,7 @@ import { CreditBadge } from '@/user/components/CreditBadge'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { declareUnitLock, fetchUnitLocks } from '@/user/api/recommendApi'
-import { fetchActiveProblemSet } from '@/user/api/problemSetApi'
+import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
@@ -30,6 +30,18 @@ import styles from './styles/HomePage.module.scss'
 
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
+
+/** 이어풀기 팝업 노출 여부 — "앱을 켰을 때" 1회 (페이지 로드당, SPA 이동으로는 재노출 없음) */
+let resumePromptShown = false
+
+/** unitCode 로 커리큘럼 유닛 찾기 — 팝업의 세트 과목이 현재 탭과 달라도 복원 가능해야 한다 */
+function findUnitByCode(subject: Subject, unitCode: string) {
+  for (const category of CURRICULUM[subject]) {
+    const unit = category.units.find((u) => u.unitCode === unitCode)
+    if (unit) return unit
+  }
+  return null
+}
 
 /**
  * 메인 홈 (Figma PI-PAGE-04 · 2431-17022 · 2026-08-07 개편)
@@ -214,6 +226,41 @@ export default function HomePage() {
   const setEnglishType = useTrialStore((s) => s.setEnglishType)
 
   /**
+   * 진단 세트 시작·재개 코어 — 시작 시트와 이어풀기 팝업(PI-POPUP-RESUME)이 공유한다.
+   * 팝업은 현재 탭과 다른 과목의 세트도 재개할 수 있어 과목(subj)을 인자로 받는다.
+   */
+  const startTrialSet = async (
+    row: { name: string; unitCode: string; nodeId?: string },
+    subj: Subject,
+  ) => {
+    const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
+    const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(subj, nodeId, row.unitCode, 'TRIAL')
+    loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
+    resetTrial()
+    setLastSubject(subj)
+    if (subj === 'math') setMathSkillNode(nodeId)
+    else setEnglishType(nodeId)
+    useTrialStore.getState().setActiveSetId(set.setId)
+    // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
+    set.items.forEach((item, i) => {
+      if (!item.submitted) return
+      const problem = problems[i]
+      useTrialStore.getState().addResult(subj, {
+        problemId: problem.id,
+        selectedChoice: null,
+        correct: item.correct ?? false,
+        serverCorrect: item.correct ?? false,
+        earnedPoints: item.correct ? problem.points : 0,
+        timeoverFlag: false,
+        peekedBeforeAnswer: false,
+        elapsedMs: 0,
+      })
+    })
+    startUnit({ unitName: row.name, returnTo: `/home${window.location.search}` })
+    navigate(`/trial/quiz/${subj}/${firstUnsolvedIdx}`)
+  }
+
+  /**
    * 시작하기 — 세트 발급 (2026-08-30). 크레딧 차감·문항 구성·박제가 서버 한 트랜잭션이고,
    * 진행 중(ACTIVE) 세트가 있으면 그대로 돌아와(재차감 없음) 첫 미제출 문항부터 재개된다.
    */
@@ -227,32 +274,7 @@ export default function HomePage() {
     setStarting(true)
     setStartError(null)
     try {
-      const nodeId = startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
-      const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
-        subject, nodeId, startSheet.unitCode, 'TRIAL')
-      loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
-      resetTrial()
-      setLastSubject(subject)
-      if (subject === 'math') setMathSkillNode(nodeId)
-      else setEnglishType(nodeId)
-      useTrialStore.getState().setActiveSetId(set.setId)
-      // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
-      set.items.forEach((item, i) => {
-        if (!item.submitted) return
-        const problem = problems[i]
-        useTrialStore.getState().addResult(subject, {
-          problemId: problem.id,
-          selectedChoice: null,
-          correct: item.correct ?? false,
-          serverCorrect: item.correct ?? false,
-          earnedPoints: item.correct ? problem.points : 0,
-          timeoverFlag: false,
-          peekedBeforeAnswer: false,
-          elapsedMs: 0,
-        })
-      })
-      startUnit({ unitName: startSheet.name, returnTo: `/home${window.location.search}` })
-      navigate(`/trial/quiz/${subject}/${firstUnsolvedIdx}`)
+      await startTrialSet(startSheet, subject)
     } catch (error) {
       setStartError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
       setStarting(false)
@@ -296,11 +318,14 @@ export default function HomePage() {
    * 열려 있으면 해당 유닛 문제로 FREE 세션을 만들어 /solve 로 진입.
    */
   const startSolveSession = useSolveStore((s) => s.startSession)
-  const startFreeSolve = async (row: UnitProgressRow) => {
+  const startFreeSolve = async (
+    row: { unitCode: string; nodeId?: string },
+    subj: Subject = subject,
+  ) => {
     try {
-      const nodeId = row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
+      const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
       const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
-        subject, nodeId, row.unitCode, 'FREE')
+        subj, nodeId, row.unitCode, 'FREE')
       loadMe(true)
       startSolveSession({
         problems,
@@ -308,9 +333,43 @@ export default function HomePage() {
         returnTo: `/home${window.location.search}`,
         setId: set.setId,
       })
-      navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
+      navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {
       window.alert(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+    }
+  }
+
+  // ── 이어풀기 팝업 (PI-POPUP-RESUME · Figma 2931-11007) ──────────────────
+  // 앱을 켰을 때(페이지 로드당 1회) 풀다 만 세트가 있으면 띄운다.
+  // 추천 로직과 무관 — 추천은 ①진단→②최약점 그대로, 재개 안내는 이 팝업의 몫
+  const [resumePrompt, setResumePrompt] = useState<ResumableSet | null>(null)
+  useEffect(() => {
+    if (sessionStatus !== 'ready' || resumePromptShown) return
+    let alive = true
+    fetchResumableSet()
+      .then((resumable) => {
+        if (!alive || !resumable) return
+        resumePromptShown = true
+        setResumePrompt(resumable)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus])
+
+  const handleResume = async () => {
+    const info = resumePrompt
+    if (!info) return
+    setResumePrompt(null)
+    const subj: Subject = info.subject === 'ENGLISH' ? 'english' : 'math'
+    const unit = findUnitByCode(subj, info.unitCode)
+    if (!unit) return
+    try {
+      if (info.source === 'TRIAL') await startTrialSet(unit, subj)
+      else await startFreeSolve(unit, subj)
+    } catch (error) {
+      window.alert(extractApiMessage(error) ?? '이어풀기에 실패했어. 다시 시도해줘')
     }
   }
 
@@ -961,6 +1020,46 @@ export default function HomePage() {
                 ? `${lockedRequired.name} ${lockedIsOff ? '다시 풀기' : '먼저 풀기'}`
                 : '확인'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 이어풀기 팝업 (PI-POPUP-RESUME · 2931-11007) — 앱 진입 시 풀다 만 세트 안내 ── */}
+      {resumePrompt && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resume-prompt-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.2)] px-[20px]"
+        >
+          <div className="flex w-[335px] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] shadow-[0px_0px_7px_rgba(0,0,0,0.21)]">
+            <h2
+              id="resume-prompt-title"
+              className="text-[18px] font-bold leading-[1.4] text-[#121417]"
+            >
+              풀던 문제가 남아 있어
+            </h2>
+            <div className="flex w-full flex-col items-center gap-[24px]">
+              <p className="text-center text-[16px] font-medium leading-[1.4] text-[#121417]">
+                남은 문제부터 바로 시작할 수 있어
+              </p>
+              <div className="flex w-full gap-[8px]">
+                <button
+                  type="button"
+                  onClick={() => setResumePrompt(null)}
+                  className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResume}
+                  className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
+                >
+                  이어풀기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

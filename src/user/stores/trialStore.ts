@@ -44,6 +44,12 @@ interface TrialState {
    * 해설 왕복·소셜 로그인 왕복은 결과 화면으로 되돌아오므로 유지된다.
    */
   resultPass: boolean
+  /**
+   * 진행 중 발급 세트 id — 홈에서 시작한 진단 세트의 제출에 첨부돼
+   * 서버 세트 완료 판정·이어풀기의 연결고리가 된다.
+   * 온보딩 맛보기(가입 전)는 발급이 없어 null.
+   */
+  activeSetId: number | null
 
   setMathSkillNode: (id: string) => void
   setEnglishType: (id: string) => void
@@ -54,6 +60,7 @@ interface TrialState {
   markFirstCreditCelebrated: () => void
   grantResultPass: () => void
   consumeResultPass: () => void
+  setActiveSetId: (id: number | null) => void
   reset: () => void
 
   isMathComplete: () => boolean
@@ -80,6 +87,7 @@ export const useTrialStore = create<TrialState>()(
       firstRewardGranted: false,
       firstCreditCelebrated: false,
       resultPass: false,
+      activeSetId: null,
 
       setMathSkillNode: (id) =>
         set({ mathSkillNodeId: id, mathResults: [] }),
@@ -113,6 +121,8 @@ export const useTrialStore = create<TrialState>()(
       grantResultPass: () => set({ resultPass: true }),
       consumeResultPass: () => set({ resultPass: false }),
 
+      setActiveSetId: (id) => set({ activeSetId: id }),
+
       // 보상 플래그 2종은 reset 대상이 아니다 — 세트 재시작마다 초기화되면
       // 같은 세션에서 축하 시트가 다시 뜰 수 있다 (탭 닫으면 자연 소멸)
       reset: () =>
@@ -123,6 +133,7 @@ export const useTrialStore = create<TrialState>()(
           englishResults: [],
           lastSubject: null,
           resultPass: false,
+          activeSetId: null,
         }),
 
       // 맛보기 세트 = 3문항 (정책 · mockProblems TRIAL_PROBLEM_COUNT 와 동일)
@@ -165,6 +176,7 @@ export const useTrialStore = create<TrialState>()(
         firstRewardGranted: state.firstRewardGranted,
         firstCreditCelebrated: state.firstCreditCelebrated,
         resultPass: state.resultPass,
+        activeSetId: state.activeSetId,
       }),
     },
   ),

@@ -288,6 +288,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       timeSpentMs: Math.round(elapsedMs),
       // 무응답("모르겠어요")은 skipped 로 명시 — 서버가 오답 채점 + 찍은 오답과 구분 기록
       skipped,
+      // 발급 세트 연결 — 3건이 모이면 서버가 세트 DONE + 난이도 사다리 판정
+      setId: isTrial ? useTrialStore.getState().activeSetId : solveSession?.setId ?? null,
     }
 
     // 익명(가입 전 맛보기) — 401 왕복 없이 바로 큐로. 채점은 로컬 정답으로 이미 끝났다

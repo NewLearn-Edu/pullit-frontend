@@ -15,6 +15,8 @@ export interface SolveSession {
   source: AttemptSource
   /** 완료·닫기 시 돌아갈 경로 */
   returnTo: string
+  /** 발급 세트 id — 세트 풀이(FREE·DAILY)만, 오답 재풀이(RETRY)는 없음 */
+  setId?: number
 }
 
 interface SolveState {
