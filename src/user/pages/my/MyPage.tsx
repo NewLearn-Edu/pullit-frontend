@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
+import { UserAvatar } from '@/user/components/UserAvatar'
 import { PageHeader } from '@/user/components/PageHeader'
 import { logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
 import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
@@ -149,7 +150,7 @@ export default function MyPage() {
         <div className={styles.content}>
         {/* 프로필 헤더 — 토스 프로필형 세로 중앙 배치 (아바타 · 이름 · 학년|코인 메타) */}
         <section className={styles.profileCard}>
-          <span className={styles.avatar}>🦊</span>
+          <UserAvatar src={me?.profileImageUrl} size={72} />
           <p className={styles.userName}>
             {/* 표시명은 닉네임 우선 — 프로필 편집에서 바꾸는 값 (없으면 실명) */}
             {isGuest ? me?.nickname ?? '게스트' : me?.nickname ?? me?.name ?? '이름 없음'}

@@ -345,6 +345,8 @@ export interface MeResult {
   birthDate: string | null
   /** 학년/신분 — 프로필 완성 전엔 null */
   grade: Grade | null
+  /** 커스텀 프로필 이미지 URL — null 이면 프론트가 기본 아바타 표시 */
+  profileImageUrl: string | null
   /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
   marketingConsentAt: string | null
   /** 마지막 닉네임 변경 시각 — 90일 재변경 잠금 판정용 (한 번도 안 바꿨으면 null) */

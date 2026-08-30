@@ -5,6 +5,7 @@ import { clsx } from 'clsx'
 import { PageHeader } from '@/user/components/PageHeader'
 import { updateNickname } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
+import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
 
 /** 닉네임 허용 문자 — 완성형 한글·영문·숫자 (자모 단독·공백·특수문자 불가, 서버와 동일) */
@@ -87,9 +88,7 @@ export default function ProfileEditPage() {
       <main className="mx-auto flex w-full max-w-[620px] flex-1 flex-col items-center px-[20px] pb-[120px]">
         {/* 아바타 + 편집 배지 — 이미지 변경은 준비 전 */}
         <div className="relative mt-[32px]">
-          <span className="flex size-[88px] items-center justify-center rounded-full bg-[#fff1f2] text-[44px]">
-            🦊
-          </span>
+          <UserAvatar src={me?.profileImageUrl} size={88} />
           <span
             aria-hidden
             className="absolute -bottom-[2px] -right-[2px] flex size-[28px] items-center justify-center rounded-full border border-[#e5e7ea] bg-white"
