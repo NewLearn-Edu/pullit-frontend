@@ -11,6 +11,7 @@ import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
+import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
@@ -21,6 +22,7 @@ import styles from './styles/TrialQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
 
+// 온보딩 맛보기 고정 영역 폴백 — 홈에서 시작한 세트는 pendingUnit.unitName 이 정본
 const SUBJECT_LABEL: Record<Subject, string> = {
   math: '수학 · 지수와 로그',
   english: '영어 · 주제',
@@ -87,9 +89,14 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
   // 맛보기를 이미 완주한 회원의 딥링크 진입 방어 — 미완 유저(게스트·신규 회원)는 통과.
   // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외.
+  // 홈에서 시작한 진단 세트(pendingUnit 존재)도 제외 — 같은 /trial/quiz 라우트를
+  // 재사용하는데, 온보딩 가드가 완주 회원을 홈으로 되돌려보내면 크레딧만 차감되고
+  // 문제를 못 보는 사고가 난다 (온보딩 퍼널은 진입 시 clearPendingUnit 을 하므로
+  // pendingUnit 유무가 홈 진입과 온보딩 진입을 정확히 가른다).
   // 맛보기는 세션 없이 진행한다 — users 로우는 결과 화면 이후 /signup 에서
   // 건너뛰기(게스트) 또는 소셜 가입 시점에만 생성된다 (2026-08-19 확정)
-  useTrialFunnelGuard(isTrial)
+  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  useTrialFunnelGuard(isTrial && !pendingUnit)
 
   // 문제 세트 — 서버(GET /api/problems) 우선, 실패·부족 시 목 폴백 (problemSet 캐시 공유)
   const [problems, setProblems] = useState<Problem[]>(() =>
@@ -399,7 +406,11 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     <div className={styles.page}>
       <QuizTopBar
         progress={isTrial ? { current: idx + 1, total: problems.length } : undefined}
-        subjectLabel={SUBJECT_LABEL[subject as Subject]}
+        subjectLabel={
+          pendingUnit
+            ? `${subject === 'math' ? '수학' : '영어'} · ${pendingUnit.unitName}`
+            : SUBJECT_LABEL[subject as Subject]
+        }
         onClose={handleClose}
         progressRatio={isTrial ? (idx + 1) / problems.length : undefined}
         rightExtra={
