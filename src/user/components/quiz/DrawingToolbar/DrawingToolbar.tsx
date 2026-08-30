@@ -360,19 +360,8 @@ export function DrawingToolbar({
     <div className={styles.container}>
       {/* Row 1 : 필수 컨트롤 · 항상 한 줄 */}
       <div className={styles.row}>
-        {/* 좌측: 접기 (모바일만) · 되돌리기 */}
+        {/* 좌측: 되돌리기 — 접기 버튼은 없음. 툴바 토글은 상단 바 우측 펜 버튼으로 일원화 */}
         <div className={styles.left}>
-          {isCompact && (
-            <button
-              type="button"
-              onClick={() => onDrawingEnabledChange(false)}
-              aria-label="필기 도구 접기"
-              className={styles.collapseButton}
-            >
-              <ChevronUpIcon />
-              접기
-            </button>
-          )}
           <button
             type="button"
             onClick={onUndo}
@@ -690,13 +679,6 @@ function UndoIcon() {
   )
 }
 
-function ChevronUpIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="18 15 12 9 6 15" />
-    </svg>
-  )
-}
 
 function PenIcon() {
   return (

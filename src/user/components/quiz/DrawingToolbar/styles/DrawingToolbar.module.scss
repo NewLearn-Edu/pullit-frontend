@@ -53,24 +53,6 @@
 
 .right { justify-content: flex-end; }
 
-.collapseButton {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  height: 32px;
-  padding: 0 $space-md;
-  border-radius: $radius-btn-sm;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-body;
-  white-space: nowrap;
-  transition: background-color 150ms ease, transform 100ms ease;
-
-  &:active { transform: scale(0.95); }
-  @include hover { background: $color-surface; }
-}
-
 .iconButton {
   @include button-reset;
   @include flex-center;
