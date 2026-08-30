@@ -16,7 +16,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+// base(완성 잉크)·live(진행 중 획) 두 캔버스가 같은 자리에 겹친다
 .canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   // 터치·펜 필기 시 스크롤·확대 방지
