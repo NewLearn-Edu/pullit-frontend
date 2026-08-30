@@ -914,50 +914,88 @@ export default function HomePage() {
                 </div>
               </>
             ) : (
-              <>
-                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
-                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                    아직 안배운 단원이야?
-                  </h2>
-                  <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    {startSheet.name}부터 {category.name} 끝까지 잠가둘게
-                  </p>
-                </div>
+              (() => {
+                // 건너뛸 범위 — 이 단원부터 대단원 끝까지 (미리보기 카드는 3장까지)
+                const fromIdx = category.units.findIndex((u) => u.unitCode === startSheet.unitCode)
+                const skipped = fromIdx >= 0 ? category.units.slice(fromIdx) : [startSheet]
+                const previews = skipped.slice(0, 3)
+                return (
+                  <>
+                    <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
+                      <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+                        {startSheet.name}부터 건너뛸까?
+                      </h2>
+                    </div>
 
-                <div className="flex w-full items-center justify-center gap-[6px] rounded-[12px] bg-[#f8f8f8] p-[12px]">
-                  <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#d6d8db] text-[11px] font-semibold text-[#5e6368]">
-                    i
-                  </span>
-                  <p className="text-[13px] font-medium text-[#80858b]">
-                    {startSheet.name}
-                    {josaEulReul(startSheet.name)} 다시 풀면 언제든 열려
-                  </p>
-                </div>
+                    {/* 함께 건너뛰는 소단원 미니 카드 — 점선 박스 (PI-SHEET-JUMP) */}
+                    <div className="relative flex w-full flex-col items-center">
+                      <span className="relative z-[2] -mb-[15px] rounded-[8px] bg-[#fff1f2] p-[8px] text-[12px] font-semibold leading-[1.4] text-[#ff385c]">
+                        함께 건너뜀
+                      </span>
+                      <div className="rounded-[24px] border border-dashed border-[#ff8fa3] p-[20px]">
+                        <ul className="flex flex-col gap-[8px]">
+                          {previews.map((unit, i) => (
+                            <li
+                              key={unit.unitCode}
+                              className="flex h-[55px] w-[240px] items-center justify-between rounded-[16px] bg-[#f1f1f1] p-[12px]"
+                              style={{ opacity: 1 - i * 0.2 }}
+                            >
+                              <span className="min-w-0 truncate text-[12px] font-semibold leading-[1.4] text-[#5e6368]">
+                                {unit.name}
+                              </span>
+                              <span className="shrink-0 rounded-[8px] bg-[#fff1f2] px-[9px] py-[6px] text-[9px] font-semibold leading-[1.4] text-[#ff385c]">
+                                진단하기
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {skipped.length >= 3 && (
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-[110px] bg-gradient-to-b from-white/0 to-white"
+                        />
+                      )}
+                    </div>
 
-                {startError && (
-                  <p className="w-full text-center text-[13px] font-medium text-primary">
-                    {startError}
-                  </p>
-                )}
+                    <ul className="flex w-full list-disc flex-col gap-[8px] pl-[20px]">
+                      <li className="text-[14px] font-medium leading-[1.4] text-[#23272b]">
+                        이 {unitLabel}을 건너뛰면{' '}
+                        <b className="font-bold text-[#121417]">뒤에 남은 {unitLabel}</b>도 같이
+                        건너뛰어
+                      </li>
+                      <li className="text-[14px] font-medium leading-[1.4] text-[#5e6368]">
+                        건너뛴 {unitLabel}은 <b className="font-bold text-[#121417]">언제든지</b>{' '}
+                        다시 진단할 수 있어
+                      </li>
+                    </ul>
 
-                <div className="flex w-full gap-[8px]">
-                  <button
-                    type="button"
-                    onClick={() => setSkipMode(false)}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
-                  >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    onClick={confirmSkip}
-                    disabled={lockSaving}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                  >
-                    {lockSaving ? '저장 중…' : '잠그기'}
-                  </button>
-                </div>
-              </>
+                    {startError && (
+                      <p className="w-full text-center text-[13px] font-medium text-primary">
+                        {startError}
+                      </p>
+                    )}
+
+                    <div className="flex w-full gap-[8px]">
+                      <button
+                        type="button"
+                        onClick={() => setSkipMode(false)}
+                        className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmSkip}
+                        disabled={lockSaving}
+                        className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                      >
+                        {lockSaving ? '저장 중…' : '건너뛰기'}
+                      </button>
+                    </div>
+                  </>
+                )
+              })()
             )}
           </div>
         </div>
