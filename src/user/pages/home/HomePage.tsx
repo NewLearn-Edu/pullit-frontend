@@ -342,15 +342,21 @@ export default function HomePage() {
   // ── 이어풀기 팝업 (PI-POPUP-RESUME · Figma 2931-11007) ──────────────────
   // 앱을 켰을 때(페이지 로드당 1회) 풀다 만 세트가 있으면 띄운다.
   // 추천 로직과 무관 — 추천은 ①진단→②최약점 그대로, 재개 안내는 이 팝업의 몫
-  const [resumePrompt, setResumePrompt] = useState<ResumableSet | null>(null)
+  // 데이터(resumableSet)와 팝업 노출(resumePromptOpen)을 분리 — 팝업을 취소해도
+  // 소단원 카드의 "이어풀기" 라벨(2919-8829)은 계속 보여야 한다
+  const [resumableSet, setResumableSet] = useState<ResumableSet | null>(null)
+  const [resumePromptOpen, setResumePromptOpen] = useState(false)
   useEffect(() => {
-    if (sessionStatus !== 'ready' || resumePromptShown) return
+    if (sessionStatus !== 'ready') return
     let alive = true
     fetchResumableSet()
       .then((resumable) => {
-        if (!alive || !resumable) return
-        resumePromptShown = true
-        setResumePrompt(resumable)
+        if (!alive) return
+        setResumableSet(resumable)
+        if (resumable && !resumePromptShown) {
+          resumePromptShown = true
+          setResumePromptOpen(true)
+        }
       })
       .catch(() => {})
     return () => {
@@ -359,9 +365,9 @@ export default function HomePage() {
   }, [sessionStatus])
 
   const handleResume = async () => {
-    const info = resumePrompt
+    const info = resumableSet
     if (!info) return
-    setResumePrompt(null)
+    setResumePromptOpen(false)
     const subj: Subject = info.subject === 'ENGLISH' ? 'english' : 'math'
     const unit = findUnitByCode(subj, info.unitCode)
     if (!unit) return
@@ -568,7 +574,12 @@ export default function HomePage() {
                         className={clsx(styles.unitCard, styles.unitCardTap, styles.unitCardNext)}
                       >
                         <span className={styles.unitCardName}>{row.name}</span>
-                        <span className={styles.unitDiagnoseBtn}>진단하기</span>
+                        <span className={styles.unitDiagnoseBtn}>
+                          {resumableSet?.source === 'TRIAL' &&
+                          resumableSet.unitCode === row.unitCode
+                            ? '이어풀기'
+                            : '진단하기'}
+                        </span>
                       </button>
                     </li>
                   )
@@ -896,13 +907,17 @@ export default function HomePage() {
                 )}
 
                 <div className="flex w-full gap-[8px]">
-                  <button
-                    type="button"
-                    onClick={() => setSkipMode(true)}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
-                  >
-                    이 단원 안배웠어요
-                  </button>
+                  {/* 이어풀기 상태에선 "안배웠어요" 숨김 — 이미 크레딧 내고 시작한 단원을
+                      "안 배웠다"며 잠그는 건 모순이라 이어서 풀기만 남긴다 */}
+                  {!resumable && (
+                    <button
+                      type="button"
+                      onClick={() => setSkipMode(true)}
+                      className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                    >
+                      이 단원 안배웠어요
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={confirmStartSet}
@@ -1063,7 +1078,7 @@ export default function HomePage() {
       )}
 
       {/* ── 이어풀기 팝업 (PI-POPUP-RESUME · 2931-11007) — 앱 진입 시 풀다 만 세트 안내 ── */}
-      {resumePrompt && (
+      {resumePromptOpen && resumableSet && (
         <div
           role="dialog"
           aria-modal="true"
@@ -1084,7 +1099,7 @@ export default function HomePage() {
               <div className="flex w-full gap-[8px]">
                 <button
                   type="button"
-                  onClick={() => setResumePrompt(null)}
+                  onClick={() => setResumePromptOpen(false)}
                   className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
                 >
                   취소

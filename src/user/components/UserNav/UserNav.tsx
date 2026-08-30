@@ -66,7 +66,7 @@ export function UserNav({ active }: UserNavProps) {
           <span className={styles.bottomIcon} aria-hidden />
           추천 문제
           <span className={styles.bottomFab} aria-hidden>
-            <RecommendIcon size={48} />
+            <RecommendIcon size={46} />
           </span>
         </Link>
         {/* 오답노트는 학습 기록 섹션 소속 — 하단 네비에서는 학습 기록을 활성 표시 */}

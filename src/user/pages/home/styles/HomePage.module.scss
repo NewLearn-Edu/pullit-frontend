@@ -279,14 +279,14 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
   // 안쪽 알약은 카드를 호버할 때 같이 진해진다 (카드가 하나의 버튼이므로)
   @include hover {
-    .unitDiagnoseBtn { background: $color-primary-hover; }
+    .unitDiagnoseBtn { background: #ffdadc; }
   }
 }
 
-// 잠김 — 회색 카드
+// 잠김 — 회색 카드 (2919-8829 개정: black/200 → black/100)
 .unitCardLocked {
   justify-content: space-between;
-  background: #e5e7ea; // black/200
+  background: #f0f1f3; // black/100
 }
 
 .unitCardBody {
@@ -372,23 +372,24 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 }
 
 // 진단하기 — 빨간 소형 버튼 (Figma Button S/Secondary)
+// 진단하기·이어풀기 필 — 소프트 핑크 (Figma 2919-8829 개정: 채운 빨강 → red/100 배경)
 .unitDiagnoseBtn {
   @include button-reset;
   flex-shrink: 0;
-  padding: $space-sm 12px;
+  padding: 8px 12px;
   border-radius: 8px;
-  background: $color-primary;
+  background: #fff1f2; // red/100
   font-size: 12px;
   font-weight: $fw-semibold;
   line-height: 1.4;
-  color: #fff;
+  color: $color-primary;
   white-space: nowrap;
   transition: background 150ms ease;
 
-  @include hover { background: $color-primary-hover; }
+  @include hover { background: #ffdadc; }
 
   &:disabled {
-    background: #d6d8db;
+    background: #f0f1f3;
     color: #80858b;
     cursor: default;
   }
