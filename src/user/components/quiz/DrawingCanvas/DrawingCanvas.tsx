@@ -10,10 +10,15 @@ export interface DrawingCanvasHandle {
 }
 
 interface Stroke {
-  points: number[][] // [x, y] (pressure 는 균일 굵기라 사용 안 함)
+  /**
+   * [x, y] — 월드 좌표 (기준 폭 base 조판 기준 · pressure 는 균일 굵기라 사용 안 함).
+   * 화면 px 이 아니라 배율을 나눈 값이라, 컨테이너가 커지고 줄어도 본문 위 같은 자리를 가리킨다.
+   */
+  points: number[][]
   tool: StrokeTool
   color: string
-  size: number
+  /** 브러시 굵기 — 월드 px (그린 시점의 화면 px ÷ 그 시점 배율) */
+  sizeWorld: number
 }
 
 interface DrawingCanvasProps {
@@ -22,6 +27,18 @@ interface DrawingCanvasProps {
   size: number
   disabled?: boolean
   allowFinger?: boolean
+  /**
+   * 월드 좌표 기준 폭 — 본문을 감싼 ExamScaleFrame 의 base 와 같은 값이어야
+   * 필기가 본문과 같은 배율로 커지고 줄어든다.
+   */
+  base?: number
+}
+
+/** 도구별 슬라이더 값(0.1~1.0) → 화면 px 굵기 (지우개 커서 지름과 공유) */
+function toolScreenPx(tool: StrokeTool, size: number): number {
+  if (tool === 'laser') return 9 // 슬라이더 무시 · 네온 링+코어 구조 잘 보이게 다소 굵게
+  if (tool === 'highlighter') return size * 32
+  return size * 14
 }
 
 /**
@@ -33,16 +50,23 @@ interface DrawingCanvasProps {
  *   - 매 프레임 offscreen 을 drawImage 복사 후 현재 그리는 stroke 만 그림.
  *   - 겹침 누적 · 지글거림 없음.
  *
+ * 좌표계 — 본문(ExamScaleFrame)과 같은 "기준 폭 base 조판" 월드 좌표.
+ * 획은 월드 좌표로 저장하고 렌더 때 현재 배율(컨테이너 폭 ÷ base)을 곱한다.
+ * → 창 리사이즈·해설 패널 드래그·기기 회전으로 본문이 확대/축소돼도
+ *   필기가 본문 위 같은 자리에 같은 비율로 따라간다.
+ *
  * perfect-freehand 옵션도 튜닝 · SVG path 스타일로 렌더링해 계단현상 최소화.
  * 정책상 필기 저장 안 함. 문제 넘기면 자연 소실.
  */
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   function DrawingCanvas(
-    { tool, color, size, disabled, allowFinger = false },
+    { tool, color, size, disabled, allowFinger = false, base = 500 },
     ref,
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    // 현재 배율 (컨테이너 폭 ÷ base) — 월드 좌표 ↔ 화면 px 변환에 사용
+    const scaleRef = useRef(1)
     // 완성된 stroke 를 담아두는 오프스크린 캔버스 (사용자에게 안 보임)
     const offscreenRef = useRef<HTMLCanvasElement | null>(null)
     // 지우개 도구 사용 시 포인터 위치 · 크기를 미리 보여주는 원형 커서 오버레이
@@ -93,6 +117,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const resize = () => {
         const rect = container.getBoundingClientRect()
         const dpr = window.devicePixelRatio || 1
+        // 본문(ExamScaleFrame)과 같은 배율 — 폭이 바뀌면 획도 이 배율로 다시 래스터된다
+        scaleRef.current = rect.width > 0 ? rect.width / base : 1
 
         canvas.width = Math.round(rect.width * dpr)
         canvas.height = Math.round(rect.height * dpr)
@@ -100,7 +126,6 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         canvas.style.height = `${rect.height}px`
         const ctx = canvas.getContext('2d')
         if (ctx) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
         }
@@ -114,7 +139,6 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         off.height = canvas.height
         const offCtx = off.getContext('2d')
         if (offCtx) {
-          offCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
           offCtx.imageSmoothingEnabled = true
           offCtx.imageSmoothingQuality = 'high'
         }
@@ -131,7 +155,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [base])
 
     /**
      * 오프스크린 캔버스에 완성된 stroke 를 전부 다시 그림.
@@ -139,12 +163,14 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
      */
     const rebuildOffscreen = () => {
       const off = offscreenRef.current
-      const canvas = canvasRef.current
-      if (!off || !canvas) return
+      if (!off) return
       const ctx = off.getContext('2d')
       if (!ctx) return
-      const rect = canvas.getBoundingClientRect()
-      ctx.clearRect(0, 0, rect.width, rect.height)
+      const dpr = window.devicePixelRatio || 1
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, off.width, off.height)
+      // 월드 좌표 획을 현재 배율로 래스터 — 리사이즈 뒤에도 본문과 같은 비율
+      ctx.setTransform(dpr * scaleRef.current, 0, 0, dpr * scaleRef.current, 0, 0)
       for (const s of strokesRef.current) {
         renderStroke(ctx, s)
       }
@@ -164,8 +190,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // 표시 캔버스는 dpr 스케일이 적용된 상태 · offscreen 을 dpr 픽셀 그대로 복사
+      // offscreen 은 이미 현재 배율로 래스터된 상태 · 디바이스 픽셀 그대로 복사
       const dpr = window.devicePixelRatio || 1
+      const drawScale = dpr * scaleRef.current
       ctx.save()
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -196,17 +223,17 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           fadingLasersRef.current = []
           laserActivityEndRef.current = null
         } else if (opacity > 0) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx.setTransform(drawScale, 0, 0, drawScale, 0, 0)
           for (const s of fadingLasersRef.current) {
             renderStroke(ctx, s, opacity)
           }
         }
       }
 
-      // 현재 stroke 는 dpr 스케일 컨텍스트에서 그림
+      // 현재 stroke 는 dpr × 배율 컨텍스트에서 그림 (월드 좌표 → 화면 px)
       const cur = currentRef.current
       if (cur) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        ctx.setTransform(drawScale, 0, 0, drawScale, 0, 0)
         renderStroke(ctx, cur, 1)
       }
 
@@ -252,8 +279,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         ctx.save()
         ctx.globalCompositeOperation = 'source-over'
         // 1) 빨간 링 + halo · shadowBlur 로 부드러운 발광
+        // (shadowBlur 는 transform 을 안 타는 디바이스 px — 배율을 직접 곱해 비율 유지)
         ctx.shadowColor = `rgba(255, 30, 55, ${0.9 * opacity})`
-        ctx.shadowBlur = 18
+        ctx.shadowBlur = 18 * scaleRef.current
         ctx.fillStyle = `rgba(230, 25, 50, ${opacity})`
         ctx.fill(outerPath)
         // 2) 흰 코어 · shadow off · 살짝 붉은 기 남은 흰색
@@ -284,32 +312,22 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     /**
-     * perfect-freehand 옵션.
-     * s.size 는 사용자 슬라이더 값 (0.1 ~ 1.0). 도구별로 실제 픽셀 크기가 다름.
-     * - 펜/지우개: size × 14  (0.1 = 1.4px · 1.0 = 14px)
-     * - 형광펜:    size × 32  (0.1 = 3.2px · 1.0 = 32px)
+     * perfect-freehand 옵션 — 굵기는 stroke 에 박제된 월드 px(sizeWorld) 그대로.
+     * (도구별 화면 px 매핑은 캡처 시점의 toolScreenPx ÷ 배율로 이미 반영됨)
      * 굵기는 압력과 무관하게 일정 (thinning: 0).
      */
-    const strokeOptionsFor = (s: Stroke) => {
-      let px: number
-      if (s.tool === 'laser') {
-        px = 9 // 레이저 · 슬라이더 무시 · 네온 링+코어 구조 잘 보이게 다소 굵게
-      } else if (s.tool === 'highlighter') {
-        px = s.size * 32
-      } else {
-        px = s.size * 14
-      }
-      return {
-        size: Math.max(1, px),
-        thinning: 0,
-        smoothing: 0.65,
-        streamline: 0.7,
-      }
-    }
+    const strokeOptionsFor = (s: Stroke) => ({
+      size: Math.max(0.5, s.sizeWorld),
+      thinning: 0,
+      smoothing: 0.65,
+      streamline: 0.7,
+    })
 
+    /** 포인터 화면 좌표 → 월드 좌표 (배율 나눔) */
     const getPoint = (e: React.PointerEvent<HTMLCanvasElement>): number[] => {
       const rect = canvasRef.current!.getBoundingClientRect()
-      return [e.clientX - rect.left, e.clientY - rect.top]
+      const k = scaleRef.current || 1
+      return [(e.clientX - rect.left) / k, (e.clientY - rect.top) / k]
     }
 
     /**
@@ -354,7 +372,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         points: [getPoint(e)],
         tool: toolRef.current,
         color: colorRef.current,
-        size: sizeRef.current,
+        // 화면에서 보이는 굵기(도구별 px)를 월드 px 로 변환해 박제 —
+        // 이후 배율이 바뀌어도 본문과 같은 비율로 커지고 줄어든다
+        sizeWorld:
+          toolScreenPx(toolRef.current, sizeRef.current) / (scaleRef.current || 1),
       }
       drawingRef.current = true
       // 레이저 새 stroke 시작 → 공유 페이드 타이머 리셋
@@ -378,10 +399,11 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         ? e.nativeEvent.getCoalescedEvents()
         : [e.nativeEvent]
       const rect = canvasRef.current!.getBoundingClientRect()
+      const k = scaleRef.current || 1
       for (const ev of events) {
         currentRef.current.points.push([
-          ev.clientX - rect.left,
-          ev.clientY - rect.top,
+          (ev.clientX - rect.left) / k,
+          (ev.clientY - rect.top) / k,
         ])
       }
     }
@@ -397,11 +419,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         laserActivityEndRef.current = Date.now()
         // undo 대상에서도 제외
       } else {
-        // 일반 stroke · offscreen 에 박제
+        // 일반 stroke · offscreen 에 박제 (월드 좌표 → 현재 배율로 래스터)
         const off = offscreenRef.current
         if (off) {
           const ctx = off.getContext('2d')
-          if (ctx) renderStroke(ctx, s)
+          if (ctx) {
+            const dpr = window.devicePixelRatio || 1
+            const k = dpr * scaleRef.current
+            ctx.setTransform(k, 0, 0, k, 0, 0)
+            renderStroke(ctx, s)
+          }
         }
         strokesRef.current.push(s)
       }
@@ -415,8 +442,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
 
     const suppressContext = (e: React.SyntheticEvent) => e.preventDefault()
 
-    // 지우개 커서 지름 (px) · strokeOptionsFor 의 eraser 스케일과 동일하게 size × 14
-    const eraserDiameterPx = Math.max(6, size * 14)
+    // 지우개 커서 지름 (화면 px) — 지금 그으면 지워질 실제 폭과 동일 (toolScreenPx 공유)
+    const eraserDiameterPx = Math.max(6, toolScreenPx('eraser', size))
     const cursorStyle = disabled
       ? 'default'
       : tool === 'eraser'
