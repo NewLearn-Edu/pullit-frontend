@@ -394,10 +394,14 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (!currentRef.current) return
       if (!shouldAcceptPointer(e)) return
       e.preventDefault()
-      // getCoalescedEvents 로 놓친 점까지 수집 → 곡선 정밀도 향상
-      const events = typeof e.nativeEvent.getCoalescedEvents === 'function'
-        ? e.nativeEvent.getCoalescedEvents()
-        : [e.nativeEvent]
+      // getCoalescedEvents 로 놓친 점까지 수집 → 곡선 정밀도 향상.
+      // WebKit(iPad Safari)은 펜 입력에서 이 목록을 간헐적으로 비워 반환한다 —
+      // 그대로 쓰면 이동점이 전부 버려져 획이 점·토막으로 끊긴다. 비면 원 이벤트로 폴백.
+      const coalesced =
+        typeof e.nativeEvent.getCoalescedEvents === 'function'
+          ? e.nativeEvent.getCoalescedEvents()
+          : null
+      const events = coalesced && coalesced.length > 0 ? coalesced : [e.nativeEvent]
       const rect = canvasRef.current!.getBoundingClientRect()
       const k = scaleRef.current || 1
       for (const ev of events) {
