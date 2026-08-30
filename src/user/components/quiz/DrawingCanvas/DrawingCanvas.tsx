@@ -34,6 +34,12 @@ interface DrawingCanvasProps {
   base?: number
 }
 
+/**
+ * 입력 게이트 (화면 px) — 이보다 작게 움직인 포인터 리포트는 노이즈로 보고 버린다.
+ * 손떨림·펜 센서 노이즈 진폭(±0.5~1px)보다 크고, 작은 글씨 획(10px+)보다는 충분히 작게.
+ */
+const INPUT_GATE_PX = 2
+
 /** 도구별 슬라이더 값(0.1~1.0) → 화면 px 굵기 (지우개 커서 지름과 공유) */
 function toolScreenPx(tool: StrokeTool, size: number): number {
   if (tool === 'laser') return 9 // 슬라이더 무시 · 네온 링+코어 구조 잘 보이게 다소 굵게
@@ -404,11 +410,26 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const events = coalesced && coalesced.length > 0 ? coalesced : [e.nativeEvent]
       const rect = canvasRef.current!.getBoundingClientRect()
       const k = scaleRef.current || 1
+      /**
+       * 최소 이동 게이트 — 마지막 채택점에서 INPUT_GATE_PX(화면 px) 미만 이동은 버린다.
+       * 펜은 속도와 무관하게 초당 120~240회 리포트하므로, 느리게 움직이면 리포트당
+       * 이동(0.2~0.5px)이 손떨림·센서 노이즈(±0.5px+)보다 작아져 노이즈가 획 모양을
+       * 지배한다 — 저속에서만 획이 꾸물거리는 원인. 게이트는 저속 노이즈만 걸러내고
+       * 보통 속도(이동 ≫ 게이트)에는 아무 영향이 없다.
+       */
+      const pts = currentRef.current.points
+      const gate = INPUT_GATE_PX / k
+      const gateSq = gate * gate
+      let [lx, ly] = pts[pts.length - 1]
       for (const ev of events) {
-        currentRef.current.points.push([
-          (ev.clientX - rect.left) / k,
-          (ev.clientY - rect.top) / k,
-        ])
+        const x = (ev.clientX - rect.left) / k
+        const y = (ev.clientY - rect.top) / k
+        const dx = x - lx
+        const dy = y - ly
+        if (dx * dx + dy * dy < gateSq) continue
+        pts.push([x, y])
+        lx = x
+        ly = y
       }
     }
 
@@ -416,6 +437,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       if (!currentRef.current) return
       canvasRef.current?.releasePointerCapture(e.pointerId)
       const s = currentRef.current
+      // 획 끝점 보정 — 게이트에 걸려 못 들어간 마지막 위치를 채워 펜을 뗀 자리에서 끝나게
+      {
+        const rect = canvasRef.current!.getBoundingClientRect()
+        const k = scaleRef.current || 1
+        const x = (e.clientX - rect.left) / k
+        const y = (e.clientY - rect.top) / k
+        const [lx, ly] = s.points[s.points.length - 1]
+        const half = (INPUT_GATE_PX / k) * 0.5
+        if ((x - lx) ** 2 + (y - ly) ** 2 > half * half) s.points.push([x, y])
+      }
       if (s.tool === 'laser') {
         // 레이저 · offscreen 저장 안 함 · fadingLasers 에 누적
         // 공유 타이머 시작 → 이후 다른 레이저 stroke 안 그리면 HOLD 후 함께 페이드
