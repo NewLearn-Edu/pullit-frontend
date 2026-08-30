@@ -28,8 +28,9 @@ const SUBJECT_LABEL: Record<Subject, string> = {
   english: '영어 · 주제',
 }
 
-/** 90초 → "1분 30초" · 120초 → "2분" — DB 권장시간을 올림 없이 그대로 표기 */
-function formatKoreanDuration(totalSec: number): string {
+/** 90초 → "1분 30초" · 120초 → "2분" — DB 권장시간을 올림 없이 그대로 표기.
+    해설 리뷰(TrialReviewPage)의 권장 시간 표기에서도 사용 */
+export function formatKoreanDuration(totalSec: number): string {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60
   if (m === 0) return `${s}초`
@@ -599,7 +600,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   )
 }
 
-function PenToggleIcon() {
+/** 상단 바 필기 토글 아이콘 — 해설 리뷰(TrialReviewPage)에서도 사용 */
+export function PenToggleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
