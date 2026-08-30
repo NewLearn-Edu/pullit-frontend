@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { getStroke } from 'perfect-freehand'
 import styles from './styles/DrawingCanvas.module.scss'
 
@@ -369,6 +369,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      notePen(e)
       updateEraserCursor(e)
       if (!shouldAcceptPointer(e)) return
       e.preventDefault()
@@ -395,6 +396,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      notePen(e)
       // 드로잉 중이 아니어도 지우개 커서 위치는 항상 tracking
       updateEraserCursor(e)
       if (!currentRef.current) return
@@ -477,12 +479,23 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
 
     const suppressContext = (e: React.SyntheticEvent) => e.preventDefault()
 
+    /**
+     * 펜 감지 — Apple Pencil 호버(M2+ iPad)는 CSS cursor 를 화면에 띄우는데,
+     * 글씨를 쓰는 동안 획 사이마다 호버 커서(십자선)가 나타났다 사라지며 깜빡인다.
+     * 펜은 촉 자체가 포인터라 커서가 필요 없다 — 펜이 한 번이라도 감지되면 숨긴다.
+     * (호버도 pointermove 로 오므로 첫 호버 순간 바로 사라진다 · 마우스는 십자선 유지)
+     */
+    const [penSeen, setPenSeen] = useState(false)
+    const notePen = (e: React.PointerEvent) => {
+      if (!penSeen && e.pointerType === 'pen') setPenSeen(true)
+    }
+
     // 지우개 커서 지름 (화면 px) — 지금 그으면 지워질 실제 폭과 동일 (toolScreenPx 공유)
     const eraserDiameterPx = Math.max(6, toolScreenPx('eraser', size))
     const cursorStyle = disabled
       ? 'default'
-      : tool === 'eraser'
-        ? 'none' // 기본 크로스헤어 숨기고 원형 오버레이로 대체
+      : tool === 'eraser' || penSeen
+        ? 'none' // 지우개는 원형 오버레이로 대체 · 펜은 촉이 포인터 (호버 커서 깜빡임 방지)
         : 'crosshair'
 
     return (
