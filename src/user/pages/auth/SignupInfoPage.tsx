@@ -205,12 +205,18 @@ export default function SignupInfoPage() {
    */
   const [consentOpen, setConsentOpen] = useState(false)
 
-  // 단계 자동 진행 — 휴대폰 인증 완료가 신호 (동의 시트도 함께 올라온다)
+  // 단계 자동 진행 — "이번 세션에서 인증이 막 완료된" 순간에만 동의 시트를 올린다.
+  // 새로고침 복원(restoredVerified)까지 열면 생년월일 에러 등 미완 상태에서도
+  // 시트가 떠버린다 — 복원 시엔 닫힌 채 시작하고 하단 버튼으로 연다.
+  const prevVerifiedRef = useRef(phoneVerified)
   useEffect(() => {
-    if (phoneVerified) {
-      reveal(5)
-      setConsentOpen(true)
-    }
+    const justVerified = phoneVerified && !prevVerifiedRef.current
+    prevVerifiedRef.current = phoneVerified
+    if (!justVerified) return
+    reveal(5)
+    // 앞 단계가 전부 유효할 때만 — 인증만 됐고 생년월일이 에러면 시트 대신 폼에 머문다
+    if (nameValid && birthValid && !under14 && grade != null) setConsentOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phoneVerified])
 
   /**
