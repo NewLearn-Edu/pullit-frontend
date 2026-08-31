@@ -798,3 +798,68 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
   @include hover { opacity: 0.9; }
 }
+
+// ── "건너뛴 단원" 잠금 스택 (Figma 3683-7680 locked-stack) ────────────────────
+// 헤더(자물쇠 + 개수 + 진단하기) 아래 회색 칸들이 실금으로 이어진 한 덩어리.
+.offStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px; // 실금 — 컨테이너 배경(#d6d8db)이 비쳐 칸 경계가 된다
+  overflow: hidden;
+  border-radius: 16px;
+  background: #d6d8db;
+}
+
+.offStackHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: 10px $space-lg;
+  background: #e5e7ea;
+}
+
+.offStackHeadLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: #5e6368;
+  white-space: nowrap;
+}
+
+.offStackHeadIco {
+  display: inline-flex;
+  flex: none;
+  color: #80858b;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// 재개 진입점 — 시작 소단원 진단 시작 (시안: #f8f8f8 알약 버튼)
+.offStackBtn {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f8f8f8;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  color: $ink;
+  transition: background 150ms ease;
+
+  &:hover {
+    background: #fff;
+  }
+}
+
+// 스택 안의 칸 — 회색 면, 모서리는 스택 컨테이너가 깎는다
+.offStackCard {
+  justify-content: space-between;
+  border-radius: 0;
+  background: #f0f1f3;
+}

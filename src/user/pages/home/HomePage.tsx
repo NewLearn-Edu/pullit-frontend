@@ -8,6 +8,7 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { Skeleton } from '@/user/components/Skeleton'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { declareUnitLock, fetchUnitLocks } from '@/user/api/recommendApi'
@@ -58,10 +59,9 @@ export default function HomePage() {
   const sessionStatus = useUserStore((s) => s.status)
   const credit = me?.creditBalance ?? 0
 
-  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 동기화
-  useEffect(() => {
-    if (sessionStatus === 'ready') hydrateFromServer()
-  }, [sessionStatus, hydrateFromServer])
+  // 서버 동기화(진단 기록 + 잠금) 완료 전에는 그래프·리스트 자리에 스켈레톤 —
+  // 빈 데이터를 실물처럼 그렸다가 갈아끼우는 깜빡임(미진단 → 점수)을 없앤다
+  const [synced, setSynced] = useState(false)
 
   // 홈은 세션(게스트·회원)이 있어야 하는 페이지 — 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {
@@ -113,18 +113,30 @@ export default function HomePage() {
 
   // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 유닛코드 → off 시작점 매핑
   const [locks, setLocks] = useState<Record<string, string>>({}) // categoryCode → offFromUnitCode
-  const refreshLocks = useCallback(() => {
-    fetchUnitLocks(subject)
-      .then((list) => {
-        const map: Record<string, string> = {}
-        for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
-        setLocks(map)
-      })
-      .catch(() => {})
-  }, [subject])
+  const refreshLocks = useCallback(
+    () =>
+      fetchUnitLocks(subject)
+        .then((list) => {
+          const map: Record<string, string> = {}
+          for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
+          setLocks(map)
+        })
+        .catch(() => {}),
+    [subject],
+  )
+
+  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 잠금과 함께 동기화.
+  // 실패해도 스켈레톤에 갇히지 않게 settled 기준으로 연다 (그때는 로컬 상태 폴백)
   useEffect(() => {
-    if (sessionStatus === 'ready') refreshLocks()
-  }, [sessionStatus, refreshLocks])
+    if (sessionStatus !== 'ready') return
+    let alive = true
+    Promise.allSettled([hydrateFromServer(), refreshLocks()]).then(() => {
+      if (alive) setSynced(true)
+    })
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus, hydrateFromServer, refreshLocks])
 
   const categoryCodeOf = (cat: (typeof categories)[number]) =>
     cat.units[0].unitCode.split('_').slice(0, 3).join('_')
@@ -447,8 +459,24 @@ export default function HomePage() {
             ))}
           </div>
 
+          {/* 서버 동기화 전 — 그래프·리스트 자리 스켈레톤 (같은 크기라 도착 시 점프 없음) */}
+          {!synced && (
+            <>
+              <Skeleton style={{ marginTop: 16, height: 360 }} />
+              <section className={styles.subSection}>
+                <h2 className={styles.subTitle}>{unitLabel}</h2>
+                <div className="flex flex-col gap-[8px]">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <Skeleton key={i} style={{ height: 77 }} />
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
           {/* 약점 그래프 카드 (Figma 2919-8728) — 흰 카드 안 레이더.
               이 대단원에서 하나도 진단 전이면 다크 잠금 오버레이 (2842-8069) */}
+          {synced && (
           <div className={styles.graphShell}>
             <ProgressRadar
               key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
@@ -490,36 +518,57 @@ export default function HomePage() {
               </div>
             )}
           </div>
+          )}
 
           {/* 소단원(수학) / 유형(영어) 카드 리스트 (Figma subject-card 3종) */}
+          {synced && (
           <section className={styles.subSection}>
             <h2 className={styles.subTitle}>{unitLabel}</h2>
 
             <ol className={styles.unitCards}>
-              {progress.rows.map((row) => {
+              {progress.rows.map((row, rowIdx) => {
                 if (row.state === 'off') {
-                  // "안배웠어요" 잠금 구간 — 시작 소단원(offHead)만 재개 진입점
+                  // "안배웠어요"(건너뛴) 구간 — 잠금 스택 (Figma 3683-7680).
+                  // 시작 소단원(offHead)에서 구간 전체를 한 덩어리로 그리고,
+                  // 나머지 off 행은 여기서 이미 그려졌으므로 건너뛴다.
+                  if (!row.offHead) return null
+                  const offRows = progress.rows.slice(rowIdx).filter((r) => r.state === 'off')
                   return (
-                    <li key={row.name} data-unit-card={row.name}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          row.offHead ? openStartSheet(row) : setLockedSheet(row)
-                        }
-                        className={clsx(styles.unitCard, styles.unitCardLocked)}
-                      >
-                        <span className="flex min-w-0 flex-col items-start gap-[4px] text-left">
-                          <span className={styles.unitCardNameLocked}>{row.name}</span>
-                          {row.offHead && (
-                            <span className="text-[12px] font-medium text-[#a6abb1]">
-                              안배운 단원 · 다시 풀면 열려
+                    <li key={row.name}>
+                      <div className={styles.offStack}>
+                        <div className={styles.offStackHead} data-unit-card={row.name}>
+                          <span className={styles.offStackHeadLeft}>
+                            <span className={styles.offStackHeadIco} aria-hidden>
+                              <LockIcon />
                             </span>
-                          )}
-                        </span>
-                        <span className={styles.unitLockIcon} aria-label="잠김">
-                          <LockIcon />
-                        </span>
-                      </button>
+                            건너뛴 단원 {offRows.length}개
+                          </span>
+                          {/* 재개 진입점 — 시작 소단원부터 다시 진단하면 구간이 열린다 */}
+                          <button
+                            type="button"
+                            onClick={() => openStartSheet(row)}
+                            className={styles.offStackBtn}
+                          >
+                            진단하기
+                          </button>
+                        </div>
+                        {offRows.map((offRow) => (
+                          <button
+                            key={offRow.name}
+                            type="button"
+                            data-unit-card={offRow.name}
+                            onClick={() =>
+                              offRow.offHead ? openStartSheet(offRow) : setLockedSheet(offRow)
+                            }
+                            className={clsx(styles.unitCard, styles.offStackCard)}
+                          >
+                            <span className={styles.unitCardNameLocked}>{offRow.name}</span>
+                            <span className={styles.unitLockIcon} aria-label="잠김">
+                              <LockIcon />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </li>
                   )
                 }
@@ -602,6 +651,7 @@ export default function HomePage() {
               })}
             </ol>
           </section>
+          )}
         </div>
 
         {/*
@@ -906,26 +956,27 @@ export default function HomePage() {
                   </p>
                 )}
 
-                <div className="flex w-full gap-[8px]">
+                {/* 전체폭 시작 버튼 → 그 아래 "안배웠어요" 텍스트 링크 (Figma PI-SHEET-START) */}
+                <div className="flex w-full flex-col gap-[16px]">
+                  <button
+                    type="button"
+                    onClick={confirmStartSet}
+                    disabled={starting}
+                    className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  >
+                    {starting ? '시작 중…' : resumable ? '이어서 풀기' : '시작하기'}
+                  </button>
                   {/* 이어풀기 상태에선 "안배웠어요" 숨김 — 이미 크레딧 내고 시작한 단원을
                       "안 배웠다"며 잠그는 건 모순이라 이어서 풀기만 남긴다 */}
                   {!resumable && (
                     <button
                       type="button"
                       onClick={() => setSkipMode(true)}
-                      className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                      className="w-full text-center text-[14px] font-medium text-[#80858b] transition-colors hover:text-[#121417]"
                     >
-                      이 단원 안배웠어요
+                      이 단원 아직 안배웠어요
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={confirmStartSet}
-                    disabled={starting}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                  >
-                    {starting ? '시작 중…' : resumable ? '이어서 풀기' : '시작하기'}
-                  </button>
                 </div>
               </>
             ) : (
