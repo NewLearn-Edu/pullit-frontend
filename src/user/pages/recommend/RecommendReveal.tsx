@@ -30,6 +30,7 @@ import {
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { isRecommendDemo, RECOMMEND_DEMO } from './recommendDemoData'
+import { LockIcon } from '@/user/components/icons/LockIcon'
 import styles from './styles/RecommendReveal.module.scss'
 
 const SET_SIZE = 3
@@ -929,29 +930,13 @@ function OffGroup({
   )
 }
 
+/** 셰브런 — Figma icon/blank (3684-7781) 원본 패스. 색은 CSS(currentColor)가 정한다 */
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 14 14" fill="none" aria-hidden>
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
-        d="M5.2 3.2 9 7l-3.8 3.8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" className={className} aria-hidden>
-      <rect x="2.8" y="6" width="8.4" height="6" rx="1.6" fill="currentColor" />
-      <path
-        d="M4.6 6V4.6a2.4 2.4 0 0 1 4.8 0V6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
+        d="M11.3333 7.99661C11.3333 8.11406 11.3115 8.22247 11.2678 8.32185C11.2242 8.42123 11.1587 8.51609 11.0714 8.60644L5.96988 13.7696C5.8258 13.9232 5.6468 14 5.43287 14C5.29317 14 5.16437 13.9639 5.0465 13.8916C4.92862 13.8238 4.83475 13.729 4.7649 13.607C4.69941 13.4896 4.66667 13.3586 4.66667 13.214C4.66667 12.9972 4.74525 12.8052 4.90242 12.6381L9.49967 7.99661L4.90242 3.35517C4.74525 3.18803 4.66667 2.99831 4.66667 2.786C4.66667 2.63693 4.69941 2.50367 4.7649 2.38622C4.83475 2.26877 4.92862 2.17617 5.0465 2.10841C5.16437 2.03614 5.29317 2 5.43287 2C5.6468 2 5.8258 2.07453 5.96988 2.2236L11.0714 7.38679C11.1587 7.47713 11.2242 7.57199 11.2678 7.67137C11.3115 7.77075 11.3333 7.87916 11.3333 7.99661Z"
+        fill="currentColor"
       />
     </svg>
   )

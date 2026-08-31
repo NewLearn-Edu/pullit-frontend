@@ -833,11 +833,11 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 .offStackHeadIco {
   display: inline-flex;
   flex: none;
-  color: #80858b;
 
+  // 시안(3684-7781) 헤더 자물쇠 20px — 색은 아이콘 벡터에 박혀 있다
   svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 }
 

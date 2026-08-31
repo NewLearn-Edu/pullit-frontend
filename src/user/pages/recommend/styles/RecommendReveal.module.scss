@@ -490,12 +490,11 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   color: $color-primary;
 }
 
-// 잠긴 칸의 자물쇠 — 이름과 같은 회색 톤
+// 잠긴 칸의 자물쇠 — 색은 아이콘 벡터(투톤)에 박혀 있어 크기만 정한다
 .cardLockIco {
   flex: none;
   width: calc(16px * var(--rec-type, 1));
   height: calc(16px * var(--rec-type, 1));
-  color: #a6abb1;
 }
 
 // ── "건너뛴 단원" 잠금 스택 (시안 3589-8481 locked-stack) ─────────────────────
@@ -526,7 +525,6 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   flex: none;
   width: calc(13px * var(--rec-type, 1));
   height: calc(13px * var(--rec-type, 1));
-  color: #80858b;
 }
 
 .offStackHeadText {
