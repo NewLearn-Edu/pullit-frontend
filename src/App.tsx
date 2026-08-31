@@ -14,6 +14,7 @@ import PolicyPage from './user/pages/policy/PolicyPage'
 import EarlybirdEntryPage from './user/pages/earlybird/EarlybirdEntryPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
+import SignupCompletePage from '@/user/pages/auth/SignupCompletePage'
 import SignupInfoPage from './user/pages/auth/SignupInfoPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
@@ -76,6 +77,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPromptPage />} />
       <Route path="/signup/info" element={<SignupInfoPage />} />
+      <Route path="/signup-complete" element={<SignupCompletePage />} />
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />

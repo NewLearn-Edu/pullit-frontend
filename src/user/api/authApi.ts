@@ -387,8 +387,14 @@ export interface ProfileCompleteRequest {
  * 전화번호는 SMS 인증(confirmPhoneCode)을 마친 번호여야 한다 (미인증 시 400 U016).
  * 만 14세 미만이면 서버가 계정을 즉시 파기하고 403(U010) 을 반환한다.
  */
-export async function completeProfile(req: ProfileCompleteRequest): Promise<void> {
-  await api.post('/api/users/me/profile', req)
+/** 가입 추가 정보 완료 응답 — welcomeCreditGranted 가 켜지면 축하 뷰(/signup-complete)로 */
+export interface ProfileCompleteResult {
+  welcomeCreditGranted: boolean
+}
+
+export async function completeProfile(req: ProfileCompleteRequest): Promise<ProfileCompleteResult> {
+  const { data } = await api.post<{ data: ProfileCompleteResult | null }>('/api/users/me/profile', req)
+  return data.data ?? { welcomeCreditGranted: false }
 }
 
 /** 전화번호 인증번호 SMS 발송 (60초 쿨다운 — 초과 시 429 U012) */

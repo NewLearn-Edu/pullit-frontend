@@ -409,7 +409,7 @@ export default function SignupInfoPage() {
     setPending(true)
     setError(null)
     try {
-      await completeProfile({
+      const { welcomeCreditGranted } = await completeProfile({
         name: name.trim(),
         birthDate,
         grade: grade!, // readyForConsent 가 null 을 걸러준다
@@ -421,6 +421,11 @@ export default function SignupInfoPage() {
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
       clearSavedSignupForm() // 가입 완료 — 보존해둔 작성 내용 폐기
+      if (welcomeCreditGranted) {
+        // 가입 축하 크레딧 지급 — 축하 뷰가 먼저 뜨고, 확인에서 퍼널/홈을 판정한다
+        navigate('/signup-complete', { replace: true })
+        return
+      }
       // 맛보기 미완 신규 가입자는 퍼널(/start)부터 — 완료 유저만 복귀 경로/홈
       navigate(await resolvePostAuthDestination(), { replace: true })
     } catch (e) {
