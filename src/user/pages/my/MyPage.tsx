@@ -12,7 +12,11 @@ import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/MyPage.module.scss'
 
 const APP_VERSION = 'v1.0.0'
-const SUPPORT_EMAIL = 'newlearnsoft@gmail.com'
+/**
+ * 고객센터 카카오톡 채널 채팅 URL (풀잇 공식 채널 _NVnwX).
+ * /chat 을 열면 채널 추가 + 1:1 채팅으로 이어진다 (모바일은 카카오톡 앱, PC 는 카카오톡 웹챗).
+ */
+const KAKAO_CHANNEL_CHAT_URL = 'http://pf.kakao.com/_NVnwX/chat'
 
 /**
  * 생년월일 → 학년 라벨 (한국 나이 = 올해 − 출생년 + 1).
@@ -248,7 +252,8 @@ export default function MyPage() {
             <MenuItem
               label="고객센터"
               onClick={() => {
-                window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[풀잇 문의]')}`
+                // 카카오톡 채널 채팅으로 연결 (채널 추가 + 1:1 문의)
+                window.open(KAKAO_CHANNEL_CHAT_URL, '_blank', 'noopener,noreferrer')
               }}
               last
             />
