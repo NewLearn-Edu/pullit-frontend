@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { captureInviteCode } from './user/services/referral'
 // Pretendard 셀프호스팅 (dynamic subset) — CDN 통짜 가변 폰트(~2MB) 로드가
 // 매 새로고침마다 시스템 폰트 → Pretendard 교체 깜빡임(FOUT)을 만들어 전환.
 // 유니코드 범위별 분할 파일이라 필요한 글리프만 수십 KB 단위로 즉시 로드된다.
@@ -19,6 +20,10 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('qa-r
   localStorage.removeItem('pullit_trial_progress') // 단원 진단 캐시·오늘 세트 카운터·pendingUnit
   sessionStorage.clear() // 맛보기 결과·풀이 큐·문항 타이머 스냅샷
 }
+
+// 초대 링크(?invite=)로 진입한 경우 코드를 즉시 저장 — 소셜 로그인 리다이렉트로 URL 이 날아가기 전에.
+// 렌더 전에 실행해 어떤 라우트로 들어오든 붙잡는다
+captureInviteCode()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#FF385C" />
+    <script>
+      // 카카오톡 인앱 브라우저 탈출 — OS 기본 브라우저(iOS 사파리 / Android 크롬 등)로 다시 연다.
+      // 인앱 웹뷰는 구글 등 소셜 로그인이 막히는(disallowed_useragent) 문제가 있어 바깥으로 뺀다.
+      // 번들 로드 전에 실행해 웹뷰 깜빡임을 없애고, Safari/Chrome UA 는 KAKAOTALK 을 안 포함하므로 루프가 없다.
+      (function () {
+        if (/KAKAOTALK/i.test(navigator.userAgent || '')) {
+          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href)
+        }
+      })()
+    </script>
     <title>풀잇 · 매일 4문제로 약점 찾기</title>
     <meta
       name="description"

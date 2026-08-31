@@ -14,6 +14,7 @@ import {
   type Grade,
   type PhoneVerifyResult,
 } from '@/user/api/authApi'
+import { clearInviteCode, readInviteCode } from '@/user/services/referral'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { finishLogin, resolvePostAuthDestination } from '@/user/services/finishLogin'
 import { useUserStore } from '@/user/stores/userStore'
@@ -417,13 +418,16 @@ export default function SignupInfoPage() {
         agreeTerms: true,
         agreePrivacy: true,
         agreeMarketing, // 선택 — 유저가 직접 체크한 값 그대로 (버튼이 자동으로 켜지 않음)
+        inviteCode: readInviteCode(), // 초대 링크로 들어온 가입이면 초대자에게 +5 (없으면 null)
       })
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
       clearSavedSignupForm() // 가입 완료 — 보존해둔 작성 내용 폐기
+      clearInviteCode() // 초대 처리 완료 — 재사용 방지로 저장한 코드 폐기
       if (welcomeCreditGranted) {
-        // 가입 축하 크레딧 지급 — 축하 뷰가 먼저 뜨고, 확인에서 퍼널/홈을 판정한다
-        navigate('/signup-complete', { replace: true })
+        // 가입 축하 크레딧 지급 — 축하 뷰가 먼저 뜨고, 확인에서 퍼널/홈을 판정한다.
+        // state.granted 는 축하 뷰의 1회용 통행권 — URL 직접 진입을 막는다
+        navigate('/signup-complete', { replace: true, state: { granted: true } })
         return
       }
       // 맛보기 미완 신규 가입자는 퍼널(/start)부터 — 완료 유저만 복귀 경로/홈

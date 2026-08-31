@@ -380,6 +380,8 @@ export interface ProfileCompleteRequest {
   agreePrivacy: boolean
   /** [선택] 마케팅 정보 수신 동의 — 유저가 직접 체크한 경우에만 true */
   agreeMarketing: boolean
+  /** [선택] 초대 코드 — 초대 링크(?invite=)로 들어와 가입한 경우 실린다 (초대자 +5 지급 근거) */
+  inviteCode?: string | null
 }
 
 /**
@@ -395,6 +397,17 @@ export interface ProfileCompleteResult {
 export async function completeProfile(req: ProfileCompleteRequest): Promise<ProfileCompleteResult> {
   const { data } = await api.post<{ data: ProfileCompleteResult | null }>('/api/users/me/profile', req)
   return data.data ?? { welcomeCreditGranted: false }
+}
+
+/** 내 초대 코드 조회 — 없으면 서버가 이때 발급. 초대 링크(pullit.co.kr/start?invite=)에 실린다 */
+export async function fetchInviteCode(): Promise<string> {
+  const { data } = await api.get<{ data: { inviteCode: string } | null }>('/api/users/me/invite-code')
+  return data.data?.inviteCode ?? ''
+}
+
+/** 초대하기 버튼 누름 기록 — 공유 발동마다 1회 (초대 "시도" 집계용). 실패해도 공유는 진행 */
+export async function recordInviteShared(): Promise<void> {
+  await api.post('/api/users/me/invite-shared')
 }
 
 /** 전화번호 인증번호 SMS 발송 (60초 쿨다운 — 초과 시 429 U012) */
