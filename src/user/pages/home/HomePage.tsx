@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { LockIcon } from '@/user/components/icons/LockIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { RecommendIcon } from '@/user/components/icons/RecommendIcon'
 import { UserNav } from '@/user/components/UserNav'
@@ -564,7 +565,7 @@ export default function HomePage() {
                           >
                             <span className={styles.unitCardNameLocked}>{offRow.name}</span>
                             <span className={styles.unitLockIcon} aria-label="잠김">
-                              <LockIcon />
+                              <LockIcon size={28} />
                             </span>
                           </button>
                         ))}
@@ -907,8 +908,11 @@ export default function HomePage() {
             {!skipMode ? (
               <>
                 <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
+                  {/* 건너뛴(off) 구간 재개 진입점이면 재진단 변형 (Figma 3575-7722) */}
                   <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                    {startSheet.name} 약점 진단하기
+                    {startSheet.state === 'off'
+                      ? '건너뛴 단원 다시 진단하기'
+                      : `${startSheet.name} 약점 진단하기`}
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
                     진단을 끝내면 {startSheet.name} 그래프 결과가 채워져
@@ -964,11 +968,18 @@ export default function HomePage() {
                     disabled={starting}
                     className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
-                    {starting ? '시작 중…' : resumable ? '이어서 풀기' : '시작하기'}
+                    {starting
+                      ? '시작 중…'
+                      : resumable
+                        ? '이어서 풀기'
+                        : startSheet.state === 'off'
+                          ? '추천문제 풀기'
+                          : '시작하기'}
                   </button>
                   {/* 이어풀기 상태에선 "안배웠어요" 숨김 — 이미 크레딧 내고 시작한 단원을
-                      "안 배웠다"며 잠그는 건 모순이라 이어서 풀기만 남긴다 */}
-                  {!resumable && (
+                      "안 배웠다"며 잠그는 건 모순. 건너뛴 구간 재진단(off)도 마찬가지 —
+                      이미 건너뛴 단원을 또 건너뛰는 링크는 순환이라 뺀다 (3575-7722) */}
+                  {!resumable && startSheet.state !== 'off' && (
                     <button
                       type="button"
                       onClick={() => setSkipMode(true)}
@@ -1396,20 +1407,6 @@ function ChevronIcon() {
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="3" y="7" width="10" height="6.5" rx="1.6" fill="currentColor" />
-      <path
-        d="M5.2 7V5.4a2.8 2.8 0 0 1 5.6 0V7"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        fill="none"
       />
     </svg>
   )
