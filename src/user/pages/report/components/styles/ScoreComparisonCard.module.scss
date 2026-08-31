@@ -56,201 +56,166 @@ $fill: #f0f1f3; // black/100
   @include hover { background: #e5e7ea; }
 }
 
-// ── 단원별 bullet chart ─────────────────────────────────────────────────────
-// 가로 막대 = 내 점수, 세로 마커 = 풀잇 평균. 3개 대분류를 한 화면에서 비교한다.
+// ── 소단원별 세로 쌍막대 (Figma 3667-6294) ──────────────────────────────────
+// 그룹 = [풀잇 평균(회색) | 내 점수(빨강)] 두 기둥. 진단한 소단원만 그룹이 되고,
+// 넘치면 카드 안에서 가로 스크롤. 잠금 행 없음 — 미진단은 아예 등장하지 않는다.
 
-.rows {
+// 대분류 칩 — 활성 검정 채움 · 비활성 흰 채움 + black/200 보더 (시안 그대로)
+.chips {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  margin-top: 4px;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
 }
 
-.row {
+.chip {
+  @include button-reset;
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid $line;
+  background: $color-canvas;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  color: $ink-900;
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.chipActive {
+  border-color: $chip-dark;
+  background: $chip-dark;
+  color: #fff;
+}
+
+.groups {
   display: flex;
+  // 그룹 수가 적으면 영역 전체에 균등 분배(가운데 정렬 효과), 넘치면 24px 최소
+  // 간격으로 가로 스크롤 (space-between 은 넘칠 때 flex-start 로 안전하게 떨어진다)
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  padding-top: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+// 그룹 = 받침선 위 쌍막대 + 아래 단원명 캡션.
+// 받침선이 그룹마다 끊겨 "이 두 기둥이 한 세트"라는 걸 눈이 바로 묶는다
+.group {
+  display: flex;
+  flex: none;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
-.rowHead {
+// 차트 영역 고정 높이 — 100점(막대 140px) + 배지(25px) + 간격(8px).
+// 점수와 무관하게 카드 높이가 늘고 줄지 않는다: 저점은 빈 공간 위 작은 막대,
+// 100점은 꼭대기까지 찬다
+.pair {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: $space-sm;
+  gap: 8px;
+  align-items: flex-end;
+  height: 173px;
+  padding: 0 10px 0;
+  border-bottom: 2px solid #f0f1f3; // 받침선 — 저점 막대도 축 위에 서 있게
 }
 
-.name {
-  font-size: 14px;
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end; // 고정 프레임 바닥부터 쌓기 — 배지가 막대 머리를 따라간다
+  gap: 8px;
+  height: 100%;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 9px;
+  background: $fill;
+  font-size: 10px;
+  font-weight: $fw-medium;
+  color: $muted;
+  white-space: nowrap;
+}
+
+// 내 점수 배지 — 평균보다 한 단계 크게 (12px/600) 시선 우선
+.badgeMine {
+  background: $tint;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  color: $color-primary;
+}
+
+.bar {
+  width: 15px;
+  border-radius: 6px 6px 0 0;
+  background: $line;
+  transform-origin: bottom;
+  animation: bar-rise 500ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+.barMine { background: $color-primary; }
+
+@keyframes bar-rise {
+  from { transform: scaleY(0); }
+}
+
+// 미진단 — 막대 없이 텍스트만 (받침선 위에 낮게)
+.undiagnosed {
+  padding-bottom: 6px;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  color: #a6abb1; // black/400
+  white-space: nowrap;
+}
+
+.groupName {
+  font-size: 11px;
   font-weight: $fw-medium;
   color: $label;
   white-space: nowrap;
+  max-width: 96px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.rowRight {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
+// 범례 — "풀잇 평균" 라벨을 그룹마다 반복하지 않고 여기 한 번만
+.groupNameGhost {
+  color: #a6abb1; // black/400 — 미진단은 이름도 한 톤 연하게
 }
 
-.score {
-  font-size: 15px;
-  font-weight: $fw-semibold;
-  color: $ink-900;
-  font-variant-numeric: tabular-nums;
-}
-
-.delta {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 7px;
-  border-radius: $radius-full;
-  font-size: 11px;
-  font-weight: $fw-semibold;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-// 평균 이상은 레드, 미만은 중립 회색 — 학습 앱이라 하락을 질책 색으로 칠하지 않는다
-.deltaUp {
-  background: $tint;
-  color: $color-primary;
-}
-
-.deltaDown {
-  background: $fill;
-  color: $muted;
-}
-
-// 마커 필(평균값)이 아래로 붙으므로 그만큼 자리를 비워 둔다
-.trackWrap {
-  position: relative;
-  padding-bottom: 22px;
-}
-
-.track {
-  height: 12px;
-  border-radius: $radius-full;
-  background: #f2f3f5;
-  box-shadow: inset 0 1px 2px rgba(18, 20, 23, 0.04); // 홈이 눌린 트랙 질감
-}
-
-.fill {
-  position: relative;
-  height: 100%;
-  border-radius: $radius-full;
-  // 왼쪽은 연하게 시작해 끝점으로 갈수록 진해진다 — 시선이 값 끝에 모이게
-  background: linear-gradient(90deg, #ff8598 0%, $color-primary 100%);
-  box-shadow: 0 2px 6px rgba(255, 56, 92, 0.28);
-  // 왼쪽에서 차오르는 연출 — 행마다 순차 지연
-  transform-origin: left;
-  animation: fill-grow 620ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
-
-  @media (prefers-reduced-motion: reduce) { animation: none; }
-}
-
-// 평균 미만 — 같은 계열이되 채도를 낮춰 "아직 못 미친다"를 색으로도 전달
-.fillBelow {
-  background: linear-gradient(90deg, #ffd4db 0%, #ffa4b2 100%);
-  box-shadow: 0 2px 6px rgba(255, 164, 178, 0.3);
-}
-
-@keyframes fill-grow {
-  from { transform: scaleX(0); }
-}
-
-// 막대 끝점 — 흰 코어 도트. 채움 애니메이션과 함께 커지며 자리 잡는다
-.fillDot {
-  position: absolute;
-  top: 50%;
-  right: 3px;
-  width: 6px;
-  height: 6px;
-  border-radius: $radius-full;
-  background: #fff;
-  transform: translateY(-50%);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
-}
-
-// 평균 마커 — 트랙을 살짝 넘는 잉크 세로선 (라운드 노치)
-.marker {
-  position: absolute;
-  top: -3px;
-  width: 2.5px;
-  height: 18px;
-  border-radius: 2px;
-  background: $chip-dark;
-  transform: translateX(-50%);
-  box-shadow: 0 0 0 2px $color-canvas; // 채움 위를 지나도 또렷하게
-}
-
-// 평균값 필 — 숫자만 덜렁 있던 라벨을 "평균 51" 미니 필로
-.markerPill {
-  position: absolute;
-  top: 20px;
-  padding: 2px 7px;
-  border-radius: $radius-full;
-  background: $fill;
-  font-size: 10px;
-  font-weight: $fw-semibold;
-  font-variant-numeric: tabular-nums;
-  color: $label;
-  white-space: nowrap;
-}
-
-// 마커 의미 설명 — 행마다 반복하지 않고 카드에 한 번만
 .legend {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 10px;
   font-size: 11px;
-  color: $muted;
-}
-
-.legendMarker {
-  display: block;
-  width: 2.5px;
-  height: 11px;
-  border-radius: 2px;
-  background: $chip-dark;
-}
-
-// ── 잠긴 대단원 — 맛보기 진단을 끝내야 비교 공개 ────────────────────────────
-
-.rowLocked .name {
-  color: $muted;
-}
-
-.lockIcon {
-  @include flex-center;
-  color: #c4c9ce;
-}
-
-// 잠긴 트랙 — 옅은 사선 스트라이프 (채움 없음)
-.trackLocked {
-  background: repeating-linear-gradient(
-    135deg,
-    #f2f3f5 0 6px,
-    #eaecef 6px 12px
-  );
-  box-shadow: none;
-}
-
-.lockHint {
-  position: absolute;
-  top: 20px;
-  left: 0;
-  font-size: 10px;
   font-weight: $fw-medium;
-  color: #a6abb1;
-  white-space: nowrap;
+  color: $muted;
 }
 
-// 데이터 없음 — 아직 푼 문제가 없는 과목
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: $line;
+}
+
+.legendDotMine { background: $color-primary; }
+
 .empty {
   display: flex;
   flex-direction: column;

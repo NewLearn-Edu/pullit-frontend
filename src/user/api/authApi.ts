@@ -353,6 +353,8 @@ export interface MeResult {
   nicknameChangedAt: string | null
   /** 가입 소셜 — 애플 가입자는 이름 칸을 수정할 수 없다 (Apple 정책). 게스트/미연동이면 null */
   provider: 'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null
+  /** 가입 시각 (ISO) — 리포트 잔디의 시작 기준(가입 월) */
+  joinedAt: string | null
 }
 
 /** 학년/신분 — 서버 common.enums.Grade 와 동일 값 */

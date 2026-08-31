@@ -1,4 +1,4 @@
-import { type Subject } from '@/user/stores/trialStore'
+import { type DailyActivity } from '@/user/api/attemptApi'
 
 /**
  * 학습 리포트 데이터 (Figma 2678-8990)
@@ -6,30 +6,6 @@ import { type Subject } from '@/user/stores/trialStore'
  * POC 목 데이터 — 결정적(deterministic)으로 생성해 렌더마다 값이 흔들리지 않는다.
  * 실 API 연동 시 이 파일의 build* 함수만 서버 응답 매핑으로 교체하면 된다.
  */
-
-// ── 평균 점수 비교 ───────────────────────────────────────────────────────────
-
-export interface ScoreComparison {
-  /** 풀잇 전체 평균 (0~100) */
-  average: number
-  /** 내 점수 (0~100) */
-  mine: number
-}
-
-/** 대분류(칩) → 비교 점수. 서버 연동 시 GET /api/attempts/skill-scores 집계로 대체 */
-const SCORE_BY_CATEGORY: Record<string, ScoreComparison> = {
-  대수: { average: 51, mine: 76 },
-  '미적분 I': { average: 58, mine: 44 },
-  '확률과 통계': { average: 47, mine: 62 },
-  '중심 내용 파악': { average: 55, mine: 71 },
-  '논리 구조 이해': { average: 49, mine: 38 },
-  '종합·추론 능력': { average: 52, mine: 58 },
-  '정보 확인 능력': { average: 61, mine: 66 },
-}
-
-export function getScoreComparison(category: string): ScoreComparison | null {
-  return SCORE_BY_CATEGORY[category] ?? null
-}
 
 // ── 학습 연속일 (히트맵) ─────────────────────────────────────────────────────
 
@@ -44,50 +20,76 @@ export interface HeatmapDay {
 /** 한 주(일~토 7칸) — GitHub 잔디와 동일하게 열 = 주, 행 = 요일 */
 export type HeatmapWeek = HeatmapDay[]
 
-/** 1년 = 53주 (GitHub 컨트리뷰션 그래프와 동일한 범위) */
+/** 최대 1년 = 53주 (GitHub 컨트리뷰션 그래프와 동일한 상한) */
 export const HEATMAP_WEEKS = 53
 
-/** 날짜 시드 기반 의사난수 — 같은 날짜면 항상 같은 값 (렌더 흔들림 방지) */
-function seededLevel(date: Date): HeatmapDay['level'] {
-  const seed = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate()
-  const x = Math.sin(seed) * 10000
-  const r = x - Math.floor(x)
-  if (r < 0.22) return 0
-  if (r < 0.45) return 1
-  if (r < 0.68) return 2
-  if (r < 0.87) return 3
+/**
+ * 그날 푼 문제 수 → 색 단계. 1세트 = 3문제라 세트 단위로 딱 떨어진다:
+ * 1세트 이하 = 1, 2세트 = 2, 3세트 = 3, 4세트 이상 = 4.
+ */
+export function activityLevel(count: number): HeatmapDay['level'] {
+  if (count <= 0) return 0
+  if (count <= 3) return 1
+  if (count <= 6) return 2
+  if (count <= 9) return 3
   return 4
 }
 
-/**
- * 최근 1년치 잔디 — 이번 주 토요일을 마지막 열로 하는 53주.
- * 각 열은 일~토 7칸이고, 미래 날짜는 빈 자리로 남긴다.
- */
-export function buildHeatmap(today: Date): HeatmapWeek[] {
-  const end = new Date(today)
-  end.setHours(0, 0, 0, 0)
-  end.setDate(end.getDate() + (6 - end.getDay())) // 이번 주 토요일
+/** Date → 서버 날짜 키 "YYYY-MM-DD" (로컬 기준 — toISOString 은 UTC 라 하루 밀린다) */
+export function dateKey(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${m}-${d}`
+}
 
-  const start = new Date(end)
-  start.setDate(start.getDate() - (HEATMAP_WEEKS * 7 - 1))
+/**
+ * 잔디 — 항상 53주(1년) 판을 통째로 그린다 (GitHub 컨트리뷰션 그래프 방식).
+ *
+ * 가입 1년 미만이면 판의 시작이 가입 월 1일이 든 주 — 오늘 이후는 빈 칸으로
+ * 남아 있다가 시간이 지나며 채워진다. 가입 1년이 넘으면 이번 주가 마지막 열인
+ * 최근 1년 창으로 굴러간다. joinedAt 이 없으면(로딩 전·게스트) 최근 1년 창.
+ * counts = 서버 일별 풀이 수 맵 (푼 날만 있음, 없는 날 = 0).
+ */
+export function buildHeatmap(
+  today: Date,
+  counts: Record<string, number>,
+  joinedAt?: string | null,
+): HeatmapWeek[] {
+  // 기본(최근 1년 창)의 시작 — 이번 주 토요일에서 53주를 거슬러 올라간 일요일
+  const trailingStart = new Date(today)
+  trailingStart.setHours(0, 0, 0, 0)
+  trailingStart.setDate(trailingStart.getDate() + (6 - trailingStart.getDay()) - (HEATMAP_WEEKS * 7 - 1))
+
+  let start = trailingStart
+  if (joinedAt) {
+    const joined = new Date(joinedAt)
+    const monthStart = new Date(joined.getFullYear(), joined.getMonth(), 1)
+    monthStart.setDate(monthStart.getDate() - monthStart.getDay()) // 그 주 일요일
+    if (monthStart.getTime() > trailingStart.getTime()) start = monthStart
+  }
 
   return Array.from({ length: HEATMAP_WEEKS }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => {
       const date = new Date(start)
       date.setDate(start.getDate() + w * 7 + d)
       const future = date.getTime() > today.getTime()
-      return { date, level: future ? (0 as const) : seededLevel(date), future }
+      return {
+        date,
+        level: future ? (0 as const) : activityLevel(counts[dateKey(date)] ?? 0),
+        future,
+      }
     }),
   )
 }
 
 /**
  * 열(주)마다 표시할 월 라벨 — 그 달의 첫 주에만 값이 있고 나머지는 null.
- * 첫 열은 잘린 주라 라벨을 붙이지 않는다 (라벨이 왼쪽으로 삐져나오는 것 방지).
+ * 첫 열은 시작 월(가입 월) 라벨을 붙이되, 두어 열 안에서 달이 바뀌면
+ * 라벨끼리 겹치므로 그때는 생략한다.
  */
 export function buildMonthLabels(weeks: HeatmapWeek[]): Array<number | null> {
   let prev = -1
-  return weeks.map((week, i) => {
+  const labels = weeks.map((week, i) => {
     const month = week[0].date.getMonth()
     if (i === 0) {
       prev = month
@@ -99,6 +101,12 @@ export function buildMonthLabels(weeks: HeatmapWeek[]): Array<number | null> {
     }
     return null
   })
+  // 첫 열 = 시작 주 — 주 후반(토요일) 기준 달이 그 열의 대표 달이다
+  const firstMonth = weeks[0]?.[6].date.getMonth()
+  if (firstMonth != null && labels[1] == null && labels[2] == null) {
+    labels[0] = firstMonth + 1
+  }
+  return labels
 }
 
 /**
@@ -125,20 +133,20 @@ export function countActiveDays(weeks: HeatmapWeek[]): number {
 
 // ── 이번 주 학습 (라인 차트) ─────────────────────────────────────────────────
 
-export type WeeklyMetric = 'solved' | 'accuracy' | 'minutes'
+export type WeeklyMetric = 'solved' | 'minutes'
 
 export interface WeeklyMetricConfig {
   key: WeeklyMetric
   label: string
   /** 툴팁·값 표기 단위 */
   unit: string
-  /** y축 상한 — 라인 높이 계산 기준 */
+  /** y축 상한 최솟값 — 실제 상한은 max(이 값, 이번 주 최댓값) */
   max: number
 }
 
+/** 시안 3368-9029 — 지표 2개 (정답률은 빠졌다) */
 export const WEEKLY_METRICS: WeeklyMetricConfig[] = [
-  { key: 'solved', label: '푼 문제', unit: '문제', max: 12 },
-  { key: 'accuracy', label: '정답률', unit: '%', max: 100 },
+  { key: 'solved', label: '푼 문제 수', unit: '문제', max: 12 },
   { key: 'minutes', label: '학습 시간', unit: '분', max: 60 },
 ]
 
@@ -148,34 +156,33 @@ export interface WeeklyPoint {
   values: Record<WeeklyMetric, number>
 }
 
-const WEEKLY_MOCK: Record<Subject, Array<Record<WeeklyMetric, number>>> = {
-  math: [
-    { solved: 3, accuracy: 33, minutes: 9 },
-    { solved: 5, accuracy: 60, minutes: 16 },
-    { solved: 6, accuracy: 66, minutes: 18 },
-    { solved: 10, accuracy: 80, minutes: 31 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-  ],
-  english: [
-    { solved: 2, accuracy: 50, minutes: 7 },
-    { solved: 4, accuracy: 50, minutes: 13 },
-    { solved: 3, accuracy: 66, minutes: 11 },
-    { solved: 7, accuracy: 71, minutes: 22 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-    { solved: 0, accuracy: 0, minutes: 0 },
-  ],
-}
-
 /**
- * 이번 주(일~토) 일별 지표. 오늘 이후는 데이터 없음(null)으로 잘라
- * 라인이 오늘까지만 그려지게 한다 (시안: 수요일까지 그려진 상태).
+ * 이번 주(일~토) 일별 지표 — 누적이 아니라 그날그날의 값.
+ * 서버 일별 학습량(daily-activity)에서 이번 주 구간만 뽑는다.
+ * 오늘 이후는 null 로 잘라 라인이 오늘까지만 그려지게 한다.
  */
-export function buildWeekly(subject: Subject, today: Date): Array<WeeklyPoint | null> {
-  const source = WEEKLY_MOCK[subject]
-  return source.map((values, day) => (day > today.getDay() ? null : { day, values }))
+export function buildWeekly(
+  activity: DailyActivity[],
+  today: Date,
+): Array<WeeklyPoint | null> {
+  const byDate = new Map(activity.map((d) => [d.date, d]))
+  const sunday = new Date(today)
+  sunday.setHours(0, 0, 0, 0)
+  sunday.setDate(sunday.getDate() - sunday.getDay())
+
+  return Array.from({ length: 7 }, (_, day) => {
+    if (day > today.getDay()) return null
+    const date = new Date(sunday)
+    date.setDate(sunday.getDate() + day)
+    const found = byDate.get(dateKey(date))
+    return {
+      day,
+      values: {
+        solved: found?.count ?? 0,
+        minutes: found ? Math.round(found.timeSpentMs / 60000) : 0,
+      },
+    }
+  })
 }
 
 export const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']

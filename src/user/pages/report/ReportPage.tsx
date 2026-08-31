@@ -4,22 +4,17 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { Skeleton } from '@/user/components/Skeleton'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
-import { ENGLISH_ABILITIES } from '@/user/data/englishAbilities'
+import { fetchDailyActivity, type DailyActivity } from '@/user/api/attemptApi'
 import { ScoreComparisonCard } from './components/ScoreComparisonCard'
 import { StreakHeatmapCard } from './components/StreakHeatmapCard'
 import { WeeklyLearningCard } from './components/WeeklyLearningCard'
 import styles from './styles/ReportPage.module.scss'
-
-/** 비교 대상 — 수학은 대분류, 영어는 독해 능력 4분류 */
-const CATEGORIES: Record<Subject, string[]> = {
-  math: ['대수', '미적분 I', '확률과 통계'],
-  english: ENGLISH_ABILITIES.map((a) => a.name),
-}
 
 /**
  * 학습 리포트 (/report · Figma 2678-8990)
@@ -44,6 +39,20 @@ export default function ReportPage() {
 
   // 오늘 날짜는 한 번만 고정 — 렌더마다 새 Date 를 만들면 자식 useMemo 가 매번 무효화된다
   const today = useMemo(() => new Date(), [])
+
+  // 일별 학습량 — 잔디(1년)와 이번 주 차트가 같은 데이터를 나눠 쓴다.
+  // 도착 전에는 두 카드 자리에 스켈레톤 (빈 잔디 → 채움 깜빡임 방지).
+  // 실패해도 게이트는 열어 빈 상태로나마 그린다 (스켈레톤에 갇히지 않게)
+  const [activity, setActivity] = useState<DailyActivity[]>([])
+  const [activityLoaded, setActivityLoaded] = useState(false)
+  useEffect(() => {
+    fetchDailyActivity()
+      .then(setActivity)
+      .catch(() => {})
+      .finally(() => setActivityLoaded(true))
+  }, [])
+  // joinedAt(잔디 시작 기준)까지 확정된 뒤에 그린다 — 53주 → 가입 월 판 재계산 점프 방지
+  const cardsReady = activityLoaded && sessionStatus === 'ready'
 
   return (
     <div className={styles.page}>
@@ -80,9 +89,18 @@ export default function ReportPage() {
         <div className={styles.content}>
           <h1 className={styles.title}>학습 리포트</h1>
 
-          <ScoreComparisonCard subject={subject} categories={CATEGORIES[subject]} />
-          <StreakHeatmapCard today={today} />
-          <WeeklyLearningCard subject={subject} today={today} />
+          <ScoreComparisonCard subject={subject} />
+          {cardsReady ? (
+            <>
+              <StreakHeatmapCard today={today} activity={activity} joinedAt={me?.joinedAt} />
+              <WeeklyLearningCard activity={activity} today={today} />
+            </>
+          ) : (
+            <>
+              <Skeleton style={{ height: 272 }} />
+              <Skeleton style={{ height: 336 }} />
+            </>
+          )}
         </div>
       </main>
     </div>
