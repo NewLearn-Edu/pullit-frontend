@@ -1003,3 +1003,28 @@
   background: var(--color-fill-hover);
   font-size: 13px; font-weight: 600; color: var(--table-fg);
 }
+
+/* ── 평균 관리 (UnitAveragesPage) ───────────────────────────── */
+/* "실제 88점"처럼 내용 길이가 변하는 배지 — 고정 80px 대신 내용 맞춤 */
+.ua-badge-fit { width: auto; min-width: 80px; padding: 0 12px; }
+.ua-seed-input {
+  width: 76px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-canvas);
+  color: var(--table-fg);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.ua-seed-input::-webkit-outer-spin-button,
+.ua-seed-input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+.ua-seed-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 56, 92, 0.12);
+}

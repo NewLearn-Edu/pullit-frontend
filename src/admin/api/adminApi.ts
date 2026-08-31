@@ -554,3 +554,44 @@ export async function fetchPhoneVerifications(params: {
   )
   return data.data
 }
+
+// ---------------------------------------------------------------------------
+// 소단원 평균 관리 (리포트 노출 평균)
+// ---------------------------------------------------------------------------
+
+/**
+ * 소단원 1개의 평균 현황 — 실제 평균(진단 실측)과 노출 평균(시드)을 나란히.
+ * 표본이 minSample 이상 모이면 노출이 자동으로 실측(REAL)으로 전환된다.
+ */
+export interface AdminUnitAverage {
+  unitCode: string
+  unitLarge: string
+  skillNode: string
+  /** 유저별 최신 진단 기준 실측 평균 — 표본 0이면 null */
+  realAverage: number | null
+  userCount: number
+  /** 어드민이 관리하는 시드값 (표본 부족 시 이 값이 노출됨) */
+  seedScore: number
+  /** 현재 유저 리포트에 노출 중인 값 */
+  exposedScore: number
+  source: 'SEED' | 'REAL'
+  minSample: number
+}
+
+export async function fetchAdminUnitAverages(
+  subject: 'MATH' | 'ENGLISH',
+): Promise<AdminUnitAverage[]> {
+  const { data } = await adminApi.get<BaseResponse<AdminUnitAverage[]>>(
+    '/api/admin/unit-averages',
+    { params: { subject } },
+  )
+  return data.data
+}
+
+/** 노출(시드) 평균 수정 — 0~100 */
+export async function updateAdminUnitAverageSeed(
+  unitCode: string,
+  seedScore: number,
+): Promise<void> {
+  await adminApi.put(`/api/admin/unit-averages/${unitCode}`, { seedScore })
+}

@@ -13,6 +13,7 @@ import PhoneVerificationsPage from './pages/PhoneVerificationsPage'
 import CreditsPage from './pages/CreditsPage'
 import PoliciesPage from './pages/PoliciesPage'
 import VisitStatsPage from './pages/VisitStatsPage'
+import UnitAveragesPage from './pages/UnitAveragesPage'
 import './admin.css'
 
 /**
@@ -57,6 +58,7 @@ export default function AdminRoutes() {
         <Route path="credits" element={<CreditsPage />} />
         <Route path="policies" element={<PoliciesPage />} />
         <Route path="stats/visits" element={<VisitStatsPage />} />
+        <Route path="stats/unit-averages" element={<UnitAveragesPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>
