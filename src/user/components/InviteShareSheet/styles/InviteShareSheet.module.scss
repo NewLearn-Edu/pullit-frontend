@@ -1,0 +1,111 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// InviteShareSheet · 초대 공유 시트 (카카오톡 / 링크복사 명시 선택)
+// -----------------------------------------------------------------------------
+
+.dim {
+  position: fixed;
+  inset: 0;
+  min-width: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  background: rgba(0, 0, 0, 0.35);
+  // 크레딧 부족 팝업(z 80) 위에서 뜬다
+  z-index: 90;
+  animation: share-dim-in 200ms ease;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 24px 32px;
+  border-radius: 24px;
+  background: $color-canvas;
+  filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.21));
+  animation: share-card-in 240ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: $fw-bold;
+  color: #121417;
+}
+
+.close {
+  @include button-reset;
+  @include flex-center;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  font-size: 24px;
+  line-height: 1;
+  color: #5e6368;
+}
+
+.options {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.option {
+  @include button-reset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  @include flex-center;
+  width: 64px;
+  height: 64px;
+  border-radius: $radius-full;
+  transition: transform 120ms ease;
+
+  .option:active & {
+    transform: scale(0.94);
+  }
+}
+
+.iconKakao {
+  background: #fee500;
+}
+
+.iconLink {
+  background: #f0f1f3;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: $fw-semibold;
+  color: #121417;
+}
+
+@keyframes share-dim-in {
+  from { opacity: 0; }
+}
+
+@keyframes share-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
