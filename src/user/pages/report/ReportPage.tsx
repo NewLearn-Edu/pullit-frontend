@@ -6,7 +6,6 @@ import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { Skeleton } from '@/user/components/Skeleton'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
-import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
@@ -73,14 +72,6 @@ export default function ReportPage() {
                 className={styles.iconCircle}
               >
                 <WrongNoteIcon size={18} />
-              </button>
-              <button
-                type="button"
-                aria-label="마이페이지"
-                onClick={() => navigate('/my')}
-                className={styles.iconCircle}
-              >
-                <ProfileIcon size={18} />
               </button>
             </>
           }

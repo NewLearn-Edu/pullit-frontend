@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
-import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
@@ -79,14 +78,6 @@ export default function WrongNotePage() {
               <span className={clsx(styles.iconCircle, styles.iconCircleActive)} aria-hidden>
                 <WrongNoteIcon filled />
               </span>
-              <button
-                type="button"
-                aria-label="마이페이지"
-                onClick={() => navigate('/my')}
-                className={styles.iconCircle}
-              >
-                <ProfileIcon size={18} />
-              </button>
             </>
           }
         />
