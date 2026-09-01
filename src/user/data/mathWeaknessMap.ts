@@ -85,7 +85,6 @@ export const MATH_MAP_EDGES: MapEdge[] = [
   // 점선은 타깃의 왼쪽 옆면으로 진입한다 — 아래 렌더러의 간접 라우팅 참고
   { from: 'exp-log-fn', to: 'derivative-use', indirect: true },
   { from: 'sine-cosine', to: 'derivative-use', indirect: true },
-  { from: 'induction', to: 'perm-comb', indirect: true, fromSide: 'right' },
 ]
 
 /** 월드 좌표 경계 (여백 포함) — fit/클램프 계산용 */

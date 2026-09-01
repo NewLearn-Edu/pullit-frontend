@@ -8,7 +8,6 @@ import MyPage from './user/pages/my/MyPage'
 import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
-import UnlockProgressPage from './user/pages/unlock/UnlockProgressPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
 import PolicyPage from './user/pages/policy/PolicyPage'
 import EarlybirdEntryPage from './user/pages/earlybird/EarlybirdEntryPage'
@@ -66,7 +65,6 @@ export default function App() {
       <Route path="/my/profile" element={<ProfileEditPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
-        <Route path="/unlock/:subject/:slug" element={<UnlockProgressPage />} />
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}
         <Route path="/unit-result/:subject/:unitName" element={<UnitResultPage />} />
         {/* 자유 풀이 — 홈·오답노트에서만 진입하므로 회원 영역과 같은 게이트 */}
