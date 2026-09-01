@@ -41,8 +41,25 @@
       integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV"
       crossorigin="anonymous"
     />
+    <!-- Meta Pixel — init 만 여기서. PageView 는 SPA 라우트 이동마다 React 쪽
+         (services/metaPixel.ts)이 쏜다 — 여기서도 쏘면 첫 페이지가 이중 집계된다.
+         로컬 개발(localhost·사설 IP)에서는 로드하지 않아 카운트를 오염시키지 않는다. -->
+    <script>
+      (function () {
+        if (/^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(location.hostname)) return
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+        document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '3838902539584016');
+      })()
+    </script>
   </head>
   <body>
+    <noscript><img height="1" width="1" style="display:none" alt=""
+      src="https://www.facebook.com/tr?id=3838902539584016&ev=PageView&noscript=1"
+    /></noscript>
     <script>
       // 다크 랜딩('/') 흰 화면 플래시 방지 — JS 번들 로드 전에 배경을 먼저 검게
       if (location.pathname === '/') document.documentElement.style.background = '#000'
