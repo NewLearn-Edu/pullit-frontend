@@ -316,15 +316,18 @@ $red-tint: #fff1f2;
 
 // ── 범례 · 줌 컨트롤 ─────────────────────────────────────────────────────────
 
-// 상단 헤더(64px) 바로 아래 좌측 — 지도를 읽기 전에 기호부터 보인다 (2026-09-01)
+// 좌하단 — 우하단 줌 컨트롤과 같은 높이에 정렬
 .legend {
   position: absolute;
-  top: 76px;
+  bottom: calc(var(--nav-bottom-h) + 20px);
   left: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   pointer-events: none;
+
+  // 웹은 하단 네비 대신 사이드바 — 컨트롤과 동일하게 바닥 기준
+  @include desktop-up { bottom: 20px; }
 }
 
 .legendRow {
