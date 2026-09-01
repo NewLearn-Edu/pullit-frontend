@@ -558,7 +558,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const solo = phase === 'lift' || phase === 'expand' || phase === 'ready'
   const revealed = phase === 'expand' || phase === 'ready'
   const badge = unitBadge(rec, target?.row)
-  const reason = rec?.reason?.trim() || defaultReason(target?.row)
+  const reason = defaultReason(target?.row)
+  // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
 
   return (
@@ -590,10 +591,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
             </p>
           </div>
           <div className={clsx(styles.titleLayer, !revealed && styles.titleLayerOut)}>
-            <h1 className={styles.title}>지금 풀어야할 곳</h1>
-            <p className={styles.subtitle}>
-              최근 학습기록으로 지금 풀어야 할 {SET_SIZE}문제 준비했어
-            </p>
+            <h1 className={styles.title}>지금 필요한 추천문제</h1>
+            <p className={styles.subtitle}>현재 학습 상태에 맞춰 문제를 골랐어</p>
           </div>
         </div>
 
@@ -715,6 +714,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                 </div>
               </div>
               <div className={styles.detailFoot}>
+                <span className={styles.detailReasonLabel}>추천 기준</span>
                 <p className={styles.detailReason}>{reason}</p>
               </div>
             </div>
@@ -725,7 +725,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
           <div className={clsx(styles.stats, revealed && styles.statsIn)}>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>문제</span>
+              <span className={styles.statLabel}>문제 수</span>
               <span className={styles.statValue}>{SET_SIZE}문제</span>
             </div>
             <span className={styles.statDivider} aria-hidden />
@@ -758,22 +758,26 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
               <span className={styles.creditValue}>{credit}개</span>
             </div>
             {actionError && <p className={styles.actionError}>{actionError}</p>}
-            <div className={styles.dockButtons}>
-              <button
-                type="button"
-                onClick={() => setSkipMode(true)}
-                className={styles.ghostButton}
-              >
-                이 단원 안배웠어요
-              </button>
+            {/* CTA 정책 (2026-08-31): 미진단 = 진단하기 · 진단한(약점 포함) = 추천 문제 풀기.
+                "안배웠어요"는 미진단 추천에서만 — 아래 텍스트 링크 (3591-10490) */}
+            <div className={styles.dockActions}>
               <button
                 type="button"
                 onClick={confirmStart}
                 disabled={starting}
-                className={styles.primaryButton}
+                className={styles.darkButton}
               >
-                {starting ? '시작 중…' : '시작하기'}
+                {starting ? '시작 중…' : target?.row.diagnosis ? '추천 문제 풀기' : '진단하기'}
               </button>
+              {!target?.row.diagnosis && (
+                <button
+                  type="button"
+                  onClick={() => setSkipMode(true)}
+                  className={styles.skipLink}
+                >
+                  이 단원 아직 안배웠어요
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -872,9 +876,9 @@ function UnitCard({
         // 푼 칸은 점수 + 셰브런, 잠긴 칸은 자물쇠 (시안 3589-8481).
         // 미진단(next)은 이름만 — 오른쪽을 비워 "아직 기록 없음" 이 그대로 보인다.
         (done ? (
+          // 애니메이션 캔버스에는 셰브런 없이 점수만 (3681-8056) — 셰브런은 홈 리스트 전용
           <span className={clsx(styles.cardCheck, row.diagnosis?.weak && styles.cardCheckWeak)}>
             {row.diagnosis?.score}점
-            <ChevronIcon />
           </span>
         ) : locked ? (
           <LockIcon className={styles.cardLockIco} />
@@ -930,19 +934,7 @@ function OffGroup({
   )
 }
 
-/** 셰브런 — Figma icon/blank (3684-7781) 원본 패스. 색은 CSS(currentColor)가 정한다 */
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M11.3333 7.99661C11.3333 8.11406 11.3115 8.22247 11.2678 8.32185C11.2242 8.42123 11.1587 8.51609 11.0714 8.60644L5.96988 13.7696C5.8258 13.9232 5.6468 14 5.43287 14C5.29317 14 5.16437 13.9639 5.0465 13.8916C4.92862 13.8238 4.83475 13.729 4.7649 13.607C4.69941 13.4896 4.66667 13.3586 4.66667 13.214C4.66667 12.9972 4.74525 12.8052 4.90242 12.6381L9.49967 7.99661L4.90242 3.35517C4.74525 3.18803 4.66667 2.99831 4.66667 2.786C4.66667 2.63693 4.69941 2.50367 4.7649 2.38622C4.83475 2.26877 4.92862 2.17617 5.0465 2.10841C5.16437 2.03614 5.29317 2 5.43287 2C5.6468 2 5.8258 2.07453 5.96988 2.2236L11.0714 7.38679C11.1587 7.47713 11.2242 7.57199 11.2678 7.67137C11.3115 7.77075 11.3333 7.87916 11.3333 7.99661Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
-/** 상세 카드 배지 — 미진단이면 회색 '미진단', 복습이면 점수(약점은 빨강) */
+/** 상세 카드 배지 — 미진단이면 회색 '진단 전', 복습이면 점수(약점은 빨강) */
 function unitBadge(rec: Recommendation | null, row?: UnitProgressRow) {
   if (row?.diagnosis) {
     return { text: `${row.diagnosis.score}점`, weak: row.diagnosis.weak }
@@ -950,12 +942,15 @@ function unitBadge(rec: Recommendation | null, row?: UnitProgressRow) {
   if (rec?.type === 'REVIEW' && rec.score != null) {
     return { text: `${rec.score}점`, weak: rec.score < 70 }
   }
-  return { text: '미진단', weak: false }
+  return { text: '진단 전', weak: false }
 }
 
+/** "추천 기준" 행의 짧은 사유 (3591-10490) — 문장형 대신 기준만 담백하게 */
 function defaultReason(row?: UnitProgressRow) {
-  if (row?.diagnosis) return `지난번 ${row.diagnosis.score}점이었어. 다시 다져보자`
-  return '아직 안 풀어봐서 점수가 없어. 먼저 풀어보자'
+  if (row?.diagnosis) {
+    return row.diagnosis.weak ? '점수가 가장 낮은 약점 단원' : '점수가 가장 낮은 단원'
+  }
+  return '아직 진단하지 않은 단원'
 }
 
 /** 조회중 말줄임 — 점 3개가 차례로 켜진다 */
