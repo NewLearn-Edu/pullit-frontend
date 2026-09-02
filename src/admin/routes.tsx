@@ -14,6 +14,7 @@ import CreditsPage from './pages/CreditsPage'
 import PoliciesPage from './pages/PoliciesPage'
 import VisitStatsPage from './pages/VisitStatsPage'
 import UnitAveragesPage from './pages/UnitAveragesPage'
+import ProblemInventoryPage from './pages/ProblemInventoryPage'
 import './admin.css'
 
 /**
@@ -47,6 +48,7 @@ export default function AdminRoutes() {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="problems/inventory" element={<ProblemInventoryPage />} />
         <Route path="problems/:subject" element={<ProblemListPage />} />
         <Route path="review" element={<ProblemReviewPage />} />
         <Route path="upload" element={<ProblemUploadPage />} />

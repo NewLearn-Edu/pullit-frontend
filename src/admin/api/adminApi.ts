@@ -588,6 +588,45 @@ export async function fetchAdminUnitAverages(
   return data.data
 }
 
+// ---------------------------------------------------------------------------
+// 문제 재고
+// ---------------------------------------------------------------------------
+
+/**
+ * 소단원 1개의 문제 재고 — 노출 문항 수와 "더 받을 문제가 없는" 유저 규모.
+ * 사다리 세트는 이미 제출한 문항을 다시 내지 않으므로(2026-09-02), 남은 문항이
+ * 3개 미만인 유저(exhaustedCount)는 세트를 발급받지 못한다.
+ */
+export interface AdminProblemInventory {
+  unitCode: string
+  unitLarge: string
+  unitMid: string
+  skillNode: string
+  /** 서비스 노출(ACTIVE) 문항 수 */
+  activeCount: number
+  score2Count: number
+  score3Count: number
+  score4Count: number
+  /** 비노출(검수 대기·탈락) 문항 수 */
+  inactiveCount: number
+  /** 이 단원 노출 문항을 1개 이상 제출한 유저 */
+  learnerCount: number
+  /** 남은 문항 3~5개 — 세트 1번만 더 가능 */
+  oneSetLeftCount: number
+  /** 남은 문항 3개 미만 — 세트 발급 불가 */
+  exhaustedCount: number
+}
+
+export async function fetchAdminProblemInventory(
+  subject: 'MATH' | 'ENGLISH',
+): Promise<AdminProblemInventory[]> {
+  const { data } = await adminApi.get<BaseResponse<AdminProblemInventory[]>>(
+    '/api/admin/problem-inventory',
+    { params: { subject } },
+  )
+  return data.data
+}
+
 /** 노출(시드) 평균 수정 — 0~100 */
 export async function updateAdminUnitAverageSeed(
   unitCode: string,

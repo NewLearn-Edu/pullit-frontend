@@ -213,6 +213,10 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
               <span className="ico"><IcoList /></span>
               문제 검수
             </NavLink>
+            <NavLink to="/admin/problems/inventory" className={navClass}>
+              <span className="ico"><IcoStats /></span>
+              문제 재고
+            </NavLink>
 
             <div className="nav-label">맛보기 테스트</div>
             <NavLink to="/admin/trial-tests/math" className={navClass}>
