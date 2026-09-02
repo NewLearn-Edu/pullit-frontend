@@ -24,8 +24,19 @@ import styles from './styles/HomePage.module.scss'
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
 
-/** 이어풀기 팝업 노출 여부 — "앱을 켰을 때" 1회 (페이지 로드당, SPA 이동으로는 재노출 없음) */
-let resumePromptShown = false
+/**
+ * 이어풀기 팝업 24시간 쿨다운 (2026-09-02) — 매 홈 진입마다 뜨면 피로해서,
+ * 한 번 띄우면 24시간 안에는 다시 안 띄운다. 노출 자체의 스로틀이라 서버
+ * 진실원(풀다 만 세트)과 무관 — 카드의 "풀다 만 문제가 있어" 라벨이 상시 안내를 맡는다.
+ * QA: ?qa-reset 으로 초기화 (main.tsx)
+ */
+const RESUME_PROMPT_SHOWN_AT_KEY = 'pullit_resume_prompt_shown_at'
+const RESUME_PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
+
+function resumePromptCoolingDown(): boolean {
+  const at = Number(localStorage.getItem(RESUME_PROMPT_SHOWN_AT_KEY))
+  return Number.isFinite(at) && at > 0 && Date.now() - at < RESUME_PROMPT_COOLDOWN_MS
+}
 
 /** unitCode 로 커리큘럼 유닛 찾기 — 팝업의 세트 과목이 현재 탭과 달라도 복원 가능해야 한다 */
 function findUnitByCode(subject: Subject, unitCode: string) {
@@ -137,6 +148,15 @@ export default function HomePage() {
     credit,
     returnTo: () => `/home${window.location.search}`,
     onLocksChanged: refreshLocks,
+    // 진단 완료 토스트 "보기" (3575-7884) — 단원명으로 전 대분류에서 행을 찾아 상세 시트
+    resolveUnit: (name) => {
+      for (const cat of categories) {
+        const rows = computeCategoryProgress(cat, diagnosed, locks[categoryCodeOf(cat)] ?? null).rows
+        const row = rows.find((r) => r.name === name)
+        if (row) return { row, context: { category: cat, rows } }
+      }
+      return null
+    },
   })
   const sheetCtx = { category, rows: progress.rows }
 
@@ -155,7 +175,7 @@ export default function HomePage() {
 
 
   // ── 이어풀기 팝업 (PI-POPUP-RESUME · Figma 2931-11007) ──────────────────
-  // 앱을 켰을 때(페이지 로드당 1회) 풀다 만 세트가 있으면 띄운다.
+  // 풀다 만 세트가 있으면 띄우되 24시간에 1회만 (쿨다운 상수 참조).
   // 추천 로직과 무관 — 추천은 ①진단→②최약점 그대로, 재개 안내는 이 팝업의 몫
   // 데이터(resumableSet)와 팝업 노출(resumePromptOpen)을 분리 — 팝업을 취소해도
   // 소단원 카드의 "이어풀기" 라벨(2919-8829)은 계속 보여야 한다
@@ -168,8 +188,8 @@ export default function HomePage() {
       .then((resumable) => {
         if (!alive) return
         setResumableSet(resumable)
-        if (resumable && !resumePromptShown) {
-          resumePromptShown = true
+        if (resumable && !resumePromptCoolingDown()) {
+          localStorage.setItem(RESUME_PROMPT_SHOWN_AT_KEY, String(Date.now()))
           setResumePromptOpen(true)
         }
       })
@@ -378,7 +398,7 @@ export default function HomePage() {
                         <span className={styles.unitDiagnoseBtn}>
                           {resumableSet?.source === 'TRIAL' &&
                           resumableSet.unitCode === row.unitCode
-                            ? '이어 풀기'
+                            ? '이어풀기'
                             : '진단하기'}
                         </span>
                       </button>

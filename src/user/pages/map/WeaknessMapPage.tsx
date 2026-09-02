@@ -102,6 +102,20 @@ export default function WeaknessMapPage() {
     credit: me?.creditBalance ?? 0,
     returnTo: () => '/weakness-map',
     onLocksChanged: refreshLocks,
+    onAllClosed: () => setSelectedId(null),
+    // 진단 완료 토스트 "보기" (3575-7884) — 노드 클릭과 같은 경로로 선택 + 상세 시트
+    resolveUnit: (name) => {
+      const hit = rowIndex.get(name)
+      if (!hit) return null
+      const node = (subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES).find(
+        (n) => n.name === name,
+      )
+      if (!node) return null
+      const category = findCategoryByName(subject, node.cat)
+      if (!category) return null
+      setSelectedId(node.id)
+      return { row: hit.row, context: { category, rows: hit.rows } }
+    },
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -174,9 +188,9 @@ export default function WeaknessMapPage() {
   )
 
   const focusNode = useCallback(
-    (node: MapNode, scale: number) => {
+    (node: MapNode, scale: number, inset: { bottom?: number; right?: number } = {}) => {
       setAnimated(true)
-      setView(centerOn(node, scale))
+      setView(centerOn(node, scale, inset))
     },
     [centerOn],
   )
@@ -192,10 +206,18 @@ export default function WeaknessMapPage() {
   }, [subject])
 
   // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
+  // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
   useEffect(() => {
     if (!selected) return
-    const raf = requestAnimationFrame(() => focusNode(selected, FOCUS_SCALE))
+    const raf = requestAnimationFrame(() => {
+      const el = sheets.sheetEl.current
+      const inset = window.matchMedia('(min-width: 1281px)').matches
+        ? { right: (el?.offsetWidth ?? 0) + 40 } // 웹 — 우측 패널 폭 + 여백
+        : { bottom: el?.offsetHeight ?? 0 } // 모바일·패드 — 바텀시트 높이
+      focusNode(selected, FOCUS_SCALE, inset)
+    })
     return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focusNode])
 
   // ── 팬 · 핀치 (pointer events) ─────────────────────────────────────────

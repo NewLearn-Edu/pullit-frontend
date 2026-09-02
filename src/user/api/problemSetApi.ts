@@ -50,7 +50,7 @@ export async function issueProblemSet(
   return data.data
 }
 
-/** 진행 중 세트 조회 — 시작 시트의 "이어서 풀기" 표시 판단용. 없으면 null (차감 없음) */
+/** 진행 중 세트 조회 — 시작 시트의 "이어풀기" 표시 판단용. 없으면 null (차감 없음) */
 export async function fetchActiveProblemSet(
   subject: 'math' | 'english',
   unitCode: string,

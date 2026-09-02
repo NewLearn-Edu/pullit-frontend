@@ -10,6 +10,7 @@ import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
+import { CreditUsedToast } from '@/user/components/CreditUsedToast'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
@@ -407,6 +408,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
   return (
     <div className={styles.page}>
+      {/* 크레딧 사용 토스트 — 차감이 있던 첫 문제 화면에서만 1회/2초 (2857-21836) */}
+      <CreditUsedToast />
       <QuizTopBar
         progress={isTrial ? { current: idx + 1, total: problems.length } : undefined}
         subjectLabel={

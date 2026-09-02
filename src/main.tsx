@@ -18,6 +18,7 @@ import 'katex/dist/katex.min.css'
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('qa-reset')) {
   localStorage.removeItem('pullit_first_credit_celebrated') // 첫 크레딧 시트 1회 노출 플래그
   localStorage.removeItem('pullit_trial_progress') // 단원 진단 캐시·오늘 세트 카운터·pendingUnit
+  localStorage.removeItem('pullit_resume_prompt_shown_at') // 이어풀기 팝업 24시간 쿨다운
   sessionStorage.clear() // 맛보기 결과·풀이 큐·문항 타이머 스냅샷
 }
 

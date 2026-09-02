@@ -321,6 +321,16 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   color: #80858b; // black/500
 }
 
+// 풀다 만 세트 안내 라벨 — Caption/S (시안 3684-8045)
+.unitResumeLabel {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: $color-primary;
+  white-space: nowrap;
+}
+
 // 약점 필 — 결과 화면과 동일 규격 (red/100 배경 + red/500 보더)
 .unitWeakPill {
   flex-shrink: 0;
@@ -728,6 +738,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   @include button-reset;
   @include flex-center;
   flex-shrink: 0;
+  width: 100%; // 시트 flex 밖(고정 footer 등)에서도 전체 폭 유지
   height: 56px;
   border-radius: 12px;
   background: #23272b;
@@ -826,4 +837,44 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   color: #a6abb1; // black/400
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// ── 단원 상세 시트 분할 (2026-09-01) — 학습 경로까지 보이고 최근 학습은 안쪽 스크롤,
+//    CTA 는 시트 하단 고정. 모바일은 폴드가 학습 경로 뒤에 오도록 높이를 못 박는다.
+.unitSheetSplit {
+  max-height: calc(100dvh - 120px);
+  padding-bottom: 0;
+  overflow: hidden; // 스크롤은 안쪽 몸통이 담당 (폴드 높이는 JS 실측 — 학습 경로까지)
+
+  @include desktop-up {
+    max-height: none; // 우측 패널은 기존 % 높이 유지
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+}
+
+.unitSheetScroll {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: $space-lg;
+  // 스크롤바·콘텐츠가 시트 라운드에 닿지 않게 패딩은 유지한 채 영역만 확장
+  margin: 0 -20px;
+  padding: 0 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain; // 몸통 끝에서 스크롤이 배경 페이지로 새지 않게
+
+  // flex 컬럼 자식은 기본 shrink 로 구겨진다 — 원 높이를 지켜야 넘친 만큼 스크롤이 생긴다
+  > * { flex-shrink: 0; }
+}
+
+.unitSheetFoot {
+  flex: none;
+  width: 100%;
+  padding: 12px 0 calc(20px + env(safe-area-inset-bottom));
+  // 스크롤 콘텐츠가 CTA 밑으로 지나가는 게 살짝 비치도록 위쪽 경계만 옅게
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.04);
+
+  @include desktop-up { padding-bottom: 20px; }
 }

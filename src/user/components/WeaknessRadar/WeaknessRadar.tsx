@@ -13,6 +13,13 @@ export interface RadarUnit {
 /** 약점 판정 기준 — 70점 미만 */
 const WEAK_THRESHOLD = 70
 
+/**
+ * 점수 → 반경 비율. 가장 안쪽 붉은 링(25%)이 0점 바닥, 바깥 끝이 100점.
+ * 0점이 중심에 점으로 뭉치지 않고 안쪽 링 위에 앉는다 (2026-09-01)
+ */
+export const scoreRadiusRatio = (score: number) =>
+  0.25 + 0.75 * (Math.min(100, Math.max(0, score)) / 100)
+
 const RED = '#ff385c'
 const INK = '#23272b'
 
@@ -121,7 +128,7 @@ export default function WeaknessRadar({
     Array.from({ length: n }, (_, i) => point(i, r)) as [number, number][]
 
   const dataXY = units.map((_, i) =>
-    point(i, maxR * Math.max(0.08, (animated[i] ?? 0) / 100)),
+    point(i, maxR * scoreRadiusRatio(animated[i] ?? 0)),
   ) as [number, number][]
   // 점·펄스는 둥근 모서리의 실제 정점 위에 얹는다
   const { d: dataPath, apexes } = roundedPolygon(dataXY, 16)

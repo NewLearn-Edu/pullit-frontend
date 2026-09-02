@@ -18,6 +18,7 @@ import {
   type Recommendation,
 } from '@/user/api/recommendApi'
 import { useCreditForExtraSet } from '@/user/api/creditApi'
+import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { CURRICULUM, type CurriculumCategory } from '@/user/data/curriculum'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
@@ -496,6 +497,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     setActionError(null)
     try {
       await useCreditForExtraSet()
+      setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST) // 첫 문제 화면 토스트
       loadMe(true)
       resetTrial()
       setLastSubject(subject)

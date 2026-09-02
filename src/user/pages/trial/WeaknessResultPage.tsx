@@ -13,6 +13,7 @@ import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
 import { CreditCelebrationContent } from '@/user/components/CreditCelebration'
+import { setDiagnoseDoneFlash } from '@/user/pages/home/UnitSheets'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
@@ -240,6 +241,9 @@ export default function WeaknessResultPage() {
    */
   const leaveResult = (to: string) => {
     if (to !== '/signup') useTrialStore.getState().consumeResultPass()
+    // 소단원 시트에서 시작한 진단(pendingUnit)이면 복귀한 홈·지도에 완료 토스트 예약 (3575-7884)
+    if (to !== '/signup' && pendingNameRef.current)
+      setDiagnoseDoneFlash(pendingNameRef.current, lastSubject ?? 'math')
     navigate(to)
   }
 
@@ -370,9 +374,11 @@ export default function WeaknessResultPage() {
   // 점수는 서버 누적 점수(skillScore)를 우선 쓰되, 첫 진단이면 세션 점수와 같은 값이라 폴백해도 무방.
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   const finishPendingUnit = useTrialProgressStore((s) => s.finishPendingUnit)
-  // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로는 미리 잡아둔다
+  // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로·단원명은 미리 잡아둔다
   const returnToRef = useRef<string | null>(null)
+  const pendingNameRef = useRef<string | null>(null)
   if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
+  if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
 
   // 재열람용 문항별 결과 — 목 문제 데이터 없이도 표를 다시 그릴 수 있게 표시값을 박제
   const diagnosisItems = useMemo(

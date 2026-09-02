@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
@@ -7,8 +7,9 @@ import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { declareUnitLock } from '@/user/api/recommendApi'
-import { fetchActiveProblemSet } from '@/user/api/problemSetApi'
+import { fetchActiveProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
 import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
+import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import {
   SET_CREDIT_COST,
   useTrialProgressStore,
@@ -17,8 +18,41 @@ import {
 import { UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
 import styles from './styles/HomePage.module.scss'
 
+/** 이어풀기 변형 시트 요약 — 남은 문항 수 · 남은 예상 시간(권장 시간 합) */
+function remainingOfSet(set: IssuedProblemSet) {
+  const left = set.items.filter((item) => !item.submitted)
+  return { count: left.length, sec: left.reduce((s, item) => s + item.recommendedTimeSec, 0) }
+}
+
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
+
+/**
+ * 진단 완료 토스트 플래시 (3575-7884 · 토스트 팝업 정책) — 결과 페이지의 "진단 완료"가
+ * 기록하고, 복귀한 홈·지도가 1회 소비한다 (읽는 즉시 삭제 = 첫 1회 보장).
+ */
+const DIAGNOSE_DONE_FLASH_KEY = 'pullit_diagnose_done_flash'
+
+export function setDiagnoseDoneFlash(unitName: string, subject: Subject): void {
+  try {
+    sessionStorage.setItem(DIAGNOSE_DONE_FLASH_KEY, JSON.stringify({ unitName, subject }))
+  } catch {
+    /* storage 불가 환경 — 토스트 생략 */
+  }
+}
+
+function consumeDiagnoseDoneFlash(subject: Subject): string | null {
+  try {
+    const raw = sessionStorage.getItem(DIAGNOSE_DONE_FLASH_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(DIAGNOSE_DONE_FLASH_KEY)
+    const parsed = JSON.parse(raw) as { unitName?: string; subject?: string }
+    if (typeof parsed.unitName !== 'string' || parsed.subject !== subject) return null
+    return parsed.unitName
+  } catch {
+    return null
+  }
+}
 
 /**
  * 소단원 액션 시트 묶음 — 홈과 약점 지도가 같은 로직·같은 화면을 쓴다 (2026-08-31).
@@ -42,6 +76,8 @@ export function useUnitSheets({
   credit,
   returnTo,
   onLocksChanged,
+  onAllClosed,
+  resolveUnit,
 }: {
   subject: Subject
   credit: number
@@ -49,6 +85,10 @@ export function useUnitSheets({
   returnTo: () => string
   /** "안배웠어요" 확정 후 — 페이지가 잠금 상태를 다시 불러오게 */
   onLocksChanged: () => void
+  /** 모든 시트가 닫혔을 때 — 지도가 노드 선택을 해제하는 데 쓴다 */
+  onAllClosed?: () => void
+  /** 진단 완료 토스트의 "보기" — 단원명으로 행·컨텍스트를 찾아 상세 시트를 연다 (3575-7884) */
+  resolveUnit?: (unitName: string) => { row: UnitProgressRow; context: UnitSheetContext } | null
 }) {
   const navigate = useNavigate()
   const loadMe = useUserStore((s) => s.loadMe)
@@ -63,6 +103,11 @@ export function useUnitSheets({
 
   const [ctx, setCtx] = useState<UnitSheetContext | null>(null)
   const [unitSheet, setUnitSheet] = useState<UnitProgressRow | null>(null)
+  /**
+   * 상세 시트 모드 — 'detail'(단원 상세) ↔ 'confirm'(추천 확인 · 3715-6852).
+   * 별도 시트를 띄우지 않고 같은 시트가 제자리에서 줄어들며 내용만 바뀐다 (모프 전환)
+   */
+  const [unitSheetMode, setUnitSheetMode] = useState<'detail' | 'confirm'>('detail')
   const [startSheet, setStartSheet] = useState<UnitProgressRow | null>(null)
   const [skipMode, setSkipMode] = useState(false)
   const [lockedSheet, setLockedSheet] = useState<UnitProgressRow | null>(null)
@@ -70,6 +115,61 @@ export function useUnitSheets({
   const [startError, setStartError] = useState<string | null>(null)
   const [lockSaving, setLockSaving] = useState(false)
   const [shortageOpen, setShortageOpen] = useState(false)
+  // 시트가 하나라도 열려 있으면 배경(body) 스크롤 잠금 — 시트 스크롤이 페이지로 새지 않게
+  const anySheetOpen = !!(unitSheet || startSheet || lockedSheet)
+  useEffect(() => {
+    if (!anySheetOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [anySheetOpen])
+
+  // 열림 → 닫힘 전이에서만 통지 — 지도가 노드 선택 해제에 쓴다
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (wasOpenRef.current && !anySheetOpen) onAllClosed?.()
+    wasOpenRef.current = anySheetOpen
+  }, [anySheetOpen, onAllClosed])
+
+  // 상세 시트 폴드 — 처음 열면 학습 경로까지만 보이고 최근 학습은 스크롤 뒤에 (2026-09-01).
+  // 콘텐츠 높이가 기기·단원마다 달라 CSS 고정값 대신 구분 띠 위치를 실측해 몸통 높이를 자른다
+  const sheetScrollRef = useRef<HTMLDivElement | null>(null)
+  const foldRef = useRef<HTMLDivElement | null>(null)
+  useLayoutEffect(() => {
+    const body = sheetScrollRef.current
+    const fold = foldRef.current
+    if (!unitSheet || !body || !fold) return
+    // 웹 우측 패널은 높이가 고정(%)이라 자르면 아래가 비어 보인다 — 모바일·패드만
+    if (window.matchMedia('(min-width: 1281px)').matches) {
+      body.style.maxHeight = ''
+      return
+    }
+    body.style.maxHeight = `${fold.offsetTop - body.offsetTop}px`
+  }, [unitSheet])
+
+  // 건너뛰기 확정 토스트 (3715-9240) — 시트가 닫힌 뒤 "{소단원명}부터 건너뛰었어"
+  const [skipToast, setSkipToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!skipToast) return
+    const timer = window.setTimeout(() => setSkipToast(null), 2600)
+    return () => window.clearTimeout(timer)
+  }, [skipToast])
+
+  // 진단 완료 토스트 (3575-7884) — 결과 페이지에서 돌아온 첫 1회, 2초 노출 (시안 주석 정책)
+  const [doneToast, setDoneToast] = useState<string | null>(null)
+  useEffect(() => {
+    const consumed = consumeDiagnoseDoneFlash(subject)
+    if (consumed) setDoneToast(consumed)
+    // 마운트 시 1회 — 플래시는 읽는 즉시 지워져 과목 전환 재실행에도 안전
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (!doneToast) return
+    const timer = window.setTimeout(() => setDoneToast(null), 2000)
+    return () => window.clearTimeout(timer)
+  }, [doneToast])
 
   const isDesktop = () => window.matchMedia('(min-width: 1281px)').matches
   const closeStartSheet = () => {
@@ -81,6 +181,20 @@ export function useUnitSheets({
   const startDrag = useSheetDrag(closeStartSheet, { disabled: isDesktop })
   const lockedDrag = useSheetDrag(() => setLockedSheet(null), { disabled: isDesktop })
 
+  /**
+   * 열려 있는 시트 엘리먼트 — 지도가 "시트가 가리는 높이"를 실측해 카메라를
+   * 시트 위 영역으로 피하는 데 쓴다. 시트는 동시에 하나만 열리므로 ref 하나를 공유.
+   */
+  const sheetEl = useRef<HTMLDivElement | null>(null)
+  const bindSheetEl =
+    (dragRef: React.MutableRefObject<HTMLDivElement | null>) => (el: HTMLDivElement | null) => {
+      if (el) sheetEl.current = el
+      dragRef.current = el
+    }
+  const { ref: unitDragRef, ...unitDragHandlers } = unitDrag.sheetProps
+  const { ref: startDragRef, ...startDragHandlers } = startDrag.sheetProps
+  const { ref: lockedDragRef, ...lockedDragHandlers } = lockedDrag.sheetProps
+
   const openStartSheet = (row: UnitProgressRow | undefined) => {
     if (!row) return
     setSkipMode(false)
@@ -91,20 +205,38 @@ export function useUnitSheets({
   /** 상태별 분기 진입점 — 카드·노드 클릭이 전부 여기로 온다 */
   const openUnit = (row: UnitProgressRow, context: UnitSheetContext) => {
     setCtx(context)
-    if (row.diagnosis) setUnitSheet(row)
-    else if (row.state === 'next' || (row.state === 'off' && row.offHead)) openStartSheet(row)
+    if (row.diagnosis) {
+      setUnitSheetMode('detail')
+      setUnitSheet(row)
+    }
+    if (row.diagnosis) return
+    if (row.state === 'off') {
+      // 건너뛴 구간은 어느 칸을 눌러도 재개 진입점(잠금 시작 소단원)의 재진단 시트 (3693-9855)
+      openStartSheet(context.rows.find((r) => r.offHead) ?? row)
+      return
+    }
+    if (row.state === 'next') openStartSheet(row)
     else setLockedSheet(row)
   }
 
-  // 진행 중(ACTIVE) 진단 세트 감지 — 시트 버튼이 "이어서 풀기"로 바뀌고 크레딧 안내를 숨긴다
-  const [resumable, setResumable] = useState(false)
+  /** 진단 완료 토스트 "보기" — 방금 진단한 단원의 상세 시트로 (2856-20608) */
+  const viewDoneToastUnit = () => {
+    if (!doneToast) return
+    const hit = resolveUnit?.(doneToast)
+    setDoneToast(null)
+    if (hit) openUnit(hit.row, hit.context)
+  }
+
+  // 진행 중(ACTIVE) 진단 세트 감지 — 시트가 이어풀기 변형(남은 문제·크레딧 없음)으로 바뀐다
+  const [activeTrialSet, setActiveTrialSet] = useState<IssuedProblemSet | null>(null)
+  const resumable = !!activeTrialSet
   useEffect(() => {
-    setResumable(false)
+    setActiveTrialSet(null)
     if (!startSheet) return
     let alive = true
     fetchActiveProblemSet(subject, startSheet.unitCode, 'TRIAL')
       .then((active) => {
-        if (alive) setResumable(!!active)
+        if (alive) setActiveTrialSet(active)
       })
       .catch(() => {})
     return () => {
@@ -112,15 +244,18 @@ export function useUnitSheets({
     }
   }, [startSheet, subject])
 
-  // 예상 시간 — 세트 문항의 권장 시간 합 (문제 세트 캐시 공유라 보통 즉시)
+  // 예상 시간 — 세트 문항의 권장 시간 합 (문제 세트 캐시 공유라 보통 즉시).
+  // 진단 시작 시트·추천 확인 모드가 같은 계산을 쓴다
+  const confirmTarget = unitSheetMode === 'confirm' ? unitSheet : null
+  const estimateTarget = startSheet ?? confirmTarget
   const [estimatedSec, setEstimatedSec] = useState<number | null>(null)
   useEffect(() => {
     setEstimatedSec(null)
-    if (!startSheet) return
+    if (!estimateTarget) return
     let alive = true
     loadQuizProblems(
       subject,
-      startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
+      estimateTarget.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
     ).then((problems) => {
       if (alive && problems.length > 0)
         setEstimatedSec(problems.reduce((s, p) => s + p.tRecSec, 0))
@@ -128,7 +263,76 @@ export function useUnitSheets({
     return () => {
       alive = false
     }
-  }, [startSheet, subject])
+  }, [estimateTarget, subject])
+
+  // 진행 중(ACTIVE) 추천(FREE) 세트 감지 — 확인 시트가 이어풀기 변형으로 바뀐다
+  const [activeFreeSet, setActiveFreeSet] = useState<IssuedProblemSet | null>(null)
+  const freeResumable = !!activeFreeSet
+  useEffect(() => {
+    setActiveFreeSet(null)
+    if (!confirmTarget) return
+    let alive = true
+    fetchActiveProblemSet(subject, confirmTarget.unitCode, 'FREE')
+      .then((active) => {
+        if (alive) setActiveFreeSet(active)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmTarget?.unitCode, subject])
+
+  /** 추천 확인 시트 CTA — 크레딧 확인 후 FREE 세트 시작 (이어풀기는 재차감 없음) */
+  const [freeStarting, setFreeStarting] = useState(false)
+  const confirmStartFree = async () => {
+    if (!confirmTarget || freeStarting) return
+    if (!freeResumable && credit < SET_CREDIT_COST) {
+      setShortageOpen(true)
+      return
+    }
+    setFreeStarting(true)
+    try {
+      await startFreeSolve(confirmTarget)
+    } finally {
+      setFreeStarting(false)
+    }
+  }
+
+  /**
+   * 상세 → 확인 모프 전환 (FLIP) — 시트를 닫았다 새로 띄우지 않고, 현재 높이에서
+   * 새 내용의 높이로 부드럽게 줄어들며 내용이 바뀐다. 웹 우측 패널은 높이가
+   * 고정이라 내용 교체(페이드)만 한다.
+   */
+  const morphFromHeight = useRef<number | null>(null)
+  const openConfirmMode = () => {
+    const el = sheetEl.current
+    if (el && !isDesktop()) morphFromHeight.current = el.offsetHeight
+    setUnitSheetMode('confirm')
+  }
+  useLayoutEffect(() => {
+    if (unitSheetMode !== 'confirm') return
+    const el = sheetEl.current
+    const from = morphFromHeight.current
+    morphFromHeight.current = null
+    if (!el || from == null) return
+    const to = el.offsetHeight // 새 내용의 자연 높이
+    if (Math.abs(to - from) < 2) return
+    el.style.height = `${from}px`
+    el.style.overflow = 'hidden'
+    // 강제 리플로우 — 시작 높이를 확정해야 같은 프레임의 목표 높이가 전환으로 굴러간다
+    // (rAF 는 페인트 전에 실행돼 두 값이 합쳐져 스냅된다)
+    void el.offsetHeight
+    el.style.transition = 'height 320ms cubic-bezier(0.22, 0.9, 0.3, 1)'
+    el.style.height = `${to}px`
+    const done = () => {
+      el.style.transition = ''
+      el.style.height = ''
+      el.style.overflow = ''
+      el.removeEventListener('transitionend', done)
+    }
+    el.addEventListener('transitionend', done)
+  }, [unitSheetMode])
 
   /**
    * 진단 세트 시작·재개 코어 — 시작 시트와 이어풀기 팝업(PI-POPUP-RESUME)이 공유한다.
@@ -140,6 +344,8 @@ export function useUnitSheets({
   ) => {
     const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
     const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(subj, nodeId, row.unitCode, 'TRIAL')
+    // 새 발급 = 차감 발생 → 문제 첫 화면 토스트 (이어풀기는 차감 없음 · 2857-21836)
+    if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST)
     loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
     resetTrial()
     setLastSubject(subj)
@@ -196,6 +402,7 @@ export function useUnitSheets({
     try {
       await declareUnitLock(subject, startSheet.unitCode)
       onLocksChanged()
+      setSkipToast(startSheet.name)
       closeStartSheet()
     } catch {
       setStartError('잠금 저장에 실패했어. 다시 시도해줘')
@@ -215,6 +422,7 @@ export function useUnitSheets({
       const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
       const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
         subj, nodeId, row.unitCode, 'FREE')
+      if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST)
       loadMe(true)
       startSolveSession({
         problems,
@@ -252,8 +460,13 @@ export function useUnitSheets({
       {unitSheet?.diagnosis && (
         <div className={styles.unitDim} onClick={unitDrag.close}>
           <div
-            {...unitDrag.sheetProps}
-            className={clsx(styles.unitSheet, unitDrag.dragging && styles.infoSheetDragging)}
+            {...unitDragHandlers}
+            ref={bindSheetEl(unitDragRef)}
+            className={clsx(
+              styles.unitSheet,
+              unitSheetMode === 'detail' && styles.unitSheetSplit,
+              unitDrag.dragging && styles.infoSheetDragging,
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -273,6 +486,11 @@ export function useUnitSheets({
             >
               ×
             </button>
+
+            {unitSheetMode === 'detail' && (
+            <>
+            {/* 몸통 — 학습 경로까지 보이고 최근 학습은 스크롤로 (CTA 는 아래 고정) */}
+            <div ref={sheetScrollRef} className={styles.unitSheetScroll}>
 
             {/* 헤더 — 유닛명 + 약점 배지 · 평균 점수 (웹은 우상단 X 버튼 아래로 내려 시작) */}
             <div className="flex w-full items-center justify-between py-[8px] xl:pt-[36px]">
@@ -328,8 +546,8 @@ export function useUnitSheets({
               <LearningPath items={buildNeighborPath(rows, unitSheet.name)} />
             </div>
 
-            {/* 섹션 구분 — 시트 좌우 패딩(20px)을 뚫는 두꺼운 띠 */}
-            <div className="-mx-[20px] h-[10px] shrink-0 bg-[#f8f8f8]" aria-hidden />
+            {/* 섹션 구분 — 시트 좌우 패딩(20px)을 뚫는 두꺼운 띠. 폴드 기준점(여기까지 보임) */}
+            <div ref={foldRef} className="-mx-[20px] h-[10px] shrink-0 bg-[#f8f8f8]" aria-hidden />
 
             {/* 최근 학습 — 카드 탭/전체보기 → 진단 재열람 페이지 */}
             <div className="flex w-full items-center justify-between px-[8px]">
@@ -397,21 +615,90 @@ export function useUnitSheets({
               )}
             </button>
 
-            {/* 자유 풀이 CTA (2026-08-17 정책) — 이 소단원의 맛보기 진단을
-                마쳤으면 바로 풀 수 있다 (시트는 진단 완료 유닛에서만 열린다) */}
-            <button
-              type="button"
-              onClick={() => {
-                setUnitSheet(null)
-                startFreeSolve(unitSheet)
-              }}
-              className={styles.unitButton}
-            >
-              추천 문제 풀기
-            </button>
-            <p className={styles.unitButtonHint}>
-              크레딧 {SET_CREDIT_COST}개가 사용돼 · 풀다 만 세트는 이어서 풀 수 있어
-            </p>
+            </div>
+
+            {/* 자유 풀이 CTA — 시트 하단 고정 (스크롤과 무관하게 항상 보인다) */}
+            <div className={styles.unitSheetFoot}>
+              <button
+                type="button"
+                onClick={openConfirmMode} // 같은 시트가 줄어들며 확인 내용(3715-6852)으로 바뀐다
+                className={styles.unitButton}
+              >
+                추천 문제 보기
+              </button>
+            </div>
+            </>
+            )}
+
+            {/* ── 추천 확인 (3715-6852) — 같은 시트 안에서 내용만 교체 ── */}
+            {unitSheetMode === 'confirm' && (
+              <div className="flex w-full animate-[sheet-morph-in_260ms_ease_60ms_both] flex-col gap-[24px]">
+                <style>{`@keyframes sheet-morph-in { from { opacity: 0 } }`}</style>
+                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
+                  <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+                    {activeFreeSet
+                      ? `${unitSheet.name} 이어풀기`
+                      : `${unitSheet.name} 추천 ${SET_SIZE}문제`}
+                  </h2>
+                  <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
+                    {activeFreeSet
+                      ? '풀다 만 문제가 있어. 크레딧 차감 없이 이어서 풀 수 있어'
+                      : '최근 풀이 기록으로 너에게 딱 맞는 문제로 준비했어'}
+                  </p>
+                </div>
+
+                {/* 문제 · 예상 시간 · 필요 크레딧 — 진단 시작 시트와 같은 규격.
+                    이어풀기 변형은 남은 문항 기준 + 크레딧 없음 (시안 이어풀기 상태) */}
+                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[16px]">
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">
+                      {activeFreeSet ? '남은 문제' : '문제'}
+                    </span>
+                    <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeFreeSet ? remainingOfSet(activeFreeSet).count : SET_SIZE}문제
+                    </span>
+                  </div>
+                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">예상 시간</span>
+                    <span className="whitespace-nowrap text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeFreeSet
+                        ? `약 ${Math.max(1, Math.round(remainingOfSet(activeFreeSet).sec / 60))}분`
+                        : estimatedSec != null
+                          ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
+                          : '약 —분'}
+                    </span>
+                  </div>
+                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">필요 크레딧</span>
+                    <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeFreeSet ? '없음' : `${SET_CREDIT_COST}개`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex w-full flex-col gap-[8px] pb-[8px]">
+                  <div className="flex w-full items-center justify-center gap-[8px]">
+                    <SheetCoinIcon />
+                    <span className="text-[14px] font-medium leading-[1.4] text-[#80858b]">보유 크레딧:</span>
+                    <span className="text-[14px] font-semibold leading-[1.4] text-[#80858b]">{credit}개</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={confirmStartFree}
+                    disabled={freeStarting}
+                    className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  >
+                    {freeStarting
+                      ? '시작 중…'
+                      : freeResumable
+                        ? '이어풀기'
+                        : `추천 ${SET_SIZE}문제 풀기`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -420,7 +707,8 @@ export function useUnitSheets({
       {startSheet && (
         <div className={styles.unitDim} onClick={startDrag.close}>
           <div
-            {...startDrag.sheetProps}
+            {...startDragHandlers}
+            ref={bindSheetEl(startDragRef)}
             className={clsx(styles.unitSheet, startDrag.dragging && styles.infoSheetDragging)}
             onClick={(e) => e.stopPropagation()}
           >
@@ -444,45 +732,60 @@ export function useUnitSheets({
             {!skipMode ? (
               <>
                 <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
-                  {/* 건너뛴(off) 구간 재개 진입점이면 재진단 변형 (Figma 3575-7722) */}
-                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                    {startSheet.state === 'off'
-                      ? '건너뛴 단원 다시 진단하기'
-                      : `${startSheet.name} 약점 진단하기`}
+                  {/* 건너뛴(off) 구간 재진단 변형 (3693-9855) — 시작 소단원 기준 문구.
+                      진행 중(ACTIVE) 세트가 있으면 이어풀기 변형이 우선 */}
+                  <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
+                    {activeTrialSet
+                      ? `${startSheet.name} 이어풀기`
+                      : startSheet.state === 'off'
+                        ? `${startSheet.name}부터 다시 진단하기`
+                        : `${startSheet.name} 약점 진단하기`}
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    진단을 끝내면 {startSheet.name} 그래프 결과가 채워져
+                    {activeTrialSet
+                      ? '풀다 만 문제가 있어. 크레딧 차감 없이 이어서 풀 수 있어'
+                      : startSheet.state === 'off'
+                        ? `${startSheet.name}부터 다시 진단하면 건너뛴 단원이 모두 열려`
+                        : `진단을 끝내면 ${startSheet.name} 그래프 결과가 채워져`}
                   </p>
                 </div>
 
-                {/* 문제 수 · 예상 시간 · 필요 크레딧 */}
-                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[20px]">
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">문제</span>
-                    <span className="text-[22px] font-semibold text-[#121417]">{SET_SIZE}문제</span>
-                  </div>
-                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">예상 시간</span>
-                    <span className="whitespace-nowrap text-[22px] font-semibold text-[#121417]">
-                      {estimatedSec != null
-                        ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
-                        : '약 —분'}
+                {/* 문제 수 · 예상 시간 · 필요 크레딧 (3715-8753 — 라벨 12 · 값 18 bold).
+                    이어풀기 변형은 남은 문항 기준 + 크레딧 없음 */}
+                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[16px]">
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">
+                      {activeTrialSet ? '남은 문제' : '문제'}
+                    </span>
+                    <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeTrialSet ? remainingOfSet(activeTrialSet).count : SET_SIZE}문제
                     </span>
                   </div>
-                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">필요 크레딧</span>
-                    <span className="text-[22px] font-semibold text-[#121417]">
-                      {SET_CREDIT_COST}개
+                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">예상 시간</span>
+                    <span className="whitespace-nowrap text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeTrialSet
+                        ? `약 ${Math.max(1, Math.round(remainingOfSet(activeTrialSet).sec / 60))}분`
+                        : estimatedSec != null
+                          ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
+                          : '약 —분'}
+                    </span>
+                  </div>
+                  <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
+                    <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">필요 크레딧</span>
+                    <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
+                      {activeTrialSet ? '없음' : `${SET_CREDIT_COST}개`}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex w-full items-center justify-center gap-[6px]">
+                {/* 보유 크레딧 (3715-8766) — 14px · 라벨 medium / 값 semibold, 둘 다 black/500 */}
+                <div className="flex w-full items-center justify-center gap-[8px]">
                   <SheetCoinIcon />
-                  <span className="text-[12px] font-semibold text-[#80858b]">보유 크레딧:</span>
-                  <span className="text-[12px] font-semibold text-[#121417]">{credit}개</span>
+                  <span className="text-[14px] font-medium leading-[1.4] text-[#80858b]">보유 크레딧:</span>
+                  <span className="text-[14px] font-semibold leading-[1.4] text-[#80858b]">{credit}개</span>
                 </div>
 
                 {startError && (
@@ -490,23 +793,21 @@ export function useUnitSheets({
                     {startError}
                   </p>
                 )}
-                {resumable && !startError && (
-                  <p className="w-full text-center text-[13px] font-medium text-[#80858b]">
-                    풀다 만 세트가 있어 — 크레딧 차감 없이 이어서 풀 수 있어
-                  </p>
-                )}
-
                 {/* 전체폭 시작 버튼 → 그 아래 "안배웠어요" 텍스트 링크 (Figma PI-SHEET-START) */}
-                <div className="flex w-full flex-col gap-[16px]">
+                <div className="flex w-full flex-col gap-[12px]">
                   <button
                     type="button"
                     onClick={confirmStartSet}
                     disabled={starting}
                     className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
-                    {/* CTA 정책 (2026-08-31): 미진단·건너뛴 재개 = 진단하기 —
+                    {/* CTA 정책: 미진단·건너뛴 재개 = "{소단원명} 진단하기" (3715-7668) —
                         "추천 문제 풀기"는 이미 진단한 단원(상세 시트)의 몫 */}
-                    {starting ? '시작 중…' : resumable ? '이어서 풀기' : '진단하기'}
+                    {starting
+                      ? '시작 중…'
+                      : resumable
+                        ? '이어풀기'
+                        : `${startSheet.name} 진단하기`}
                   </button>
                   {/* "안배웠어요"는 미진단(next) 단원에서만 (2026-08-31 정책).
                       이어풀기 중엔 이미 크레딧 내고 시작한 단원이라 모순, 건너뛴 구간
@@ -515,7 +816,7 @@ export function useUnitSheets({
                     <button
                       type="button"
                       onClick={() => setSkipMode(true)}
-                      className="w-full text-center text-[14px] font-medium text-[#80858b] transition-colors hover:text-[#121417]"
+                      className="w-full text-center text-[16px] font-semibold leading-[1.4] text-[#80858b] transition-colors hover:text-[#121417]"
                     >
                       이 단원 아직 안배웠어요
                     </button>
@@ -615,7 +916,8 @@ export function useUnitSheets({
       {lockedSheet && (
         <div className={styles.unitDim} onClick={lockedDrag.close}>
           <div
-            {...lockedDrag.sheetProps}
+            {...lockedDragHandlers}
+            ref={bindSheetEl(lockedDragRef)}
             className={clsx(styles.unitSheet, lockedDrag.dragging && styles.infoSheetDragging)}
             onClick={(e) => e.stopPropagation()}
           >
@@ -679,10 +981,63 @@ export function useUnitSheets({
           onClose={() => setShortageOpen(false)}
         />
       )}
+
+      {/* 건너뛰기 확정 토스트 (3715-9240) — 하단 네비 위 다크 바 */}
+      {skipToast && (
+        <div
+          role="status"
+          className="fixed inset-x-[16px] bottom-[calc(var(--nav-bottom-h,0px)+16px)] z-[60] flex items-center gap-[8px] rounded-[14px] bg-[#23272b] px-[16px] py-[14px] shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
+        >
+          <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#ffdadc]">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path
+                d="M2.5 6.3 5 8.7 9.5 3.6"
+                stroke="#ff385c"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <p className="text-[14px] font-semibold leading-[1.4] text-white">
+            {skipToast}부터 건너뛰었어
+          </p>
+        </div>
+      )}
+
+      {/* 진단 완료 토스트 (3575-7884) — 다크 바 + "보기" → 해당 단원 상세 시트 */}
+      {doneToast && (
+        <div
+          role="status"
+          className="fixed bottom-[calc(var(--nav-bottom-h,0px)+16px)] left-1/2 z-[60] flex w-[calc(100%-40px)] max-w-[620px] -translate-x-1/2 items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
+        >
+          <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#ffdadc]">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path
+                d="M2.5 6.3 5 8.7 9.5 3.6"
+                stroke="#ff385c"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <p className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-[1.4] text-white">
+            {doneToast} 약점 진단 완료!
+          </p>
+          <button
+            type="button"
+            onClick={viewDoneToastUnit}
+            className="shrink-0 rounded-full bg-[#5e6368] p-[8px] text-[12px] font-semibold leading-[1.4] text-[#f8f8f8]"
+          >
+            보기
+          </button>
+        </div>
+      )}
     </>
   )
 
-  return { openUnit, openStartSheet, startTrialSet, startFreeSolve, element }
+  return { openUnit, openStartSheet, startTrialSet, startFreeSolve, sheetEl, element }
 }
 
 /** 서버 에러 응답(BaseResponse.message) 우선 추출 — 크레딧 부족 등 서버 문구를 그대로 보여준다 */
