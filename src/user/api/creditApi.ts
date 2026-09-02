@@ -20,3 +20,24 @@ export async function useCreditForExtraSet(): Promise<CreditUseResponse> {
   const { data } = await api.post<BaseResponse<CreditUseResponse>>('/api/credits/extra-set')
   return data.data
 }
+
+export type CreditTransactionType = 'USE' | 'REWARD' | 'ADMIN_GRANT' | 'ADMIN_DEDUCT'
+export type CreditRewardType = 'TRIAL_FIRST_CLEAR' | 'SIGNUP_WELCOME' | 'INVITE_FRIEND_COMPLETE'
+
+export interface CreditTransaction {
+  id: number
+  type: CreditTransactionType
+  /** REWARD 의 세부 종류 (그 외 null) */
+  rewardType: CreditRewardType | null
+  /** 증감량 — 사용·차감은 음수 */
+  amount: number
+  balanceAfter: number
+  reason: string
+  createdAt: string
+}
+
+/** 내 크레딧 내역 — 최신순 최근 200건 (마이페이지 · 학습 관리 · 크레딧 내역) */
+export async function fetchCreditTransactions(): Promise<CreditTransaction[]> {
+  const { data } = await api.get<BaseResponse<CreditTransaction[]>>('/api/credits/transactions')
+  return data.data
+}

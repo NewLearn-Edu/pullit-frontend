@@ -10,6 +10,7 @@ import WrongNoteDetailPage from './user/pages/wrongnote/WrongNoteDetailPage'
 import WrongNoteReviewPage from './user/pages/wrongnote/WrongNoteReviewPage'
 import MyPage from './user/pages/my/MyPage'
 import ProfileEditPage from './user/pages/my/ProfileEditPage'
+import CreditHistoryPage from './user/pages/my/CreditHistoryPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
@@ -122,6 +123,8 @@ export default function App() {
         <Route path="/report" element={<ReportPage />} />
         <Route path="/my" element={<MyPage />} />
         <Route path="/my/profile" element={<ProfileEditPage />} />
+        {/* 크레딧 내역 — 마이페이지 › 학습 관리 */}
+        <Route path="/my/credits" element={<CreditHistoryPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}

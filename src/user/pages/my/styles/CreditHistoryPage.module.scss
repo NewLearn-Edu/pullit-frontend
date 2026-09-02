@@ -1,0 +1,219 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// CreditHistoryPage · 크레딧 내역 (마이페이지 › 학습 관리)
+//   회색 페이지 위 — 잔액 카드 + 날짜별 그룹 리스트 (마이페이지 카드 규격 그대로)
+// -----------------------------------------------------------------------------
+
+$bg: #f8f8f8;
+$line: #ececec;
+$ink: #171211;
+$sub: #626262;
+$muted: #a6abb1;
+$plus: #ff385c;
+$minus: #2a78ff;
+
+.page {
+  display: flex;
+  min-height: 100dvh;
+  background: $bg;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  @include desktop-up {
+    max-width: 620px;
+    margin: 0 auto;
+  }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 20px calc(var(--nav-bottom-h, 0px) + 40px);
+}
+
+// 잔액 카드
+.balanceCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $color-canvas;
+}
+
+.balanceLabel {
+  margin: 0;
+  font-size: 14px;
+  font-weight: $fw-medium;
+  color: $sub;
+}
+
+.balanceValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: $fw-bold;
+  color: $ink;
+  font-variant-numeric: tabular-nums;
+
+  :global(svg) {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.balanceHint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: $muted;
+}
+
+// 날짜 그룹
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupDate {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: $fw-bold;
+  color: $sub;
+}
+
+.groupCard {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $color-canvas;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid $line;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.rowIcon {
+  @include flex-center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #f0f1f3;
+  font-size: 16px;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rowTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: $fw-semibold;
+  color: $ink;
+  word-break: keep-all;
+}
+
+.rowSub {
+  margin: 0;
+  font-size: 12px;
+  color: $muted;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowAmounts {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.amount {
+  margin: 0;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  font-variant-numeric: tabular-nums;
+  color: $ink;
+}
+
+.amountPlus {
+  color: $plus;
+}
+
+.amountMinus {
+  color: $minus;
+}
+
+.after {
+  margin: 0;
+  font-size: 12px;
+  color: $muted;
+  font-variant-numeric: tabular-nums;
+}
+
+// 빈 상태 · 에러
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 20px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $color-canvas;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: $fw-semibold;
+  color: $ink;
+}
+
+.emptyDesc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: $sub;
+  word-break: keep-all;
+}
+
+.skeletonCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: $color-canvas;
+}
