@@ -203,6 +203,35 @@
   border-color: $color-foreground;
 }
 
+// 지우개 종류(전체/일부) 칩 — 패스노트 퀵메뉴의 캡슐 2개와 같은 의미
+.eraserModeGroup {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.eraserModeButton {
+  @include button-reset;
+  @include flex-center;
+  height: 28px;
+  padding: 0 $space-md;
+  border-radius: $radius-full;
+  font-size: $fs-body-sm;
+  font-weight: $fw-medium;
+  color: $color-muted;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease;
+
+  @include hover { background: rgba(246, 244, 242, 0.6); }
+}
+
+.eraserModeButtonActive {
+  background: $color-surface;
+  color: $color-foreground;
+
+  @include hover { background: $color-surface; }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Divider (색·두께 사이 세로 선)
 // ─────────────────────────────────────────────────────────────────────────────

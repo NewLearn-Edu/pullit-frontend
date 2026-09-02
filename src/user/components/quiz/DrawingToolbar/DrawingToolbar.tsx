@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
-import { StrokeTool } from '../DrawingCanvas'
+import type { EraserMode, StrokeTool } from '../DrawingCanvas'
 import { useIsCompact, useIsTouchDevice } from '@/user/hooks/useMediaQuery'
 import styles from './styles/DrawingToolbar.module.scss'
 
@@ -11,23 +11,32 @@ const COLORS = ['#120C0B', '#2563EB', '#DC2626', '#059669']
 const DEFAULT_PRESETS: [number, number, number] = [0.2, 0.35, 0.7]
 
 /**
- * 지우개 사이즈 4단 (canvas size 값 · × 14 = 실제 픽셀)
+ * 지우개 사이즈 4단 (canvas size 값 · × 14 = 기준 폭 500 조판 px · 화면에선 배율만큼 축소)
  * 0.6 = 8.4px · 1.4 = 19.6px · 2.6 = 36.4px · 4.2 = 58.8px
  */
 const ERASER_SIZES: readonly number[] = [0.6, 1.4, 2.6, 4.2]
 /** 툴바 버튼 안 원 지름 · 실제 지우개 크기 비율만 반영 */
 const ERASER_DOT_PX = [7, 14, 22, 32]
 
+/** 지우개 종류 칩 — 패스노트 퀵메뉴의 전체/일부와 같은 순서·이름 */
+const ERASER_MODES: readonly [EraserMode, string, string][] = [
+  ['stroke', '전체', '닿은 획을 통째로 지웁니다'],
+  ['partial', '일부', '지나간 부분만 잘라냅니다'],
+]
+
 interface DrawingToolbarProps {
   tool: StrokeTool
   color: string
   size: number
+  /** 지우개 종류 — 전체(닿은 획 통째로) / 일부(지나간 부분만) */
+  eraserMode: EraserMode
   allowFinger: boolean
   /** 필기 도구 활성화 여부 · false 이면 툴바 접힘 + canvas 도 disabled */
   drawingEnabled: boolean
   onToolChange: (t: StrokeTool) => void
   onColorChange: (c: string) => void
   onSizeChange: (s: number) => void
+  onEraserModeChange: (m: EraserMode) => void
   onAllowFingerChange: (v: boolean) => void
   onDrawingEnabledChange: (v: boolean) => void
   onUndo: () => void
@@ -42,11 +51,13 @@ export function DrawingToolbar({
   tool,
   color,
   size,
+  eraserMode,
   allowFinger,
   drawingEnabled,
   onToolChange,
   onColorChange,
   onSizeChange,
+  onEraserModeChange,
   onAllowFingerChange,
   onDrawingEnabledChange,
   onUndo,
@@ -243,9 +254,28 @@ export function DrawingToolbar({
     </div>
   )
 
-  // 지우개 사이즈 4단 그룹
+  // 지우개 설정 — 종류(전체/일부) + 사이즈 4단
   const eraserSizesGroup = (
     <div className={styles.eraserSizesGroup}>
+      <div className={styles.eraserModeGroup} role="radiogroup" aria-label="지우개 종류">
+        {ERASER_MODES.map(([mode, label, title]) => {
+          const isActive = eraserMode === mode
+          return (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={isActive}
+              title={title}
+              onClick={() => onEraserModeChange(mode)}
+              className={clsx(styles.eraserModeButton, isActive && styles.eraserModeButtonActive)}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      <Divider />
       {ERASER_SIZES.map((v, i) => {
         const isActive = i === eraserSizeIdx
         const px = ERASER_DOT_PX[i]
@@ -375,15 +405,15 @@ export function DrawingToolbar({
         {/* 가운데: 도구 + (데스크탑에서만) 색 · 두께 */}
         <div className={styles.center}>
           <ToolButton
-            active={tool === 'pen'}
-            onClick={() => handleToolChange('pen')}
+            active={tool === 'mono'}
+            onClick={() => handleToolChange('mono')}
             label="펜"
           >
             <PenIcon />
           </ToolButton>
           <ToolButton
-            active={tool === 'highlighter'}
-            onClick={() => handleToolChange('highlighter')}
+            active={tool === 'marker'}
+            onClick={() => handleToolChange('marker')}
             label="형광펜"
           >
             <HighlighterIcon />
@@ -497,7 +527,7 @@ const SizePopover = forwardRef<HTMLDivElement, {
   ref,
 ) {
   const label =
-    tool === 'highlighter' ? '형광펜 두께' : tool === 'eraser' ? '지우개 두께' : '펜 두께'
+    tool === 'marker' ? '형광펜 두께' : tool === 'eraser' ? '지우개 두께' : '펜 두께'
   return (
     <div
       ref={ref}

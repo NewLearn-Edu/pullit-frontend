@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
-import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
@@ -136,9 +137,17 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [inputValue, setInputValue] = useState('') // 주관식(단답형) 입력값
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [tool, setTool] = useState<StrokeTool>('pen')
+  const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.35) // 0.1 ~ 1.0 슬라이더 값 · 도구별 픽셀 매핑은 DrawingCanvas
+  const [size, setSize] = useState(0.35) // 0.1 ~ 1.0 슬라이더 값 · 도구별 굵기 매핑은 DrawingCanvas
+  const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
+  // 복원한 필기의 세로 끝(px)만큼 캔버스 영역을 확보해 아래쪽 필기가 안 잘리게 (폰 저장 → 태블릿).
+  // state 가 아니라 style 직접 — 획마다 문제 본문(KaTeX)까지 다시 그리지 않는다
+  const canvasAreaRef = useRef<HTMLDivElement>(null)
+  const applyNoteHeight = (px: number) => {
+    const el = canvasAreaRef.current
+    if (el) el.style.minHeight = px > 0 ? `${px}px` : ''
+  }
   const [allowFinger, setAllowFinger] = useState(false) // 아이패드 손바닥 걸침 방지 · 기본 펜만
   // 필기 도구 활성화 여부. 모바일 진입 시 DrawingToolbar 가 자동 false 로 세팅 (툴바 접힘 + canvas disabled)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
@@ -210,7 +219,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     setSelected(null)
     setInputValue('')
     setSkipConfirmOpen(false)
-    canvasRef.current?.clear()
+    // 필기는 지우지 않는다 — 문제별로 저장·복원된다 (ProblemNoteCanvas 가 문제 코드 기준으로 교체)
     // 새로고침 내성 — 문항별 시작 시각을 sessionStorage 에 박아 경과 시간이 이어진다.
     // 삭제는 명시적 진행 지점(다음 문항 이동·이탈·완료)에서만 — 언마운트 cleanup 으로
     // 지우면 StrictMode 이중 마운트가 복원 직후 키를 지워 새로고침 복원이 깨진다
@@ -436,11 +445,13 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         tool={tool}
         color={color}
         size={size}
+        eraserMode={eraserMode}
         allowFinger={allowFinger}
         drawingEnabled={drawingEnabled}
         onToolChange={setTool}
         onColorChange={setColor}
         onSizeChange={setSize}
+        onEraserModeChange={setEraserMode}
         onAllowFingerChange={setAllowFinger}
         onDrawingEnabledChange={setDrawingEnabled}
         onUndo={() => canvasRef.current?.undo()}
@@ -470,7 +481,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
             {/* 어드민 미리보기와 100% 동일 조판 — 같은 공용 클래스(pv-body 계열, exam.css) 사용.
                 ExamScaleFrame: 375px 기준 고정 조판을 폭에 비례해 확대 (줄바꿈 불변) */}
-            <div className={clsx(styles.canvasArea, 'exam-paper')}>
+            <div ref={canvasAreaRef} className={clsx(styles.canvasArea, 'exam-paper')}>
               <ExamScaleFrame>
               <div className={clsx('pv-body', subject === 'english' && 'en')}>
                 <div className={styles.bodyWrap}>
@@ -504,13 +515,19 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
               <div className={styles.spacer} />
 
               <div className={styles.canvasOverlay}>
-                <DrawingCanvas
+                {/* 문제 필기 — 문제 코드별 problem.pnk 로 저장·복원 (문제가 바뀌면 새로 마운트) */}
+                <ProblemNoteCanvas
+                  key={problem.serverId ?? problem.id}
                   ref={canvasRef}
+                  problemCode={problem.serverId}
+                  target="problem"
                   tool={tool}
                   color={color}
                   size={size}
+                  eraserMode={eraserMode}
                   disabled={!drawingEnabled}
                   allowFinger={allowFinger}
+                  onContentHeight={applyNoteHeight}
                 />
               </div>
             </div>

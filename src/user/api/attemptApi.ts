@@ -3,7 +3,7 @@ import { api } from '@/user/api/authApi'
 export type AttemptSource = 'DAILY' | 'FREE' | 'RETRY' | 'TRIAL'
 
 export interface AttemptSubmitRequest {
-  /** 서버 problems 테이블 PK (예: 2022_1_1_1-S0252) */
+  /** 서버 problems.problem_code (예: math_2022_1_1_1_0252) */
   problemId: string
   source: AttemptSource
   submittedNo?: number | null

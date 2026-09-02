@@ -1,14 +1,11 @@
 import { clsx } from 'clsx'
-import type { Ref } from 'react'
+import { useRef, type Ref } from 'react'
 import type { Problem } from '@/user/data/mockProblems'
 import { MathExplainRender } from '@/shared/components/ExamRender'
 import { ProblemExplain, parseExplainBlocks } from '@/shared/components/ProblemExplain'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
-import {
-  DrawingCanvas,
-  type DrawingCanvasHandle,
-  type StrokeTool,
-} from '@/user/components/quiz/DrawingCanvas'
+import type { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import styles from './styles/ExplainPanel.module.scss'
 
 /** 해설 위 필기 옵션 — 페이지의 공용 툴바 상태를 그대로 받는다 (리뷰 화면용) */
@@ -16,6 +13,7 @@ export interface ExplainDrawing {
   tool: StrokeTool
   color: string
   size: number
+  eraserMode?: EraserMode
   disabled?: boolean
   allowFinger?: boolean
   canvasRef?: Ref<DrawingCanvasHandle>
@@ -68,6 +66,15 @@ export function ExplainPanel({
         ? String(resolvedAnswer)
         : ['①', '②', '③', '④', '⑤'][resolvedAnswer - 1] ?? '-'
 
+  // 복원한 해설 필기의 세로 끝(px)만큼 drawWrap 을 늘린다 — 짧은 해설이라도 아래쪽 필기가 안 잘리게.
+  // state 가 아니라 style 직접 — 획마다 패널이 다시 그려지면 MathJax 조판이 풀린다
+  // (React 19 는 리렌더마다 dangerouslySetInnerHTML 을 재설정해 typeset 결과를 지운다)
+  const drawWrapRef = useRef<HTMLDivElement>(null)
+  const applyNoteHeight = (px: number) => {
+    const el = drawWrapRef.current
+    if (el) el.style.minHeight = px > 0 ? `max(100%, ${px}px)` : ''
+  }
+
   const cssVars = {
     // md+ 에서 사용될 width · 인라인으로 --pw 주입
     // 닫힘 애니메이션 중에도 inner 는 마지막 사용자 값 유지 → 텍스트 리플로우 방지
@@ -106,7 +113,7 @@ export function ExplainPanel({
           <div className={styles.body}>
             {/* drawWrap: 필기 오버레이 기준 컨테이너 — 스크롤 내용과 같이 움직이고,
                 해설이 짧아도 패널 높이만큼은 채워 아래 여백에도 쓸 수 있다 */}
-            <div className={styles.drawWrap}>
+            <div ref={drawWrapRef} className={styles.drawWrap}>
             {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
             <ExamScaleFrame>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
@@ -155,13 +162,21 @@ export function ExplainPanel({
                 className={styles.drawOverlay}
                 onPointerDownCapture={drawing.onActivate}
               >
-                <DrawingCanvas
+                {/* 해설 필기 — 문제 코드별 explanation.pnk 로 저장·복원 (문제가 바뀌면 새로 마운트).
+                    영어 해설/번역 탭이 생기면 탭마다 캔버스를 따로 두고 번역 탭은 target="translation"
+                    (key 에 탭도 포함해 탭 전환 때 저장·복원되게) */}
+                <ProblemNoteCanvas
+                  key={problem.serverId ?? problem.id}
                   ref={drawing.canvasRef}
+                  problemCode={problem.serverId}
+                  target="explanation"
                   tool={drawing.tool}
                   color={drawing.color}
                   size={drawing.size}
+                  eraserMode={drawing.eraserMode}
                   disabled={drawing.disabled}
                   allowFinger={drawing.allowFinger}
+                  onContentHeight={applyNoteHeight}
                 />
               </div>
             )}
