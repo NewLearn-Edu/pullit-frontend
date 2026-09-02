@@ -45,6 +45,51 @@ function useIsNarrow() {
   return narrow
 }
 
+/**
+ * 꺾은선 → 부드러운 곡선 (단조 큐빅 · Fritsch–Carlson).
+ * 카트멀롬 같은 일반 스플라인은 0이 이어지는 구간에서 바닥 아래로 출렁이는데,
+ * 단조 보간은 데이터가 평평한 곳은 평평하게, 오르내리는 곳만 둥글게 잇는다.
+ */
+function monotoneCurvePath(pts: [number, number][]): string {
+  const n = pts.length
+  if (n === 0) return ''
+  if (n === 1) return `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`
+  const dx = pts.slice(1).map((p, i) => p[0] - pts[i][0])
+  const slope = pts.slice(1).map((p, i) => (p[1] - pts[i][1]) / (dx[i] || 1))
+  // 각 점의 접선 기울기 — 양옆 기울기 부호가 다르면 0 (극점은 평평하게)
+  const m: number[] = new Array(n).fill(0)
+  m[0] = slope[0]
+  m[n - 1] = slope[n - 2]
+  for (let i = 1; i < n - 1; i++) {
+    m[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2
+  }
+  // 오버슈트 방지 — 접선이 구간 기울기의 3배를 넘지 않게
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) {
+      m[i] = 0
+      m[i + 1] = 0
+      continue
+    }
+    const a = m[i] / slope[i]
+    const b = m[i + 1] / slope[i]
+    const h = Math.hypot(a, b)
+    if (h > 3) {
+      m[i] = (3 * a) / h * slope[i]
+      m[i + 1] = (3 * b) / h * slope[i]
+    }
+  }
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`
+  for (let i = 0; i < n - 1; i++) {
+    const t = dx[i] / 3
+    const c1x = pts[i][0] + t
+    const c1y = pts[i][1] + m[i] * t
+    const c2x = pts[i + 1][0] - t
+    const c2y = pts[i + 1][1] - m[i + 1] * t
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`
+  }
+  return d
+}
+
 function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean }) {
   const W = compact ? 480 : 1000
   const H = compact ? 270 : 250
@@ -63,7 +108,7 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
     const y = (v: number) => PAD_T + innerH - (v / yMax) * innerH
 
     const toPath = (key: 'solved' | 'learners') =>
-      data.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(' ')
+      monotoneCurvePath(data.map((d, i) => [x(i), y(d[key])]))
 
     const solvedPath = toPath('solved')
     const solvedArea = `${solvedPath} L${x(data.length - 1).toFixed(1)},${(PAD_T + innerH).toFixed(1)} L${x(0).toFixed(1)},${(PAD_T + innerH).toFixed(1)} Z`
