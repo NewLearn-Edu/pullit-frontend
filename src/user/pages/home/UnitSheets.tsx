@@ -58,6 +58,34 @@ function consumeDiagnoseDoneFlash(subject: Subject): string | null {
 }
 
 /**
+ * 단원 상세 재오픈 플래시 — 세트 완료 점수 변동 화면(/solve-result)에서 "완료"로 약점 지도로
+ * 돌아올 때, 방금 푼 소단원을 선택 상태로 상세 시트까지 열어 둔다 (Figma 3699-11683 · 2026-09-02).
+ * 약점 지도에서 시작한 자유 풀이(진단 이후)만 해당 — 홈에서 시작한 세트는 홈으로 돌아가며 안 쓴다.
+ */
+const UNIT_REOPEN_FLASH_KEY = 'pullit_unit_reopen_flash'
+
+export function setUnitReopenFlash(unitName: string, subject: Subject): void {
+  try {
+    sessionStorage.setItem(UNIT_REOPEN_FLASH_KEY, JSON.stringify({ unitName, subject }))
+  } catch {
+    /* storage 불가 환경 — 재오픈 생략 */
+  }
+}
+
+export function consumeUnitReopenFlash(subject: Subject): string | null {
+  try {
+    const raw = sessionStorage.getItem(UNIT_REOPEN_FLASH_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(UNIT_REOPEN_FLASH_KEY)
+    const parsed = JSON.parse(raw) as { unitName?: string; subject?: string }
+    if (typeof parsed.unitName !== 'string' || parsed.subject !== subject) return null
+    return parsed.unitName
+  } catch {
+    return null
+  }
+}
+
+/**
  * 소단원 액션 시트 묶음 — 홈과 약점 지도가 같은 로직·같은 화면을 쓴다 (2026-08-31).
  *
  * 상태별 분기 (openUnit):

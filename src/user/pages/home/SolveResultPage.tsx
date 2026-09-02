@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import arrowIcon from '@/assets/score-change-arrow.svg'
 import upIcon from '@/assets/score-change-up.svg'
 import downIcon from '@/assets/score-change-down.svg'
@@ -143,7 +144,13 @@ export default function SolveResultPage() {
   const headline =
     direction === 'up' ? '평균 점수가 올랐어' : direction === 'down' ? '평균 점수가 떨어졌어' : '평균 점수는 그대로야'
 
-  const leave = () => navigate(state.returnTo || '/home', { replace: true })
+  // 약점 지도에서 시작한 세트면 돌아가서 방금 푼 소단원을 선택 + 상세 시트 열기 (3699-11683).
+  // 홈에서 시작한 세트는 홈으로만 (지도 전용 동작)
+  const leave = () => {
+    const to = state.returnTo || '/home'
+    if (to.startsWith('/weakness-map') && unitName) setUnitReopenFlash(unitName, subject)
+    navigate(to, { replace: true })
+  }
 
   return (
     <div className="flex min-h-dvh flex-col overflow-x-hidden bg-[#f0f1f3]">

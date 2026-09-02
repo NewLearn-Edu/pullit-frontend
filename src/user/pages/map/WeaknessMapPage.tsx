@@ -16,7 +16,7 @@ import {
   useTrialProgressStore,
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
-import { useUnitSheets } from '@/user/pages/home/UnitSheets'
+import { useUnitSheets, consumeUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import {
   MATH_MAP_EDGES,
   MATH_MAP_NODES,
@@ -135,6 +135,25 @@ export default function WeaknessMapPage() {
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // 점수 변동 화면(/solve-result)에서 "완료"로 돌아온 경우 — 방금 푼 소단원을 선택(포커스)하고
+  // 상세 시트를 바로 연다 (3699-11683). 플래시는 읽는 즉시 지워져 1회만
+  // (플래시는 마운트 때 한 번 읽어 두고, 행 인덱스가 준비되는 시점에 연다 — 잠금 조회 뒤 재계산돼도 1회)
+  const pendingReopenRef = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (pendingReopenRef.current === undefined) pendingReopenRef.current = consumeUnitReopenFlash(subject)
+    const unitName = pendingReopenRef.current
+    if (!unitName) return
+    const hit = rowIndex.get(unitName)
+    const node = (subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES).find((n) => n.name === unitName)
+    const category = node ? findCategoryByName(subject, node.cat) : null
+    if (!hit || !node || !category) return
+    pendingReopenRef.current = null
+    setSelectedId(node.id)
+    sheets.openUnit(hit.row, { category, rows: hit.rows })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, rowIndex])
+
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: INITIAL_SCALE })
   const [animated, setAnimated] = useState(false) // 포커스 이동 중에만 transform 트랜지션
   // 피그마식 핸드 툴 — 스페이스 누르는 동안 grab 커서 + 노드 클릭 무시
