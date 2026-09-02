@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Toast } from '@/user/components/Toast'
 import { useNavigate, useParams } from 'react-router-dom'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { PageHeader } from '@/user/components/PageHeader'
@@ -207,11 +208,9 @@ export default function WrongNoteDetailPage() {
         </div>
       </main>
 
-      {toast && (
-        <div key={toast.key} className={styles.toast} role="status">
-          {toast.message}
-        </div>
-      )}
+      <Toast show={!!toast} fit bottom="calc(110px + env(safe-area-inset-bottom))" className={styles.toast}>
+        {toast?.message}
+      </Toast>
 
       {/* 하단 고정 — 단원 오답 전체 다시 풀기 (이번 화면에서 제외한 문제는 빼고) */}
       <div className={styles.footer}>

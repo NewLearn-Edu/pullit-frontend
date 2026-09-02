@@ -1,0 +1,60 @@
+// -----------------------------------------------------------------------------
+// Toast · 하단 토스트 공용 래퍼
+// - 아래에서 위로 떠오르고, 사라질 때도 아래로 가라앉으며 페이드
+// - PC 좌측 사이드바(UserNav)가 있으면 그 오른쪽 콘텐츠 영역 기준으로 가운데 정렬
+// -----------------------------------------------------------------------------
+
+.wrap {
+  position: fixed;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.card {
+  width: 100%;
+  max-width: 620px;
+  pointer-events: auto;
+  animation: toast-in 260ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+.fit {
+  width: auto;
+  max-width: 100%;
+}
+
+.out {
+  animation: toast-out 200ms ease-in both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .out {
+    animation-duration: 1ms;
+  }
+}

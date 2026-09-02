@@ -1,0 +1,95 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ConfirmDialog · 확인/안내 팝업 (문제 화면 "모르는 문제야?" 팝업과 동일 규격)
+// 브라우저 confirm/alert 대체 — 인앱 브라우저·OS 마다 제각각인 기본 다이얼로그 대신
+// -----------------------------------------------------------------------------
+
+.dim {
+  position: fixed;
+  inset: 0;
+  z-index: 60; // 시트(50)·answerBar(30) 위
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-lg;
+  background: rgba(0, 0, 0, 0.4);
+  animation: confirm-fade 180ms ease;
+}
+
+.card {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 16px;
+  background: $color-canvas;
+  padding: $space-xl $space-lg $space-lg;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  animation: confirm-pop 220ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.title {
+  margin: 0;
+  text-align: center;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+  word-break: keep-all;
+}
+
+.desc {
+  margin: $space-md 0 0;
+  text-align: center;
+  font-size: $fs-body-sm;
+  line-height: 1.6;
+  color: $color-body;
+  word-break: keep-all;
+}
+
+.actions {
+  display: flex;
+  gap: $space-sm;
+  margin-top: $space-xl;
+}
+
+.cancel {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  background: $color-surface;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-body;
+  transition: background-color 150ms ease;
+
+  @include hover { background: $color-line; }
+}
+
+.ok {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  background: #23272b;
+  font-size: $fs-body-sm;
+  font-weight: $fw-bold;
+  color: #fff;
+  transition: opacity 150ms ease;
+
+  @include hover { opacity: 0.9; }
+}
+
+.okDanger {
+  background: $color-danger;
+}
+
+@keyframes confirm-fade {
+  from { opacity: 0; }
+}
+
+@keyframes confirm-pop {
+  from { opacity: 0; transform: scale(0.94); }
+}

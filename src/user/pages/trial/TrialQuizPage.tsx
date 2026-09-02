@@ -11,6 +11,7 @@ import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { CreditUsedToast } from '@/user/components/CreditUsedToast'
+import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
@@ -144,6 +145,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [drawingEnabled, setDrawingEnabled] = useState(true)
   // 모르겠어요·넘어가기 확인 팝업
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false) // 나가기 확인 팝업 (브라우저 confirm 대체)
 
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const answerBarRef = useRef<HTMLDivElement>(null)
@@ -379,12 +381,13 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'), { replace: isTrial })
   }
 
-  const handleClose = () => {
-    // 문항별 즉시 저장으로 바뀌어 "저장 안 됨" 안내는 더 이상 사실이 아니다
-    if (window.confirm('나가면 풀이가 여기서 끝나요. 지금까지 푼 문제는 저장돼요.')) {
-      clearQuizStart(mode, subject, idx)
-      navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
-    }
+  const handleClose = () => setExitConfirmOpen(true)
+
+  /** 나가기 확정 — 문항별 즉시 저장이라 지금까지 푼 문제는 남는다 */
+  const confirmExit = () => {
+    setExitConfirmOpen(false)
+    clearQuizStart(mode, subject, idx)
+    navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
   }
 
   /** 모르겠어요 확정 — 무응답 오답으로 기록하고 진행 */
@@ -520,7 +523,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       </div>
 
       {/* 하단 고정 답안 바 — 객관식 1~5 / 주관식 숫자 입력 + 다음·모르겠어요 */}
-      <div ref={answerBarRef} className={styles.answerBar}>
+      <div ref={answerBarRef} className={styles.answerBar} data-answer-bar>
         {isShortAnswer ? (
           <div className={styles.answerInputRow}>
             <input
@@ -576,28 +579,22 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
       {/* 모르겠어요 확인 팝업 — 무응답은 오답으로 기록되니 한 번 확인 */}
       {skipConfirmOpen && (
-        <div className={styles.confirmDim} onClick={() => setSkipConfirmOpen(false)}>
-          <div
-            role="alertdialog"
-            aria-label="모르는 문제 확인"
-            className={styles.confirmCard}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className={styles.confirmTitle}>모르는 문제야?</p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                onClick={() => setSkipConfirmOpen(false)}
-                className={styles.confirmCancel}
-              >
-                취소
-              </button>
-              <button type="button" onClick={confirmDontKnow} className={styles.confirmOk}>
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="모르는 문제야?"
+          onCancel={() => setSkipConfirmOpen(false)}
+          onConfirm={confirmDontKnow}
+        />
+      )}
+
+      {/* 나가기 확인 팝업 — 브라우저 confirm 대신 앱 팝업 */}
+      {exitConfirmOpen && (
+        <ConfirmDialog
+          title="풀이를 여기서 끝낼까?"
+          desc="지금까지 푼 문제는 저장돼. 이어풀기로 다시 돌아올 수 있어."
+          confirmLabel="나가기"
+          onCancel={() => setExitConfirmOpen(false)}
+          onConfirm={confirmExit}
+        />
       )}
     </div>
   )

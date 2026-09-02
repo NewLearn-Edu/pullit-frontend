@@ -383,12 +383,6 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
 }
 
 .toast {
-  position: fixed;
-  bottom: calc(var(--nav-bottom-h) + 24px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 60;
-  max-width: calc(100vw - 40px);
   padding: 12px 18px;
   border-radius: 12px;
   background: rgba(18, 20, 23, 0.92);
@@ -396,9 +390,5 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   font-weight: $fw-medium;
   color: #fff;
   white-space: nowrap;
-  animation: my-toast-in 220ms ease;
 }
 
-@keyframes my-toast-in {
-  from { opacity: 0; transform: translate(-50%, 6px); }
-}

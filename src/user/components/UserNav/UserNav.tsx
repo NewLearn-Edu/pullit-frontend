@@ -29,7 +29,7 @@ export function UserNav({ active }: UserNavProps) {
   return (
     <>
       {/* 데스크탑 사이드바 */}
-      <aside className={styles.sidebar}>
+      <aside className={styles.sidebar} data-side-nav>
         <Link to="/home" className={styles.logo}>
           풀잇
         </Link>

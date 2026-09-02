@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
+import { ConfirmDialog } from '@/user/components/ConfirmDialog'
+import { Toast } from '@/user/components/Toast'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
@@ -115,6 +117,7 @@ export function useUnitSheets({
   const [startError, setStartError] = useState<string | null>(null)
   const [lockSaving, setLockSaving] = useState(false)
   const [shortageOpen, setShortageOpen] = useState(false)
+  const [alertMsg, setAlertMsg] = useState<string | null>(null) // 시트 밖 실패 안내 팝업 (브라우저 alert 대체)
   // 시트가 하나라도 열려 있으면 배경(body) 스크롤 잠금 — 시트 스크롤이 페이지로 새지 않게
   const anySheetOpen = !!(unitSheet || startSheet || lockedSheet)
   useEffect(() => {
@@ -432,7 +435,7 @@ export function useUnitSheets({
       })
       navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {
-      window.alert(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+      setAlertMsg(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
     }
   }
 
@@ -983,11 +986,10 @@ export function useUnitSheets({
       )}
 
       {/* 건너뛰기 확정 토스트 (3715-9240) — 하단 네비 위 다크 바 */}
-      {skipToast && (
-        <div
-          role="status"
-          className="fixed inset-x-[16px] bottom-[calc(var(--nav-bottom-h,0px)+16px)] z-[60] flex items-center gap-[8px] rounded-[14px] bg-[#23272b] px-[16px] py-[14px] shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
-        >
+      <Toast
+        show={!!skipToast}
+        className="flex items-center gap-[8px] rounded-[14px] bg-[#23272b] px-[16px] py-[14px] shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
+      >
           <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#ffdadc]">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path
@@ -1002,15 +1004,16 @@ export function useUnitSheets({
           <p className="text-[14px] font-semibold leading-[1.4] text-white">
             {skipToast}부터 건너뛰었어
           </p>
-        </div>
-      )}
+      </Toast>
+
+      {/* 시트 밖 실패 안내 — 브라우저 alert 대신 앱 팝업 */}
+      {alertMsg && <ConfirmDialog title={alertMsg} onConfirm={() => setAlertMsg(null)} />}
 
       {/* 진단 완료 토스트 (3575-7884) — 다크 바 + "보기" → 해당 단원 상세 시트 */}
-      {doneToast && (
-        <div
-          role="status"
-          className="fixed bottom-[calc(var(--nav-bottom-h,0px)+16px)] left-1/2 z-[60] flex w-[calc(100%-40px)] max-w-[620px] -translate-x-1/2 items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
-        >
+      <Toast
+        show={!!doneToast}
+        className="flex items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
+      >
           <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#ffdadc]">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path
@@ -1032,8 +1035,7 @@ export function useUnitSheets({
           >
             보기
           </button>
-        </div>
-      )}
+      </Toast>
     </>
   )
 

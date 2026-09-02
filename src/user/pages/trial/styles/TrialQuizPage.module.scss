@@ -347,69 +347,6 @@
 // 모르겠어요 확인 팝업 — 딤 + 센터 카드 (취소 · 확인)
 // ─────────────────────────────────────────────────────────────────────────────
 
-.confirmDim {
-  position: fixed;
-  inset: 0;
-  z-index: 50; // answerBar(30) 위
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-lg;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.confirmCard {
-  width: 100%;
-  max-width: 320px;
-  border-radius: 16px;
-  background: $color-canvas;
-  padding: $space-xl $space-lg $space-lg;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-}
-
-.confirmTitle {
-  margin: 0;
-  text-align: center;
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  color: $color-foreground;
-}
-
-.confirmActions {
-  display: flex;
-  gap: $space-sm;
-  margin-top: $space-xl;
-}
-
-.confirmCancel {
-  @include button-reset;
-  @include flex-center;
-  flex: 1;
-  height: 48px;
-  border-radius: 12px;
-  background: $color-surface;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-body;
-  transition: background-color 150ms ease;
-
-  @include hover { background: $color-line; }
-}
-
-.confirmOk {
-  @include button-reset;
-  @include flex-center;
-  flex: 1;
-  height: 48px;
-  border-radius: 12px;
-  background: #23272b;
-  font-size: $fs-body-sm;
-  font-weight: $fw-bold;
-  color: #fff;
-  transition: opacity 150ms ease;
-
-  @include hover { opacity: 0.9; }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 해설 리뷰 화면 전용 — 정답/내 오답 보기 표시 (TrialReviewPage 에서 재사용)

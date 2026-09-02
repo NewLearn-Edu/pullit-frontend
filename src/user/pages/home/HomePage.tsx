@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
@@ -181,6 +182,7 @@ export default function HomePage() {
   // 소단원 카드의 "이어풀기" 라벨(2919-8829)은 계속 보여야 한다
   const [resumableSet, setResumableSet] = useState<ResumableSet | null>(null)
   const [resumePromptOpen, setResumePromptOpen] = useState(false)
+  const [resumeError, setResumeError] = useState<string | null>(null) // 이어풀기 실패 안내 팝업
   useEffect(() => {
     if (sessionStatus !== 'ready') return
     let alive = true
@@ -210,7 +212,7 @@ export default function HomePage() {
       if (info.source === 'TRIAL') await sheets.startTrialSet(unit, subj)
       else await sheets.startFreeSolve(unit, subj)
     } catch (error) {
-      window.alert(extractApiMessage(error) ?? '이어풀기에 실패했어. 다시 시도해줘')
+      setResumeError(extractApiMessage(error) ?? '이어풀기에 실패했어. 다시 시도해줘')
     }
   }
 
@@ -476,6 +478,8 @@ export default function HomePage() {
 
       {/* 소단원 액션 시트 4종 + 크레딧 부족 팝업 — 약점 지도와 공용 (UnitSheets) */}
       {sheets.element}
+
+      {resumeError && <ConfirmDialog title={resumeError} onConfirm={() => setResumeError(null)} />}
 
       {/* ── 이어풀기 팝업 (PI-POPUP-RESUME · 2931-11007) — 앱 진입 시 풀다 만 세트 안내 ── */}
       {resumePromptOpen && resumableSet && (

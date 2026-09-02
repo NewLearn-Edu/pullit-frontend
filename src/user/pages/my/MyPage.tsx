@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Toast } from '@/user/components/Toast'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
@@ -299,7 +300,9 @@ export default function MyPage() {
       </main>
 
       {/* 미니 토스트 — 준비 중 메뉴 · 동의 변경 결과 안내 */}
-      {toast && <div className={styles.toast}>{toast}</div>}
+      <Toast show={!!toast} fit bottom="calc(var(--nav-bottom-h) + 24px)" className={styles.toast}>
+        {toast}
+      </Toast>
 
       {/* 회원탈퇴 확인 다이얼로그 */}
       {withdrawOpen && (

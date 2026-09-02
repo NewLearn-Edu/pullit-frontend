@@ -256,11 +256,6 @@ $sub: #80858b;
 
 // 토스트 — 하단 중앙, 2.4초 자동 소멸
 .toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(110px + env(safe-area-inset-bottom));
-  z-index: 30;
-  transform: translateX(-50%);
   padding: 12px 20px;
   border-radius: $radius-full;
   background: rgba(22, 15, 14, 0.92);
@@ -268,19 +263,8 @@ $sub: #80858b;
   font-size: 14px;
   font-weight: $fw-semibold;
   white-space: nowrap;
-  animation: toast-in 200ms ease;
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
 
 // ── 하단 고정 전체 풀기 ──────────────────────────────────────────────────────
 

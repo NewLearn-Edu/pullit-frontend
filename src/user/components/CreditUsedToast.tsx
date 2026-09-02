@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Toast } from '@/user/components/Toast'
 
 /**
  * 크레딧 사용 토스트 (Figma 2857-21836 · 3631-9472).
@@ -37,38 +38,42 @@ function consumeCreditUsedFlash(): { used: number; remaining: number } | null {
 export function CreditUsedToast() {
   const [flash, setFlash] = useState<{ used: number; remaining: number } | null>(null)
 
+  // 플래시 소비와 타이머를 분리 — 한 effect 에 묶으면 StrictMode(dev)가 effect 를
+  // 두 번 돌릴 때 첫 실행이 플래시를 지우고 cleanup 이 타이머를 취소한 뒤,
+  // 두 번째 실행은 플래시가 없어 타이머를 다시 걸지 않아 토스트가 영영 안 사라진다
   useEffect(() => {
     const consumed = consumeCreditUsedFlash()
-    if (!consumed) return
-    setFlash(consumed)
-    const timer = window.setTimeout(() => setFlash(null), 2000)
-    return () => window.clearTimeout(timer)
+    if (consumed) setFlash(consumed)
   }, [])
 
-  if (!flash) return null
+  useEffect(() => {
+    if (!flash) return
+    const timer = window.setTimeout(() => setFlash(null), 2000)
+    return () => window.clearTimeout(timer)
+  }, [flash])
 
   return (
-    <div
-      role="status"
-      // 채점하기 푸터 위 — 폰은 좌우 20px, 패드·웹은 본문 폭(620px)에 맞춰 중앙
-      className="fixed bottom-[calc(112px+env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[calc(100%-40px)] max-w-[620px] -translate-x-1/2 animate-[credit-toast-in_260ms_cubic-bezier(0.22,0.9,0.3,1)] items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
+    // 답안 바(data-answer-bar) 바로 위 — 바 높이(객관식 5개 + 넘어가기)를 실제로 재서 겹치지 않는다
+    <Toast
+      show={!!flash}
+      anchorSelector="[data-answer-bar]"
+      bottom="calc(112px + env(safe-area-inset-bottom))"
+      className="flex items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
     >
-      <style>{`
-        @keyframes credit-toast-in {
-          from { opacity: 0; transform: translate(-50%, 10px) }
-          to { opacity: 1; transform: translate(-50%, 0) }
-        }
-      `}</style>
-      <div className="flex min-w-0 flex-1 items-center gap-[8px]">
-        <ToastCoinIcon />
-        <p className="min-w-0 flex-1 text-[16px] font-semibold leading-[1.4] text-white">
-          크레딧 {flash.used}개를 사용했어
-        </p>
-      </div>
-      <p className="shrink-0 text-[14px] font-bold leading-[1.4] text-[#e5e7ea]">
-        남은 크레딧 {flash.remaining}
-      </p>
-    </div>
+      {flash && (
+        <>
+          <div className="flex min-w-0 flex-1 items-center gap-[8px]">
+            <ToastCoinIcon />
+            <p className="min-w-0 flex-1 text-[16px] font-semibold leading-[1.4] text-white">
+              크레딧 {flash.used}개를 사용했어
+            </p>
+          </div>
+          <p className="shrink-0 text-[14px] font-bold leading-[1.4] text-[#e5e7ea]">
+            남은 크레딧 {flash.remaining}
+          </p>
+        </>
+      )}
+    </Toast>
   )
 }
 
