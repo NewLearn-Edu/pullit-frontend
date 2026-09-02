@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
@@ -11,6 +11,7 @@ import {
   fetchUnitScoreSnapshot,
   type UnitScoreSnapshot,
 } from '@/user/services/unitScoreSnapshot'
+import styles from './styles/SolveResultPage.module.scss'
 
 interface ResultState {
   setId: number
@@ -22,6 +23,21 @@ interface ResultState {
 const POLL_MS = 700
 const POLL_MAX = 4
 
+/** 시퀀스 타이밍(ms) — 제목 → 카드 → 이전 점수 → 화살표 → 현재 점수 롤링 → 칩 → 안내·완료 */
+const T = {
+  title: 0,
+  card: 180,
+  beforeCount: 420, // 이전 점수 0 → N 카운트 시작
+  beforeDur: 650,
+  arrow: 950,
+  afterMin: 1150, // 현재 점수 롤링은 이 시점 이후 + 서버 값 도착 후
+  afterDur: 800,
+  chipGap: 80, // 롤링 끝 → 칩 팝
+  outroGap: 220, // 칩 팝 → 안내·완료 버튼
+}
+
+type Direction = 'up' | 'down' | 'same'
+
 /**
  * 세트 풀이 완료 — 소단원 평균 점수 변동 (Figma 3620-8320 상승 · 2857-21967 하락)
  *
@@ -31,6 +47,10 @@ const POLL_MAX = 4
  *
  * 마지막 문항 제출은 fire-and-forget 이라 도착 직후 조회하면 아직 반영 전일 수 있다 →
  * 누적 배점(totalPoints)이 커질 때까지 짧게 재조회한다.
+ *
+ * 연출(토스식): 제목·카드가 떠오르고, 이전 점수가 0에서 카운트업, 화살표가 밀려 들어온 뒤
+ * 현재 점수가 이전 값에서 굴러가 멈추면 변동 칩이 스프링으로 튀고 카드가 한 번 통통.
+ * 그제야 두 번째 줄("평균 점수가 올랐어")과 안내·완료 버튼이 나타난다.
  */
 export default function SolveResultPage() {
   const navigate = useNavigate()
@@ -77,58 +97,123 @@ export default function SolveResultPage() {
     }
   }, [state, subject, unitName])
 
+  // ── 시퀀스 ────────────────────────────────────────────────────────────────
+  const beforeScore = state?.before?.score ?? 0
+  const reduced = usePrefersReducedMotion()
+  const elapsed = useElapsed()
+
+  // 이전 점수 카운트업 (0 → before)
+  const beforeShown = useCountTo(beforeScore, {
+    from: 0,
+    duration: reduced ? 0 : T.beforeDur,
+    start: reduced || elapsed >= T.beforeCount,
+  })
+
+  // 현재 점수 롤링 — 서버 값이 오고, 화살표까지 나온 뒤에
+  const afterReady = after != null && (reduced || elapsed >= T.afterMin)
+  const afterShown = useCountTo(after?.score ?? beforeScore, {
+    from: beforeScore,
+    duration: reduced ? 0 : T.afterDur,
+    start: afterReady,
+  })
+  const rolling = afterReady && after != null && afterShown !== after.score
+
+  // 롤링이 끝나면 칩 → 안내·완료 순으로
+  const [revealed, setRevealed] = useState(false) // 칩 팝 + 카드 통통
+  const [headlineOn, setHeadlineOn] = useState(false) // 두 번째 줄 문구
+  const [outro, setOutro] = useState(false)
+  useEffect(() => {
+    if (!afterReady || rolling) return
+    const d = (ms: number) => (reduced ? 0 : ms)
+    const a = window.setTimeout(() => setRevealed(true), d(T.chipGap))
+    const h = window.setTimeout(() => setHeadlineOn(true), d(T.chipGap + 160))
+    const b = window.setTimeout(() => setOutro(true), d(T.chipGap + 160 + T.outroGap))
+    return () => {
+      window.clearTimeout(a)
+      window.clearTimeout(h)
+      window.clearTimeout(b)
+    }
+  }, [afterReady, rolling, reduced])
+
   if (!state) return null
 
   const before = state.before
   const delta = before && after ? after.score - before.score : null
-  const direction: 'up' | 'down' | 'same' | null =
-    delta == null ? null : delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'
+  const direction: Direction | null = delta == null ? null : delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'
   const headline =
-    direction === 'up'
-      ? '평균 점수가 올랐어'
-      : direction === 'down'
-        ? '평균 점수가 떨어졌어'
-        : direction === 'same'
-          ? '평균 점수는 그대로야'
-          : '평균 점수를 계산하고 있어'
+    direction === 'up' ? '평균 점수가 올랐어' : direction === 'down' ? '평균 점수가 떨어졌어' : '평균 점수는 그대로야'
 
   const leave = () => navigate(state.returnTo || '/home', { replace: true })
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#f0f1f3]">
+    <div className="flex min-h-dvh flex-col overflow-x-hidden bg-[#f0f1f3]">
       <OnboardingHeader showLogo onClose={leave} />
 
       <main className="flex w-full flex-1 flex-col items-center justify-center gap-[40px] px-[20px] pb-[40px] pt-[20px]">
         <h1 className="break-keep text-center text-[24px] font-bold leading-[1.3] text-[#121417]">
-          {unitName}
+          <span className={styles.rise} style={{ '--d': `${T.title}ms` } as React.CSSProperties}>
+            {unitName}
+          </span>
           <br />
-          {headline}
+          {/* 두 번째 줄은 점수가 확정된 뒤에만 — 결과를 먼저 말하지 않는다 */}
+          <span className={clsx(headlineOn ? styles.rise : 'invisible')}>{headline}</span>
         </h1>
 
         {/* 이전 평균 → 현재 평균 카드 */}
-        <div className="flex w-full max-w-[335px] items-center justify-center gap-[16px] rounded-[16px] bg-white p-[20px]">
+        <div
+          className={clsx(
+            'flex w-full max-w-[335px] items-center justify-center gap-[16px] rounded-[16px] bg-white p-[20px]',
+            styles.card,
+            revealed && styles.cardBump,
+          )}
+          style={{ '--d': `${T.card}ms` } as React.CSSProperties}
+        >
           <div className="flex min-w-0 flex-1 flex-col items-center gap-[8px] text-center">
             <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">이전 평균</p>
-            <p className="text-[24px] font-bold text-[#121417]">{before ? `${before.score}점` : '—'}</p>
+            <p className={clsx('text-[24px] font-bold text-[#121417]', styles.num)}>
+              {before ? `${beforeShown}점` : '—'}
+            </p>
           </div>
 
           <div className="flex flex-col items-center justify-end gap-[16px] self-stretch">
-            <img src={arrowIcon} alt="" aria-hidden className="h-[11px] w-[25px]" />
-            <DeltaChip direction={direction} delta={delta} />
+            <img
+              src={arrowIcon}
+              alt=""
+              aria-hidden
+              className={clsx('h-[11px] w-[25px]', styles.arrow)}
+              style={{ '--d': `${T.arrow}ms` } as React.CSSProperties}
+            />
+            {revealed && direction && delta != null ? (
+              <DeltaChip direction={direction} delta={delta} />
+            ) : (
+              <span className="h-[24px]" />
+            )}
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col items-center gap-[8px] text-center">
             <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">현재 평균</p>
-            <p className={clsx('text-[24px] font-bold text-[#121417]', !after && 'animate-pulse text-[#a6abb1]')}>
-              {after ? `${after.score}점` : '…'}
+            <p
+              className={clsx(
+                'text-[24px] font-bold text-[#121417]',
+                styles.num,
+                rolling && styles.numRolling,
+                !afterReady && styles.numPending,
+              )}
+            >
+              {afterReady ? `${afterShown}점` : '…'}
             </p>
           </div>
         </div>
       </main>
 
-      {/* 계산 안내 */}
-      <div className="flex w-full flex-col items-center px-[20px]">
-        <div className="flex w-full max-w-[335px] items-start gap-[8px] rounded-[16px] bg-[#e5e7ea] p-[16px]">
+      {/* 계산 안내 — 결과 확정 뒤 */}
+      <div className="flex w-full flex-col items-center overflow-hidden px-[20px]">
+        <div
+          className={clsx(
+            'flex w-full max-w-[335px] items-start gap-[8px] rounded-[16px] bg-[#e5e7ea] p-[16px]',
+            outro ? styles.rise : 'invisible',
+          )}
+        >
           <span className="flex size-[16px] shrink-0 items-center justify-center rounded-full bg-[#d6d8db] text-[12px] font-semibold leading-none text-[#5e6368]">
             i
           </span>
@@ -138,12 +223,18 @@ export default function SolveResultPage() {
         </div>
       </div>
 
-      {/* 완료 — 진입처(홈)로 */}
-      <div className="flex w-full justify-center px-[20px] pb-[max(28px,env(safe-area-inset-bottom))] pt-[20px]">
+      {/* 완료 — 진입처(홈)로.
+          overflow-hidden: 떠오르는 애니메이션(translateY 14px)이 화면 바닥을 넘는 순간
+          스크롤바가 생겼다 사라지며 화면이 흔들리던 문제 — 초과분을 여기서 잘라낸다 */}
+      <div className="flex w-full justify-center overflow-hidden px-[20px] pb-[max(28px,env(safe-area-inset-bottom))] pt-[20px]">
         <button
           type="button"
           onClick={leave}
-          className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
+          className={clsx(
+            'flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90',
+            outro ? styles.rise : 'invisible',
+          )}
+          style={{ '--d': '80ms' } as React.CSSProperties}
         >
           완료
         </button>
@@ -152,12 +243,11 @@ export default function SolveResultPage() {
   )
 }
 
-/** 변동 칩 — 상승 빨강 · 하락 파랑 · 변동 없음 회색 · 계산 중엔 비움 */
-function DeltaChip({ direction, delta }: { direction: 'up' | 'down' | 'same' | null; delta: number | null }) {
-  if (direction == null || delta == null) return <span className="h-[24px]" />
+/** 변동 칩 — 상승 빨강 · 하락 파랑 · 변동 없음 회색. 스프링 팝으로 등장 */
+function DeltaChip({ direction, delta }: { direction: Direction; delta: number }) {
   if (direction === 'same') {
     return (
-      <span className="rounded-full bg-[#f0f1f3] px-[6px] py-[4px] text-[12px] font-semibold leading-[1.4] text-[#80858b]">
+      <span className={clsx('rounded-full bg-[#f0f1f3] px-[6px] py-[4px] text-[12px] font-semibold leading-[1.4] text-[#80858b]', styles.chip)}>
         변동 없음
       </span>
     )
@@ -168,10 +258,61 @@ function DeltaChip({ direction, delta }: { direction: 'up' | 'down' | 'same' | n
       className={clsx(
         'flex items-center gap-[4px] rounded-full px-[6px] py-[4px] text-[12px] font-semibold leading-[1.4]',
         up ? 'bg-[#fff1f2] text-primary' : 'bg-[#eaf1ff] text-[#2a78ff]',
+        styles.chip,
       )}
     >
       <img src={up ? upIcon : downIcon} alt="" aria-hidden className="size-[12px]" />
       {Math.abs(delta)}점 {up ? '상승' : '하락'}
     </span>
   )
+}
+
+// ── 연출 훅 ──────────────────────────────────────────────────────────────────
+
+/** 마운트 후 경과 시간(ms) — 시퀀스 타이밍 판정용. 마지막 단계(afterMin)까지만 갱신 */
+function useElapsed(): number {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const started = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      const e = now - started
+      setElapsed(e)
+      if (e < T.afterMin + 50) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return elapsed
+}
+
+/** from → target 을 duration 동안 easeOutCubic 으로 굴린다 (start 가 true 가 되는 순간부터) */
+function useCountTo(target: number, { from, duration, start }: { from: number; duration: number; start: boolean }): number {
+  const [value, setValue] = useState(from)
+  const fromRef = useRef(from)
+  useEffect(() => {
+    if (!start) return
+    if (duration <= 0) {
+      setValue(target)
+      return
+    }
+    const begin = fromRef.current
+    let raf = 0
+    let startAt: number | null = null
+    const tick = (now: number) => {
+      if (startAt === null) startAt = now
+      const t = Math.min(1, (now - startAt) / duration)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setValue(Math.round(begin + (target - begin) * eased))
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [start, target, duration])
+  return value
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  return reduced
 }

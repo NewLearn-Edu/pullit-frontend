@@ -1,0 +1,102 @@
+// -----------------------------------------------------------------------------
+// SolveResultPage · 세트 완료 점수 변동 (Figma 3620-8320 / 2857-21967)
+// 토스식 시퀀스 — 제목 → 카드 → 이전 점수 카운트 → 화살표 → 현재 점수 롤링 → 칩 스프링 → 안내·완료
+// -----------------------------------------------------------------------------
+
+$ease-out: cubic-bezier(0.22, 0.9, 0.3, 1);
+$spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+// 아래에서 떠오르며 등장 — --d 로 지연 (지연 중 숨김은 fill-mode: both 가 담당 · 기본 opacity 를 0 으로 두면
+// 다른 애니메이션으로 갈아끼울 때 요소가 사라진다)
+.rise {
+  animation: rise 520ms $ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+
+// 카드 — 살짝 작게 시작해 펴진다.
+// will-change 로 컴포지터 레이어에 올려 scale 애니메이션(등장·통통) 중 카드 안 글자가
+// 다시 래스터되며 깜빡이지 않게 한다
+.card {
+  will-change: transform;
+  backface-visibility: hidden;
+  animation: card-in 600ms $ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+
+// 칩 — 스프링 팝
+.chip {
+  animation: chip-pop 480ms $spring both;
+}
+
+// 점수가 확정되는 순간 카드가 한 번 통통
+.cardBump {
+  animation: card-bump 420ms $spring both;
+}
+
+// 화살표 — 왼쪽에서 밀려 들어오며 나타남
+.arrow {
+  animation: arrow-in 420ms $ease-out both;
+  animation-delay: var(--d, 0ms);
+}
+
+// 숫자 — 자릿수 고정폭 (롤링 중 폭이 흔들리지 않게). 상하 떨림은 깜빡임처럼 보여 뺐다
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.numRolling {
+  color: #40464c;
+  transition: color 200ms ease;
+}
+
+// 대기 중(아직 서버 반영 전) 현재 점수 자리
+.numPending {
+  color: #a6abb1;
+  animation: pending 1s ease-in-out infinite alternate;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes chip-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes card-bump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+
+@keyframes arrow-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pending {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .card,
+  .chip,
+  .arrow {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .cardBump,
+  .numPending {
+    animation: none;
+  }
+}
