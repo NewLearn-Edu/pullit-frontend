@@ -147,7 +147,7 @@ export default function SolveResultPage() {
 
   return (
     <div className="flex min-h-dvh flex-col overflow-x-hidden bg-[#f0f1f3]">
-      <OnboardingHeader showLogo onClose={leave} />
+      <OnboardingHeader onClose={leave} />
 
       <main className="flex w-full flex-1 flex-col items-center justify-center gap-[40px] px-[20px] pb-[40px] pt-[20px]">
         <h1 className="break-keep text-center text-[24px] font-bold leading-[1.3] text-[#121417]">
