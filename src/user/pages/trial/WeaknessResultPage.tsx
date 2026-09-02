@@ -310,11 +310,12 @@ export default function WeaknessResultPage() {
     }
   }, [subject, unitName])
 
-  // 세션 결과 기반 폴백 점수 (같은 공식)
+  // 세션 결과 기반 폴백 점수 — 서버와 같은 공식(획득 배점 합 / 푼 배점 합).
+  // 획득 배점은 문항별 결과 표와 같은 시간 가중값(earnedPoints · 제안시간 초과 60%·제한시간 초과 0)
   const local = useMemo(() => {
     const total = rows.reduce((s, r) => s + (r.problem?.points ?? 0), 0)
     const earned = rows.reduce(
-      (s, r) => s + ((r.result.serverCorrect ?? r.result.correct) ? r.problem?.points ?? 0 : 0),
+      (s, r) => s + ((r.result.serverCorrect ?? r.result.correct) ? r.result.earnedPoints : 0),
       0,
     )
     return total === 0 ? 0 : Math.round((earned * 100) / total)
