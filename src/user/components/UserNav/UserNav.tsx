@@ -69,12 +69,9 @@ export function UserNav({ active }: UserNavProps) {
             <RecommendIcon size={46} />
           </span>
         </Link>
-        {/* 오답노트는 학습 기록 섹션 소속 — 하단 네비에서는 학습 기록을 활성 표시 */}
-        <BottomItem
-          to="/report"
-          label="학습 기록"
-          active={active === 'report' || active === 'wrongNote'}
-        >
+        {/* 하단 네비엔 오답노트 탭이 없다 — 오답노트 화면에선 어느 탭도 활성 표시하지 않는다
+            (학습 기록을 켜 두면 다른 화면에 있는 것처럼 보여 혼란 · 2026-09-02) */}
+        <BottomItem to="/report" label="학습 기록" active={active === 'report'}>
           <ReportIcon size={21} filled />
         </BottomItem>
         <BottomItem to="/my" label="마이" active={active === 'my'}>
