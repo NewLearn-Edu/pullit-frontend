@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { clsx } from 'clsx'
 import { PageHeader } from '@/user/components/PageHeader'
-import { updateNickname } from '@/user/api/authApi'
+import { deleteProfileImage, updateNickname, updateProfileImage } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
@@ -14,6 +14,8 @@ const NICKNAME_MIN = 2
 const NICKNAME_MAX = 10
 /** 재변경 잠금 기간 — 서버 UserService.NICKNAME_LOCK_DAYS 와 동일하게 유지 */
 const LOCK_DAYS = 90
+/** 업로드 전 축소 기준 (긴 변). 88px 아바타에 쓰기 충분하고 서버 상한(5MB)에 걸릴 일이 없다 */
+const IMAGE_MAX_EDGE = 512
 
 /**
  * 프로필 편집 (/my/profile · 토스 프로필 편집 참고 2026-08-25)
@@ -57,6 +59,45 @@ export default function ProfileEditPage() {
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  // 이미지는 닉네임 저장 버튼과 무관하게 고른 즉시 반영한다 (되돌리기도 마찬가지)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imageBusy, setImageBusy] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+
+  const pickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일을 다시 골라도 change 가 뜨도록 비운다
+    if (!file || imageBusy) return
+    setImageBusy(true)
+    setImageError(null)
+    try {
+      await updateProfileImage(await resizeProfileImage(file))
+      await loadMe(true)
+    } catch (e) {
+      // 서버 메시지가 곧 UX 카피 (형식·용량) — 그대로 노출
+      const message = isAxiosError(e)
+        ? (e.response?.data as { message?: string } | undefined)?.message
+        : null
+      setImageError(message ?? '이미지를 바꾸지 못했어요. 다시 시도해주세요')
+    } finally {
+      setImageBusy(false)
+    }
+  }
+
+  const removeImage = async () => {
+    if (imageBusy) return
+    setImageBusy(true)
+    setImageError(null)
+    try {
+      await deleteProfileImage()
+      await loadMe(true)
+    } catch {
+      setImageError('이미지를 지우지 못했어요. 다시 시도해주세요')
+    } finally {
+      setImageBusy(false)
+    }
+  }
+
   const save = async () => {
     if (!canSave || saving) return
     setSaving(true)
@@ -86,15 +127,39 @@ export default function ProfileEditPage() {
       <PageHeader backTo="history" center={<span className="text-[17px] font-bold text-[#121417]">프로필 편집</span>} />
 
       <main className="mx-auto flex w-full max-w-[620px] flex-1 flex-col items-center px-[20px] pb-[120px]">
-        {/* 아바타 + 편집 배지 — 이미지 변경은 준비 전 */}
-        <div className="relative mt-[32px]">
-          <UserAvatar src={me?.profileImageUrl} size={88} />
-          <span
-            aria-hidden
-            className="absolute -bottom-[2px] -right-[2px] flex size-[28px] items-center justify-center rounded-full border border-[#e5e7ea] bg-white"
+        {/* 아바타 + 편집 배지 — 탭하면 파일 선택, 고른 즉시 업로드된다 */}
+        <div className="mt-[32px] flex flex-col items-center gap-[10px]">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={imageBusy}
+            aria-label="프로필 이미지 변경"
+            className="relative"
           >
-            <PencilIcon />
-          </span>
+            <span className={clsx('block', imageBusy && 'opacity-50')}>
+              <UserAvatar src={me?.profileImageUrl} size={88} />
+            </span>
+            <span
+              aria-hidden
+              className="absolute -bottom-[2px] -right-[2px] flex size-[28px] items-center justify-center rounded-full border border-[#e5e7ea] bg-white"
+            >
+              <PencilIcon />
+            </span>
+          </button>
+
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={pickImage} className="hidden" />
+
+          {me?.profileImageUrl && (
+            <button
+              type="button"
+              onClick={removeImage}
+              disabled={imageBusy}
+              className="text-[13px] font-medium text-[#80858b] disabled:opacity-50"
+            >
+              기본 이미지로 되돌리기
+            </button>
+          )}
+          {imageError && <p className="text-[13px] font-medium text-danger">{imageError}</p>}
         </div>
 
         {/* 닉네임 필드 */}
@@ -160,6 +225,31 @@ export default function ProfileEditPage() {
       </footer>
     </div>
   )
+}
+
+/**
+ * 업로드 전 축소 — 서버는 검증만 하고 리사이즈는 여기서 한다 (서버에 이미지 라이브러리 불필요).
+ * webp 인코딩을 못 하는 구형 브라우저는 png 로 폴백되는데, 서버가 둘 다 허용하므로 그대로 통과한다.
+ */
+async function resizeProfileImage(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file)
+  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height))
+  const width = Math.round(bitmap.width * scale)
+  const height = Math.round(bitmap.height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, width, height)
+  bitmap.close()
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('이미지를 변환하지 못했어요'))),
+      'image/webp',
+      0.9,
+    )
+  })
 }
 
 function PencilIcon() {

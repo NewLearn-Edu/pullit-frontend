@@ -231,6 +231,11 @@ function enqueueTypeset(el: HTMLElement): Promise<void> {
 export function MathJaxExplainRender({ text }: { text: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const html = useMemo(() => renderMd(text), [text])
+  // innerHTML prop 객체를 html 기준으로 고정 — React 19 는 이 객체의 참조가 바뀌면 문자열 비교 없이
+  // innerHTML 을 다시 대입한다 (React 18 은 __html 문자열을 비교했음). 렌더마다 새 객체를 넘기면
+  // 리렌더 한 번에 MathJax typeset 결과 DOM 이 지워지고 $…$ 원문이 남는다 (divider 드래그만으로 재현).
+  // 아래 typeset effect 는 [html] 의존이라 html 이 그대로면 다시 돌지 않으므로 여기서 막아야 한다.
+  const innerHtml = useMemo(() => ({ __html: html }), [html])
 
   useEffect(() => {
     let alive = true
@@ -247,7 +252,7 @@ export function MathJaxExplainRender({ text }: { text: string }) {
   return (
     // 바깥 root 가 폭 측정용 컨테이너 — 안쪽 폰트가 cqw(컨테이너 폭 %)로 반응
     <div className="exam-mj-root">
-      <div ref={ref} className="exam-mj" dangerouslySetInnerHTML={{ __html: html }} />
+      <div ref={ref} className="exam-mj" dangerouslySetInnerHTML={innerHtml} />
     </div>
   )
 }

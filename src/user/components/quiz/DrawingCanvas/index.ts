@@ -1,2 +1,2 @@
 export { DrawingCanvas } from './DrawingCanvas'
-export type { DrawingCanvasHandle, StrokeTool } from './DrawingCanvas'
+export type { DrawingCanvasHandle, DrawingCanvasProps, EraserMode, StrokeTool } from './DrawingCanvas'

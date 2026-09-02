@@ -8,8 +8,9 @@
 export interface Problem {
   id: number
   /**
-   * 서버 problems 테이블의 실제 PK (예: 2022_1_1_1-S0252).
-   * 풀이 기록(POST /api/attempts)은 이 값으로 전송하며, 없으면 서버 저장을 건너뛴다.
+   * 서버 problems.problem_code (예: math_2022_1_1_1_0252 — {과목}_{교육과정}_{대단원}_{중단원}_{소단원}_{4자리}).
+   * 풀이 기록(POST /api/attempts)·필기 저장(/api/problem-notes)은 이 값으로 전송하며, 없으면 서버 저장을 건너뛴다.
+   * 목 문항의 코드는 규격만 맞춘 값이라 로컬 DB 에 같은 코드의 문제가 없으면 서버가 404 로 거부한다 (필기는 로컬 저널에만 남음).
    * 유저용 문제 조회 API 가 생기면 목 데이터와 함께 제거될 임시 매핑.
    */
   serverId?: string
@@ -39,7 +40,7 @@ export interface Problem {
 const problemsMathSample: Problem[] = [
   {
     id: 1,
-    serverId: '2022_1_1_1-S0252',
+    serverId: 'math_2022_1_1_1_0252',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 2,
@@ -60,7 +61,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 2,
-    serverId: '2022_1_1_1-S0235',
+    serverId: 'math_2022_1_1_1_0235',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 3,
@@ -81,7 +82,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 3,
-    serverId: '2022_1_1_1-S0009',
+    serverId: 'math_2022_1_1_1_0009',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 3,
@@ -100,7 +101,7 @@ const problemsMathSample: Problem[] = [
   },
   {
     id: 4,
-    serverId: '2022_1_1_1-S0269',
+    serverId: 'math_2022_1_1_1_0269',
     subject: 'math',
     skillNodeId: 'sn-exp-log-01',
     points: 4,

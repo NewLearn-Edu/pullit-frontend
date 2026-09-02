@@ -1,7 +1,8 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
-import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
@@ -60,14 +61,22 @@ export function ReviewScreen({
   const closeExplain = initialExplainOpen ? onClose : () => setExplainOpen(false)
 
   // 필기 — 캔버스는 문제·해설 두 장. 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
-  const [tool, setTool] = useState<StrokeTool>('pen')
+  const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
   const [size, setSize] = useState(0.35)
+  const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
   const [allowFinger, setAllowFinger] = useState(false)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const explainCanvasRef = useRef<DrawingCanvasHandle>(null)
   const activeCanvasRef = useRef<'problem' | 'explain'>('problem')
+  // 복원한 문제 필기의 세로 끝(px)만큼 캔버스 영역을 확보 (풀이 때 남긴 필기가 안 잘리게).
+  // state 가 아니라 style 직접 — 획마다 화면 전체(해설 MathJax 포함)를 다시 그리지 않는다
+  const canvasAreaRef = useRef<HTMLDivElement>(null)
+  const applyNoteHeight = (px: number) => {
+    const el = canvasAreaRef.current
+    if (el) el.style.minHeight = px > 0 ? `${px}px` : ''
+  }
   const activeCanvas = () =>
     activeCanvasRef.current === 'explain' ? explainCanvasRef.current : canvasRef.current
 
@@ -97,11 +106,13 @@ export function ReviewScreen({
         tool={tool}
         color={color}
         size={size}
+        eraserMode={eraserMode}
         allowFinger={allowFinger}
         drawingEnabled={drawingEnabled}
         onToolChange={setTool}
         onColorChange={setColor}
         onSizeChange={setSize}
+        onEraserModeChange={setEraserMode}
         onAllowFingerChange={setAllowFinger}
         onDrawingEnabledChange={setDrawingEnabled}
         onUndo={() => activeCanvas()?.undo()}
@@ -118,7 +129,7 @@ export function ReviewScreen({
               {headerMeta && <div className={styles.problemMeta}>{headerMeta}</div>}
             </div>
 
-            <div className={styles.canvasArea}>
+            <div ref={canvasAreaRef} className={styles.canvasArea}>
               {/* 500px 기준 고정 조판 → 폭 비례 확대 (줄바꿈 불변 · 퀴즈와 동일 정책).
                   보기도 퀴즈·어드민과 같은 시험지형(pv-choices) — 칩 박스 없음.
                   정답 = 채운 원문자 ❶~❺ · 내 오답 = 빨강 */}
@@ -161,13 +172,19 @@ export function ReviewScreen({
                 className={styles.canvasOverlay}
                 onPointerDownCapture={() => (activeCanvasRef.current = 'problem')}
               >
-                <DrawingCanvas
+                {/* 풀이 때 남긴 문제 필기(problem.pnk)를 그대로 불러온다 */}
+                <ProblemNoteCanvas
+                  key={problem.serverId ?? problem.id}
                   ref={canvasRef}
+                  problemCode={problem.serverId}
+                  target="problem"
                   tool={tool}
                   color={color}
                   size={size}
+                  eraserMode={eraserMode}
                   disabled={!drawingEnabled}
                   allowFinger={allowFinger}
+                  onContentHeight={applyNoteHeight}
                 />
               </div>
             </div>
@@ -200,6 +217,7 @@ export function ReviewScreen({
             tool,
             color,
             size,
+            eraserMode,
             disabled: !drawingEnabled,
             allowFinger,
             canvasRef: explainCanvasRef,
