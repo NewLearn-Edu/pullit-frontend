@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { trackPageView } from './user/services/metaPixel'
+import { type Subject } from './user/stores/trialStore'
+import { CURRICULUM } from './user/data/curriculum'
 import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
@@ -34,12 +36,49 @@ import RequireTrialDone from './user/components/RequireTrialDone'
 const AdminRoutes = lazy(() => import('./admin/routes'))
 
 /**
- * 구 추천 경로 (/today) → /recommend.
- * 이미 발송된 알림톡 링크가 /today 라 살려 둔다. ?subject= 같은 쿼리를 그대로 넘긴다.
+ * 이 기기에서 가장 최근에 진단한 과목 — 알림톡처럼 과목을 모르는 진입에서 추론용.
+ * 진단 캐시(pullit_trial_progress)는 localStorage 라 다음날 재방문에도 남는다.
+ */
+function latestStudiedSubject(): Subject | null {
+  try {
+    const raw = localStorage.getItem('pullit_trial_progress')
+    if (!raw) return null
+    const persisted = JSON.parse(raw) as {
+      state?: { diagnosed?: Record<string, { date?: string; time?: string }> }
+    }
+    const diagnosed = persisted.state?.diagnosed
+    if (!diagnosed) return null
+    const subjectByName = new Map<string, Subject>()
+    for (const subject of ['math', 'english'] as const)
+      for (const category of CURRICULUM[subject])
+        for (const unit of category.units) subjectByName.set(unit.name, subject)
+    let best: { at: string; subject: Subject } | null = null
+    for (const [name, diag] of Object.entries(diagnosed)) {
+      const subject = subjectByName.get(name)
+      if (!subject || !diag?.date) continue
+      const at = `${diag.date} ${diag.time ?? '00:00'}`
+      if (!best || at > best.at) best = { at, subject }
+    }
+    return best?.subject ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 알림톡 랜딩 (/today) → /recommend.
+ * 버튼 링크는 쿼리 없는 고정 URL 이라 과목을 모른다 — ①쿼리 ②이 기기의 최근 진단
+ * 과목 ③둘 다 없으면 과목 선택 화면 순서로 보낸다. 나머지 쿼리는 보존.
  */
 function TodayRedirect() {
   const { search } = useLocation()
-  return <Navigate to={`/recommend${search}`} replace />
+  const params = new URLSearchParams(search)
+  if (!params.get('subject')) {
+    const last = latestStudiedSubject()
+    if (last) params.set('subject', last)
+  }
+  const query = params.toString()
+  return <Navigate to={`/recommend${query ? `?${query}` : ''}`} replace />
 }
 
 /**
