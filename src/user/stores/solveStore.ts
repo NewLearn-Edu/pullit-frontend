@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { type Problem } from '@/user/data/mockProblems'
 import { type AttemptSource } from '@/user/api/attemptApi'
+import type { UnitScoreSnapshot } from '@/user/services/unitScoreSnapshot'
 
 /**
  * 일반 문제풀이(/solve) 세션 — 진입처(오답노트 다시 풀기 등)가 문제 목록을
@@ -17,6 +18,10 @@ export interface SolveSession {
   returnTo: string
   /** 발급 세트 id — 세트 풀이(FREE·DAILY)만, 오답 재풀이(RETRY)는 없음 */
   setId?: number
+  /** 세트가 속한 소단원 표시명 — 세트 완료 후 점수 변동 결과 화면(/solve-result)의 제목·조회 키 */
+  unitName?: string
+  /** 세트 시작 시점의 소단원 누적 점수 — 결과 화면의 "이전 평균" (조회 실패 시 null) */
+  scoreBefore?: UnitScoreSnapshot | null
 }
 
 interface SolveState {

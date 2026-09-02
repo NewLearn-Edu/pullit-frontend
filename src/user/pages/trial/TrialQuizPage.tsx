@@ -378,7 +378,21 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     }
     // 결과 화면은 세트를 막 끝낸 직후에만 열린다 — 여기서 1회용 열람권을 발급한다
     if (isTrial) useTrialStore.getState().grantResultPass()
-    navigate(isTrial ? '/weakness' : (solveSession?.returnTo ?? '/home'), { replace: isTrial })
+    if (isTrial) {
+      navigate('/weakness', { replace: true })
+      return
+    }
+    // 진단 이후의 세트 풀이(FREE·DAILY) — 소단원 평균 점수 변동 화면 (3620-8320 / 2857-21967).
+    // 오답 다시 풀기(RETRY·세트 없음)는 점수에 영향이 없어 진입처로 바로 돌아간다
+    const returnTo = solveSession?.returnTo ?? '/home'
+    if (solveSession?.setId && solveSession.unitName) {
+      navigate(`/solve-result/${subject}/${encodeURIComponent(solveSession.unitName)}`, {
+        replace: true,
+        state: { setId: solveSession.setId, before: solveSession.scoreBefore ?? null, returnTo },
+      })
+      return
+    }
+    navigate(returnTo)
   }
 
   const handleClose = () => setExitConfirmOpen(true)

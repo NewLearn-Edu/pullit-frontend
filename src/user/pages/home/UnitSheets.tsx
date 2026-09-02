@@ -11,6 +11,7 @@ import { useSolveStore } from '@/user/stores/solveStore'
 import { declareUnitLock } from '@/user/api/recommendApi'
 import { fetchActiveProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
 import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
+import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import {
   SET_CREDIT_COST,
@@ -418,7 +419,7 @@ export function useUnitSheets({
    * 자유 풀이 (2026-08-17 정책) — 소단원의 맛보기 진단을 마쳤으면 FREE 세션으로 진입.
    */
   const startFreeSolve = async (
-    row: { unitCode: string; nodeId?: string },
+    row: { name?: string; unitCode: string; nodeId?: string },
     subj: Subject = subject,
   ) => {
     try {
@@ -427,11 +428,17 @@ export function useUnitSheets({
         subj, nodeId, row.unitCode, 'FREE')
       if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST)
       loadMe(true)
+      // 세트 완료 후 "이전 평균 → 현재 평균" 비교용 — 시작 시점 누적 점수를 찍어 둔다
+      const scoreBefore = row.name
+        ? await snapshotUnitScoreForSet(subj, row.name, set.setId, set.resumed)
+        : null
       startSolveSession({
         problems,
         source: 'FREE',
         returnTo: returnTo(),
         setId: set.setId,
+        unitName: row.name,
+        scoreBefore,
       })
       navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {
