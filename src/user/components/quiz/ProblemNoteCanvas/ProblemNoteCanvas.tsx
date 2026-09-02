@@ -24,7 +24,7 @@ interface ProblemNoteCanvasProps extends Omit<DrawingCanvasProps, 'onStrokesChan
  * 저장되는 필기 캔버스 — DrawingCanvas 에 문제 필기 저장소(problemNotes)를 붙인다 (2026-09-02).
  * - 마운트·문제 변경: 캐시를 즉시 그리고, 서버 저장본을 확인해 교체
  * - 편집: 최신 획 목록만 저장소에 반영 (네트워크 없음)
- * - 문제 변경·언마운트: 변경분 업로드 (탭 종료·백그라운드는 저장소가 keepalive 로 처리)
+ * - 문제 변경·언마운트: 변경분 업로드 (백그라운드 전환은 저장소가, 탭 종료는 로컬 저널이 다음 시작 때 처리)
  * 문제가 바뀔 때는 부모가 key 를 바꿔 새로 마운트한다 — 목 문항(코드 없음)도 획이 넘어가지 않게.
  */
 export const ProblemNoteCanvas = forwardRef<DrawingCanvasHandle, ProblemNoteCanvasProps>(

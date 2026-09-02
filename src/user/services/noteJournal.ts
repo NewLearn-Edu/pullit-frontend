@@ -7,12 +7,15 @@ import type { NoteTarget } from '@/user/api/problemNoteApi'
  * 오프라인 이탈에서 그리던 필기를 잃지 않으려면 로컬에 남겨 두고 다음 앱 시작 때 올려야 한다.
  * 서버 업로드 시점은 그대로다(획마다 올리지 않음) — 저널은 로컬 디스크라 서버 부담이 없다.
  * 항목은 서버 업로드가 성공하면 지운다. 남아 있는 건 "아직 못 올린 것"뿐이다.
+ * 게스트는 서버에 올리지 않으므로 게스트의 필기는 회원이 될 때까지 여기 머문다.
  *
  * IndexedDB 가 없거나 막힌 환경(구형 사파리 프라이빗 모드 등)에선 조용히 no-op — 저널 없이 메모리만으로 동작한다.
  */
 export interface NoteJournalRecord {
-  /** `${problemCode}/${target}` */
+  /** `${userId}/${problemCode}/${target}` */
   key: string
+  /** 소유자 — me.id 문자열, 세션 없이 그린 것은 'anonymous' (세션이 생기면 그 유저에게 넘긴다). 초기 저널엔 없었음 */
+  userId?: string
   problemCode: string
   target: NoteTarget
   /** PNK1 메타 id — 재업로드 때도 같은 id 를 유지 */

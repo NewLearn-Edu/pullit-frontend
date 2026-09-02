@@ -2,7 +2,7 @@ import axios from 'axios'
 import { api } from '@/user/api/authApi'
 
 /**
- * 필기 대상 — 문제당 파일 하나씩 (S3 users/{userId}/notes/{problemCode}/{target}.pnk)
+ * 필기 대상 — 문제당 파일 하나씩 (S3 users/{userId}/notes/{problemCode}/{target}.pnk.gz)
  * - problem: 문제 본문 위
  * - explanation: 해설 위
  * - translation: 번역 위 — 영어는 해설/번역 탭이 둘 다 필기 대상 (탭 UI 는 기획 대기 · 2026-09-02)
@@ -14,12 +14,13 @@ export type NoteTarget = 'problem' | 'explanation' | 'translation'
  *
  * 계약 (백엔드 pullit-backend `problemnote/controller/ProblemNoteController` 가 1:1 구현 · 2026-09-02):
  *   GET /api/problem-notes/{problemId}/{target}
- *     200 application/octet-stream = 저장할 때 보낸 바이트 그대로. gzip 으로 올린 파일은 Content-Encoding: gzip 으로
- *     내려오고 브라우저가 자동으로 푼다 (여기 코드는 해제하지 않는다)
+ *     200 application/octet-stream + Content-Encoding: gzip = 저장할 때 보낸 바이트 그대로.
+ *     브라우저가 헤더를 보고 자동으로 푼다 (여기 코드는 해제하지 않는다)
  *     404 = 저장된 필기 없음
  *   PUT /api/problem-notes/{problemId}/{target}
- *     본문 application/octet-stream · Content-Encoding: gzip — 서버는 풀지 않고 받은 그대로 S3 에 둔다
- *     (탭 종료 직전 keepalive 전송만 헤더 없이 원본 · 서버 검증은 크기 상한과 앞머리(매직)뿐이라 파일 정합은 여기 코덱 몫)
+ *     본문 application/octet-stream · Content-Encoding: gzip — 서버는 풀지 않고 받은 그대로 S3(.pnk.gz)에 둔다
+ *     (압축 API 가 없는 구형 브라우저는 원본으로 보내고 서버가 눌러서 맞춘다 · 서버 검증은 크기 상한과 앞머리뿐이라
+ *     파일 정합은 여기 코덱 몫 · 탭 종료 직전 전송은 없다 — 로컬 저널이 다음 시작 때 올린다)
  *   problemId = Problem.serverId (problems.problem_code) · target = problem | explanation | translation
  *   CORS: PUT 은 preflight 대상 — 백엔드 allowedHeaders(*) 가 Content-Encoding 을 되돌려준다
  */
@@ -43,7 +44,7 @@ export async function fetchProblemNote(
   }
 }
 
-/** 저장 — gzip 본문이면 Content-Encoding: gzip, 압축 못 한(구형 브라우저) 원본이면 헤더 없이 */
+/** 저장 — gzip 본문이면 Content-Encoding: gzip, 압축 못 한(구형 브라우저) 원본이면 헤더 없이 (서버가 눌러서 보관) */
 export async function uploadProblemNote(
   problemId: string,
   target: NoteTarget,
@@ -55,27 +56,6 @@ export async function uploadProblemNote(
       'Content-Type': 'application/octet-stream',
       ...(encoding === 'gzip' ? { 'Content-Encoding': 'gzip' } : {}),
     },
-  })
-}
-
-/**
- * 탭 종료·백그라운드 전환 직전 저장 — fetch keepalive 는 페이지가 내려가도 전송된다.
- * 압축(CompressionStream)은 비동기라 이 시점엔 못 쓰므로 원본을 그대로 보낸다
- * (keepalive 본문 상한 64KB — 넘으면 브라우저가 거부하고 dirty 가 남아 다음 트리거에 재전송).
- */
-export function uploadProblemNoteKeepalive(
-  problemId: string,
-  target: NoteTarget,
-  raw: Uint8Array<ArrayBuffer>,
-): Promise<void> {
-  return fetch(`${api.defaults.baseURL ?? ''}${noteUrl(problemId, target)}`, {
-    method: 'PUT',
-    body: new Blob([raw]),
-    headers: { 'Content-Type': 'application/octet-stream' },
-    credentials: 'include',
-    keepalive: true,
-  }).then((res) => {
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
   })
 }
 
