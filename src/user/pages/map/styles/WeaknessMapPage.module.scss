@@ -124,6 +124,21 @@ $red-tint: #fff1f2;
   color: #fff;
 }
 
+// 풀다 만 세트 표식 — 홈 카드 "풀다 만 문제가 있어" 라벨의 노드 버전 (red-soft 필)
+.badgeResume {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 5px 8px;
+  border-radius: $radius-full;
+  background: #fff1f2;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: $color-primary;
+  white-space: nowrap;
+}
+
 // 미진단·건너뜀 공용 필 — h22 · 12px semibold (Node 2364-8761)
 .badgeLocked {
   display: inline-flex;

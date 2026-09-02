@@ -9,6 +9,7 @@ import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
 import { fetchUnitLocks } from '@/user/api/recommendApi'
+import { fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
 import { findCategoryByName } from '@/user/data/curriculum'
 import {
   computeCategoryProgress,
@@ -80,6 +81,21 @@ export default function WeaknessMapPage() {
     hydrateFromServer()
     refreshLocks()
   }, [sessionStatus, hydrateFromServer, refreshLocks])
+
+  // 풀다 만 세트 — 해당 노드에 "풀다 만 문제" 표식 (홈 카드 라벨과 같은 진실원, 3681)
+  const [resumableSet, setResumableSet] = useState<ResumableSet | null>(null)
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    let alive = true
+    fetchResumableSet()
+      .then((resumable) => {
+        if (alive) setResumableSet(resumable)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus])
 
   // 소단원명 → (진행 행 + 카테고리 행 목록) — 노드 상태·시트 컨텍스트의 근거
   const rowIndex = useMemo(() => {
@@ -440,6 +456,8 @@ export default function WeaknessMapPage() {
                 const done = !!row?.diagnosis
                 // 건너뛴(off) 구간은 자물쇠로 — 그 외 미진단은 전부 "미진단" 배지 (시안 2370-9041)
                 const off = row?.state === 'off'
+                // 풀다 만 세트가 있는 노드 — 상태 배지 대신 재개 표식이 우선 (홈 3681 라벨과 동일 정보)
+                const resumable = !!row && resumableSet?.unitCode === row.unitCode
                 return (
                   <button
                     key={node.id}
@@ -460,9 +478,15 @@ export default function WeaknessMapPage() {
                   >
                     <span className={styles.nodeHead}>
                       <span className={styles.nodeCat}>{node.cat}</span>
-                      {weak && <span className={styles.badgeWeak}>약점</span>}
-                      {!done && !off && <span className={styles.badgeLocked}>미진단</span>}
-                      {off && <span className={styles.badgeLocked}>건너뜀</span>}
+                      {resumable ? (
+                        <span className={styles.badgeResume}>풀다 만 문제</span>
+                      ) : (
+                        <>
+                          {weak && <span className={styles.badgeWeak}>약점</span>}
+                          {!done && !off && <span className={styles.badgeLocked}>미진단</span>}
+                          {off && <span className={styles.badgeLocked}>건너뜀</span>}
+                        </>
+                      )}
                     </span>
                     <span className={styles.nodeBody}>
                       <span className={styles.nodeName}>{node.name}</span>
