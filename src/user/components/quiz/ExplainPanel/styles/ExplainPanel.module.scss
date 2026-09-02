@@ -140,6 +140,19 @@
   padding: $space-lg;
 }
 
+// 필기 오버레이 기준 컨테이너 — 해설 내용과 함께 스크롤 · 짧은 해설도 패널 높이만큼 확보
+.drawWrap {
+  position: relative;
+  min-height: 100%;
+}
+
+// 해설 위 필기 캔버스 (문제 카드 .canvasOverlay 와 동일 패턴)
+.drawOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: $z-canvas;
+}
+
 // revealed=false 시 답 노출 방지 (블러 처리)
 .bodyBlurred {
   user-select: none;

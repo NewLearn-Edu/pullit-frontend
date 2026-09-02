@@ -68,15 +68,6 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   font-size: 36px;
 }
 
-// 프로필 이미지 — 기본 아바타와 같은 크기·원형, 비율은 잘라서 채운다
-.avatarImage {
-  flex-shrink: 0;
-  width: 72px;
-  height: 72px;
-  border-radius: $radius-full;
-  object-fit: cover;
-}
-
 .userName {
   max-width: 100%;
   margin: 4px 0 0;

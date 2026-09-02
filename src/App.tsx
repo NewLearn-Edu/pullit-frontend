@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { trackPageView } from './user/services/metaPixel'
 import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
@@ -8,12 +9,12 @@ import MyPage from './user/pages/my/MyPage'
 import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
-import UnlockProgressPage from './user/pages/unlock/UnlockProgressPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
 import PolicyPage from './user/pages/policy/PolicyPage'
 import EarlybirdEntryPage from './user/pages/earlybird/EarlybirdEntryPage'
 import LoginPage from './user/pages/auth/LoginPage'
 import SignupPromptPage from './user/pages/auth/SignupPromptPage'
+import SignupCompletePage from '@/user/pages/auth/SignupCompletePage'
 import SignupInfoPage from './user/pages/auth/SignupInfoPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
@@ -44,9 +45,23 @@ function TodayRedirect() {
  * 수학 = 지수와 로그 (sn-exp-log-01) · 영어 = 빈칸 추론 (en-blank) 로 강제.
  * 정책 (page 64847873) 상 "학생이 선택" 이지만 실서비스 붙일 때 열 예정.
  */
+/**
+ * Meta Pixel PageView — SPA 는 라우트가 바뀌어도 문서가 다시 로드되지 않아
+ * 픽셀이 자동 집계하지 못한다. pathname 이 바뀔 때마다 직접 쏜다
+ * (search 변화는 제외 — 과목 탭 토글 등 쿼리 갱신이 조회수를 부풀리지 않게).
+ */
+function MetaPixelPageView() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    trackPageView(pathname)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <AccessGate>
+    <MetaPixelPageView />
     <Routes>
       <Route path="/" element={<LandingPage />} />
       {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}
@@ -65,7 +80,6 @@ export default function App() {
       <Route path="/my/profile" element={<ProfileEditPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
-        <Route path="/unlock/:subject/:slug" element={<UnlockProgressPage />} />
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}
         <Route path="/unit-result/:subject/:unitName" element={<UnitResultPage />} />
         {/* 자유 풀이 — 홈·오답노트에서만 진입하므로 회원 영역과 같은 게이트 */}
@@ -76,6 +90,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPromptPage />} />
       <Route path="/signup/info" element={<SignupInfoPage />} />
+      <Route path="/signup-complete" element={<SignupCompletePage />} />
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />

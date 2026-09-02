@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import {
   declareUnitLock,
   fetchRecommendation,
@@ -17,6 +18,7 @@ import {
   type Recommendation,
 } from '@/user/api/recommendApi'
 import { useCreditForExtraSet } from '@/user/api/creditApi'
+import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { CURRICULUM, type CurriculumCategory } from '@/user/data/curriculum'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
@@ -29,6 +31,7 @@ import {
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { isRecommendDemo, RECOMMEND_DEMO } from './recommendDemoData'
+import { LockIcon } from '@/user/components/icons/LockIcon'
 import styles from './styles/RecommendReveal.module.scss'
 
 const SET_SIZE = 3
@@ -478,16 +481,23 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
   const [skipMode, setSkipMode] = useState(false)
   const [starting, setStarting] = useState(false)
+  // 크레딧 부족 팝업 (2856-17959) — 시작하기를 눌렀을 때 안내 (버튼 비활성 대신)
+  const [shortageOpen, setShortageOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   /** 시작하기 — 홈 시작 시트와 같은 규칙 (서버 크레딧 차감 성공 시에만 진입) */
   const confirmStart = async () => {
     if (!target || starting) return
+    if (credit < SET_CREDIT_COST) {
+      setShortageOpen(true)
+      return
+    }
     setStarting(true)
     setActionError(null)
     try {
       await useCreditForExtraSet()
+      setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST) // 첫 문제 화면 토스트
       loadMe(true)
       resetTrial()
       setLastSubject(subject)
@@ -550,7 +560,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const solo = phase === 'lift' || phase === 'expand' || phase === 'ready'
   const revealed = phase === 'expand' || phase === 'ready'
   const badge = unitBadge(rec, target?.row)
-  const reason = rec?.reason?.trim() || defaultReason(target?.row)
+  const reason = defaultReason(target?.row)
+  // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
 
   return (
@@ -582,10 +593,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
             </p>
           </div>
           <div className={clsx(styles.titleLayer, !revealed && styles.titleLayerOut)}>
-            <h1 className={styles.title}>지금 풀어야할 곳</h1>
-            <p className={styles.subtitle}>
-              최근 학습기록으로 지금 풀어야 할 {SET_SIZE}문제 준비했어
-            </p>
+            <h1 className={styles.title}>지금 필요한 추천문제</h1>
+            <p className={styles.subtitle}>현재 학습 상태에 맞춰 문제를 골랐어</p>
           </div>
         </div>
 
@@ -656,6 +665,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                               key={`off-${slot.idx}`}
                               rows={slot.rows!}
                               gap={geo.gap}
+                              cardH={geo.cardH}
                               scan={state}
                               mute={mute}
                             />
@@ -706,6 +716,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                 </div>
               </div>
               <div className={styles.detailFoot}>
+                <span className={styles.detailReasonLabel}>추천 기준</span>
                 <p className={styles.detailReason}>{reason}</p>
               </div>
             </div>
@@ -716,7 +727,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
           <div className={clsx(styles.stats, revealed && styles.statsIn)}>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>문제</span>
+              <span className={styles.statLabel}>문제 수</span>
               <span className={styles.statValue}>{SET_SIZE}문제</span>
             </div>
             <span className={styles.statDivider} aria-hidden />
@@ -748,25 +759,27 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
               <span className={styles.creditLabel}>보유 크레딧:</span>
               <span className={styles.creditValue}>{credit}개</span>
             </div>
-            {(actionError || credit < SET_CREDIT_COST) && (
-              <p className={styles.actionError}>{actionError ?? '크레딧이 부족해'}</p>
-            )}
-            <div className={styles.dockButtons}>
-              <button
-                type="button"
-                onClick={() => setSkipMode(true)}
-                className={styles.ghostButton}
-              >
-                이 단원 안배웠어요
-              </button>
+            {actionError && <p className={styles.actionError}>{actionError}</p>}
+            {/* CTA 정책 (2026-08-31): 미진단 = 진단하기 · 진단한(약점 포함) = 추천 문제 풀기.
+                "안배웠어요"는 미진단 추천에서만 — 아래 텍스트 링크 (3591-10490) */}
+            <div className={styles.dockActions}>
               <button
                 type="button"
                 onClick={confirmStart}
-                disabled={starting || credit < SET_CREDIT_COST}
-                className={styles.primaryButton}
+                disabled={starting}
+                className={styles.darkButton}
               >
-                {starting ? '시작 중…' : '시작하기'}
+                {starting ? '시작 중…' : target?.row.diagnosis ? '추천 문제 풀기' : '진단하기'}
               </button>
+              {!target?.row.diagnosis && (
+                <button
+                  type="button"
+                  onClick={() => setSkipMode(true)}
+                  className={styles.skipLink}
+                >
+                  이 단원 아직 안배웠어요
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -796,6 +809,14 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           </>
         )}
       </footer>
+
+      {/* 크레딧 부족 (Figma 2856-17959) — 시작하기 눌렀는데 크레딧이 모자랄 때 */}
+      {shortageOpen && (
+        <CreditShortagePopup
+          required={SET_CREDIT_COST}
+          onClose={() => setShortageOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -813,18 +834,14 @@ function UnitCard({
   bare,
   mute = 'none',
   scan = 'done',
-  fade,
 }: {
   row: UnitProgressRow
   marked?: boolean
   bare?: boolean
   mute?: 'none' | 'dim' | 'hide'
   scan?: ScanState
-  /** 안배운 구간에서 아래로 갈수록 옅어지는 정도 */
-  fade?: number
 }) {
-  const off = row.state === 'off'
-  const locked = row.state === 'locked' || off
+  const locked = row.state === 'locked'
   const done = !!row.diagnosis
   // 스캔이 지나가기 전에는 결과를 숨긴다 — 지나가는 순간 상태가 드러나야 "체크" 로 읽힌다
   const revealed = scan !== 'pending'
@@ -833,14 +850,15 @@ function UnitCard({
       className={clsx(
         styles.card,
         bare && styles.cardBare,
-        !marked && (revealed && done ? styles.cardDone : styles.cardIdle),
+        // 시안(3589-8481): 진단·미진단은 흰 카드, 순서상 잠긴 칸은 회색 + 자물쇠
+        !marked && revealed && (locked ? styles.cardLockedBg : styles.cardDone),
+        !marked && !revealed && styles.cardIdle,
         marked && styles.cardMarked,
         !revealed && styles.cardPendingScan,
         scan === 'now' && styles.cardScanning,
         mute === 'dim' && styles.cardDim,
         mute === 'hide' && styles.cardHide,
       )}
-      style={fade != null && revealed ? { opacity: fade } : undefined}
     >
       <div className={styles.cardBody}>
         <span className={clsx(styles.cardName, locked && !marked && styles.cardNameLocked)}>
@@ -857,81 +875,68 @@ function UnitCard({
         <span className={styles.cardPill}>미진단 단원</span>
       ) : (
         revealed &&
-        // 푼 칸은 체크 + 점수, 안 푼 칸은 "미진단" — 둘 다 오른쪽 같은 자리에 놓아
-        // 훑고 지나간 결과가 한 줄로 읽힌다. 배지가 아니라 글자라 캔버스가 시끄럽지 않다.
+        // 푼 칸은 점수 + 셰브런, 잠긴 칸은 자물쇠 (시안 3589-8481).
+        // 미진단(next)은 이름만 — 오른쪽을 비워 "아직 기록 없음" 이 그대로 보인다.
         (done ? (
+          // 애니메이션 캔버스에는 셰브런 없이 점수만 (3681-8056) — 셰브런은 홈 리스트 전용
           <span className={clsx(styles.cardCheck, row.diagnosis?.weak && styles.cardCheckWeak)}>
-            <CheckIcon />
             {row.diagnosis?.score}점
           </span>
-        ) : off ? (
-          // 잠긴 구간은 시작점에만 이유를 단다 — 칸마다 달면 같은 말이 네 번 반복된다.
-          // 폭이 모자라면 이름이 먼저 줄어든다 (경계 표시가 우선)
-          row.offHead && <span className={styles.cardOffHead}>안배웠어요</span>
-        ) : (
-          <span className={styles.cardUndone}>미진단</span>
-        ))
+        ) : locked ? (
+          <LockIcon className={styles.cardLockIco} />
+        ) : null)
       )}
     </div>
   )
 }
 
 /**
- * "안배웠어요" 구간 — 그 소단원부터 대단원 끝까지.
- *
- * 막을 덮거나 점선 상자로 묶지 않는다. 카드는 그대로 두고 첫 칸만 또렷하게 남겨
- * "안배웠어요" 를 달고, 그 아래로 갈수록 옅어진다 — 잠금이 어디서 시작해 어디까지
- * 이어지는지가 새 장치 없이 카드 자체로 읽힌다.
+ * "안배웠어요"(건너뛴) 구간 — 잠금 스택 (시안 3589-8481 locked-stack).
+ * "건너뛴 단원 N개" 헤더 + 회색 칸들이 실금으로 이어진 한 덩어리.
+ * 스택 전체 높이는 원래 칸들이 차지하던 격자 높이와 같아야
+ * 다른 열과의 정렬·카메라 워크가 유지된다.
  */
 function OffGroup({
   rows,
   gap,
+  cardH,
   scan,
   mute,
 }: {
   rows: UnitProgressRow[]
   gap: number
+  cardH: number
   scan: ScanState
   mute: 'none' | 'dim' | 'hide'
 }) {
+  const revealed = scan !== 'pending'
+  const height = rows.length * cardH + (rows.length - 1) * gap
   return (
     <div
       className={clsx(
-        styles.offGroup,
+        styles.offStack,
+        !revealed && styles.offStackPending,
         scan === 'now' && styles.cardScanning,
         mute === 'dim' && styles.cardDim,
         mute === 'hide' && styles.cardHide,
       )}
-      style={{ gap: `${gap}px` }}
+      style={{ height: `${height}px` }}
     >
-      {rows.map((row, i) => (
-        <UnitCard
-          key={row.unitCode}
-          row={row}
-          scan={scan}
-          // 첫 칸이 경계 — 아래로 내려갈수록 옅어지되 너무 사라지지는 않게
-          fade={i === 0 ? 1 : Math.max(0.34, 0.62 - (i - 1) * 0.09)}
-        />
+      <div className={styles.offStackHead}>
+        <LockIcon className={styles.offStackHeadIco} />
+        <span className={styles.offStackHeadText}>건너뛴 단원 {rows.length}개</span>
+      </div>
+      {rows.map((row) => (
+        <div key={row.unitCode} className={styles.offStackCard}>
+          <span className={clsx(styles.cardName, styles.cardNameLocked)}>{row.name}</span>
+          <LockIcon className={styles.cardLockIco} />
+        </div>
       ))}
     </div>
   )
 }
 
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path
-        d="M3 7.3 5.9 10 11 4.4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-/** 상세 카드 배지 — 미진단이면 회색 '미진단', 복습이면 점수(약점은 빨강) */
+/** 상세 카드 배지 — 미진단이면 회색 '진단 전', 복습이면 점수(약점은 빨강) */
 function unitBadge(rec: Recommendation | null, row?: UnitProgressRow) {
   if (row?.diagnosis) {
     return { text: `${row.diagnosis.score}점`, weak: row.diagnosis.weak }
@@ -939,12 +944,15 @@ function unitBadge(rec: Recommendation | null, row?: UnitProgressRow) {
   if (rec?.type === 'REVIEW' && rec.score != null) {
     return { text: `${rec.score}점`, weak: rec.score < 70 }
   }
-  return { text: '미진단', weak: false }
+  return { text: '진단 전', weak: false }
 }
 
+/** "추천 기준" 행의 짧은 사유 (3591-10490) — 문장형 대신 기준만 담백하게 */
 function defaultReason(row?: UnitProgressRow) {
-  if (row?.diagnosis) return `지난번 ${row.diagnosis.score}점이었어. 다시 다져보자`
-  return '아직 안 풀어봐서 점수가 없어. 먼저 풀어보자'
+  if (row?.diagnosis) {
+    return row.diagnosis.weak ? '점수가 가장 낮은 약점 단원' : '점수가 가장 낮은 단원'
+  }
+  return '아직 진단하지 않은 단원'
 }
 
 /** 조회중 말줄임 — 점 3개가 차례로 켜진다 */

@@ -1,0 +1,33 @@
+// 스켈레톤 — 회색 면 + 좌→우 광택. 색은 홈 카드 바탕(#f0f1f3)과 같은 계열.
+.skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: #eef0f2;
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 80%
+    );
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}

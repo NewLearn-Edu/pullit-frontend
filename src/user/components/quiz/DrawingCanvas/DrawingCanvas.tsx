@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { getStroke } from 'perfect-freehand'
 import styles from './styles/DrawingCanvas.module.scss'
 
@@ -10,10 +10,15 @@ export interface DrawingCanvasHandle {
 }
 
 interface Stroke {
-  points: number[][] // [x, y] (pressure 는 균일 굵기라 사용 안 함)
+  /**
+   * [x, y] — 월드 좌표 (기준 폭 base 조판 기준 · pressure 는 균일 굵기라 사용 안 함).
+   * 화면 px 이 아니라 배율을 나눈 값이라, 컨테이너가 커지고 줄어도 본문 위 같은 자리를 가리킨다.
+   */
+  points: number[][]
   tool: StrokeTool
   color: string
-  size: number
+  /** 브러시 굵기 — 월드 px (그린 시점의 화면 px ÷ 그 시점 배율) */
+  sizeWorld: number
 }
 
 interface DrawingCanvasProps {
@@ -22,29 +27,63 @@ interface DrawingCanvasProps {
   size: number
   disabled?: boolean
   allowFinger?: boolean
+  /**
+   * 월드 좌표 기준 폭 — 본문을 감싼 ExamScaleFrame 의 base 와 같은 값이어야
+   * 필기가 본문과 같은 배율로 커지고 줄어든다.
+   */
+  base?: number
 }
 
 /**
- * 필기 캔버스 — 오프스크린 2-레이어 방식.
+ * 입력 게이트 (화면 px) — 이보다 작게 움직인 포인터 리포트는 노이즈로 보고 버린다.
+ * 손떨림·펜 센서 노이즈 진폭(±0.5~1px)보다 크고, 작은 글씨 획(10px+)보다는 충분히 작게.
+ */
+const INPUT_GATE_PX = 2
+
+/** 도구별 슬라이더 값(0.1~1.0) → 화면 px 굵기 (지우개 커서 지름과 공유) */
+function toolScreenPx(tool: StrokeTool, size: number): number {
+  if (tool === 'laser') return 9 // 슬라이더 무시 · 네온 링+코어 구조 잘 보이게 다소 굵게
+  if (tool === 'highlighter') return size * 32
+  return size * 14
+}
+
+/**
+ * 필기 캔버스 — 보이는 2-레이어 방식 (2026-08-30 개편).
  *
- * Layer 1 · Offscreen canvas
- *   - 완성된 stroke 를 픽셀로 박제. undo · clear · resize 때만 재구성.
- * Layer 2 · Main canvas (사용자에게 보임)
- *   - 매 프레임 offscreen 을 drawImage 복사 후 현재 그리는 stroke 만 그림.
- *   - 겹침 누적 · 지글거림 없음.
+ * Layer A · base (아래 캔버스, 보임)
+ *   - 완성된 stroke 를 픽셀로 박제. undo · clear · resize 때만 전체 재구성.
+ *   - 그리는 동안에는 절대 지우지 않는다 — 완성된 잉크는 물리적으로 깜빡일 수 없다.
+ * Layer B · live (위 캔버스, 보임 · 포인터 수신)
+ *   - 진행 중 stroke 와 레이저만. 매 프레임 clear 후 다시 그린다.
+ *
+ * 이전의 "오프스크린 → 매 프레임 메인에 전체 복사" 방식은 iPad Safari(120Hz)에서
+ * 큰 캔버스의 clear+blit 가 프레임마다 반복돼 간헐적 빈 프레임(깜빡임)과 프레임
+ * 드랍을 만들었다. 레이어를 DOM 에서 분리하면 프레임당 비용이 진행 중 획 하나로
+ * 줄고, 완성 획은 합성기(compositor)가 그대로 유지한다.
+ *
+ * 지우개는 특수 — 완성 잉크를 파야 하므로 base 에 직접 destination-out 으로 그린다.
+ * 같은 경로를 매 프레임 다시 파도 결과가 같아(멱등) clear 가 필요 없다.
+ *
+ * 좌표계 — 본문(ExamScaleFrame)과 같은 "기준 폭 base 조판" 월드 좌표.
+ * 획은 월드 좌표로 저장하고 렌더 때 현재 배율(컨테이너 폭 ÷ base)을 곱한다.
+ * → 창 리사이즈·해설 패널 드래그·기기 회전으로 본문이 확대/축소돼도
+ *   필기가 본문 위 같은 자리에 같은 비율로 따라간다.
  *
  * perfect-freehand 옵션도 튜닝 · SVG path 스타일로 렌더링해 계단현상 최소화.
  * 정책상 필기 저장 안 함. 문제 넘기면 자연 소실.
  */
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   function DrawingCanvas(
-    { tool, color, size, disabled, allowFinger = false },
+    { tool, color, size, disabled, allowFinger = false, base = 500 },
     ref,
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    // 완성된 stroke 를 담아두는 오프스크린 캔버스 (사용자에게 안 보임)
-    const offscreenRef = useRef<HTMLCanvasElement | null>(null)
+    /** Layer A — 완성 stroke (아래) */
+    const baseCanvasRef = useRef<HTMLCanvasElement>(null)
+    /** Layer B — 진행 중 stroke · 레이저 (위 · 포인터 수신) */
+    const liveCanvasRef = useRef<HTMLCanvasElement>(null)
+    // 현재 배율 (컨테이너 폭 ÷ base) — 월드 좌표 ↔ 화면 px 변환에 사용
+    const scaleRef = useRef(1)
     // 지우개 도구 사용 시 포인터 위치 · 크기를 미리 보여주는 원형 커서 오버레이
     const eraserCursorRef = useRef<HTMLDivElement>(null)
 
@@ -52,7 +91,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const currentRef = useRef<Stroke | null>(null)
     const rafRef = useRef<number | null>(null)
     const drawingRef = useRef<boolean>(false)
-    // 레이저 stroke · 그린 후 자동 fade out 되는 임시 stroke (offscreen 저장 안 함)
+    // 레이저 stroke · 그린 후 자동 fade out 되는 임시 stroke (base 저장 안 함)
     // 개별 타이머 없이 배열 · 페이드 시점은 아래 laserActivityEndRef 로 공유 관리
     const fadingLasersRef = useRef<Stroke[]>([])
     // 마지막 레이저 stroke 가 완료된 시각 (ms).
@@ -74,53 +113,43 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       clear: () => {
         strokesRef.current = []
         currentRef.current = null
-        rebuildOffscreen()
-        blitToMain()
+        rebuildBase()
+        renderLive()
       },
       undo: () => {
         strokesRef.current = strokesRef.current.slice(0, -1)
-        rebuildOffscreen()
-        blitToMain()
+        rebuildBase()
+        renderLive()
       },
     }))
 
-    // 초기화 · 리사이즈
+    // 초기화 · 리사이즈 — 두 레이어를 같은 크기로 맞추고 base 를 재래스터
     useEffect(() => {
-      const canvas = canvasRef.current
+      const baseCanvas = baseCanvasRef.current
+      const liveCanvas = liveCanvasRef.current
       const container = containerRef.current
-      if (!canvas || !container) return
+      if (!baseCanvas || !liveCanvas || !container) return
 
       const resize = () => {
         const rect = container.getBoundingClientRect()
         const dpr = window.devicePixelRatio || 1
+        // 본문(ExamScaleFrame)과 같은 배율 — 폭이 바뀌면 획도 이 배율로 다시 래스터된다
+        scaleRef.current = rect.width > 0 ? rect.width / base : 1
 
-        canvas.width = Math.round(rect.width * dpr)
-        canvas.height = Math.round(rect.height * dpr)
-        canvas.style.width = `${rect.width}px`
-        canvas.style.height = `${rect.height}px`
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
+        for (const canvas of [baseCanvas, liveCanvas]) {
+          canvas.width = Math.round(rect.width * dpr)
+          canvas.height = Math.round(rect.height * dpr)
+          canvas.style.width = `${rect.width}px`
+          canvas.style.height = `${rect.height}px`
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+          }
         }
 
-        // 오프스크린도 같이 리사이즈
-        if (!offscreenRef.current) {
-          offscreenRef.current = document.createElement('canvas')
-        }
-        const off = offscreenRef.current
-        off.width = canvas.width
-        off.height = canvas.height
-        const offCtx = off.getContext('2d')
-        if (offCtx) {
-          offCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
-          offCtx.imageSmoothingEnabled = true
-          offCtx.imageSmoothingQuality = 'high'
-        }
-
-        rebuildOffscreen()
-        blitToMain()
+        rebuildBase()
+        renderLive()
       }
 
       resize()
@@ -131,46 +160,50 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [base])
+
+    /** base 컨텍스트를 월드 → 디바이스 변환으로 맞춰 반환 */
+    const baseCtx = () => {
+      const canvas = baseCanvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (!ctx) return null
+      const k = (window.devicePixelRatio || 1) * scaleRef.current
+      ctx.setTransform(k, 0, 0, k, 0, 0)
+      return ctx
+    }
 
     /**
-     * 오프스크린 캔버스에 완성된 stroke 를 전부 다시 그림.
+     * base 캔버스에 완성 stroke 를 전부 다시 그림.
      * undo · clear · resize 에서만 호출 · 그리기 루프에서는 사용 X.
      */
-    const rebuildOffscreen = () => {
-      const off = offscreenRef.current
-      const canvas = canvasRef.current
-      if (!off || !canvas) return
-      const ctx = off.getContext('2d')
-      if (!ctx) return
-      const rect = canvas.getBoundingClientRect()
-      ctx.clearRect(0, 0, rect.width, rect.height)
+    const rebuildBase = () => {
+      const canvas = baseCanvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (!canvas || !ctx) return
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const bctx = baseCtx()
+      if (!bctx) return
       for (const s of strokesRef.current) {
-        renderStroke(ctx, s)
+        renderStroke(bctx, s)
       }
     }
 
     /**
-     * 매 프레임 표시 캔버스 갱신:
-     * 1) offscreen (완성 stroke) 복사
-     * 2) 페이드 중인 레이저 stroke 를 opacity 로 겹쳐 그림
-     * 3) 현재 그리는 stroke 위에 얹기
+     * 매 프레임 live 레이어 갱신 — 진행 중 stroke 와 레이저만.
+     * base(완성 잉크)는 여기서 절대 건드리지 않는다.
+     * 지우개는 base 에 직접 판다 (같은 경로 반복은 멱등이라 clear 불필요).
      */
-    const blitToMain = () => {
+    const renderLive = () => {
       rafRef.current = null
-      const canvas = canvasRef.current
-      const off = offscreenRef.current
-      if (!canvas || !off) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      const canvas = liveCanvasRef.current
+      const ctx = canvas?.getContext('2d')
+      if (!canvas || !ctx) return
 
-      // 표시 캔버스는 dpr 스케일이 적용된 상태 · offscreen 을 dpr 픽셀 그대로 복사
       const dpr = window.devicePixelRatio || 1
-      ctx.save()
+      const drawScale = dpr * scaleRef.current
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(off, 0, 0)
-      ctx.restore()
 
       // 레이저 stroke 공유 페이드 로직:
       // - laserActivityEndRef = null → 새 레이저 그리는 중 · 전부 full opacity 유지
@@ -186,33 +219,35 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           if (elapsed > LASER_HOLD_MS + LASER_FADE_MS) {
             expired = true
           } else if (elapsed > LASER_HOLD_MS) {
-            opacity = Math.max(
-              0,
-              1 - (elapsed - LASER_HOLD_MS) / LASER_FADE_MS,
-            )
+            opacity = Math.max(0, 1 - (elapsed - LASER_HOLD_MS) / LASER_FADE_MS)
           }
         }
         if (expired) {
           fadingLasersRef.current = []
           laserActivityEndRef.current = null
         } else if (opacity > 0) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          ctx.setTransform(drawScale, 0, 0, drawScale, 0, 0)
           for (const s of fadingLasersRef.current) {
             renderStroke(ctx, s, opacity)
           }
         }
       }
 
-      // 현재 stroke 는 dpr 스케일 컨텍스트에서 그림
+      // 진행 중 stroke — 지우개는 base 에 직접, 나머지는 live 에
       const cur = currentRef.current
       if (cur) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        renderStroke(ctx, cur, 1)
+        if (cur.tool === 'eraser') {
+          const bctx = baseCtx()
+          if (bctx) renderStroke(bctx, cur)
+        } else {
+          ctx.setTransform(drawScale, 0, 0, drawScale, 0, 0)
+          renderStroke(ctx, cur, 1)
+        }
       }
 
       // 그리는 중이거나 페이드 중인 레이저가 있으면 다음 프레임 예약
       if (drawingRef.current || fadingLasersRef.current.length > 0) {
-        rafRef.current = requestAnimationFrame(blitToMain)
+        rafRef.current = requestAnimationFrame(renderLive)
       }
     }
 
@@ -252,8 +287,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         ctx.save()
         ctx.globalCompositeOperation = 'source-over'
         // 1) 빨간 링 + halo · shadowBlur 로 부드러운 발광
+        // (shadowBlur 는 transform 을 안 타는 디바이스 px — 배율을 직접 곱해 비율 유지)
         ctx.shadowColor = `rgba(255, 30, 55, ${0.9 * opacity})`
-        ctx.shadowBlur = 18
+        ctx.shadowBlur = 18 * scaleRef.current
         ctx.fillStyle = `rgba(230, 25, 50, ${opacity})`
         ctx.fill(outerPath)
         // 2) 흰 코어 · shadow off · 살짝 붉은 기 남은 흰색
@@ -284,32 +320,22 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     /**
-     * perfect-freehand 옵션.
-     * s.size 는 사용자 슬라이더 값 (0.1 ~ 1.0). 도구별로 실제 픽셀 크기가 다름.
-     * - 펜/지우개: size × 14  (0.1 = 1.4px · 1.0 = 14px)
-     * - 형광펜:    size × 32  (0.1 = 3.2px · 1.0 = 32px)
+     * perfect-freehand 옵션 — 굵기는 stroke 에 박제된 월드 px(sizeWorld) 그대로.
+     * (도구별 화면 px 매핑은 캡처 시점의 toolScreenPx ÷ 배율로 이미 반영됨)
      * 굵기는 압력과 무관하게 일정 (thinning: 0).
      */
-    const strokeOptionsFor = (s: Stroke) => {
-      let px: number
-      if (s.tool === 'laser') {
-        px = 9 // 레이저 · 슬라이더 무시 · 네온 링+코어 구조 잘 보이게 다소 굵게
-      } else if (s.tool === 'highlighter') {
-        px = s.size * 32
-      } else {
-        px = s.size * 14
-      }
-      return {
-        size: Math.max(1, px),
-        thinning: 0,
-        smoothing: 0.65,
-        streamline: 0.7,
-      }
-    }
+    const strokeOptionsFor = (s: Stroke) => ({
+      size: Math.max(0.5, s.sizeWorld),
+      thinning: 0,
+      smoothing: 0.65,
+      streamline: 0.7,
+    })
 
+    /** 포인터 화면 좌표 → 월드 좌표 (배율 나눔) */
     const getPoint = (e: React.PointerEvent<HTMLCanvasElement>): number[] => {
-      const rect = canvasRef.current!.getBoundingClientRect()
-      return [e.clientX - rect.left, e.clientY - rect.top]
+      const rect = liveCanvasRef.current!.getBoundingClientRect()
+      const k = scaleRef.current || 1
+      return [(e.clientX - rect.left) / k, (e.clientY - rect.top) / k]
     }
 
     /**
@@ -319,7 +345,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const updateEraserCursor = (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (toolRef.current !== 'eraser') return
       const el = eraserCursorRef.current
-      const canvas = canvasRef.current
+      const canvas = liveCanvasRef.current
       if (!el || !canvas) return
       const rect = canvas.getBoundingClientRect()
       el.style.left = `${e.clientX - rect.left}px`
@@ -344,17 +370,32 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       return false
     }
 
+    /**
+     * 펜 감지 — Apple Pencil 호버(M2+ iPad)는 CSS cursor 를 화면에 띄우는데,
+     * 글씨를 쓰는 동안 획 사이마다 호버 커서(십자선)가 나타났다 사라지며 깜빡인다.
+     * 펜은 촉 자체가 포인터라 커서가 필요 없다 — 펜이 한 번이라도 감지되면 숨긴다.
+     * (호버도 pointermove 로 오므로 첫 호버 순간 바로 사라진다 · 마우스는 십자선 유지)
+     */
+    const [penSeen, setPenSeen] = useState(false)
+    const notePen = (e: React.PointerEvent) => {
+      if (!penSeen && e.pointerType === 'pen') setPenSeen(true)
+    }
+
     const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      notePen(e)
       updateEraserCursor(e)
       if (!shouldAcceptPointer(e)) return
       e.preventDefault()
       e.stopPropagation()
-      canvasRef.current?.setPointerCapture(e.pointerId)
+      liveCanvasRef.current?.setPointerCapture(e.pointerId)
       currentRef.current = {
         points: [getPoint(e)],
         tool: toolRef.current,
         color: colorRef.current,
-        size: sizeRef.current,
+        // 화면에서 보이는 굵기(도구별 px)를 월드 px 로 변환해 박제 —
+        // 이후 배율이 바뀌어도 본문과 같은 비율로 커지고 줄어든다
+        sizeWorld:
+          toolScreenPx(toolRef.current, sizeRef.current) / (scaleRef.current || 1),
       }
       drawingRef.current = true
       // 레이저 새 stroke 시작 → 공유 페이드 타이머 리셋
@@ -363,70 +404,105 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         laserActivityEndRef.current = null
       }
       if (rafRef.current == null) {
-        rafRef.current = requestAnimationFrame(blitToMain)
+        rafRef.current = requestAnimationFrame(renderLive)
       }
     }
 
     const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      notePen(e)
       // 드로잉 중이 아니어도 지우개 커서 위치는 항상 tracking
       updateEraserCursor(e)
       if (!currentRef.current) return
       if (!shouldAcceptPointer(e)) return
       e.preventDefault()
-      // getCoalescedEvents 로 놓친 점까지 수집 → 곡선 정밀도 향상
-      const events = typeof e.nativeEvent.getCoalescedEvents === 'function'
-        ? e.nativeEvent.getCoalescedEvents()
-        : [e.nativeEvent]
-      const rect = canvasRef.current!.getBoundingClientRect()
+      // getCoalescedEvents 로 놓친 점까지 수집 → 곡선 정밀도 향상.
+      // WebKit(iPad Safari)은 펜 입력에서 이 목록을 간헐적으로 비워 반환한다 —
+      // 그대로 쓰면 이동점이 전부 버려져 획이 점·토막으로 끊긴다. 비면 원 이벤트로 폴백.
+      const coalesced =
+        typeof e.nativeEvent.getCoalescedEvents === 'function'
+          ? e.nativeEvent.getCoalescedEvents()
+          : null
+      const events = coalesced && coalesced.length > 0 ? coalesced : [e.nativeEvent]
+      const rect = liveCanvasRef.current!.getBoundingClientRect()
+      const k = scaleRef.current || 1
+      /**
+       * 최소 이동 게이트 — 마지막 채택점에서 INPUT_GATE_PX(화면 px) 미만 이동은 버린다.
+       * 펜은 속도와 무관하게 초당 120~240회 리포트하므로, 느리게 움직이면 리포트당
+       * 이동(0.2~0.5px)이 손떨림·센서 노이즈(±0.5px+)보다 작아져 노이즈가 획 모양을
+       * 지배한다 — 저속에서만 획이 꾸물거리는 원인. 게이트는 저속 노이즈만 걸러내고
+       * 보통 속도(이동 ≫ 게이트)에는 아무 영향이 없다.
+       */
+      const pts = currentRef.current.points
+      const gate = INPUT_GATE_PX / k
+      const gateSq = gate * gate
+      let [lx, ly] = pts[pts.length - 1]
       for (const ev of events) {
-        currentRef.current.points.push([
-          ev.clientX - rect.left,
-          ev.clientY - rect.top,
-        ])
+        const x = (ev.clientX - rect.left) / k
+        const y = (ev.clientY - rect.top) / k
+        const dx = x - lx
+        const dy = y - ly
+        if (dx * dx + dy * dy < gateSq) continue
+        pts.push([x, y])
+        lx = x
+        ly = y
       }
     }
 
     const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (!currentRef.current) return
-      canvasRef.current?.releasePointerCapture(e.pointerId)
+      liveCanvasRef.current?.releasePointerCapture(e.pointerId)
       const s = currentRef.current
+      // 획 끝점 보정 — 게이트에 걸려 못 들어간 마지막 위치를 채워 펜을 뗀 자리에서 끝나게
+      {
+        const rect = liveCanvasRef.current!.getBoundingClientRect()
+        const k = scaleRef.current || 1
+        const x = (e.clientX - rect.left) / k
+        const y = (e.clientY - rect.top) / k
+        const [lx, ly] = s.points[s.points.length - 1]
+        const half = (INPUT_GATE_PX / k) * 0.5
+        if ((x - lx) ** 2 + (y - ly) ** 2 > half * half) s.points.push([x, y])
+      }
       if (s.tool === 'laser') {
-        // 레이저 · offscreen 저장 안 함 · fadingLasers 에 누적
+        // 레이저 · base 저장 안 함 · fadingLasers 에 누적
         // 공유 타이머 시작 → 이후 다른 레이저 stroke 안 그리면 HOLD 후 함께 페이드
         fadingLasersRef.current.push(s)
         laserActivityEndRef.current = Date.now()
         // undo 대상에서도 제외
       } else {
-        // 일반 stroke · offscreen 에 박제
-        const off = offscreenRef.current
-        if (off) {
-          const ctx = off.getContext('2d')
-          if (ctx) renderStroke(ctx, s)
-        }
+        // 일반 stroke · base 에 박제 (지우개는 이미 base 에 파는 중 — 끝점 보정분만 최종 반영)
+        const bctx = baseCtx()
+        if (bctx) renderStroke(bctx, s)
         strokesRef.current.push(s)
       }
       currentRef.current = null
       drawingRef.current = false
-      // 마지막 프레임 다시 blit — offscreen 복사 · 페이드 루프 시작
-      if (rafRef.current == null) {
-        rafRef.current = requestAnimationFrame(blitToMain)
+      // live 를 동기로 비운다 — 커밋(base)과 다음 rAF 사이에 한 프레임이라도 양쪽에
+      // 같은 획이 보이면 형광펜(알파 0.32)이 겹쳐 진해 보인다. 레이저 페이드가 남아
+      // 있으면 renderLive 가 이어서 스케줄한다.
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
       }
+      renderLive()
     }
 
     const suppressContext = (e: React.SyntheticEvent) => e.preventDefault()
 
-    // 지우개 커서 지름 (px) · strokeOptionsFor 의 eraser 스케일과 동일하게 size × 14
-    const eraserDiameterPx = Math.max(6, size * 14)
+    // 지우개 커서 지름 (화면 px) — 지금 그으면 지워질 실제 폭과 동일 (toolScreenPx 공유)
+    const eraserDiameterPx = Math.max(6, toolScreenPx('eraser', size))
     const cursorStyle = disabled
       ? 'default'
-      : tool === 'eraser'
-        ? 'none' // 기본 크로스헤어 숨기고 원형 오버레이로 대체
+      : tool === 'eraser' || penSeen
+        ? 'none' // 지우개는 원형 오버레이로 대체 · 펜은 촉이 포인터 (호버 커서 깜빡임 방지)
         : 'crosshair'
 
     return (
       <div ref={containerRef} className={styles.container}>
+        {/* Layer A — 완성 잉크. 포인터는 위 레이어가 받는다 */}
+        <canvas ref={baseCanvasRef} className={styles.canvas} style={{ pointerEvents: 'none' }} />
+        {/* Layer B — 진행 중 획 · 레이저 · 포인터 수신 */}
         <canvas
-          ref={canvasRef}
+          ref={liveCanvasRef}
           className={styles.canvas}
           // 비활성(모바일 등) — 터치를 아래 본문으로 통과시켜 페이지 스크롤이 살아있게 한다.
           // touch-action:none 이 남아 있으면 캔버스가 덮은 영역 전체에서 스크롤이 죽는다

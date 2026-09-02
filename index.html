@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#FF385C" />
+    <script>
+      // 카카오톡 인앱 브라우저 탈출 — OS 기본 브라우저(iOS 사파리 / Android 크롬 등)로 다시 연다.
+      // 인앱 웹뷰는 구글 등 소셜 로그인이 막히는(disallowed_useragent) 문제가 있어 바깥으로 뺀다.
+      // 번들 로드 전에 실행해 웹뷰 깜빡임을 없애고, Safari/Chrome UA 는 KAKAOTALK 을 안 포함하므로 루프가 없다.
+      (function () {
+        if (/KAKAOTALK/i.test(navigator.userAgent || '')) {
+          location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href)
+        }
+      })()
+    </script>
     <title>풀잇 · 매일 4문제로 약점 찾기</title>
     <meta
       name="description"
@@ -31,8 +41,25 @@
       integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV"
       crossorigin="anonymous"
     />
+    <!-- Meta Pixel — init 만 여기서. PageView 는 SPA 라우트 이동마다 React 쪽
+         (services/metaPixel.ts)이 쏜다 — 여기서도 쏘면 첫 페이지가 이중 집계된다.
+         로컬 개발(localhost·사설 IP)에서는 로드하지 않아 카운트를 오염시키지 않는다. -->
+    <script>
+      (function () {
+        if (/^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(location.hostname)) return
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+        document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '3838902539584016');
+      })()
+    </script>
   </head>
   <body>
+    <noscript><img height="1" width="1" style="display:none" alt=""
+      src="https://www.facebook.com/tr?id=3838902539584016&ev=PageView&noscript=1"
+    /></noscript>
     <script>
       // 다크 랜딩('/') 흰 화면 플래시 방지 — JS 번들 로드 전에 배경을 먼저 검게
       if (location.pathname === '/') document.documentElement.style.background = '#000'

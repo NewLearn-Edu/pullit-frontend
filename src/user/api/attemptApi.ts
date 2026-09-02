@@ -11,6 +11,8 @@ export interface AttemptSubmitRequest {
   timeSpentMs: number
   /** 무응답 제출("모르겠어요") — 오답 채점 + 원장에서 찍은 오답과 구분 기록 */
   skipped?: boolean
+  /** 발급 세트 id — 세트 풀이면 첨부(완료 판정·이어풀기 근거), 세트 밖 풀이는 생략 */
+  setId?: number | null
 }
 
 export interface AttemptSubmitResponse {
@@ -24,6 +26,8 @@ export interface AttemptSubmitResponse {
   explanation: string | null
   /** 이 제출로 실제 지급된 보상 (null = 없음) — TRIAL_FIRST_CLEAR 면 첫 진단 축하 시트 신호 */
   grantedReward: 'TRIAL_FIRST_CLEAR' | null
+  /** 이 제출로 세트가 완료되며 일어난 난이도 레벨 변동 (null = 없음) */
+  levelChange: 'UP' | 'DOWN' | null
 }
 
 interface BaseResponse<T> {
@@ -125,5 +129,40 @@ export interface StudyStats {
 
 export async function fetchStudyStats(): Promise<StudyStats> {
   const { data } = await api.get<BaseResponse<StudyStats>>('/api/attempts/me/stats')
+  return data.data
+}
+
+/**
+ * 소단원별 풀잇 평균 (학습 리포트) — 전 유닛이 항상 내려온다.
+ * averageScore = 노출값 (표본이 임계 미만이면 시드, 이상이면 실측 — source 참고).
+ * realAverage·userCount 는 관리 가시성용 — 카드에는 averageScore 만 쓴다.
+ */
+export interface UnitAverage {
+  unitCode: string
+  averageScore: number
+  userCount: number
+  realAverage: number | null
+  source: 'SEED' | 'REAL'
+}
+
+export async function fetchUnitAverages(
+  subject: 'math' | 'english',
+): Promise<UnitAverage[]> {
+  const { data } = await api.get<BaseResponse<UnitAverage[]>>('/api/attempts/unit-averages', {
+    params: { subject: subject.toUpperCase() },
+  })
+  return data.data
+}
+
+/** 하루치 학습량 (리포트 히트맵·주간 차트 공용) — 푼 날만 내려온다. date = "YYYY-MM-DD" */
+export interface DailyActivity {
+  date: string
+  count: number
+  /** 그날 풀이에 쓴 시간 합 (ms) */
+  timeSpentMs: number
+}
+
+export async function fetchDailyActivity(): Promise<DailyActivity[]> {
+  const { data } = await api.get<BaseResponse<DailyActivity[]>>('/api/attempts/daily-activity')
   return data.data
 }

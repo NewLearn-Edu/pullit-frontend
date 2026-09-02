@@ -359,23 +359,45 @@ export interface MeResult {
   /** 회원인데 null 이면 추가 정보 입력(/signup/info)이 필요하다 */
   phoneNumber: string | null
   birthDate: string | null
+  /** 학년/신분 — 프로필 완성 전엔 null */
+  grade: Grade | null
+  /** 커스텀 프로필 이미지 URL — null 이면 프론트가 기본 아바타 표시 */
+  profileImageUrl: string | null
   /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
   marketingConsentAt: string | null
   /** 마지막 닉네임 변경 시각 — 90일 재변경 잠금 판정용 (한 번도 안 바꿨으면 null) */
   nicknameChangedAt: string | null
-  /** 프로필 이미지 URL — null 이면 기본 아바타(🦊)로 폴백 */
-  profileImageUrl: string | null
+  /** 가입 소셜 — 애플 가입자는 이름 칸을 수정할 수 없다 (Apple 정책). 게스트/미연동이면 null */
+  provider: 'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null
+  /** 가입 시각 (ISO) — 리포트 잔디의 시작 기준(가입 월) */
+  joinedAt: string | null
+}
+
+/** 학년/신분 — 서버 common.enums.Grade 와 동일 값 */
+export type Grade =
+  | 'MIDDLE_1' | 'MIDDLE_2' | 'MIDDLE_3'
+  | 'HIGH_1' | 'HIGH_2' | 'HIGH_3'
+  | 'RETAKE' | 'PARENT' | 'TEACHER' | 'GENERAL'
+
+export const GRADE_LABEL: Record<Grade, string> = {
+  MIDDLE_1: '중1', MIDDLE_2: '중2', MIDDLE_3: '중3',
+  HIGH_1: '고1', HIGH_2: '고2', HIGH_3: '고3',
+  RETAKE: '재수', PARENT: '학부모', TEACHER: '선생님', GENERAL: '일반인',
 }
 
 export interface ProfileCompleteRequest {
   /** 이름 — 구글(프로필명)·애플(최초 1회)은 SSO 값이 부정확할 수 있어 직접 입력 */
   name: string
   birthDate: string // YYYY-MM-DD
+  /** 학년/신분 — 필수 선택 (자기신고, 생년월일과 정합성 검증 안 함) */
+  grade: Grade
   phoneNumber: string // 010-0000-0000
   agreeTerms: boolean
   agreePrivacy: boolean
   /** [선택] 마케팅 정보 수신 동의 — 유저가 직접 체크한 경우에만 true */
   agreeMarketing: boolean
+  /** [선택] 초대 코드 — 초대 링크(?invite=)로 들어와 가입한 경우 실린다 (초대자 +5 지급 근거) */
+  inviteCode?: string | null
 }
 
 /**
@@ -383,8 +405,25 @@ export interface ProfileCompleteRequest {
  * 전화번호는 SMS 인증(confirmPhoneCode)을 마친 번호여야 한다 (미인증 시 400 U016).
  * 만 14세 미만이면 서버가 계정을 즉시 파기하고 403(U010) 을 반환한다.
  */
-export async function completeProfile(req: ProfileCompleteRequest): Promise<void> {
-  await api.post('/api/users/me/profile', req)
+/** 가입 추가 정보 완료 응답 — welcomeCreditGranted 가 켜지면 축하 뷰(/signup-complete)로 */
+export interface ProfileCompleteResult {
+  welcomeCreditGranted: boolean
+}
+
+export async function completeProfile(req: ProfileCompleteRequest): Promise<ProfileCompleteResult> {
+  const { data } = await api.post<{ data: ProfileCompleteResult | null }>('/api/users/me/profile', req)
+  return data.data ?? { welcomeCreditGranted: false }
+}
+
+/** 내 초대 코드 조회 — 없으면 서버가 이때 발급. 초대 링크(pullit.co.kr/start?invite=)에 실린다 */
+export async function fetchInviteCode(): Promise<string> {
+  const { data } = await api.get<{ data: { inviteCode: string } | null }>('/api/users/me/invite-code')
+  return data.data?.inviteCode ?? ''
+}
+
+/** 초대하기 버튼 누름 기록 — 공유 발동마다 1회 (초대 "시도" 집계용). 실패해도 공유는 진행 */
+export async function recordInviteShared(): Promise<void> {
+  await api.post('/api/users/me/invite-shared')
 }
 
 /** 전화번호 인증번호 SMS 발송 (60초 쿨다운 — 초과 시 429 U012) */

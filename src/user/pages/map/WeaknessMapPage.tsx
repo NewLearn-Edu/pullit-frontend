@@ -2,17 +2,20 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
-import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
-import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
-import { useSolveStore } from '@/user/stores/solveStore'
+import { fetchUnitLocks } from '@/user/api/recommendApi'
 import { findCategoryByName } from '@/user/data/curriculum'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import {
+  computeCategoryProgress,
+  useTrialProgressStore,
+  type UnitProgressRow,
+} from '@/user/stores/trialProgressStore'
+import { useUnitSheets } from '@/user/pages/home/UnitSheets'
 import {
   MATH_MAP_EDGES,
   MATH_MAP_NODES,
@@ -46,7 +49,6 @@ export default function WeaknessMapPage() {
   const navigate = useNavigate()
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
-  const startSolveSession = useSolveStore((s) => s.startSession)
 
   useEffect(() => {
     if (sessionStatus === 'anonymous') navigate('/login', {
@@ -57,6 +59,65 @@ export default function WeaknessMapPage() {
   }, [sessionStatus, navigate])
 
   const [subject, setSubject] = useState<Subject>('math')
+
+  // ── 진행 상태 — 홈과 같은 진실원 (trial_diagnoses + unit_locks) ──────────
+  const diagnosed = useTrialProgressStore((s) => s.diagnosed)
+  const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
+  const [locks, setLocks] = useState<Record<string, string>>({})
+  const refreshLocks = useCallback(
+    () =>
+      fetchUnitLocks(subject)
+        .then((list) => {
+          const map: Record<string, string> = {}
+          for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
+          setLocks(map)
+        })
+        .catch(() => {}),
+    [subject],
+  )
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    hydrateFromServer()
+    refreshLocks()
+  }, [sessionStatus, hydrateFromServer, refreshLocks])
+
+  // 소단원명 → (진행 행 + 카테고리 행 목록) — 노드 상태·시트 컨텍스트의 근거
+  const rowIndex = useMemo(() => {
+    const map = new Map<string, { row: UnitProgressRow; rows: UnitProgressRow[] }>()
+    const seen = new Set<string>()
+    for (const node of subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES) {
+      const category = findCategoryByName(subject, node.cat)
+      if (!category || seen.has(category.slug)) continue
+      seen.add(category.slug)
+      const code = category.units[0].unitCode.split('_').slice(0, 3).join('_')
+      const rows = computeCategoryProgress(category, diagnosed, locks[code] ?? null).rows
+      for (const row of rows) map.set(row.name, { row, rows })
+    }
+    return map
+  }, [subject, diagnosed, locks])
+
+  // 홈과 동일한 소단원 액션 시트 (상세·진단 시작·재진단·선행 안내)
+  const sheets = useUnitSheets({
+    subject,
+    credit: me?.creditBalance ?? 0,
+    returnTo: () => '/weakness-map',
+    onLocksChanged: refreshLocks,
+    onAllClosed: () => setSelectedId(null),
+    // 진단 완료 토스트 "보기" (3575-7884) — 노드 클릭과 같은 경로로 선택 + 상세 시트
+    resolveUnit: (name) => {
+      const hit = rowIndex.get(name)
+      if (!hit) return null
+      const node = (subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES).find(
+        (n) => n.name === name,
+      )
+      if (!node) return null
+      const category = findCategoryByName(subject, node.cat)
+      if (!category) return null
+      setSelectedId(node.id)
+      return { row: hit.row, context: { category, rows: hit.rows } }
+    },
+  })
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: INITIAL_SCALE })
   const [animated, setAnimated] = useState(false) // 포커스 이동 중에만 transform 트랜지션
@@ -100,11 +161,13 @@ export default function WeaknessMapPage() {
     [nodes, selectedId],
   )
 
-  /** 약점 점수가 가장 낮은 노드 = 첫 포커스 대상 */
+  /** 약점 점수가 가장 낮은 노드 = 첫 포커스 대상 — 서버 진단 점수 기준 */
   const weakest = useMemo(() => {
-    const scored = nodes.filter((n) => n.score != null)
-    return scored.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))[0] ?? nodes[0]
-  }, [nodes])
+    const scored = nodes
+      .map((n) => ({ n, score: rowIndex.get(n.name)?.row.diagnosis?.score }))
+      .filter((e): e is { n: MapNode; score: number } => e.score != null)
+    return scored.sort((a, b) => a.score - b.score)[0]?.n ?? nodes[0]
+  }, [nodes, rowIndex])
 
   /**
    * 특정 월드 좌표(노드 중심)를 "보이는 영역"의 중앙에 놓는 view 계산.
@@ -124,17 +187,9 @@ export default function WeaknessMapPage() {
     [],
   )
 
-  const sheetRef = useRef<HTMLDivElement | null>(null)
-  /** 팀 기준 데스크탑 분기 (1281~) — 시트가 우측 패널로 배치되는 구간 */
-  const isDesktop = () => window.matchMedia('(min-width: 1281px)').matches
-
   const focusNode = useCallback(
-    (node: MapNode, scale: number) => {
+    (node: MapNode, scale: number, inset: { bottom?: number; right?: number } = {}) => {
       setAnimated(true)
-      const el = sheetRef.current
-      const inset = isDesktop()
-        ? { right: (el?.offsetWidth ?? 0) + 40 } // 패널 폭 + 우측 여백
-        : { bottom: el?.offsetHeight ?? 0 }
       setView(centerOn(node, scale, inset))
     },
     [centerOn],
@@ -151,10 +206,18 @@ export default function WeaknessMapPage() {
   }, [subject])
 
   // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
+  // 노드 선택 → 시트가 그려진 다음 프레임에 높이를 재서 가려지지 않는 중심으로 포커스
   useEffect(() => {
     if (!selected) return
-    const raf = requestAnimationFrame(() => focusNode(selected, FOCUS_SCALE))
+    const raf = requestAnimationFrame(() => {
+      const el = sheets.sheetEl.current
+      const inset = window.matchMedia('(min-width: 1281px)').matches
+        ? { right: (el?.offsetWidth ?? 0) + 40 } // 웹 — 우측 패널 폭 + 여백
+        : { bottom: el?.offsetHeight ?? 0 } // 모바일·패드 — 바텀시트 높이
+      focusNode(selected, FOCUS_SCALE, inset)
+    })
     return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focusNode])
 
   // ── 팬 · 핀치 (pointer events) ─────────────────────────────────────────
@@ -244,8 +307,13 @@ export default function WeaknessMapPage() {
   const handleNodeClick = (node: MapNode) => {
     if (gesture.current.moved) return // 드래그 후 클릭 오발동 방지
     if (spaceRef.current) return // 핸드 툴 중엔 선택 없이 팬만
-    // 같은 노드 재탭 = 선택 해제 (시트 닫힘) · 포커스는 시트 높이 측정 후 effect 에서
-    setSelectedId((cur) => (cur === node.id ? null : node.id))
+    setSelectedId(node.id)
+    // 홈과 같은 분기 — 상태별 시트 (상세·진단 시작·재진단·선행 안내)
+    const hit = rowIndex.get(node.name)
+    if (!hit) return
+    const category = findCategoryByName(subject, node.cat)
+    if (!category) return
+    sheets.openUnit(hit.row, { category, rows: hit.rows })
   }
 
   const closeSheet = () => setSelectedId(null)
@@ -267,59 +335,6 @@ export default function WeaknessMapPage() {
     return offsets
   }, [])
 
-  // 시트 아래로 스와이프 닫기 (공용 훅) — 웹은 우측 고정 패널이라 제스처 제외
-  const sheetDragGesture = useSheetDrag(closeSheet, { disabled: isDesktop })
-
-  /**
-   * 시트에 ref 가 둘 필요하다 — 드래그 제스처용(sheetProps.ref)과 지도 여백 계산용(sheetRef).
-   * ref 를 따로 주면 스프레드가 뒤에서 덮어써 sheetRef 가 늘 null 이 되고(포커스 여백이 0),
-   * 빌드도 TS2783 으로 깨진다. 스프레드에서 ref 를 분리하고 콜백으로 둘 다 채운다.
-   */
-  const { ref: dragSheetRef, ...sheetHandlers } = sheetDragGesture.sheetProps
-  const bindSheet = useCallback(
-    (el: HTMLDivElement | null) => {
-      sheetRef.current = el
-      dragSheetRef.current = el
-    },
-    [dragSheetRef],
-  )
-
-  /** 학습 경로 — 메인 간선 기준 이전 → 현재 → 다음 (점·텍스트가 각 단원 상태 반영) */
-  const path = useMemo(() => {
-    if (!selected) return []
-    const main = edges.filter((e) => !e.indirect)
-    const prev = main.find((e) => e.to === selected.id)?.from
-    const next = main.find((e) => e.from === selected.id)?.to
-    const byId = (id?: string) => nodes.find((n) => n.id === id)
-    return [byId(prev), selected, byId(next)]
-      .filter((n): n is MapNode => !!n)
-      .map((n) => ({ name: n.name, state: n.state, current: n.id === selected.id }))
-  }, [selected, nodes, edges])
-
-  /**
-   * 자유 풀이 게이트 (2026-08-17 정책) — 해당 소단원(유형)의 맛보기 진단만
-   * 마쳤으면 그 단원 문제를 자유롭게 풀 수 있다 (대단원 완주 불필요).
-   */
-  const selectedCategory = selected ? findCategoryByName(subject, selected.cat) : undefined
-
-  /** 진단 경로로 이동 — 미진단 노드의 CTA */
-  const goDiagnose = () => {
-    if (selectedCategory) navigate(`/unlock/${subject}/${selectedCategory.slug}`)
-  }
-
-  /** 자유 풀이 시작 — 노드와 같은 이름의 커리큘럼 유닛 문제로 FREE 세션 */
-  const startFreeSolve = async () => {
-    if (!selected || !selectedCategory) return
-    const unit = selectedCategory.units.find((u) => u.name === selected.name)
-    const problems = await loadQuizProblems(
-      subject,
-      unit?.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
-    )
-    if (problems.length === 0) return
-    startSolveSession({ problems, source: 'FREE', returnTo: '/weakness-map' })
-    navigate(`/solve/${subject}/0`)
-  }
-
   return (
     <div className={styles.page}>
       <UserNav active="map" />
@@ -335,11 +350,8 @@ export default function WeaknessMapPage() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onClick={() => {
-          // 빈 캔버스 탭 = 선택 해제 — 시트가 열려 있으면 슬라이드 아웃부터
-          if (!gesture.current.moved && !spaceRef.current) {
-            if (selectedId) sheetDragGesture.close()
-            else closeSheet()
-          }
+          // 빈 캔버스 탭 = 선택 해제
+          if (!gesture.current.moved && !spaceRef.current) closeSheet()
         }}
       >
         {/* 캔버스 (팬/줌 대상) */}
@@ -409,7 +421,7 @@ export default function WeaknessMapPage() {
                       d={d}
                       className={clsx(
                         edge.indirect ? styles.edgeIndirect : styles.edgeMain,
-                        from.state === 'weak' && styles.edgeWeak,
+                        rowIndex.get(from.name)?.row.diagnosis?.weak && styles.edgeWeak,
                       )}
                       style={{
                         strokeWidth: w,
@@ -420,42 +432,52 @@ export default function WeaknessMapPage() {
                 })}
               </svg>
 
-              {/* 노드 */}
-              {nodes.map((node) => (
-                <button
-                  key={node.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleNodeClick(node)
-                  }}
-                  style={{ left: node.x, top: node.y }}
-                  className={clsx(
-                    styles.node,
-                    node.state === 'weak' && styles.nodeWeak,
-                    node.state === 'done' && styles.nodeDone,
-                    node.state === 'locked' && styles.nodeLocked,
-                    selectedId === node.id && styles.nodeSelected,
-                  )}
-                >
-                  <span className={styles.nodeHead}>
-                    <span className={styles.nodeCat}>{node.cat}</span>
-                    {node.state === 'weak' && <span className={styles.badgeWeak}>약점</span>}
-                    {node.state === 'locked' && <span className={styles.badgeLocked}>잠김</span>}
-                  </span>
-                  <span className={styles.nodeBody}>
-                    <span className={styles.nodeName}>{node.name}</span>
-                    <span className={styles.nodeScore}>
-                      {node.score != null ? `${node.score}점` : '-'}
-                    </span>
-                  </span>
-                  <span className={styles.track}>
-                    {node.score != null && (
-                      <span className={styles.fill} style={{ width: `${node.score}%` }} />
+              {/* 노드 — 상태·점수는 홈과 같은 진실원(서버 진단·잠금)에서 파생 */}
+              {nodes.map((node) => {
+                const row = rowIndex.get(node.name)?.row
+                const score = row?.diagnosis?.score ?? null
+                const weak = !!row?.diagnosis?.weak
+                const done = !!row?.diagnosis
+                // 건너뛴(off) 구간은 자물쇠로 — 그 외 미진단은 전부 "미진단" 배지 (시안 2370-9041)
+                const off = row?.state === 'off'
+                return (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleNodeClick(node)
+                    }}
+                    style={{ left: node.x, top: node.y }}
+                    className={clsx(
+                      styles.node,
+                      weak && styles.nodeWeak,
+                      done && !weak && styles.nodeDone,
+                      !done && !off && styles.nodeLocked,
+                      off && styles.nodeSkipped,
+                      selectedId === node.id && styles.nodeSelected,
                     )}
-                  </span>
-                </button>
-              ))}
+                  >
+                    <span className={styles.nodeHead}>
+                      <span className={styles.nodeCat}>{node.cat}</span>
+                      {weak && <span className={styles.badgeWeak}>약점</span>}
+                      {!done && !off && <span className={styles.badgeLocked}>미진단</span>}
+                      {off && <span className={styles.badgeLocked}>건너뜀</span>}
+                    </span>
+                    <span className={styles.nodeBody}>
+                      <span className={styles.nodeName}>{node.name}</span>
+                      <span className={styles.nodeScore}>
+                        {score != null ? `${score}점` : '-'}
+                      </span>
+                    </span>
+                    <span className={styles.track}>
+                      {score != null && (
+                        <span className={styles.fill} style={{ width: `${score}%` }} />
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
             </>
         </div>
 
@@ -475,14 +497,6 @@ export default function WeaknessMapPage() {
               className={styles.iconCircle}
             >
               <WrongNoteIcon />
-            </button>
-            <button
-              type="button"
-              aria-label="마이페이지"
-              onClick={() => navigate('/my')}
-              className={styles.iconCircle}
-            >
-              <ProfileIcon size={18} />
             </button>
           </div>
         </header>
@@ -509,6 +523,9 @@ export default function WeaknessMapPage() {
             <span className={styles.legendItem}>
               <i className={clsx(styles.swatch, styles.swatchLocked)} />미진단
             </span>
+            <span className={styles.legendItem}>
+              <i className={clsx(styles.swatch, styles.swatchSkipped)} />건너뜀
+            </span>
           </div>
         </div>
 
@@ -534,84 +551,8 @@ export default function WeaknessMapPage() {
           </button>
         </div>
 
-        {/* 노드 상세 바텀시트 */}
-        {selected && (
-          <div
-            {...sheetHandlers}
-            ref={bindSheet}
-            className={clsx(styles.sheet, sheetDragGesture.dragging && styles.sheetDragging)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button type="button" aria-label="닫기" onClick={sheetDragGesture.close} className={styles.sheetHandleWrap}>
-              <span className={styles.sheetHandle} />
-            </button>
-            {/* 웹(우측 패널) 전용 닫기 버튼 — 모바일은 핸들·스와이프로 닫음 */}
-            <button type="button" aria-label="닫기" onClick={sheetDragGesture.close} className={styles.sheetClose}>
-              ×
-            </button>
-            <div className={styles.sheetTitleRow}>
-              <h2 className={styles.sheetTitle}>{selected.name}</h2>
-              {selected.state === 'weak' && <span className={styles.sheetBadgeWeak}>약점</span>}
-              {selected.state === 'locked' && <span className={styles.sheetBadgeLocked}>잠김</span>}
-            </div>
-            <div className={styles.sheetStats}>
-              <div className={styles.sheetStat}>
-                <span className={styles.sheetStatLabel}>푼 문제</span>
-                <span className={styles.sheetStatValue}>
-                  {selected.stats ? `${selected.stats.solved}문제` : '-'}
-                </span>
-              </div>
-              <div className={styles.sheetStat}>
-                <span className={styles.sheetStatLabel}>점수</span>
-                <span className={styles.sheetStatValue}>
-                  {selected.score != null ? `${selected.score}점` : '-'}
-                </span>
-              </div>
-              <div className={clsx(styles.sheetStat, styles.sheetStatLast)}>
-                <span className={styles.sheetStatLabel}>공부 시간</span>
-                <span className={styles.sheetStatValue}>
-                  {selected.stats
-                    ? `${Math.floor(selected.stats.minutes / 60)}시간 ${selected.stats.minutes % 60}분`
-                    : '-'}
-                </span>
-              </div>
-            </div>
-
-            {path.length > 0 && (
-              <>
-                <h3 className={styles.sheetSection}>학습 경로</h3>
-                <div className={styles.pathBox}>
-                  {path.map((p, i) => (
-                    <div key={p.name} className={styles.pathItem}>
-                      {i > 0 && <span className={styles.pathLine} />}
-                      <span className={clsx(styles.pathRow, !p.current && p.state === 'locked' && styles.pathRowLocked)}>
-                        <i
-                          className={clsx(
-                            styles.pathDot,
-                            p.current && styles.pathDotCurrent,
-                            !p.current && p.state !== 'locked' && styles.pathDotDone,
-                          )}
-                        />
-                        {p.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* CTA — 미진단 노드는 진단 경로로, 맛보기를 마친 노드는 바로 자유 풀이 */}
-            {selected.state === 'locked' ? (
-              <button type="button" onClick={goDiagnose} className={styles.sheetButton}>
-                약점 진단하러 가기
-              </button>
-            ) : (
-              <button type="button" onClick={startFreeSolve} className={styles.sheetButton}>
-                문제 풀기
-              </button>
-            )}
-          </div>
-        )}
+        {/* 소단원 액션 시트 — 홈과 공용 (UnitSheets). 지도 위 오버레이로 뜬다 */}
+        {sheets.element}
       </div>
     </div>
   )

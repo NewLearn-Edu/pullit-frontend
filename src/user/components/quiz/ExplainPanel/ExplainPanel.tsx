@@ -1,9 +1,27 @@
 import { clsx } from 'clsx'
+import type { Ref } from 'react'
 import type { Problem } from '@/user/data/mockProblems'
 import { MathExplainRender } from '@/shared/components/ExamRender'
 import { ProblemExplain, parseExplainBlocks } from '@/shared/components/ProblemExplain'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
+import {
+  DrawingCanvas,
+  type DrawingCanvasHandle,
+  type StrokeTool,
+} from '@/user/components/quiz/DrawingCanvas'
 import styles from './styles/ExplainPanel.module.scss'
+
+/** 해설 위 필기 옵션 — 페이지의 공용 툴바 상태를 그대로 받는다 (리뷰 화면용) */
+export interface ExplainDrawing {
+  tool: StrokeTool
+  color: string
+  size: number
+  disabled?: boolean
+  allowFinger?: boolean
+  canvasRef?: Ref<DrawingCanvasHandle>
+  /** 이 캔버스에 포인터가 닿을 때 — 페이지가 undo/clear 라우팅 대상을 추적한다 */
+  onActivate?: () => void
+}
 
 interface ExplainPanelProps {
   open: boolean
@@ -18,6 +36,8 @@ interface ExplainPanelProps {
   width: number
   /** divider 드래그 중 · true 면 width transition off (매끄러운 드래그) */
   resizing: boolean
+  /** 있으면 해설 본문 위에 필기 캔버스를 얹는다 */
+  drawing?: ExplainDrawing
 }
 
 /**
@@ -36,6 +56,7 @@ export function ExplainPanel({
   revealed,
   width,
   resizing,
+  drawing,
 }: ExplainPanelProps) {
   // 정답 표시 — 객관식은 원문자, 주관식은 값 그대로. 확인 불가(-)는 서버 응답 전
   const resolvedAnswer = answerNo ?? (problem.answer !== 0 ? problem.answer : null)
@@ -83,6 +104,9 @@ export function ExplainPanel({
           </div>
 
           <div className={styles.body}>
+            {/* drawWrap: 필기 오버레이 기준 컨테이너 — 스크롤 내용과 같이 움직이고,
+                해설이 짧아도 패널 높이만큼은 채워 아래 여백에도 쓸 수 있다 */}
+            <div className={styles.drawWrap}>
             {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
             <ExamScaleFrame>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
@@ -125,6 +149,23 @@ export function ExplainPanel({
               </div>
             </div>
             </ExamScaleFrame>
+
+            {drawing && (
+              <div
+                className={styles.drawOverlay}
+                onPointerDownCapture={drawing.onActivate}
+              >
+                <DrawingCanvas
+                  ref={drawing.canvasRef}
+                  tool={drawing.tool}
+                  color={drawing.color}
+                  size={drawing.size}
+                  disabled={drawing.disabled}
+                  allowFinger={drawing.allowFinger}
+                />
+              </div>
+            )}
+            </div>
           </div>
         </div>
       </aside>

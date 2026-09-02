@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { type DailyActivity } from '@/user/api/attemptApi'
 import {
   buildHeatmap,
   buildMonthLabels,
@@ -17,18 +18,42 @@ const DAY_AXIS = ['', '월', '', '수', '', '금', '']
  * 최근 1년(53주)을 열 = 주, 행 = 일~토 로 그린다.
  * 좁은 화면에서는 가로 스크롤되며, 진입 시 최신(오른쪽 끝)으로 맞춰진다.
  */
-export function StreakHeatmapCard({ today }: { today: Date }) {
-  const weeks = useMemo(() => buildHeatmap(today), [today])
+export function StreakHeatmapCard({
+  today,
+  activity,
+  joinedAt,
+}: {
+  today: Date
+  activity: DailyActivity[]
+  /** 가입 시각 — 잔디는 가입 월부터 그린다 (없으면 1년 전체) */
+  joinedAt?: string | null
+}) {
+  // 서버 일별 풀이 수 (푼 날만) — ReportPage 가 한 번 불러 두 카드에 나눠준다
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const day of activity) map[day.date] = day.count
+    return map
+  }, [activity])
+
+  const weeks = useMemo(() => buildHeatmap(today, counts, joinedAt), [today, counts, joinedAt])
   const monthLabels = useMemo(() => buildMonthLabels(weeks), [weeks])
   const streak = useMemo(() => countStreak(weeks), [weeks])
   const activeDays = useMemo(() => countActiveDays(weeks), [weeks])
 
-  // 1년치는 대부분의 화면보다 넓다 — 가장 최근 주가 보이게 오른쪽 끝에서 시작
+  // 판이 가입 월에 고정돼 있는가 — 마지막 열까지 아직 오지 않았으면(미래) 그렇다.
+  // 이때 학습 기록은 왼쪽(가입 직후)에 모여 있고, 1년이 차면 최근 1년 창으로 굴러간다.
+  const anchoredToJoin = weeks[weeks.length - 1][0].future
+
+  // 좁은 화면에선 잔디가 카드보다 넓다 — 기록이 있는 쪽이 보이게 스크롤 시작점을 잡는다.
+  // 가입 월 고정 판은 왼쪽(가입 직후)이, 최근 1년 창은 오른쪽(최신 주)이 기록 쪽이다.
+  // 오버플로가 없으면 건드리지 않는다 — 서브픽셀 잔여 스크롤로 첫 라벨이 잘리는 것 방지.
   const scrollRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollLeft = el.scrollWidth
-  }, [weeks])
+    if (el && el.scrollWidth - el.clientWidth > 8) {
+      el.scrollLeft = anchoredToJoin ? 0 : el.scrollWidth
+    }
+  }, [weeks, anchoredToJoin])
 
   return (
     <section className={styles.card}>
@@ -36,7 +61,9 @@ export function StreakHeatmapCard({ today }: { today: Date }) {
         <div className={styles.headTexts}>
           <h2 className={styles.title}>학습 연속일</h2>
           <p className={styles.subtitle}>
-            최근 1년간 <b>{activeDays}일</b> 학습했어
+            {/* 가입 1년 미만이면 판 = 가입 이후 전체 — 문구도 그에 맞춘다 */}
+            {anchoredToJoin ? '가입하고 ' : '최근 1년간 '}
+            <b>{activeDays}일</b> 학습했어
           </p>
         </div>
         <span className={styles.badge}>
@@ -94,7 +121,7 @@ function Cell({ day }: { day: HeatmapDay }) {
   const label = `${day.date.getFullYear()}.${day.date.getMonth() + 1}.${day.date.getDate()}`
   return (
     <i
-      className={`${styles.cell} ${styles[LEVEL_CLASS[day.level]]} ${day.future ? styles.future : ''}`}
+      className={`${styles.cell} ${styles[LEVEL_CLASS[day.level]]}`}
       title={day.future ? label : `${label} · 학습량 ${day.level}단계`}
     />
   )

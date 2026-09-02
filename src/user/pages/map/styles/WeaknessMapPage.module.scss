@@ -109,26 +109,33 @@ $red-tint: #fff1f2;
 }
 
 .nodeCat {
-  font-size: 10px;
-  font-weight: $fw-bold;
-}
-
-.badgeWeak,
-.badgeLocked {
-  padding: 5px 8px;
-  border-radius: $radius-full;
-  font-size: 10px;
-  font-weight: $fw-bold;
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
 }
 
 .badgeWeak {
+  padding: 4px 6px;
+  border: 1px solid $color-primary;
+  border-radius: $radius-full;
   background: $color-primary;
+  font-size: 10px;
+  font-weight: $fw-bold;
   color: #fff;
 }
 
+// 미진단·건너뜀 공용 필 — h22 · 12px semibold (Node 2364-8761)
 .badgeLocked {
-  background: $gray-200;
-  color: $gray-500;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 5px 8px;
+  border-radius: $radius-full;
+  background: $gray-200; // black/200
+  font-size: 12px;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: $gray-500; // black/500
 }
 
 .nodeBody {
@@ -143,8 +150,8 @@ $red-tint: #fff1f2;
 .nodeName {
   flex: 1;
   min-width: 0;
-  font-size: 15px;
-  font-weight: $fw-bold;
+  font-size: 16px;
+  font-weight: $fw-semibold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -190,10 +197,20 @@ $red-tint: #fff1f2;
 }
 
 .nodeLocked {
-  background: $gray-100;
+  background: $gray-100; // black/100
   border: 1px solid $gray-200;
   .nodeCat,
   .nodeBody { color: $gray-500; }
+}
+
+// 건너뛴 단원 (Node 2364-8761 · 건너뛰기 Default) — black/300 면, 점수는 면과 동화
+.nodeSkipped {
+  background: #d6d8db; // black/300
+  border: 1px solid #d6d8db;
+  .nodeCat,
+  .nodeName { color: #a6abb1; } // black/400
+  .nodeScore { color: #d6d8db; }
+  .track { background: #f8f8f8; } // black/50
 }
 
 // 선택 — 진단완료는 검정, 미진단은 진회색으로 반전 + NodeMap-selected 그림자
@@ -209,14 +226,18 @@ $red-tint: #fff1f2;
     transform: translateY(-7px);
   }
 
-  // 약점 — 레드 채움 반전 (Figma 2536-1595)
+  // 약점 — 레드 채움 반전 (Figma 2536-1595) · 배지는 red/100 으로 반전
   &.nodeWeak {
     background: $color-primary;
     border-color: $color-primary;
     .nodeCat,
     .nodeBody { color: #fff; }
-    .badgeWeak { background: #ff8fa3; } // red/300
-    .track { background: #ff8fa3; }
+    .badgeWeak {
+      border-color: $color-primary;
+      background: $red-tint; // red/100
+      color: $color-primary;
+    }
+    .track { background: #ff8fa3; } // red/300
     .fill { background: #fff; }
   }
 
@@ -230,10 +251,20 @@ $red-tint: #fff1f2;
   }
 
   &.nodeLocked {
-    background: #a6abb1;
+    background: #a6abb1; // black/400
     border-color: $gray-500;
     .nodeCat,
     .nodeBody { color: #fff; }
+    .track { background: $gray-200; }
+  }
+
+  // 건너뜀 selected — black/400 면에 black/100 텍스트 (3688-9139)
+  &.nodeSkipped {
+    background: #a6abb1;
+    border-color: $gray-500;
+    .nodeCat,
+    .nodeName,
+    .nodeScore { color: $gray-100; } // black/100
     .track { background: $gray-200; }
   }
 }
@@ -285,15 +316,17 @@ $red-tint: #fff1f2;
 
 // ── 범례 · 줌 컨트롤 ─────────────────────────────────────────────────────────
 
+// 좌하단 — 우하단 줌 컨트롤과 같은 높이에 정렬
 .legend {
   position: absolute;
+  bottom: calc(var(--nav-bottom-h) + 20px);
   left: 20px;
-  bottom: calc(var(--nav-bottom-h) + 20px); // 하단 네비 위
   display: flex;
   flex-direction: column;
   gap: 10px;
   pointer-events: none;
 
+  // 웹은 하단 네비 대신 사이드바 — 컨트롤과 동일하게 바닥 기준
   @include desktop-up { bottom: 20px; }
 }
 
@@ -333,6 +366,11 @@ $red-tint: #fff1f2;
 .swatchLocked {
   background: $gray-100;
   border: 1px solid $gray-200;
+}
+
+.swatchSkipped {
+  background: #d6d8db; // black/300
+  border: 1px solid #d6d8db;
 }
 
 .controls {

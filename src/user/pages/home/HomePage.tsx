@@ -2,33 +2,50 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
-import { ProfileIcon } from '@/user/components/icons/NavIcons'
 import { RecommendIcon } from '@/user/components/icons/RecommendIcon'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
-import { useTrialStore, type Subject } from '@/user/stores/trialStore'
-import { useCreditForExtraSet } from '@/user/api/creditApi'
-import { declareUnitLock, fetchUnitLocks } from '@/user/api/recommendApi'
+import { Skeleton } from '@/user/components/Skeleton'
+import { type Subject } from '@/user/stores/trialStore'
+import { fetchUnitLocks } from '@/user/api/recommendApi'
+import { fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
-import { useSolveStore } from '@/user/stores/solveStore'
-import { loadQuizProblems } from '@/user/services/problemSet'
-import {
-  computeCategoryProgress,
-  SET_CREDIT_COST,
-  useTrialProgressStore,
-  type UnitProgressRow,
-} from '@/user/stores/trialProgressStore'
+import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
 import graphExample from '@/assets/home/graph-example.png'
+import { useUnitSheets } from './UnitSheets'
 import styles from './styles/HomePage.module.scss'
 
 /** 맛보기 세트 문항 수 — 정책 3문항 */
 const SET_SIZE = 3
+
+/**
+ * 이어풀기 팝업 24시간 쿨다운 (2026-09-02) — 매 홈 진입마다 뜨면 피로해서,
+ * 한 번 띄우면 24시간 안에는 다시 안 띄운다. 노출 자체의 스로틀이라 서버
+ * 진실원(풀다 만 세트)과 무관 — 카드의 "풀다 만 문제가 있어" 라벨이 상시 안내를 맡는다.
+ * QA: ?qa-reset 으로 초기화 (main.tsx)
+ */
+const RESUME_PROMPT_SHOWN_AT_KEY = 'pullit_resume_prompt_shown_at'
+const RESUME_PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000
+
+function resumePromptCoolingDown(): boolean {
+  const at = Number(localStorage.getItem(RESUME_PROMPT_SHOWN_AT_KEY))
+  return Number.isFinite(at) && at > 0 && Date.now() - at < RESUME_PROMPT_COOLDOWN_MS
+}
+
+/** unitCode 로 커리큘럼 유닛 찾기 — 팝업의 세트 과목이 현재 탭과 달라도 복원 가능해야 한다 */
+function findUnitByCode(subject: Subject, unitCode: string) {
+  for (const category of CURRICULUM[subject]) {
+    const unit = category.units.find((u) => u.unitCode === unitCode)
+    if (unit) return unit
+  }
+  return null
+}
 
 /**
  * 메인 홈 (Figma PI-PAGE-04 · 2431-17022 · 2026-08-07 개편)
@@ -38,17 +55,14 @@ const SET_SIZE = 3
 export default function HomePage() {
   const navigate = useNavigate()
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
-  const startUnit = useTrialProgressStore((s) => s.startUnit)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const { me } = useMe()
-  const loadMe = useUserStore((s) => s.loadMe)
   const sessionStatus = useUserStore((s) => s.status)
   const credit = me?.creditBalance ?? 0
 
-  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 동기화
-  useEffect(() => {
-    if (sessionStatus === 'ready') hydrateFromServer()
-  }, [sessionStatus, hydrateFromServer])
+  // 서버 동기화(진단 기록 + 잠금) 완료 전에는 그래프·리스트 자리에 스켈레톤 —
+  // 빈 데이터를 실물처럼 그렸다가 갈아끼우는 깜빡임(미진단 → 점수)을 없앤다
+  const [synced, setSynced] = useState(false)
 
   // 홈은 세션(게스트·회원)이 있어야 하는 페이지 — 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {
@@ -79,12 +93,6 @@ export default function HomePage() {
     disabled: () => window.matchMedia('(min-width: 1281px)').matches,
   })
 
-  // 진단 완료 유닛 상세 시트 (Figma 2857-22101) — 요약 통계 + 최근 학습 + CTA
-  const [unitSheet, setUnitSheet] = useState<UnitProgressRow | null>(null)
-  const unitDrag = useSheetDrag(() => setUnitSheet(null), {
-    disabled: () => window.matchMedia('(min-width: 1281px)').matches,
-  })
-
   // replace — 탭/칩 전환이 히스토리 스택에 쌓이지 않게 (뒤로가기 한 번에 홈 이탈)
   const changeSubject = (s: Subject) => {
     setSearchParams(s === 'math' ? {} : { subject: s }, { replace: true })
@@ -100,18 +108,30 @@ export default function HomePage() {
 
   // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 유닛코드 → off 시작점 매핑
   const [locks, setLocks] = useState<Record<string, string>>({}) // categoryCode → offFromUnitCode
-  const refreshLocks = useCallback(() => {
-    fetchUnitLocks(subject)
-      .then((list) => {
-        const map: Record<string, string> = {}
-        for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
-        setLocks(map)
-      })
-      .catch(() => {})
-  }, [subject])
+  const refreshLocks = useCallback(
+    () =>
+      fetchUnitLocks(subject)
+        .then((list) => {
+          const map: Record<string, string> = {}
+          for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
+          setLocks(map)
+        })
+        .catch(() => {}),
+    [subject],
+  )
+
+  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 잠금과 함께 동기화.
+  // 실패해도 스켈레톤에 갇히지 않게 settled 기준으로 연다 (그때는 로컬 상태 폴백)
   useEffect(() => {
-    if (sessionStatus === 'ready') refreshLocks()
-  }, [sessionStatus, refreshLocks])
+    if (sessionStatus !== 'ready') return
+    let alive = true
+    Promise.allSettled([hydrateFromServer(), refreshLocks()]).then(() => {
+      if (alive) setSynced(true)
+    })
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus, hydrateFromServer, refreshLocks])
 
   const categoryCodeOf = (cat: (typeof categories)[number]) =>
     cat.units[0].unitCode.split('_').slice(0, 3).join('_')
@@ -122,117 +142,23 @@ export default function HomePage() {
   )
   const unitLabel = UNIT_LABEL[subject]
 
-  // ── 진단 시작 시트 (Figma 2842-10194) + 잠금 확인 + 선행 안내(3082-5687) ──
-  const [startSheet, setStartSheet] = useState<UnitProgressRow | null>(null)
-  const [skipMode, setSkipMode] = useState(false) // 시작 시트 안에서 잠금 확인 화면으로 전환
-  const [lockedSheet, setLockedSheet] = useState<UnitProgressRow | null>(null)
-  const [starting, setStarting] = useState(false)
-  const [startError, setStartError] = useState<string | null>(null)
-  const closeStartSheet = () => {
-    setStartSheet(null)
-    setSkipMode(false)
-    setStartError(null)
-  }
-  const startDrag = useSheetDrag(closeStartSheet, {
-    disabled: () => window.matchMedia('(min-width: 1281px)').matches,
+  // 소단원 액션 시트 묶음 — 약점 지도와 공용 (UnitSheets.tsx)
+  const sheets = useUnitSheets({
+    subject,
+    credit,
+    returnTo: () => `/home${window.location.search}`,
+    onLocksChanged: refreshLocks,
+    // 진단 완료 토스트 "보기" (3575-7884) — 단원명으로 전 대분류에서 행을 찾아 상세 시트
+    resolveUnit: (name) => {
+      for (const cat of categories) {
+        const rows = computeCategoryProgress(cat, diagnosed, locks[categoryCodeOf(cat)] ?? null).rows
+        const row = rows.find((r) => r.name === name)
+        if (row) return { row, context: { category: cat, rows } }
+      }
+      return null
+    },
   })
-  const lockedDrag = useSheetDrag(() => setLockedSheet(null), {
-    disabled: () => window.matchMedia('(min-width: 1281px)').matches,
-  })
-
-  const openStartSheet = (row: UnitProgressRow | undefined) => {
-    if (!row) return
-    setSkipMode(false)
-    setStartError(null)
-    setStartSheet(row)
-  }
-
-  // 추천 딥링크 (?start=unitCode) — /recommend(알림톡·나브 추천 버튼)가 넘겨준 유닛의
-  // 시트를 상태에 맞게 자동으로 연다. 대분류 칩이 다르면 먼저 맞춘 뒤 재실행된다.
-  useEffect(() => {
-    if (sessionStatus !== 'ready') return
-    const startCode = searchParams.get('start')
-    if (!startCode) return
-    const targetCat = categories.find((c) => c.units.some((u) => u.unitCode === startCode))
-    const next = new URLSearchParams(searchParams)
-    if (targetCat && targetCat.slug !== category.slug) {
-      if (targetCat.slug === categories[0].slug) next.delete('cat')
-      else next.set('cat', targetCat.slug)
-      setSearchParams(next, { replace: true }) // cat 이 바뀌면 이 effect 가 다시 돈다
-      return
-    }
-    next.delete('start')
-    setSearchParams(next, { replace: true })
-    const row = progress.rows.find((r) => r.unitCode === startCode)
-    if (!row) return
-    if (row.state === 'done') setUnitSheet(row)
-    else if (row.state === 'next' || (row.state === 'off' && row.offHead)) openStartSheet(row)
-    else setLockedSheet(row)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStatus, searchParams, setSearchParams, categories, category.slug, progress.rows])
-
-  // 예상 시간 — 세트 문항의 권장 시간 합 (문제 세트 캐시 공유라 보통 즉시)
-  const [estimatedSec, setEstimatedSec] = useState<number | null>(null)
-  useEffect(() => {
-    setEstimatedSec(null)
-    if (!startSheet) return
-    let alive = true
-    loadQuizProblems(
-      subject,
-      startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
-    ).then((problems) => {
-      if (alive && problems.length > 0)
-        setEstimatedSec(problems.reduce((s, p) => s + p.tRecSec, 0))
-    })
-    return () => {
-      alive = false
-    }
-  }, [startSheet, subject])
-
-  const resetTrial = useTrialStore((s) => s.reset)
-  const setLastSubject = useTrialStore((s) => s.setLastSubject)
-  const setMathSkillNode = useTrialStore((s) => s.setMathSkillNode)
-  const setEnglishType = useTrialStore((s) => s.setEnglishType)
-
-  /** 시작하기 — 서버 크레딧 차감 성공 시에만 퀴즈 진입 (UnlockProgressPage 와 동일 규칙) */
-  const confirmStartSet = async () => {
-    if (!startSheet || starting) return
-    setStarting(true)
-    setStartError(null)
-    try {
-      await useCreditForExtraSet()
-      loadMe(true)
-      resetTrial()
-      setLastSubject(subject)
-      const nodeId = startSheet.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
-      if (subject === 'math') setMathSkillNode(nodeId)
-      else setEnglishType(nodeId)
-      startUnit({ unitName: startSheet.name, returnTo: `/home${window.location.search}` })
-      navigate(`/trial/quiz/${subject}/0`)
-    } catch {
-      setStartError('크레딧 사용에 실패했어. 잔액을 확인하고 다시 시도해줘')
-      setStarting(false)
-    }
-  }
-
-  /**
-   * "안배웠어요" 확정 (2026-08-26 정책) — 이 소단원부터 대단원 끝까지 서버에 잠금 선언.
-   * 해제는 잠금 시작 소단원을 다시 풀어 박제될 때 서버가 자동 처리.
-   */
-  const [lockSaving, setLockSaving] = useState(false)
-  const confirmSkip = async () => {
-    if (!startSheet || lockSaving) return
-    setLockSaving(true)
-    try {
-      await declareUnitLock(subject, startSheet.unitCode)
-      refreshLocks()
-      closeStartSheet()
-    } catch {
-      setStartError('잠금 저장에 실패했어. 다시 시도해줘')
-    } finally {
-      setLockSaving(false)
-    }
-  }
+  const sheetCtx = { category, rows: progress.rows }
 
   /** 레이더 축 라벨 클릭 → 아래 소단원 카드로 부드럽게 스크롤 (Figma 2842-11896 리스트) */
   const scrollToUnitCard = (name: string) => {
@@ -247,41 +173,46 @@ export default function HomePage() {
    */
   const hasAnyDiagnosis = progress.rows.some((r) => r.diagnosis)
 
-  /**
-   * 자유 풀이 (2026-08-13 정책) — 대단원 진단을 모두 마쳐야(unlocked) 열린다.
-   * 열려 있으면 해당 유닛 문제로 FREE 세션을 만들어 /solve 로 진입.
-   */
-  const startSolveSession = useSolveStore((s) => s.startSession)
-  const startFreeSolve = async (row: UnitProgressRow) => {
-    const problems = await loadQuizProblems(
-      subject,
-      row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank'),
-    )
-    if (problems.length === 0) return
-    startSolveSession({
-      problems,
-      source: 'FREE',
-      returnTo: `/home${window.location.search}`,
-    })
-    navigate(`/solve/${subject}/0`)
+
+  // ── 이어풀기 팝업 (PI-POPUP-RESUME · Figma 2931-11007) ──────────────────
+  // 풀다 만 세트가 있으면 띄우되 24시간에 1회만 (쿨다운 상수 참조).
+  // 추천 로직과 무관 — 추천은 ①진단→②최약점 그대로, 재개 안내는 이 팝업의 몫
+  // 데이터(resumableSet)와 팝업 노출(resumePromptOpen)을 분리 — 팝업을 취소해도
+  // 소단원 카드의 "이어풀기" 라벨(2919-8829)은 계속 보여야 한다
+  const [resumableSet, setResumableSet] = useState<ResumableSet | null>(null)
+  const [resumePromptOpen, setResumePromptOpen] = useState(false)
+  useEffect(() => {
+    if (sessionStatus !== 'ready') return
+    let alive = true
+    fetchResumableSet()
+      .then((resumable) => {
+        if (!alive) return
+        setResumableSet(resumable)
+        if (resumable && !resumePromptCoolingDown()) {
+          localStorage.setItem(RESUME_PROMPT_SHOWN_AT_KEY, String(Date.now()))
+          setResumePromptOpen(true)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [sessionStatus])
+
+  const handleResume = async () => {
+    const info = resumableSet
+    if (!info) return
+    setResumePromptOpen(false)
+    const subj: Subject = info.subject === 'ENGLISH' ? 'english' : 'math'
+    const unit = findUnitByCode(subj, info.unitCode)
+    if (!unit) return
+    try {
+      if (info.source === 'TRIAL') await sheets.startTrialSet(unit, subj)
+      else await sheets.startFreeSolve(unit, subj)
+    } catch (error) {
+      window.alert(extractApiMessage(error) ?? '이어풀기에 실패했어. 다시 시도해줘')
+    }
   }
-
-  /**
-   * 잠긴 카드 안내 시트의 "먼저 풀어야 할" 유닛 —
-   * off 구간(안배웠어요)은 잠금 시작 소단원(offHead), 순서 잠금은 다음 진단 유닛.
-   */
-  const lockedIsOff = lockedSheet?.state === 'off'
-  const lockedRequired = lockedIsOff
-    ? progress.rows.find((r) => r.offHead)
-    : progress.nextUnit
-
-  /** 유닛 시트 요약값 — 문항별 기록이 있으면 초 단위 합산, 없으면(구버전) 분 근사 */
-  const sheetItems = unitSheet?.diagnosis?.items ?? []
-  const sheetTotal = sheetItems.length > 0 ? sheetItems.length : SET_SIZE
-  const sheetTotalSec =
-    sheetItems.length > 0
-      ? sheetItems.reduce((s, it) => s + it.seconds, 0)
-      : (unitSheet?.diagnosis?.minutes ?? 0) * 60
 
 
 
@@ -305,14 +236,6 @@ export default function HomePage() {
               >
                 <WrongNoteIcon />
               </button>
-              <button
-                type="button"
-                aria-label="마이페이지"
-                onClick={() => navigate('/my')}
-                className={styles.iconCircle}
-              >
-                <ProfileIcon size={18} />
-              </button>
             </>
           }
         />
@@ -334,8 +257,24 @@ export default function HomePage() {
             ))}
           </div>
 
+          {/* 서버 동기화 전 — 그래프·리스트 자리 스켈레톤 (같은 크기라 도착 시 점프 없음) */}
+          {!synced && (
+            <>
+              <Skeleton style={{ marginTop: 16, height: 360 }} />
+              <section className={styles.subSection}>
+                <h2 className={styles.subTitle}>{unitLabel}</h2>
+                <div className="flex flex-col gap-[8px]">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <Skeleton key={i} style={{ height: 77 }} />
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
           {/* 약점 그래프 카드 (Figma 2919-8728) — 흰 카드 안 레이더.
               이 대단원에서 하나도 진단 전이면 다크 잠금 오버레이 (2842-8069) */}
+          {synced && (
           <div className={styles.graphShell}>
             <ProgressRadar
               key={`${subject}:${category.slug}`} // 탭·카테고리 전환 시 리마운트 — 진입 애니메이션 재생
@@ -377,35 +316,28 @@ export default function HomePage() {
               </div>
             )}
           </div>
+          )}
 
           {/* 소단원(수학) / 유형(영어) 카드 리스트 (Figma subject-card 3종) */}
+          {synced && (
           <section className={styles.subSection}>
             <h2 className={styles.subTitle}>{unitLabel}</h2>
 
             <ol className={styles.unitCards}>
               {progress.rows.map((row) => {
                 if (row.state === 'off') {
-                  // "안배웠어요" 잠금 구간 — 시작 소단원(offHead)만 재개 진입점
+                  // 건너뛴 단원 — 개별 카드 (3693-8663 개정: 잠금 스택·자물쇠 폐지).
+                  // bg black/300 + "건너뜀" 필. 시작 소단원(offHead) 클릭 = 재진단 시트,
+                  // 나머지 = 잠금 안내 시트 (분기는 sheets.openUnit 이 담당)
                   return (
                     <li key={row.name} data-unit-card={row.name}>
                       <button
                         type="button"
-                        onClick={() =>
-                          row.offHead ? openStartSheet(row) : setLockedSheet(row)
-                        }
-                        className={clsx(styles.unitCard, styles.unitCardLocked)}
+                        onClick={() => sheets.openUnit(row, sheetCtx)}
+                        className={clsx(styles.unitCard, styles.unitCardSkipped)}
                       >
-                        <span className="flex min-w-0 flex-col items-start gap-[4px] text-left">
-                          <span className={styles.unitCardNameLocked}>{row.name}</span>
-                          {row.offHead && (
-                            <span className="text-[12px] font-medium text-[#a6abb1]">
-                              안배운 단원 · 다시 풀면 열려
-                            </span>
-                          )}
-                        </span>
-                        <span className={styles.unitLockIcon} aria-label="잠김">
-                          <LockIcon />
-                        </span>
+                        <span className={styles.unitCardNameSkipped}>{row.name}</span>
+                        <span className={styles.unitStatePill}>건너뜀</span>
                       </button>
                     </li>
                   )
@@ -417,14 +349,16 @@ export default function HomePage() {
                     <li key={row.name} data-unit-card={row.name}>
                       <button
                         type="button"
-                        onClick={() => setUnitSheet(row)}
+                        onClick={() => sheets.openUnit(row, sheetCtx)}
                         className={clsx(styles.unitCard, styles.unitCardTap, styles.unitCardDone)}
                       >
                         <span className={styles.unitCardBody}>
                           <span className={styles.unitCardNameRow}>
                             <span className={styles.unitCardName}>{row.name}</span>
-                            {row.diagnosis.weak && (
-                              <span className={styles.unitWeakPill}>약점</span>
+                            {/* 약점 필 없음 — 점수 색(빨강)이 약점 표시를 맡는다 (마스터 카드 2246-6010) */}
+                            {/* 풀다 만 세트(자유 풀이 등)가 있는 단원 — 이어풀기 안내 (시안 3681) */}
+                            {resumableSet?.unitCode === row.unitCode && (
+                              <span className={styles.unitResumeLabel}>풀다 만 문제가 있어</span>
                             )}
                           </span>
                           <span className={styles.unitCardMeta}>
@@ -457,11 +391,16 @@ export default function HomePage() {
                       {/* 카드 전체가 버튼 — 안쪽 알약은 표식이라 span (버튼 중첩 불가) */}
                       <button
                         type="button"
-                        onClick={() => openStartSheet(row)}
+                        onClick={() => sheets.openUnit(row, sheetCtx)}
                         className={clsx(styles.unitCard, styles.unitCardTap, styles.unitCardNext)}
                       >
                         <span className={styles.unitCardName}>{row.name}</span>
-                        <span className={styles.unitDiagnoseBtn}>진단하기</span>
+                        <span className={styles.unitDiagnoseBtn}>
+                          {resumableSet?.source === 'TRIAL' &&
+                          resumableSet.unitCode === row.unitCode
+                            ? '이어풀기'
+                            : '진단하기'}
+                        </span>
                       </button>
                     </li>
                   )
@@ -471,19 +410,19 @@ export default function HomePage() {
                   <li key={row.name} data-unit-card={row.name}>
                     <button
                       type="button"
-                      onClick={() => setLockedSheet(row)}
+                      onClick={() => sheets.openUnit(row, sheetCtx)}
                       className={clsx(styles.unitCard, styles.unitCardLocked)}
                     >
                       <span className={styles.unitCardNameLocked}>{row.name}</span>
-                      <span className={styles.unitLockIcon} aria-label="잠김">
-                        <LockIcon />
-                      </span>
+                      {/* 마스터 카드(2246-6010) — 순서 잠김은 자물쇠 대신 "미진단" 필 */}
+                      <span className={styles.unitStatePill}>미진단</span>
                     </button>
                   </li>
                 )
               })}
             </ol>
           </section>
+          )}
         </div>
 
         {/*
@@ -535,368 +474,45 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 진단 완료 유닛 상세 — 약점지도 노드 시트와 동일: 웹 우측 패널 · 모바일 바텀시트 */}
-      {unitSheet?.diagnosis && (
-        <div className={styles.unitDim} onClick={unitDrag.close}>
-          <div
-            {...unitDrag.sheetProps}
-            className={clsx(styles.unitSheet, unitDrag.dragging && styles.infoSheetDragging)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={unitDrag.close}
-              className={styles.infoHandleWrap}
+      {/* 소단원 액션 시트 4종 + 크레딧 부족 팝업 — 약점 지도와 공용 (UnitSheets) */}
+      {sheets.element}
+
+      {/* ── 이어풀기 팝업 (PI-POPUP-RESUME · 2931-11007) — 앱 진입 시 풀다 만 세트 안내 ── */}
+      {resumePromptOpen && resumableSet && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resume-prompt-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.2)] px-[20px]"
+        >
+          <div className="flex w-[335px] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] shadow-[0px_0px_7px_rgba(0,0,0,0.21)]">
+            <h2
+              id="resume-prompt-title"
+              className="text-[18px] font-bold leading-[1.4] text-[#121417]"
             >
-              <span className={styles.infoHandle} />
-            </button>
-            {/* 웹(우측 패널) 전용 닫기 버튼 — 모바일은 핸들·스와이프로 닫음 */}
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={unitDrag.close}
-              className={styles.unitClose}
-            >
-              ×
-            </button>
-
-            {/* 헤더 — 유닛명 + 약점 배지 · 평균 점수 (웹은 우상단 X 버튼 아래로 내려 시작) */}
-            <div className="flex w-full items-center justify-between py-[8px] xl:pt-[36px]">
-              <div className="flex min-w-0 items-center gap-[8px]">
-                <h2 className="truncate text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                  {unitSheet.name}
-                </h2>
-                {unitSheet.diagnosis.weak && (
-                  <span className="shrink-0 rounded-full border border-[#ff385c] bg-[#fff1f2] px-[6px] py-[3px] text-[12px] font-semibold leading-[1.4] text-[#ff385c]">
-                    약점
-                  </span>
-                )}
-              </div>
-              <div className="flex shrink-0 items-end gap-[8px]">
-                <span className="pb-[2px] text-[16px] font-medium text-[#80858b]">평균</span>
-                <span className="text-[26px] font-bold leading-none text-[#121417]">
-                  {unitSheet.diagnosis.score}점
-                </span>
-              </div>
-            </div>
-
-            {/* 요약 스탯 — 누적 정답 수 · 총 풀이 시간 */}
-            <div className="flex w-full gap-[8px]">
-              <div className="flex min-w-0 flex-1 flex-col gap-[16px] rounded-[16px] bg-[#f8f8f8] p-[20px]">
-                <span className="text-[12px] font-semibold text-[#80858b]">누적 정답 수</span>
-                <span className="text-[22px] font-semibold text-[#121417]">
-                  {unitSheet.diagnosis.correct}/{sheetTotal}개
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-[16px] rounded-[16px] bg-[#f8f8f8] p-[20px]">
-                <span className="text-[12px] font-semibold text-[#80858b]">총 풀이 시간</span>
-                <span className="whitespace-nowrap text-[22px] font-semibold text-[#121417]">
-                  {formatMinSec(sheetTotalSec)}
-                </span>
-              </div>
-            </div>
-
-            {/* 점수 반영 안내 */}
-            <div className="flex w-full items-center justify-center gap-[4px]">
-              <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#d6d8db] text-[12px] font-semibold text-[#5e6368]">
-                i
-              </span>
-              <p className="text-[12px] font-semibold text-[#80858b]">
-                {unitLabel} 점수는 추천 문제를 풀수록 새 결과가 반영돼
+              풀던 문제가 남아 있어
+            </h2>
+            <div className="flex w-full flex-col items-center gap-[24px]">
+              <p className="text-center text-[16px] font-medium leading-[1.4] text-[#121417]">
+                남은 문제부터 바로 시작할 수 있어
               </p>
+              <div className="flex w-full gap-[8px]">
+                <button
+                  type="button"
+                  onClick={() => setResumePromptOpen(false)}
+                  className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResume}
+                  className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
+                >
+                  이어풀기
+                </button>
+              </div>
             </div>
-
-            {/* 학습 경로 — 이전 → 현재(검정) → 다음 (Figma 3361-5402) */}
-            <div className="flex w-full flex-col gap-[12px]">
-              <h3 className="px-[8px] text-[18px] font-bold leading-[1.4] text-[#121417]">
-                학습 경로
-              </h3>
-              <LearningPath items={buildNeighborPath(progress.rows, unitSheet.name)} />
-            </div>
-
-            {/* 섹션 구분 — 시트 좌우 패딩(20px)을 뚫는 두꺼운 띠 */}
-            <div className="-mx-[20px] h-[10px] shrink-0 bg-[#f8f8f8]" aria-hidden />
-
-            {/* 최근 학습 — 카드 탭/전체보기 → 진단 재열람 페이지 */}
-            <div className="flex w-full items-center justify-between px-[8px]">
-              <h3 className="text-[18px] font-bold leading-[1.4] text-[#121417]">최근 학습</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(`/unit-result/${subject}/${encodeURIComponent(unitSheet.name)}`)
-                }
-                className="flex items-center gap-[4px] text-[12px] font-semibold text-[#80858b]"
-              >
-                전체보기
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                  <path
-                    d="M4.5 2.5 8 6l-3.5 3.5"
-                    stroke="#80858b"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/unit-result/${subject}/${encodeURIComponent(unitSheet.name)}`)
-              }
-              className="w-full overflow-hidden rounded-[16px] border border-[#e5e7ea] text-left"
-            >
-              <span className="flex w-full items-center justify-between px-[16px] pb-[12px] pt-[16px]">
-                <span className="flex items-center gap-[4px] text-[14px] leading-[1.4]">
-                  <span className="font-semibold text-[#121417]">
-                    {formatDiagnosisDate(unitSheet.diagnosis.date)}
-                  </span>
-                  {unitSheet.diagnosis.time && (
-                    <span className="font-medium text-[#80858b]">{unitSheet.diagnosis.time}</span>
-                  )}
-                </span>
-                <span className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
-                  {unitSheet.diagnosis.score}점
-                </span>
-              </span>
-              {sheetItems.length > 0 ? (
-                <span className="flex w-full items-center border-t border-[#e5e7ea] bg-[#f8f8f8] p-[12px]">
-                  {sheetItems.map((item, i) => (
-                    <span key={i} className="flex min-w-0 flex-1 items-center">
-                      {i > 0 && <span className="h-[32px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />}
-                      <span className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[8px]">
-                        <span className="whitespace-nowrap text-[12px] font-semibold text-[#80858b]">
-                          {i + 1}번({item.points}점)
-                        </span>
-                        <SheetMark
-                          kind={item.correct ? (item.overTime ? 'triangle' : 'circle') : 'x'}
-                        />
-                      </span>
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                <span className="block border-t border-[#e5e7ea] bg-[#f8f8f8] p-[12px] text-center text-[12px] text-[#a6abb1]">
-                  이 진단은 문항별 기록이 저장되기 전에 진행돼서 요약만 볼 수 있어
-                </span>
-              )}
-            </button>
-
-            {/* 자유 풀이 CTA (2026-08-17 정책) — 이 소단원의 맛보기 진단을
-                마쳤으면 바로 풀 수 있다 (시트는 진단 완료 유닛에서만 열린다) */}
-            <button
-              type="button"
-              onClick={() => {
-                setUnitSheet(null)
-                startFreeSolve(unitSheet)
-              }}
-              className={styles.unitButton}
-            >
-              추천 {SET_SIZE}문제 풀기
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── 진단 시작 시트 (2842-10194) ↔ 건너뛰기 화면 (2842-10966) ─────────── */}
-      {startSheet && (
-        <div className={styles.unitDim} onClick={startDrag.close}>
-          <div
-            {...startDrag.sheetProps}
-            className={clsx(styles.unitSheet, startDrag.dragging && styles.infoSheetDragging)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={startDrag.close}
-              className={styles.infoHandleWrap}
-            >
-              <span className={styles.infoHandle} />
-            </button>
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={startDrag.close}
-              className={styles.unitClose}
-            >
-              ×
-            </button>
-
-            {!skipMode ? (
-              <>
-                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
-                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                    {startSheet.name} 약점 진단하기
-                  </h2>
-                  <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    진단을 끝내면 {startSheet.name} 그래프 결과가 채워져
-                  </p>
-                </div>
-
-                {/* 문제 수 · 예상 시간 · 필요 크레딧 */}
-                <div className="flex w-full items-center rounded-[16px] bg-[#f8f8f8] p-[20px]">
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">문제</span>
-                    <span className="text-[22px] font-semibold text-[#121417]">{SET_SIZE}문제</span>
-                  </div>
-                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">예상 시간</span>
-                    <span className="whitespace-nowrap text-[22px] font-semibold text-[#121417]">
-                      {estimatedSec != null
-                        ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
-                        : '약 —분'}
-                    </span>
-                  </div>
-                  <span className="h-[44px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-[16px]">
-                    <span className="text-[12px] font-semibold text-[#80858b]">필요 크레딧</span>
-                    <span className="text-[22px] font-semibold text-[#121417]">
-                      {SET_CREDIT_COST}개
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex w-full items-center justify-center gap-[6px]">
-                  <SheetCoinIcon />
-                  <span className="text-[12px] font-semibold text-[#80858b]">보유 크레딧:</span>
-                  <span className="text-[12px] font-semibold text-[#121417]">{credit}개</span>
-                </div>
-
-                {(startError || credit < SET_CREDIT_COST) && (
-                  <p className="w-full text-center text-[13px] font-medium text-primary">
-                    {startError ?? '크레딧이 부족해'}
-                  </p>
-                )}
-
-                <div className="flex w-full gap-[8px]">
-                  <button
-                    type="button"
-                    onClick={() => setSkipMode(true)}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
-                  >
-                    이 단원 안배웠어요
-                  </button>
-                  <button
-                    type="button"
-                    onClick={confirmStartSet}
-                    disabled={starting || credit < SET_CREDIT_COST}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                  >
-                    {starting ? '시작 중…' : '시작하기'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
-                  <h2 className="text-[22px] font-semibold leading-[1.4] text-[#121417]">
-                    아직 안배운 단원이야?
-                  </h2>
-                  <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    {startSheet.name}부터 {category.name} 끝까지 잠가둘게
-                  </p>
-                </div>
-
-                <div className="flex w-full items-center justify-center gap-[6px] rounded-[12px] bg-[#f8f8f8] p-[12px]">
-                  <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#d6d8db] text-[11px] font-semibold text-[#5e6368]">
-                    i
-                  </span>
-                  <p className="text-[13px] font-medium text-[#80858b]">
-                    {startSheet.name}
-                    {josaEulReul(startSheet.name)} 다시 풀면 언제든 열려
-                  </p>
-                </div>
-
-                {startError && (
-                  <p className="w-full text-center text-[13px] font-medium text-primary">
-                    {startError}
-                  </p>
-                )}
-
-                <div className="flex w-full gap-[8px]">
-                  <button
-                    type="button"
-                    onClick={() => setSkipMode(false)}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
-                  >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    onClick={confirmSkip}
-                    disabled={lockSaving}
-                    className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                  >
-                    {lockSaving ? '저장 중…' : '잠그기'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── 선행 단원 안내 시트 (3082-5687) — 잠긴 단원 클릭 ─────────────────── */}
-      {lockedSheet && (
-        <div className={styles.unitDim} onClick={lockedDrag.close}>
-          <div
-            {...lockedDrag.sheetProps}
-            className={clsx(styles.unitSheet, lockedDrag.dragging && styles.infoSheetDragging)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={lockedDrag.close}
-              className={styles.infoHandleWrap}
-            >
-              <span className={styles.infoHandle} />
-            </button>
-            <button
-              type="button"
-              aria-label="닫기"
-              onClick={lockedDrag.close}
-              className={styles.unitClose}
-            >
-              ×
-            </button>
-
-            <div className="flex w-full flex-col gap-[8px]">
-              <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
-                {lockedIsOff ? '잠가둔 단원이야' : '먼저 풀어야 할 단원이 있어'}
-              </h2>
-              <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                {lockedRequired
-                  ? lockedIsOff
-                    ? `${lockedRequired.name}${josaEulReul(lockedRequired.name)} 다시 풀면 여기까지 열려`
-                    : `${lockedRequired.name}${josaEulReul(lockedRequired.name)} 풀면 이 단원을 시작할 수 있어`
-                  : '앞 단원부터 순서대로 진단할 수 있어'}
-              </p>
-            </div>
-
-            {/* 학습 경로 — 직전 완료 → 먼저 풀 단원(빨강) → 클릭한 단원 */}
-            <LearningPath
-              items={buildLockedPath(progress.rows, lockedRequired, lockedSheet)}
-              currentDotClass="bg-primary"
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                const next = lockedRequired
-                setLockedSheet(null)
-                openStartSheet(next)
-              }}
-              className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
-            >
-              {lockedRequired
-                ? `${lockedRequired.name} ${lockedIsOff ? '다시 풀기' : '먼저 풀기'}`
-                : '확인'}
-            </button>
           </div>
         </div>
       )}
@@ -904,157 +520,13 @@ export default function HomePage() {
   )
 }
 
-/* --- 진단 시작·건너뛰기·선행 안내 시트 헬퍼 (2842-10194 · 2842-10966 · 3082-5687) --- */
-
-/**
- * 학습 경로 타임라인 (Figma 3361-5402) — 점 + 점선 커넥터.
- *
- * 점 중심을 라벨 첫 줄 중심(위에서 10px)에 맞추고, 커넥터는 행 높이 전체를 써서
- * 다음 점까지 끊김 없이 잇는다. 이전 구현은 라벨 pt 매직값(2px·14px)으로 높이를
- * 만들어 라벨과 점이 어긋났고, 첫 행만 높이가 낮아 커넥터가 짧게 잘렸다.
- */
-function LearningPath({
-  items,
-  currentDotClass = 'bg-[#121417]',
-}: {
-  items: { name: string; current: boolean }[]
-  currentDotClass?: string
-}) {
-  return (
-    <div className="flex w-full flex-col rounded-[16px] border border-[#e5e7ea] p-[20px]">
-      {items.map((p, i) => {
-        const last = i === items.length - 1
-        return (
-          <div key={p.name} className="flex items-stretch gap-[12px]">
-            <div className="relative flex w-[10px] flex-none justify-center">
-              {/* 커넥터 — 첫 행은 점 중심에서 시작하고 마지막 행은 점 중심에서 끝난다 */}
-              {items.length > 1 && (
-                <span
-                  aria-hidden
-                  className={clsx(
-                    'absolute left-1/2 w-px -translate-x-1/2 border-l border-dashed border-[#d6d8db]',
-                    i === 0 && 'bottom-0 top-[10px]',
-                    i > 0 && !last && 'inset-y-0',
-                    last && 'top-0 h-[10px]',
-                  )}
-                />
-              )}
-              <span
-                className={clsx(
-                  'relative mt-[5px] size-[10px] shrink-0 self-start rounded-full',
-                  p.current ? currentDotClass : 'bg-[#d6d8db]',
-                )}
-              />
-            </div>
-            {/* 행 간격은 라벨 아래 패딩으로 — 레일이 그 높이까지 늘어나 커넥터가 이어진다 */}
-            <span
-              className={clsx(
-                'text-[14px] leading-[20px]',
-                !last && 'pb-[14px]',
-                p.current ? 'font-bold text-[#121417]' : 'font-medium text-[#5e6368]',
-              )}
-            >
-              {p.name}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/** 을/를 조사 — 받침 유무로 판정 */
-function josaEulReul(word: string): string {
-  const last = word.charCodeAt(word.length - 1)
-  if (last < 0xac00 || last > 0xd7a3) return '을(를)'
-  return (last - 0xac00) % 28 === 0 ? '를' : '을'
-}
-
-/** 선행 안내 경로 3줄 — [직전 완료 단원?] → [다음 풀 단원(빨강)] → [클릭한 잠긴 단원] */
-function buildLockedPath(
-  rows: UnitProgressRow[],
-  nextUnit: UnitProgressRow | undefined,
-  clicked: UnitProgressRow,
-): { name: string; current: boolean }[] {
-  const path: { name: string; current: boolean }[] = []
-  if (nextUnit) {
-    const nextIdx = rows.findIndex((r) => r.name === nextUnit.name)
-    const prevDone = rows.slice(0, nextIdx).filter((r) => r.state === 'done').at(-1)
-    if (prevDone) path.push({ name: prevDone.name, current: false })
-    path.push({ name: nextUnit.name, current: true })
+/** 서버 에러 응답(BaseResponse.message) 우선 추출 — 크레딧 부족 등 서버 문구를 그대로 보여준다 */
+function extractApiMessage(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const res = (error as { response?: { data?: { message?: string } } }).response
+    return res?.data?.message ?? null
   }
-  if (!path.some((p) => p.name === clicked.name)) path.push({ name: clicked.name, current: false })
-  return path.slice(0, 3)
-}
-
-/** 보유 크레딧 코인 (20px) — CreditBadge 코인과 동일 그래픽 */
-function SheetCoinIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden className="shrink-0">
-      <circle cx="10" cy="10" r="9.2" fill="#F8D558" />
-      <circle cx="10" cy="10" r="6.9" stroke="#EC9C40" strokeWidth="1.6" />
-      <path
-        d="M12.9 7.9a3.4 3.4 0 100 4.2"
-        stroke="#E08E39"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-/* --- 유닛 시트 헬퍼 (Figma 2857-22101) --- */
-
-/** "YYYY-MM-DD" → "오늘"/"어제"/"8월 23일" (최근 학습 카드 진단일 · Figma 3361-5402) */
-function formatDiagnosisDate(date: string): string {
-  const [y, m, d] = date.split('-')
-  if (!y || !m || !d) return date
-  const target = new Date(Number(y), Number(m) - 1, Number(d))
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((today.getTime() - target.getTime()) / 86_400_000)
-  if (diffDays === 0) return '오늘'
-  if (diffDays === 1) return '어제'
-  return `${Number(m)}월 ${Number(d)}일`
-}
-
-/**
- * 상세 시트 학습 경로 — 현재 유닛을 가운데 둔 3개 창.
- * 첫/마지막 유닛이라 이웃이 모자라면 창을 밀어 항상 3개를 보여준다 (3361-5402).
- */
-function buildNeighborPath(
-  rows: UnitProgressRow[],
-  currentName: string,
-): { name: string; current: boolean }[] {
-  const idx = rows.findIndex((r) => r.name === currentName)
-  if (idx < 0) return [{ name: currentName, current: true }]
-  const start = Math.max(0, Math.min(idx - 1, rows.length - 3))
-  return rows
-    .slice(start, start + 3)
-    .map((r) => ({ name: r.name, current: r.name === currentName }))
-}
-
-/** 총 풀이 시간 — "12분 48초" (60초 미만은 "48초") */
-function formatMinSec(totalSec: number): string {
-  const m = Math.floor(totalSec / 60)
-  const s = Math.round(totalSec % 60)
-  return m > 0 ? `${m}분 ${s}초` : `${s}초`
-}
-
-/** 최근 학습 카드의 문항 마크 — O(정답) · △(정답이지만 시간 초과) · X(오답), 시안 16px */
-function SheetMark({ kind }: { kind: 'circle' | 'triangle' | 'x' }) {
-  const label = kind === 'circle' ? '정답' : kind === 'triangle' ? '정답 (시간 초과)' : '오답'
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label={label}>
-      {kind === 'circle' && <circle cx="8" cy="8" r="6" stroke="#ff385c" strokeWidth="2" />}
-      {kind === 'triangle' && (
-        <path d="M8 3 14 13H2z" stroke="#ff385c" strokeWidth="2" strokeLinejoin="round" />
-      )}
-      {kind === 'x' && (
-        <path d="m3.5 3.5 9 9M12.5 3.5l-9 9" stroke="#ff385c" strokeWidth="2" strokeLinecap="round" />
-      )}
-    </svg>
-  )
+  return null
 }
 
 /* --- 인라인 SVG 아이콘 (소단원 카드 메타 · Figma subject-card) --- */
@@ -1120,20 +592,6 @@ function ChevronIcon() {
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="3" y="7" width="10" height="6.5" rx="1.6" fill="currentColor" />
-      <path
-        d="M5.2 7V5.4a2.8 2.8 0 0 1 5.6 0V7"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        fill="none"
       />
     </svg>
   )

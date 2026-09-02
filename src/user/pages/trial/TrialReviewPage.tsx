@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
+import { DrawingCanvas, DrawingCanvasHandle, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
+import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
+import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
@@ -10,6 +13,8 @@ import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
+import { CURRICULUM } from '@/user/data/curriculum'
+import { formatKoreanDuration, PenToggleIcon } from '@/user/pages/trial/TrialQuizPage'
 import styles from './styles/TrialQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
@@ -22,7 +27,9 @@ const SUBJECT_LABEL: Record<Subject, string> = {
 /**
  * 해설 리뷰 화면 (/trial/review/:subject/:index)
  * 결과 페이지(문항별 결과)의 "해설보기" 진입 — 왼쪽 문제 · 오른쪽 해설 패널.
- * 풀이 화면과 같은 골격이지만 타이머·필기·선택 없이 읽기 전용이다.
+ * 풀이 화면과 같은 골격. 선택은 없지만 필기는 된다 — 해설을 보며 손으로
+ * 다시 풀어보는 화면이라 풀이와 같은 필기구를 띄운다 (2026-08-30).
+ * 헤더에는 라이브 타이머 대신 내가 푼 시간(결과 기록)을 보여준다.
  */
 export default function TrialReviewPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
@@ -55,6 +62,30 @@ export default function TrialReviewPage() {
     return results.find((r) => r.problemId === problem?.id) ?? null
   }, [subject, mathResults, englishResults, problem])
   const myChoice = myResult?.selectedChoice ?? null
+
+  // 내가 푼 단원명 — 세트의 nodeId 를 커리큘럼에서 역조회 (하드코딩 라벨은 폴백)
+  const solvedNodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
+  const unitLabel = useMemo(() => {
+    if (!subject) return ''
+    for (const category of CURRICULUM[subject]) {
+      const unit = category.units.find((u) => u.nodeId === solvedNodeId)
+      if (unit) return `${subject === 'math' ? '수학' : '영어'} · ${unit.name}`
+    }
+    return SUBJECT_LABEL[subject]
+  }, [subject, solvedNodeId])
+
+  // 필기 — 해설을 보며 다시 풀어보는 용도. 풀이 화면과 같은 도구 세트.
+  // 캔버스는 문제·해설 두 장 — 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
+  const [tool, setTool] = useState<StrokeTool>('pen')
+  const [color, setColor] = useState('#120C0B')
+  const [size, setSize] = useState(0.35)
+  const [allowFinger, setAllowFinger] = useState(false)
+  const [drawingEnabled, setDrawingEnabled] = useState(true)
+  const canvasRef = useRef<DrawingCanvasHandle>(null)
+  const explainCanvasRef = useRef<DrawingCanvasHandle>(null)
+  const activeCanvasRef = useRef<'problem' | 'explain'>('problem')
+  const activeCanvas = () =>
+    activeCanvasRef.current === 'explain' ? explainCanvasRef.current : canvasRef.current
   // 정답 번호 — 서버 세트 문항은 로컬 answer 가 0 이라 서버 채점 응답을 우선
   const resolvedAnswerNo =
     myResult?.serverAnswerNo ?? (problem && problem.answer !== 0 ? problem.answer : null)
@@ -71,10 +102,36 @@ export default function TrialReviewPage() {
 
   return (
     <div className={styles.page}>
+      {/* progress 미전달 — "성적 상승까지 N문제"는 풀이 진행 문구라 리뷰에선 뺀다 */}
       <QuizTopBar
-        progress={{ current: idx + 1, total: problems.length }}
-        subjectLabel={SUBJECT_LABEL[subject as Subject]}
+        subjectLabel={unitLabel}
         onClose={() => navigate('/weakness')}
+        rightExtra={
+          <button
+            type="button"
+            onClick={() => setDrawingEnabled(!drawingEnabled)}
+            aria-pressed={drawingEnabled}
+            aria-label={drawingEnabled ? '필기 도구 끄기' : '필기 도구 켜기'}
+            className={clsx(styles.penToggle, drawingEnabled && styles.penToggleActive)}
+          >
+            <PenToggleIcon />
+          </button>
+        }
+      />
+
+      <DrawingToolbar
+        tool={tool}
+        color={color}
+        size={size}
+        allowFinger={allowFinger}
+        drawingEnabled={drawingEnabled}
+        onToolChange={setTool}
+        onColorChange={setColor}
+        onSizeChange={setSize}
+        onAllowFingerChange={setAllowFinger}
+        onDrawingEnabledChange={setDrawingEnabled}
+        onUndo={() => activeCanvas()?.undo()}
+        onClear={() => activeCanvas()?.clear()}
       />
 
       <div className={styles.content}>
@@ -84,6 +141,20 @@ export default function TrialReviewPage() {
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>
               </div>
+              {myResult && (
+                <div className={styles.problemMeta}>
+                  <div className={styles.problemTime}>
+                    권장 {formatKoreanDuration(problem.tRecSec)}
+                  </div>
+                  {/* 라이브 타이머 대신 내가 푼 시간 — 색 단계(경고·초과)는 그대로 재활용 */}
+                  <TimerBadge
+                    elapsedSec={Math.round((myResult.elapsedMs ?? 0) / 1000)}
+                    tRecSec={problem.tRecSec}
+                    tMaxSec={problem.tMaxSec}
+                    variant="onLight"
+                  />
+                </div>
+              )}
             </div>
 
             <div className={styles.canvasArea}>
@@ -126,6 +197,20 @@ export default function TrialReviewPage() {
               </ExamScaleFrame>
 
               <div className={styles.spacer} />
+
+              <div
+                className={styles.canvasOverlay}
+                onPointerDownCapture={() => (activeCanvasRef.current = 'problem')}
+              >
+                <DrawingCanvas
+                  ref={canvasRef}
+                  tool={tool}
+                  color={color}
+                  size={size}
+                  disabled={!drawingEnabled}
+                  allowFinger={allowFinger}
+                />
+              </div>
             </div>
           </section>
 
@@ -148,6 +233,15 @@ export default function TrialReviewPage() {
           revealed
           width={panelWidth}
           resizing={resizing}
+          drawing={{
+            tool,
+            color,
+            size,
+            disabled: !drawingEnabled,
+            allowFinger,
+            canvasRef: explainCanvasRef,
+            onActivate: () => (activeCanvasRef.current = 'explain'),
+          }}
         />
       </div>
     </div>

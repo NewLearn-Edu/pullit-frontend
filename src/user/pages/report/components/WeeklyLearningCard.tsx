@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { clsx } from 'clsx'
-import { type Subject } from '@/user/stores/trialStore'
+import { type DailyActivity } from '@/user/api/attemptApi'
 import {
   buildWeekly,
   DAY_LABELS,
@@ -13,19 +13,24 @@ import styles from './styles/WeeklyLearningCard.module.scss'
 const GRID_RATIOS = [0, 0.33, 0.66, 1]
 
 /**
- * 이번 주 학습 (Figma 2678-9670)
- * 지표 3개(푼 문제·정답률·학습 시간)를 세그먼트로 전환하며 일~토 추이를 본다.
- * 라인은 오늘까지만 그려지고, 마지막 지점 위에 값 툴팁이 붙는다.
+ * 이번 주 학습 (Figma 3368-9029)
+ * 지표 2개(푼 문제 수·학습 시간)를 세그먼트로 전환하며 일~토 추이를 본다.
+ * 값은 누적이 아니라 그날그날의 학습량. 라인은 오늘까지만 그려지고,
+ * 마지막 지점 위에 값 툴팁이 붙는다.
  */
-export function WeeklyLearningCard({ subject, today }: { subject: Subject; today: Date }) {
+export function WeeklyLearningCard({ activity, today }: { activity: DailyActivity[]; today: Date }) {
   const [metric, setMetric] = useState<WeeklyMetric>('solved')
   const config = WEEKLY_METRICS.find((m) => m.key === metric)!
-  const points = useMemo(() => buildWeekly(subject, today), [subject, today])
+  const points = useMemo(() => buildWeekly(activity, today), [activity, today])
+
+  // y축 상한 — 기본 눈금은 유지하되 많이 푼 주엔 데이터가 뚫고 나가지 않게 늘린다
+  const peak = Math.max(0, ...points.filter(Boolean).map((p) => p!.values[metric]))
+  const max = Math.max(config.max, Math.ceil(peak * 1.15))
 
   /** 값이 있는 지점만 (x,y) 백분율 좌표로 — 일=0%, 토=100% */
   const coords = points
     .map((p, i) =>
-      p ? { x: (i / 6) * 100, y: 100 - (Math.min(p.values[metric], config.max) / config.max) * 100 } : null,
+      p ? { x: (i / 6) * 100, y: 100 - (p.values[metric] / max) * 100 } : null,
     )
     .filter((c): c is { x: number; y: number } => c != null)
 

@@ -59,8 +59,8 @@ export interface UnitDiagnosis {
   items?: DiagnosisItem[]
 }
 
-/** 세트(소단원 3문제) 1개 진단 가격 — 서버 CreditCommandService.EXTRA_SET_COST 와 같은 값 */
-export const SET_CREDIT_COST = 1
+/** 세트(소단원 3문제) 1개 진단 가격 — 서버 CreditCommandService.EXTRA_SET_COST 와 같은 값 (3개, 2026-08-30) */
+export const SET_CREDIT_COST = 3
 
 /** 로컬 자정 기준 날짜 키 (UTC 로 자르면 한국 시간 오전 9시에 리셋된다) */
 export function todayKey(base: Date = new Date()): string {

@@ -5,6 +5,7 @@ import { clsx } from 'clsx'
 import { PageHeader } from '@/user/components/PageHeader'
 import { deleteProfileImage, updateNickname, updateProfileImage } from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
+import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
 
 /** 닉네임 허용 문자 — 완성형 한글·영문·숫자 (자모 단독·공백·특수문자 불가, 서버와 동일) */
@@ -135,25 +136,9 @@ export default function ProfileEditPage() {
             aria-label="프로필 이미지 변경"
             className="relative"
           >
-            {me?.profileImageUrl ? (
-              <img
-                src={me.profileImageUrl}
-                alt=""
-                className={clsx(
-                  'size-[88px] rounded-full object-cover',
-                  imageBusy && 'opacity-50',
-                )}
-              />
-            ) : (
-              <span
-                className={clsx(
-                  'flex size-[88px] items-center justify-center rounded-full bg-[#fff1f2] text-[44px]',
-                  imageBusy && 'opacity-50',
-                )}
-              >
-                🦊
-              </span>
-            )}
+            <span className={clsx('block', imageBusy && 'opacity-50')}>
+              <UserAvatar src={me?.profileImageUrl} size={88} />
+            </span>
             <span
               aria-hidden
               className="absolute -bottom-[2px] -right-[2px] flex size-[28px] items-center justify-center rounded-full border border-[#e5e7ea] bg-white"

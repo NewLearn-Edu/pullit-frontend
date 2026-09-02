@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { roundedPolygon, roundedPolygonPath } from './WeaknessRadar'
+import { roundedPolygon, roundedPolygonPath, scoreRadiusRatio } from './WeaknessRadar'
 import styles from './styles/WeaknessRadar.module.scss'
 
 /**
@@ -52,9 +52,9 @@ export default function ProgressRadar({
     .filter((u): u is { name: string; score: number; i: number } => u.score != null)
   const complete = diagnosed.length === units.length && units.length > 0
 
-  /** 진단 축의 데이터 좌표 (점수 비례 반경) */
+  /** 진단 축의 데이터 좌표 — 안쪽 링(25%)=0점 · 바깥 끝=100점 */
   const dataPoint = (i: number, score: number): [number, number] =>
-    point(i, maxR * Math.max(0.08, score / 100))
+    point(i, maxR * scoreRadiusRatio(score))
 
   // 완성 시 — 닫힌 폴리곤 + 가장 약한 축
   const fullXY = complete

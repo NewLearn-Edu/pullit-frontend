@@ -157,6 +157,12 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
               <span className="ico"><IcoStats /></span>
               유입 링크
             </NavLink>
+
+            <div className="nav-label">학습 리포트</div>
+            <NavLink to="/admin/stats/unit-averages" className={navClass}>
+              <span className="ico"><IcoList /></span>
+              평균 관리
+            </NavLink>
           </>
         )}
 

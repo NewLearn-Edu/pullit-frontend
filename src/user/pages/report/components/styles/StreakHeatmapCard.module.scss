@@ -78,11 +78,13 @@ $lv4: #ed3451;
 }
 
 // ── 잔디 (GitHub 컨트리뷰션 그래프 방식) ────────────────────────────────────
-// 1년 = 53주 → 열 = 주, 행 = 일~토. 대부분의 화면보다 넓어 가로 스크롤한다.
+// 1년 = 53주 → 열 = 주, 행 = 일~토.
+// 칸은 고정폭이 아니라 카드 폭에 맞춰 $cell(최소)~$cell-max(최대) 사이에서
+// 늘어난다 — 패드·웹에서 오른쪽이 비지 않고, 폰에서는 최소폭 유지 + 가로 스크롤.
 
 $cell: 11px;
+$cell-max: 24px;
 $cell-gap: 3px;
-$row-h: $cell + $cell-gap;
 
 // 요일 축(고정) + 스크롤 영역(잔디)
 .chartRow {
@@ -104,43 +106,59 @@ $row-h: $cell + $cell-gap;
   &::-webkit-scrollbar { display: none; }
 }
 
-// 왼쪽 요일 축 — 월 라벨 높이만큼 내려서 잔디 행과 맞춘다
+// 왼쪽 요일 축 — 월 라벨 높이만큼 내려서 잔디 행과 맞춘다.
+// 셀이 유동 크기라 라벨도 flex 로 같은 행 모델(7칸 + 같은 gap)을 쓴다.
 .dayAxis {
   display: flex;
   flex-direction: column;
   gap: $cell-gap;
   flex: none;
-  padding-top: 18px;
+  align-self: stretch;
+  padding-top: 18px; // 월 라벨 14px + body gap 4px
 }
 
 .dayAxisLabel {
-  height: $cell;
+  display: flex;
+  align-items: center;
+  flex: 1;
   font-size: 9px;
-  line-height: $cell;
   color: #a6abb1;
   white-space: nowrap;
 }
 
+// GitHub 잔디처럼 1년(53주)이 항상 한눈에 — 패드·웹에서는 스크롤 없이
+// 칸이 카드 폭에 맞춰 줄어들거나 늘어난다. 폰에서만 최소 칸폭 + 가로 스크롤.
 .body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: max-content; // 53주 실폭 유지 — 줄어들어 뭉개지지 않게
+  width: 100%;
+
+  @media (max-width: 767px) {
+    min-width: max-content; // 폰 — 최소 셀폭을 지키며 스크롤
+    padding-right: 14px; // 마지막 열의 월 라벨이 잘리지 않을 숨통
+  }
 }
 
-// 월 라벨 — 주 열과 같은 폭으로 깔아 달 시작 열 위에 정확히 얹힌다
+// 월 라벨 — 주 열과 같은 flex 모델로 깔아 달 시작 열 위에 정확히 얹힌다
 .months {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: $row-h;
+  display: flex;
+  gap: $cell-gap;
   height: 14px;
 }
 
 .month {
+  flex: 1 1 0;
+  max-width: $cell-max;
+  min-width: 0;
   font-size: 10px;
   line-height: 14px;
   color: #7e848a;
   white-space: nowrap;
+
+  @media (max-width: 767px) {
+    flex: 1 0 $cell;
+  }
 }
 
 .weeks {
@@ -148,18 +166,24 @@ $row-h: $cell + $cell-gap;
   gap: $cell-gap;
 }
 
-// 한 주 = 세로 7칸 (일~토)
+// 한 주 = 세로 7칸 (일~토) — 열이 함께 줄고 늘며 칸은 정사각 유지
 .week {
   display: flex;
   flex-direction: column;
   gap: $cell-gap;
-  flex: none;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: $cell-max;
+
+  @media (max-width: 767px) {
+    flex: 1 0 $cell;
+  }
 }
 
 .cell {
   display: block;
-  width: $cell;
-  height: $cell;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 2px;
   background: $lv0;
 }
@@ -170,11 +194,7 @@ $row-h: $cell + $cell-gap;
 .lv3 { background: $lv3; }
 .lv4 { background: $lv4; }
 
-// 미래 날짜 — 아직 오지 않은 칸은 테두리만 남겨 "빈 자리"로 구분
-.future {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px $fill;
-}
+// 미래 날짜 — 과거의 안 푼 날과 같은 회색 채움 (판 전체가 한 결로 보이게)
 
 // ── 범례 ─────────────────────────────────────────────────────────────────────
 
