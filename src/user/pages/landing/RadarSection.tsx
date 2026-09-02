@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import WeaknessRadar from '@/user/components/WeaknessRadar/WeaknessRadar'
+import SectionHeading from './SectionHeading'
+import LandingUnitMap from './LandingUnitMap'
 
 /**
- * 약점 레이더 섹션 (ver.2 · "3문제만 풀어 어느 단원이 가장 약한지 보여줄게")
- * 시안대로 다크 카드 배경 + 가입 페이지와 같은 morph·펄스 애니메이션 레이더.
- * 시나리오 순환은 RadarDemoCard 와 동일 리듬(1.6초), 라벨은 다크 배경용 밝은 톤.
+ * 약점 레이더 섹션 (ver.2 · 2801-5471 "3문제만 풀어 어느 단원이 가장 약한지 보여줄게")
+ * 다크 카드(952×620 · 폰 310) 안에서 레이더 → 단원 지도가 번갈아 슬라이드 (시안 타임라인).
+ * 레이더는 가입 페이지와 같은 morph·펄스 애니메이션, 시나리오 순환은 RadarDemoCard 와 동일 리듬(1.6초).
  */
 const UNIT_NAMES = [
   '지수·로그',
@@ -24,6 +26,9 @@ const SCENARIOS: number[][] = [
   [62, 100, 62, 64, 82, 62, 56],
 ]
 
+const RADAR_MS = 4800
+const MAP_MS = 4800
+
 export default function RadarSection() {
   const [scenarioIdx, setScenarioIdx] = useState(0)
   useEffect(() => {
@@ -31,24 +36,42 @@ export default function RadarSection() {
     return () => clearInterval(timer)
   }, [])
 
+  // 레이더 ↔ 단원 지도 교대 (시안 4.09초 루프를 읽을 수 있게 늘림)
+  const [showMap, setShowMap] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setShowMap((v) => !v), showMap ? MAP_MS : RADAR_MS)
+    return () => clearTimeout(t)
+  }, [showMap])
+
   const units = useMemo(
     () => UNIT_NAMES.map((name, i) => ({ name, score: SCENARIOS[scenarioIdx][i] })),
     [scenarioIdx],
   )
 
-  return (
-    <section id="product" className="flex w-full flex-col items-center gap-[56px] px-[40px] py-[140px] max-xl:py-[90px] max-md:px-lg">
-      <h2 className="break-keep text-center text-[24px] font-medium leading-[1.6] text-[#c8cbd0] max-md:text-[17px]">
-        3문제만 풀어
-        <br />
-        <span className="text-[44px] font-bold leading-[1.5] text-white max-xl:text-[34px] max-md:text-[24px]">
-          어느 단원이 <span className="text-primary">가장 약한지</span> 보여줄게
-        </span>
-      </h2>
+  const pane =
+    'absolute inset-0 flex items-center justify-center transition-transform duration-[900ms] ease-[cubic-bezier(0.22,0.9,0.3,1)] motion-reduce:transition-none'
 
-      {/* 시안의 다크 라운드 카드 — 레이더는 여백을 넉넉히 두고 중앙 배치 */}
-      <div className="flex w-full max-w-[1000px] items-center justify-center rounded-[32px] bg-[#1e2025] px-[40px] py-[64px] max-md:px-[12px] max-md:py-[32px]">
-        <WeaknessRadar dark units={units} className="w-full max-w-[560px]" />
+  return (
+    <section
+      id="product"
+      className="flex w-full flex-col items-center gap-[60px] py-[140px] max-xl:gap-[40px] max-xl:py-[100px] max-md:gap-[24px] max-md:py-[60px]"
+    >
+      <SectionHeading eyebrow="3문제만 풀어">
+        어느 단원이 <span className="text-primary">가장 약한지</span> 보여줄게
+      </SectionHeading>
+
+      <div className="w-full max-w-[1000px] px-[24px] max-md:px-lg">
+        <div className="relative h-[620px] w-full overflow-hidden rounded-[32px] bg-[#23272b] max-xl:h-[520px] max-md:h-[310px] max-md:rounded-[16px]">
+          <div
+            className={`${pane} px-[40px] max-md:px-[12px]`}
+            style={{ transform: showMap ? 'translateX(-110%)' : 'translateX(0)' }}
+          >
+            <WeaknessRadar dark units={units} className="w-full max-w-[620px] max-xl:max-w-[540px] max-md:max-w-[300px]" />
+          </div>
+          <div className={pane} style={{ transform: showMap ? 'translateX(0)' : 'translateX(110%)' }}>
+            <LandingUnitMap className="size-full" />
+          </div>
+        </div>
       </div>
     </section>
   )

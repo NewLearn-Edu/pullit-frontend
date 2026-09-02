@@ -1,65 +1,74 @@
-import starRating from '@/assets/landing/star-rating.svg'
+import starRating5 from '@/assets/landing/star-rating-5.svg'
+import starRating4 from '@/assets/landing/star-rating-4.svg'
+import SectionHeading from './SectionHeading'
 
+/** 후기 카피 — 시안 Reviews-Track(3172-5289) 그대로 */
 const REVIEWS = [
   {
     name: '김*연',
-    title: '수학이 4등급에서 2등급까지 올랐어요',
-    body: '처음에는 하루에 네 문제만 풀어서 성적이 오를까 싶었는데, 제가 자주 틀리는 유형만 계속 나오니까 효과가 있었어요. 문제를 틀리면 필요한 개념과 틀린 이유를 바로 확인할 수 있어서 같은 실수를 줄이는 데 도움이 됐어요.',
+    stars: 5,
+    title: '처음엔 약점 진단만 해보려고 했는데',
+    body: '그냥 궁금해서 진단만 한번 해봤는데 약한 단원이 생각보다 많이 나와서 그거 보고 나니까 넘기기가 좀 그래서 추천 문제도 계속 풀고 있어요. 뭐 풀지 고민 안 해도 되는 게 진짜 편합니다',
   },
   {
     name: '박*우',
-    title: '무작정 문제집만 풀 때보다 훨씬 편해요',
-    body: '문제집 펴놓고도 뭘 먼저 해야 할지 몰라서 시간 버리는 날이 많았는데, 이건 그냥 들어가면 바로 풀 수 있어서 편해요.\n특히 약한 유형이 보이니까 괜히 다 보려고 안 하게 돼요.\n해야 할 게 줄어드니까 오히려 더 하게 됩니다.',
+    stars: 4,
+    title: '문제집 하나 더 사기 애매한 고3한테 괜찮을 듯',
+    body: '이미 문제집은 많이 있는데 수능 앞두고 집중적으로 뭘 풀어야할지 몰랐는데 풀잇에서 약점 진단하고 필요한 단원만 알려주니 너무 편했어요',
   },
   {
     name: '이*진',
-    title: '생각보다 제 약점이 너무 정확했어요',
-    body: '저는 그냥 수학 전체를 못한다고 생각했는데, 막상 해보니까 특정 단원에서만 계속 틀리고 있더라고요.\n그걸 알고 나니까 공부 범위를 줄일 수 있었어요.\n무식하게 양으로 밀어붙이는 것보다 저한텐 이 방식이 더 잘 맞았습니다.',
+    stars: 5,
+    title: '버스 기다릴 때 은근 개꿀입니다',
+    body: '버스 기다리는 시간 아까운데 그 시간에 활용할 수 있는 앱이라서 너무 좋았어요!\n등하교만 해도 하루 네다섯 개는 풀어 시간 아낄 수 있습니다.',
   },
   {
     name: '최*민',
-    title: '짧아서 좋음. 진짜 그게 큼',
-    body: '저는 분량 많으면 바로 하기 싫어지는 스타일인데, 이건 "일단 해볼까?"가 돼요.\n시간 오래 안 걸리는데도 풀고 나면 내가 뭘 틀렸는지는 남아요.\n은근 꾸준히 하게 되는 타입',
+    stars: 5,
+    title: '풀잇으로 제 약점 찾았어요!',
+    body: '수학 못하는 건 알았는데 어디가 약한지는 몰랐어요. 모의고사 끝나면 아 또 틀렸네 하고 넘어갔는데 진단 돌려보니까 유독 점수 낮은 단원이 따로 있더라고요. 요즘은 그 단원부터 보고 있어요',
   },
   {
-    name: '강*서',
-    title: '계획 못 세우는 사람한테 추천하고 싶어요',
-    body: '제가 원래 계획표는 그럴듯하게 쓰는데 실천을 잘 못 하거든요.\n근데 이건 따로 계획 세울 필요 없이 바로 문제부터 풀 수 있어서 좋았어요.\n괜히 "오늘은 뭐 하지…" 하다가 끝나는 시간이 줄었습니다.',
+    name: '정*현',
+    stars: 4,
+    title: '수능 영어 때문에 깔았는데 생각보다 잘 쓰는 중',
+    body: '저는 빈칸이랑 문장 삽입을 제일 많이 틀려요ㅠ 문제집은 원하는 유형만 골라 풀기가 귀찮았는데 여기는 유형 찾아서 바로 풀 수 있어서 편해요. 쉬는 시간에 한두 문제씩 하기 좋아여',
   },
   {
-    name: '강*서',
-    title: '계속 공부했는데도 제자리였던 이유를 좀 알겠어요',
-    body: '저는 나름 열심히 했는데 성적이 잘 안 올라서 스스로 좀 답답했어요.\n근데 막상 해보니까 제가 약한 부분은 따로 있었고, 그걸 모르고 계속 엉뚱한 데 힘을 쓰고 있더라고요.\n그걸 확인한 것만으로도 방향이 잡히는 느낌이었습니다.',
+    name: '윤*호',
+    stars: 5,
+    title: '문제 퀄리티 다른앱이랑 비교가 안되네요',
+    body: '무료라 문제는 별 기대 안 했는데 각 단원별 난이도가 다양하고 수능이랑 비슷하게 풀 수 있었어요! 수능 공부하면서 풀기 괜찮은 앱 찾아서 너무 좋아요',
   },
 ]
 
 function ReviewCard({ review }: { review: (typeof REVIEWS)[number] }) {
   return (
-    <article className="flex w-[420px] shrink-0 flex-col gap-[10px] self-stretch rounded-[20px] bg-[#1e2025] px-[28px] py-[28px] max-md:w-[300px] max-md:px-[20px]">
+    <article className="flex w-[359px] shrink-0 flex-col gap-[6px] self-stretch rounded-[20px] bg-[#23272b] px-[19.5px] py-[22.7px] shadow-[0_7.8px_9.4px_rgba(0,0,0,0.1)]">
       <div className="flex items-center justify-between">
-        <span className="text-[16px] font-bold text-white">{review.name}</span>
-        <img src={starRating} alt="별점 5점" className="h-[18px] w-[90px]" />
+        <span className="text-[12.5px] font-bold text-white">{review.name}</span>
+        <img
+          src={review.stars === 5 ? starRating5 : starRating4}
+          alt={`별점 ${review.stars}점`}
+          className="h-[15.6px] w-[78px]"
+        />
       </div>
-      <p className="break-keep pb-[6px] text-[16px] font-semibold text-white">{review.title}</p>
-      <p className="whitespace-pre-line break-keep text-[14px] leading-[1.65] text-[#9aa0a8]">{review.body}</p>
+      <p className="break-keep pb-[6px] text-[12.5px] font-medium text-white">{review.title}</p>
+      <p className="whitespace-pre-line break-keep text-[12.5px] leading-[1.45] text-[#e5e7ea]">{review.body}</p>
     </article>
   )
 }
 
-/** 후기 마퀴 (ver.2) — 다크 카드 스트립이 자동으로 흐른다 (트랙 2벌 무한 루프) */
+/** 후기 마퀴 (ver.2 · 2801-5569) — 다크 카드 스트립이 자동으로 흐른다 (트랙 2벌 무한 루프) */
 export default function ReviewsSection() {
   return (
-    <section className="flex w-full flex-col items-center gap-[56px] overflow-hidden py-[140px] max-xl:py-[90px]">
-      <h2 className="break-keep px-[40px] text-center text-[24px] font-medium leading-[1.6] text-[#c8cbd0] max-md:px-lg max-md:text-[17px]">
-        미리 체험해본
-        <br />
-        <span className="text-[44px] font-bold leading-[1.5] text-white max-xl:text-[34px] max-md:text-[24px]">
-          사용자들의 <span className="text-primary">후기</span>를 확인해봐
-        </span>
-      </h2>
+    <section className="flex w-full flex-col items-center gap-[60px] overflow-hidden py-[80px] max-xl:gap-[40px] max-md:gap-[24px] max-md:py-[60px]">
+      <SectionHeading eyebrow="미리 체험해본">
+        사용자들의 <span className="text-primary">후기</span>를 확인해봐
+      </SectionHeading>
 
-      <div className="w-full overflow-hidden">
-        <div className="landing-marquee-track flex w-max gap-[20px] pr-[20px]">
+      <div className="w-full overflow-hidden pt-[31px] max-md:pt-[8px]">
+        <div className="landing-marquee-track flex w-max gap-[15.6px] pr-[15.6px]">
           {[...REVIEWS, ...REVIEWS].map((review, i) => (
             <ReviewCard key={`${review.name}-${i}`} review={review} />
           ))}

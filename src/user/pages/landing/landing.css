@@ -1,4 +1,119 @@
-/* ver.2 랜딩 전용 스타일 (2801-5435) */
+/* ver.2 랜딩 전용 스타일 (웹 2801-5435 · 폰 3194-6264) */
+
+/* 이미지·SVG 드래그 시 고스트 이미지가 끌려나오지 않게 (마케팅 페이지 — 저장할 이미지 없음) */
+.landing img,
+.landing svg {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* 히어로 글로우 — 시안 라디얼(빨강 → 어두운 회색, 전체 20%) 을 그대로 재현.
+   마지막 스톱이 바탕색(#121417)과 같아 경계가 보이지 않는다 */
+.landing-glow-hero::before,
+.landing-glow-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing-glow-hero::before {
+  background: radial-gradient(
+    ellipse 50% 50% at 50% 50%,
+    rgba(255, 56, 92, 0.2) 0%,
+    rgba(196, 47, 75, 0.2) 25%,
+    rgba(137, 38, 58, 0.2) 50%,
+    rgba(107, 34, 49, 0.2) 62.5%,
+    rgba(77, 29, 40, 0.2) 75%,
+    rgba(48, 25, 32, 0.2) 87.5%,
+    rgba(18, 20, 23, 0.2) 100%
+  );
+}
+
+/* 하단 CTA 글로우 — 빨강 → 투명 단일 라디얼 (시안 2801-5645) */
+.landing-glow-cta::before {
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255, 56, 92, 0.2), rgba(255, 56, 92, 0) 100%);
+}
+
+/* 워드 스와이퍼 — 줄 높이는 폰트 크기 비례(1.2em). 시안: 100px 글자에 360px 뷰포트(3줄) */
+.landing-swiper {
+  --row-h: 1.2em;
+}
+
+.landing-swiper-mask {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 24%, black 76%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 24%, black 76%, transparent);
+}
+
+/* 프리뷰 줄 — 시안의 그라데이션 텍스트 (위 줄: 어두움→밝음, 아래 줄: 밝음→어두움) */
+.landing-swiper-row {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to bottom, #444241, #aaa5a3);
+}
+
+.landing-swiper-row--below {
+  background-image: linear-gradient(to bottom, #aaa5a3, #444241);
+}
+
+.landing-swiper-row--active {
+  background-image: linear-gradient(#fff, #fff);
+}
+
+/* "15분" — 시안 텍스트 섀도 */
+.landing-swiper-fixed {
+  text-shadow: 0 1.5px 23px rgba(0, 0, 0, 0.4);
+}
+
+/* 흰 pill CTA 화살표 — 호버 시 우상단으로 빠지고 좌하단에서 새 화살표가 들어온다 (시안 2중 아이콘) */
+.landing-cta-arrow {
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-cta-arrow img {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.35s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.landing-cta-arrow img + img {
+  transform: translate(-22px, 22px);
+}
+
+.group:hover .landing-cta-arrow img:first-child {
+  transform: translate(22px, -22px);
+}
+
+.group:hover .landing-cta-arrow img + img {
+  transform: translate(0, 0);
+}
+
+/* 히어로 소셜프루프 pill — 빨간 글로우 + 안쪽 흰 하이라이트 + 아래 꼬리 */
+.landing-proof {
+  filter: drop-shadow(0 0 15.65px rgba(255, 56, 92, 0.2));
+}
+
+.landing-proof-body {
+  box-shadow: inset 0 0 6.7px rgba(255, 255, 255, 0.19);
+}
+
+/* 성과 차트 — 폰에선 viewBox 가 절반 이하로 줄어 글자가 7px 대로 떨어지므로 라벨·배지만 키운다 */
+@media (max-width: 767px) {
+  .landing-chart .landing-chart-label {
+    font-size: 26px;
+  }
+
+  .landing-chart .landing-chart-badge {
+    transform: scale(1.8);
+    transform-box: fill-box;
+    transform-origin: right center;
+  }
+}
 
 /* 후기 마퀴 — 트랙 2벌을 이어붙여 무한 루프 */
 @keyframes landing-marquee {
@@ -15,56 +130,34 @@
   will-change: transform;
 }
 
-/* 히어로·CTA 배경 — 어두운 바탕, 헤드라인 뒤의 붉은 라디얼 글로우 (시안: 워딩 중심) */
-.landing-glow::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse 62% 55% at 50% 38%, rgba(150, 30, 48, 0.42), transparent 70%);
-}
-
-/* 워드 스와이퍼 — 줄 높이 변수는 루트에, 마스크는 뷰포트에.
-   프리뷰 줄이 축소·페이드되어 뷰포트 위아래 절반 가까이가 빈 공간이라
-   음수 마진으로 당겨 서브카피와의 체감 간격을 좁힌다 */
-.landing-swiper {
-  --row-h: 150px;
-  margin-block: calc(var(--row-h) * -0.5);
-}
-
-.landing-swiper-mask {
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
-}
-
-@media (max-width: 1280px) {
-  .landing-swiper {
-    --row-h: 112px;
+/* 약점 단원 노드 — 시안의 배경 깜빡임(#fff1f2 ↔ #ff385c) 을 은은한 글로우로 */
+@keyframes landing-node-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 56, 92, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 56, 92, 0.22);
   }
 }
 
-@media (max-width: 767px) {
-  /* 폰트가 뷰포트 비례(clamp 32~64px)라 줄 높이도 같은 비율로 */
-  .landing-swiper {
-    --row-h: clamp(44px, 13vw, 88px);
-  }
+.landing-node--weak {
+  animation: landing-node-pulse 2.4s ease-in-out infinite;
 }
 
-/* 추천 캡션 전환 — 슬라이드가 바뀔 때 아래에서 떠오른다 */
-@keyframes landing-caption-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-
-.landing-caption-in {
-  animation: landing-caption-in 420ms cubic-bezier(0.22, 0.9, 0.3, 1);
+/* 추천 캡션·이미지 슬라이드 공용 트랙 */
+.landing-slide-track {
+  transition: transform 0.55s cubic-bezier(0.22, 0.9, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-marquee-track,
-  .landing-caption-in {
+  .landing-node--weak {
     animation: none;
+  }
+
+  .landing-slide-track,
+  .landing-cta-arrow img {
+    transition: none;
   }
 }
