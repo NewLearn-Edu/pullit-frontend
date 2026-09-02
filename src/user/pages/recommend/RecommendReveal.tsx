@@ -19,7 +19,9 @@ import {
 } from '@/user/api/recommendApi'
 import { useCreditForExtraSet } from '@/user/api/creditApi'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
-import { CURRICULUM, type CurriculumCategory } from '@/user/data/curriculum'
+import { Toast } from '@/user/components/Toast'
+import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
+import { SkipConfirmContent } from '@/user/pages/home/UnitSheets'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
@@ -31,7 +33,6 @@ import {
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { isRecommendDemo, RECOMMEND_DEMO } from './recommendDemoData'
-import { LockIcon } from '@/user/components/icons/LockIcon'
 import styles from './styles/RecommendReveal.module.scss'
 
 const SET_SIZE = 3
@@ -512,6 +513,14 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     }
   }
 
+  // 건너뛰기 확정 토스트 (3631-9044) — 재분석 화면 위 "{단원명}부터 건너뛰었어"
+  const [skipToast, setSkipToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!skipToast) return
+    const timer = window.setTimeout(() => setSkipToast(null), 2600)
+    return () => window.clearTimeout(timer)
+  }, [skipToast])
+
   /** 안배웠어요 — 이 유닛부터 대단원 끝까지 잠그고 추천을 다시 계산한다 */
   const confirmSkipUnit = async () => {
     if (!target || saving) return
@@ -520,6 +529,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     try {
       await declareUnitLock(subject, target.row.unitCode)
       setSkipMode(false)
+      setSkipToast(target.row.name)
       // 잠근 구간이 캔버스에 반영되도록 처음부터 다시 훑는다
       setPhase('scan')
       setInstant(false)
@@ -586,7 +596,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         {/* 문구 크로스페이드 — 훑는 중 ↔ 찾았다 */}
         <div className={styles.titleBlock}>
           <div className={clsx(styles.titleLayer, revealed && styles.titleLayerOut)}>
-            <h1 className={styles.title}>내가 풀라는거만 풀어봐</h1>
+            <h1 className={styles.title}>지금 풀어야 할 문제를 찾아줄게</h1>
             <p className={styles.subtitle}>
               {subject === 'math' ? '수학' : '영어'} 학습 기록 조회중
               <Ellipsis />
@@ -664,8 +674,6 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                             <OffGroup
                               key={`off-${slot.idx}`}
                               rows={slot.rows!}
-                              gap={geo.gap}
-                              cardH={geo.cardH}
                               scan={state}
                               mute={mute}
                             />
@@ -752,63 +760,67 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       <footer
         className={clsx(styles.dock, revealed && styles.dockIn)}
       >
-        {!skipMode ? (
-          <>
-            <div className={styles.creditRow}>
-              <CoinIcon />
-              <span className={styles.creditLabel}>보유 크레딧:</span>
-              <span className={styles.creditValue}>{credit}개</span>
-            </div>
-            {actionError && <p className={styles.actionError}>{actionError}</p>}
-            {/* CTA 정책 (2026-08-31): 미진단 = 진단하기 · 진단한(약점 포함) = 추천 문제 풀기.
-                "안배웠어요"는 미진단 추천에서만 — 아래 텍스트 링크 (3591-10490) */}
-            <div className={styles.dockActions}>
-              <button
-                type="button"
-                onClick={confirmStart}
-                disabled={starting}
-                className={styles.darkButton}
-              >
-                {starting ? '시작 중…' : target?.row.diagnosis ? '추천 문제 풀기' : '진단하기'}
-              </button>
-              {!target?.row.diagnosis && (
-                <button
-                  type="button"
-                  onClick={() => setSkipMode(true)}
-                  className={styles.skipLink}
-                >
-                  이 단원 아직 안배웠어요
-                </button>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <p className={styles.skipTitle}>
-              {target?.row.name}부터 {targetCategory?.name} 끝까지 잠가둘게
-            </p>
-            <p className={styles.skipDesc}>다시 풀면 언제든 열려</p>
-            {actionError && <p className={styles.actionError}>{actionError}</p>}
-            <div className={styles.dockButtons}>
-              <button
-                type="button"
-                onClick={() => setSkipMode(false)}
-                className={styles.ghostButton}
-              >
-                이전
-              </button>
-              <button
-                type="button"
-                onClick={confirmSkipUnit}
-                disabled={saving}
-                className={styles.primaryButton}
-              >
-                {saving ? '저장 중…' : '잠그기'}
-              </button>
-            </div>
-          </>
-        )}
+        <div className={styles.creditRow}>
+          <CoinIcon />
+          <span className={styles.creditLabel}>보유 크레딧:</span>
+          <span className={styles.creditValue}>{credit}개</span>
+        </div>
+        {actionError && <p className={styles.actionError}>{actionError}</p>}
+        {/* CTA 정책 (2026-08-31): 미진단 = "{단원명} 진단하기" · 진단한(약점 포함) = 추천 문제 풀기.
+            "안배웠어요"는 미진단 추천에서만 — 아래 텍스트 링크 (3591-10490) */}
+        <div className={styles.dockActions}>
+          <button
+            type="button"
+            onClick={confirmStart}
+            disabled={starting}
+            className={styles.darkButton}
+          >
+            {starting
+              ? '시작 중…'
+              : target?.row.diagnosis
+                ? '추천 문제 풀기'
+                : `${target?.row.name ?? ''} 진단하기`.trim()}
+          </button>
+          {!target?.row.diagnosis && (
+            <button
+              type="button"
+              onClick={() => setSkipMode(true)}
+              className={styles.skipLink}
+            >
+              이 단원 아직 안배웠어요
+            </button>
+          )}
+        </div>
       </footer>
+
+      {/* "안배웠어요" — 건너뛰기 확인 (3620-7138) — 홈·지도와 같은 본문 공유.
+          모바일·패드 = 바텀 시트 · 웹 = 중앙 다이얼로그 (이어풀기 팝업과 같은 패턴) */}
+      {skipMode && target && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(21,17,18,0.38)] xl:items-center xl:p-[20px]"
+          onClick={() => setSkipMode(false)}
+        >
+          <div
+            className="flex w-full max-w-[620px] flex-col items-center gap-[24px] rounded-t-[32px] bg-white px-[20px] pb-[calc(28px+env(safe-area-inset-bottom))] pt-[16px] shadow-[0_-16px_25px_rgba(0,0,0,0.12)] xl:max-w-[440px] xl:rounded-[24px] xl:p-[28px] xl:shadow-[0_12px_32px_rgba(0,0,0,0.18)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="h-[5px] w-[42px] rounded-full bg-[#d6d8db] xl:hidden" aria-hidden />
+            <SkipConfirmContent
+              unitName={target.row.name}
+              unitLabel={UNIT_LABEL[subject]}
+              skipUnits={(() => {
+                const units = targetCategory?.units ?? []
+                const fromIdx = units.findIndex((u) => u.unitCode === target.row.unitCode)
+                return fromIdx >= 0 ? units.slice(fromIdx) : [target.row]
+              })()}
+              error={actionError}
+              saving={saving}
+              onCancel={() => setSkipMode(false)}
+              onConfirm={confirmSkipUnit}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 크레딧 부족 (Figma 2856-17959) — 시작하기 눌렀는데 크레딧이 모자랄 때 */}
       {shortageOpen && (
@@ -817,6 +829,28 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           onClose={() => setShortageOpen(false)}
         />
       )}
+
+      {/* 건너뛰기 확정 토스트 (3631-9044) — 재분석 화면 위 다크 바 */}
+      <Toast
+        show={!!skipToast}
+        bottom="calc(28px + env(safe-area-inset-bottom))"
+        className="flex items-center gap-[8px] rounded-[16px] bg-[#40464c] p-[16px] backdrop-blur-[8px]"
+      >
+          <span className="flex size-[20px] shrink-0 items-center justify-center rounded-full bg-[#ffdadc]">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path
+                d="M2.5 6.3 5 8.7 9.5 3.6"
+                stroke="#ff385c"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <p className="text-[16px] font-semibold leading-[1.4] text-white">
+            {skipToast}부터 건너뛰었어
+          </p>
+      </Toast>
     </div>
   )
 }
@@ -842,6 +876,7 @@ function UnitCard({
   scan?: ScanState
 }) {
   const locked = row.state === 'locked'
+  const next = row.state === 'next'
   const done = !!row.diagnosis
   // 스캔이 지나가기 전에는 결과를 숨긴다 — 지나가는 순간 상태가 드러나야 "체크" 로 읽힌다
   const revealed = scan !== 'pending'
@@ -850,8 +885,9 @@ function UnitCard({
       className={clsx(
         styles.card,
         bare && styles.cardBare,
-        // 시안(3589-8481): 진단·미진단은 흰 카드, 순서상 잠긴 칸은 회색 + 자물쇠
+        // 마스터 카드: 진단·다음 차례는 흰 카드, 순서상 잠긴 칸은 회색 + 미진단 필
         !marked && revealed && (locked ? styles.cardLockedBg : styles.cardDone),
+        !marked && revealed && next && styles.cardNext,
         !marked && !revealed && styles.cardIdle,
         marked && styles.cardMarked,
         !revealed && styles.cardPendingScan,
@@ -871,68 +907,58 @@ function UnitCard({
           </span>
         )}
       </div>
-      {marked && !done ? (
-        <span className={styles.cardPill}>미진단 단원</span>
-      ) : (
-        revealed &&
-        // 푼 칸은 점수 + 셰브런, 잠긴 칸은 자물쇠 (시안 3589-8481).
-        // 미진단(next)은 이름만 — 오른쪽을 비워 "아직 기록 없음" 이 그대로 보인다.
+      {/* 마스터 카드(2246-6010 · 3631-9044 캔버스): 진단 = 점수, 순서 잠김 = "미진단" 필,
+          다음 차례·집힌 미진단 = "진단하기" 필. 자물쇠 표기는 폐지 */}
+      {revealed &&
         (done ? (
           // 애니메이션 캔버스에는 셰브런 없이 점수만 (3681-8056) — 셰브런은 홈 리스트 전용
           <span className={clsx(styles.cardCheck, row.diagnosis?.weak && styles.cardCheckWeak)}>
             {row.diagnosis?.score}점
           </span>
-        ) : locked ? (
-          <LockIcon className={styles.cardLockIco} />
-        ) : null)
-      )}
+        ) : locked && !marked ? (
+          <span className={styles.cardStatePill}>미진단</span>
+        ) : (
+          <span className={styles.cardPill}>진단하기</span>
+        ))}
     </div>
   )
 }
 
 /**
- * "안배웠어요"(건너뛴) 구간 — 잠금 스택 (시안 3589-8481 locked-stack).
- * "건너뛴 단원 N개" 헤더 + 회색 칸들이 실금으로 이어진 한 덩어리.
- * 스택 전체 높이는 원래 칸들이 차지하던 격자 높이와 같아야
- * 다른 열과의 정렬·카메라 워크가 유지된다.
+ * "안배웠어요"(건너뛴) 구간 — 개별 회색 카드 + "건너뜀" 필 (3631-9044 · 3693-8663 개정:
+ * 잠금 스택·자물쇠 폐지). 부모 격자의 gap 을 그대로 써서 다른 열과의 정렬이 유지된다.
  */
 function OffGroup({
   rows,
-  gap,
-  cardH,
   scan,
   mute,
 }: {
   rows: UnitProgressRow[]
-  gap: number
-  cardH: number
   scan: ScanState
   mute: 'none' | 'dim' | 'hide'
 }) {
   const revealed = scan !== 'pending'
-  const height = rows.length * cardH + (rows.length - 1) * gap
   return (
-    <div
-      className={clsx(
-        styles.offStack,
-        !revealed && styles.offStackPending,
-        scan === 'now' && styles.cardScanning,
-        mute === 'dim' && styles.cardDim,
-        mute === 'hide' && styles.cardHide,
-      )}
-      style={{ height: `${height}px` }}
-    >
-      <div className={styles.offStackHead}>
-        <LockIcon className={styles.offStackHeadIco} />
-        <span className={styles.offStackHeadText}>건너뛴 단원 {rows.length}개</span>
-      </div>
+    <>
       {rows.map((row) => (
-        <div key={row.unitCode} className={styles.offStackCard}>
-          <span className={clsx(styles.cardName, styles.cardNameLocked)}>{row.name}</span>
-          <LockIcon className={styles.cardLockIco} />
+        <div
+          key={row.unitCode}
+          className={clsx(
+            styles.card,
+            styles.cardSkipped,
+            !revealed && styles.cardPendingScan,
+            scan === 'now' && styles.cardScanning,
+            mute === 'dim' && styles.cardDim,
+            mute === 'hide' && styles.cardHide,
+          )}
+        >
+          <div className={styles.cardBody}>
+            <span className={clsx(styles.cardName, styles.cardNameSkipped)}>{row.name}</span>
+          </div>
+          <span className={styles.cardStatePill}>건너뜀</span>
         </div>
       ))}
-    </div>
+    </>
   )
 }
 

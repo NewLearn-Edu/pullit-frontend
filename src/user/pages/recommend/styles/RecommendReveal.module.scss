@@ -44,11 +44,8 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   .card,
   .cardName,
   .cardCheck,
-  .cardLockIco,
   .cardPill,
-  .offStack,
-  .offStackHeadIco,
-  .offStackHeadText,
+  .cardStatePill,
   .solo,
   .detail,
   .stats,
@@ -324,9 +321,19 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   background: #f1f3f5;
 }
 
-// 순서상 잠긴 칸 (시안 3589-8481) — 회색 면 + 자물쇠
+// 순서상 잠긴 칸 (마스터 카드 2246-6010) — 회색 면 + "미진단" 필
 .cardLockedBg {
   background: #f0f1f3;
+}
+
+// 건너뛴 칸 (3631-9044 · 3693-8663 개정) — 진회색 면 + "건너뜀" 필, 자물쇠 없음
+.cardSkipped {
+  background: #d6d8db;
+}
+
+// 다음 차례 칸 — 흰 면 + 빨간 보더 (홈 next 카드와 동일)
+.cardNext {
+  box-shadow: inset 0 0 0 1px $color-primary;
 }
 
 // 진단을 마친 칸 — 흰 면 + 실선. 바탕보다 한 단계 밝아 "지나온 곳" 이 드러난다
@@ -393,6 +400,12 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   color: $muted-2;
 }
 
+// 건너뛴 칸 이름 — .cardName 뒤에 선언해야 색이 덮이지 않는다
+.cardNameSkipped {
+  color: #a6abb1;
+  font-weight: $fw-semibold;
+}
+
 .cardMeta {
   overflow: hidden;
   font-size: calc(13px * var(--rec-type, 1));
@@ -403,16 +416,29 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   white-space: nowrap;
 }
 
-// 집힌 카드에만 붙는 배지
+// "진단하기" 필 — 다음 차례·집힌 미진단 카드 (마스터 카드의 red-soft 필)
 .cardPill {
   flex: none;
-  padding: calc(6px * var(--rec-type, 1)) calc(12px * var(--rec-type, 1));
+  padding: calc(8px * var(--rec-type, 1)) calc(12px * var(--rec-type, 1));
   border-radius: calc(8px * var(--rec-type, 1));
-  background: $color-primary;
+  background: #fff1f2;
   font-size: calc(12px * var(--rec-type, 1));
   font-weight: $fw-semibold;
   line-height: 1.4;
-  color: #fff;
+  color: $color-primary;
+  white-space: nowrap;
+}
+
+// "미진단"·"건너뜀" 상태 필 — 회색 (마스터 카드 2246-6010)
+.cardStatePill {
+  flex: none;
+  padding: calc(8px * var(--rec-type, 1)) calc(12px * var(--rec-type, 1));
+  border-radius: calc(8px * var(--rec-type, 1));
+  background: #e5e7ea;
+  font-size: calc(12px * var(--rec-type, 1));
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+  color: #80858b;
   white-space: nowrap;
 }
 
@@ -425,7 +451,7 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   .cardName,
   .cardMeta,
   .cardCheck,
-  .cardLockIco,
+  .cardStatePill,
   .cardPill {
     opacity: 0;
   }
@@ -447,7 +473,7 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
 .cardName,
 .cardMeta,
 .cardCheck,
-.cardLockIco,
+.cardStatePill,
 .cardPill {
   transition: opacity d(240ms) ease;
 }
@@ -458,7 +484,7 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   .cardName,
   .cardMeta,
   .cardCheck,
-  .cardLockIco,
+  .cardStatePill,
   .cardPill {
     transition: opacity d(240ms) ease, font-size d(1000ms) $ease-camera;
   }
@@ -490,78 +516,6 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   color: $color-primary;
 }
 
-// 잠긴 칸의 자물쇠 — 색은 아이콘 벡터(투톤)에 박혀 있어 크기만 정한다
-.cardLockIco {
-  flex: none;
-  width: calc(16px * var(--rec-type, 1));
-  height: calc(16px * var(--rec-type, 1));
-}
-
-// ── "건너뛴 단원" 잠금 스택 (시안 3589-8481 locked-stack) ─────────────────────
-// 헤더 + 회색 칸들이 실금(컨테이너 배경)으로 이어진 한 덩어리.
-// 높이는 원래 격자 칸들이 차지하던 만큼을 그대로 받아 정렬을 지킨다.
-.offStack {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: 1px; // 실금 — 컨테이너 배경이 비쳐 칸 경계가 된다
-  overflow: hidden;
-  border-radius: 16px;
-  background: #d6d8db;
-  transition: opacity d(420ms) ease;
-}
-
-.offStackHead {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: calc(6px * var(--rec-type, 1));
-  padding: 0 $space-lg;
-  height: calc(30px * var(--rec-type, 1));
-  background: #e5e7ea;
-}
-
-.offStackHeadIco {
-  flex: none;
-  width: calc(13px * var(--rec-type, 1));
-  height: calc(13px * var(--rec-type, 1));
-}
-
-.offStackHeadText {
-  overflow: hidden;
-  font-size: calc(13px * var(--rec-type, 1));
-  font-weight: $fw-semibold;
-  color: #5e6368;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.offStackCard {
-  display: flex;
-  flex: 1 1 0;
-  min-height: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  padding: 0 $space-lg;
-  background: #f0f1f3;
-}
-
-// 스캔이 지나가기 전 — 틀만 두고 내용은 감춘다 (일반 카드와 같은 리듬)
-.offStackPending {
-  .offStackHeadIco,
-  .offStackHeadText,
-  .cardName,
-  .cardLockIco {
-    opacity: 0;
-  }
-}
-
-.offStackHeadIco,
-.offStackHeadText,
-.cardLockIco {
-  transition: opacity d(240ms) ease;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 상세 카드 — 무대 안에서 아래로 커지며 드러난다
