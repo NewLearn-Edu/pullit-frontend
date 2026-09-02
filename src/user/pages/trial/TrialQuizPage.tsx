@@ -404,13 +404,23 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     navigate(returnTo)
   }
 
-  const handleClose = () => setExitConfirmOpen(true)
-
   /** 나가기 확정 — 문항별 즉시 저장이라 지금까지 푼 문제는 남는다 */
   const confirmExit = () => {
     setExitConfirmOpen(false)
     clearQuizStart(mode, subject, idx)
     navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
+  }
+
+  /**
+   * X — 세트 풀이(진단·자유·추천)는 "조금만 더 풀면 끝나!" 팝업(3631-13339)으로 한 번 붙잡는다.
+   * 오답 다시 풀기(RETRY)는 세트도 결과 화면도 없어 붙잡을 이유가 없다 — 바로 나간다
+   */
+  const handleClose = () => {
+    if (solveSession?.source === 'RETRY') {
+      confirmExit()
+      return
+    }
+    setExitConfirmOpen(true)
   }
 
   /** 모르겠어요 확정 — 무응답 오답으로 기록하고 진행 */
@@ -617,14 +627,17 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         />
       )}
 
-      {/* 나가기 확인 팝업 — 브라우저 confirm 대신 앱 팝업 */}
+      {/* 나가기 팝업 (PI-POPUP-RESUME · 3631-13339) — 주 버튼은 "계속 풀기", 나가기는 왼쪽 보조.
+          딤 클릭은 나가기가 아니라 팝업 닫기 */}
       {exitConfirmOpen && (
         <ConfirmDialog
-          title="풀이를 여기서 끝낼까?"
-          desc="지금까지 푼 문제는 저장돼. 이어풀기로 다시 돌아올 수 있어."
-          confirmLabel="나가기"
-          onCancel={() => setExitConfirmOpen(false)}
-          onConfirm={confirmExit}
+          title="조금만 더 풀면 끝나!"
+          desc="남은 문제까지 풀면 바로 결과를 확인할 수 있어."
+          cancelLabel="나가기"
+          confirmLabel="계속 풀기"
+          onCancel={confirmExit}
+          onConfirm={() => setExitConfirmOpen(false)}
+          onDismiss={() => setExitConfirmOpen(false)}
         />
       )}
     </div>

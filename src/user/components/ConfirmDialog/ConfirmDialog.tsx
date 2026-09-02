@@ -13,6 +13,11 @@ interface ConfirmDialogProps {
   onConfirm: () => void
   /** 생략하면 버튼 하나짜리 안내 팝업(alert 대체) — 딤 클릭도 onConfirm 으로 닫힌다 */
   onCancel?: () => void
+  /**
+   * 딤(바깥) 클릭 시 동작 — 기본은 onCancel(없으면 onConfirm).
+   * 왼쪽 버튼이 "나가기"처럼 되돌릴 수 없는 동작일 때, 딤 클릭은 그냥 팝업만 닫히게 따로 준다
+   */
+  onDismiss?: () => void
 }
 
 /**
@@ -28,8 +33,9 @@ export function ConfirmDialog({
   danger = false,
   onConfirm,
   onCancel,
+  onDismiss,
 }: ConfirmDialogProps) {
-  const dismiss = onCancel ?? onConfirm
+  const dismiss = onDismiss ?? onCancel ?? onConfirm
   return (
     <div className={styles.dim} onClick={dismiss}>
       <div
