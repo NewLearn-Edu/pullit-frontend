@@ -5,6 +5,7 @@ import LandingPage from './user/pages/landing/LandingPage'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import WrongNoteDetailPage from './user/pages/wrongnote/WrongNoteDetailPage'
+import WrongNoteReviewPage from './user/pages/wrongnote/WrongNoteReviewPage'
 import MyPage from './user/pages/my/MyPage'
 import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import ReportPage from './user/pages/report/ReportPage'
@@ -75,6 +76,8 @@ export default function App() {
         <Route path="/today" element={<TodayRedirect />} />
         <Route path="/wrong-note" element={<WrongNotePage />} />
         <Route path="/wrong-note/:subject/units/:unitId" element={<WrongNoteDetailPage />} />
+        {/* 오답노트 해설 — 카드의 "해설" 버튼 진입 (오답노트 API 의 정답·해설로 리뷰 화면) */}
+        <Route path="/wrong-note/:subject/units/:unitId/review/:problemId" element={<WrongNoteReviewPage />} />
         <Route path="/report" element={<ReportPage />} />
         <Route path="/my" element={<MyPage />} />
       <Route path="/my/profile" element={<ProfileEditPage />} />

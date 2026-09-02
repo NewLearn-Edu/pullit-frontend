@@ -5,7 +5,7 @@ import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { PageHeader } from '@/user/components/PageHeader'
 import { deleteWrongNote, fetchWrongNotes, restoreWrongNote, type WrongNoteItem } from '@/user/api/attemptApi'
 import { findWrongUnit, formatWrongAt, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
-import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
+import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { type Subject } from '@/user/stores/trialStore'
@@ -110,6 +110,9 @@ export default function WrongNoteDetailPage() {
   }, [row, sort])
 
   /** 다시 풀기 — 오답 문제를 풀이 세션(RETRY)으로 넘기고 /solve 진입 */
+  const reviewPath = (problemId: string) =>
+    `/wrong-note/${subject}/units/${encodeURIComponent(unitId)}/review/${encodeURIComponent(problemId)}`
+
   const startRetry = (items: WrongNoteItem[]) => {
     if (items.length === 0) return
     startSolveSession({
@@ -122,7 +125,6 @@ export default function WrongNoteDetailPage() {
 
   if (!row) return null
 
-  const ProblemRender = subject === 'english' ? EnglishProblemRender : MathProblemRender
 
   return (
     <div className={styles.page}>
@@ -167,14 +169,20 @@ export default function WrongNoteDetailPage() {
           {/* 고정 높이 미리보기(잘림) + 하단 정보 바 — 지문이 긴 문제도 카드 리듬 일정 */}
           {sortedItems.map((item: WrongNoteItem, i: number) => (
             <div key={item.problemId} className={styles.card}>
-              <div className={styles.cardPreview}>
+              {/* 미리보기 탭 = 문제 보기 (해설·다시 풀기가 있는 문제 페이지) */}
+              <button
+                type="button"
+                aria-label={`문제 ${i + 1} 보기`}
+                onClick={() => navigate(reviewPath(item.problemId))}
+                className={styles.cardPreview}
+              >
                 <div className={styles.cardProblem} aria-hidden>
-                  <ProblemRender text={item.question ?? ''} />
+                  <QuestionRender question={item.question ?? ''} subject={subject} />
                 </div>
                 <div className={styles.cardTint} aria-hidden />
                 <div className={styles.cardFade} aria-hidden />
                 <span className={styles.wrongChip}>오답 {item.wrongCount}회</span>
-              </div>
+              </button>
 
               <div className={styles.cardInfo}>
                 <button

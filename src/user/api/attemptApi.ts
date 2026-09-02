@@ -59,6 +59,11 @@ export interface WrongNoteItem {
   answerType: string | null
   /** 용어 주석 — 순서 보존 배열 (문제 생성 정책 §2) */
   glossary: { term: string; meaning: string }[]
+  /** 정답·해설 — 오답노트는 이미 틀린 문제라 서버가 함께 내려준다 (해설 보기 화면용) */
+  answerIndex: number | null
+  answerValue: number | null
+  answerText: string | null
+  explanation: string | null
   wrongCount: number
   lastWrongAt: string
 }

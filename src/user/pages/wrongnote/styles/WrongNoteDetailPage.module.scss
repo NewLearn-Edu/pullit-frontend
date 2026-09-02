@@ -126,9 +126,14 @@ $sub: #80858b;
 
 // 문제 미리보기 영역 — 넘치는 본문은 잘리고 맨 아래만 살짝 흰색으로 사라진다
 .cardPreview {
+  @include button-reset;
   position: relative;
+  display: block;
+  width: 100%;
   height: 168px;
   overflow: hidden;
+  text-align: left;
+  cursor: pointer;
   // background: #f4f5f7; // 연회색 존 시안 — 보류
 }
 

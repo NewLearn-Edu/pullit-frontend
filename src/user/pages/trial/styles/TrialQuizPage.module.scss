@@ -207,6 +207,44 @@
   flex: 1;
 }
 
+// 리뷰 화면 액션 푸터 — 문제 카드 아래, 풀이 화면 답안 바 자리 (오답노트: 해설 보기 · 다시 풀기)
+.reviewFooter {
+  display: flex;
+  gap: 8px;
+  padding: 14px $space-lg calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid $color-line;
+  background: $color-canvas;
+}
+
+.reviewSecondary {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 56px;
+  border: 1px solid #e5e7ea;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: #40464c;
+
+  @include hover { background: #f8f8f8; }
+}
+
+.reviewPrimary {
+  @include button-reset;
+  @include flex-center;
+  flex: 1;
+  height: 56px;
+  border-radius: 12px;
+  background: #23272b;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: #fff;
+
+  @include hover { opacity: 0.9; }
+}
+
 // 필기 캔버스 오버레이
 .canvasOverlay {
   position: absolute;
