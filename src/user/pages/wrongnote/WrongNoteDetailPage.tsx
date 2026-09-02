@@ -203,12 +203,13 @@ export default function WrongNoteDetailPage() {
                     {formatWrongAt(item.lastWrongAt)}
                   </p>
                 </div>
+                {/* 문제 보기 — 해설·다시 풀기가 있는 문제 페이지 (미리보기 탭과 같은 목적지) */}
                 <button
                   type="button"
-                  onClick={() => startRetry([item])}
+                  onClick={() => navigate(reviewPath(item.problemId))}
                   className={styles.retryButton}
                 >
-                  다시 풀기
+                  문제 보기
                 </button>
               </div>
             </div>

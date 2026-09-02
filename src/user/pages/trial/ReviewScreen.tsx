@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
@@ -82,6 +82,11 @@ export function ReviewScreen({
 
   const [panelWidth, setPanelWidth] = useState(420)
   const [resizing, setResizing] = useState(false)
+
+  // 액션 푸터는 풀이 화면 답안 바와 같은 fixed 바 — 패널이 inline 사이드바(md+)로 열리면
+  // 문제 칼럼(뷰포트 − 패널 폭)의 가운데로 옮겨 패널 폭 변화에 따라 문제 카드와 함께 움직인다
+  const tabletUp = useTabletUp()
+  const footerPanelW = explainOpen && tabletUp ? panelWidth : 0
 
   return (
     <div className={styles.page}>
@@ -189,12 +194,21 @@ export function ReviewScreen({
               </div>
             </div>
 
-            {footer && (
-              <div className={styles.reviewFooter}>
+          </section>
+
+          {footer && (
+            <div
+              className={styles.answerBar}
+              style={{
+                left: `calc((100% - ${footerPanelW}px) / 2)`,
+                transition: resizing ? 'none' : 'left 300ms ease',
+              }}
+            >
+              <div className={styles.reviewFooterRow}>
                 {footer({ openExplain: () => setExplainOpen(true), explainOpen })}
               </div>
-            )}
-          </section>
+            </div>
+          )}
 
           <ResizeDivider
             show={explainOpen}
@@ -227,6 +241,18 @@ export function ReviewScreen({
       </div>
     </div>
   )
+}
+
+/** md(768px) 이상 — 해설 패널이 오버레이가 아니라 inline 사이드바로 열리는 구간 */
+function useTabletUp(): boolean {
+  const [tabletUp, setTabletUp] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const onChange = (e: MediaQueryListEvent) => setTabletUp(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return tabletUp
 }
 
 function ReviewProblemBody({ problem }: { problem: Problem }) {

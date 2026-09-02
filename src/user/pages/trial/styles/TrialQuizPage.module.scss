@@ -207,13 +207,11 @@
   flex: 1;
 }
 
-// 리뷰 화면 액션 푸터 — 문제 카드 아래, 풀이 화면 답안 바 자리 (오답노트: 해설 보기 · 다시 풀기)
-.reviewFooter {
+// 리뷰 화면 액션 푸터 — 답안 바(answerBar) 안의 버튼 행 (오답노트: 해설 보기 · 다시 풀기)
+.reviewFooterRow {
   display: flex;
   gap: 8px;
-  padding: 14px $space-lg calc(14px + env(safe-area-inset-bottom));
-  border-top: 1px solid $color-line;
-  background: $color-canvas;
+  width: 100%;
 }
 
 .reviewSecondary {

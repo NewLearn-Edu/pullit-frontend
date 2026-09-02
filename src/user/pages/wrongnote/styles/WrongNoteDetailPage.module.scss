@@ -158,6 +158,9 @@ $sub: #80858b;
 .cardTint {
   position: absolute;
   inset: 0;
+  // 배경 없음 — 반투명 검정 틴트는 시도 후 제거 (2026-09-02)
+  z-index: 1;
+  pointer-events: none;
   // background: linear-gradient(
   //   180deg,
   //   rgba(0, 0, 0, 0.24) 0%,
@@ -166,7 +169,6 @@ $sub: #80858b;
   //   rgba(0, 0, 0, 0) 100%
   // );
   // background: rgba(0, 0, 0, 0.12); // 단색 검정 + 오파시티 — 텍스트까지 어두워져 보류
-  pointer-events: none;
 }
 
 // 잘리는 경계만 은은하게 — 본문 대부분은 그대로 보인다
@@ -179,11 +181,13 @@ $sub: #80858b;
   // 잘림 경계를 흰색으로 — 카드 배경에 녹아든다
   background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
   pointer-events: none;
+  z-index: 2;
 }
 
 // 우상단 오답 횟수 칩
 .wrongChip {
   position: absolute;
+  z-index: 2; // 틴트·페이드 위
   top: 12px;
   right: 12px;
   padding: 6px 12px;
