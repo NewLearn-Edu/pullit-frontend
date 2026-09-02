@@ -107,7 +107,8 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}
       <Route path="/earlybird" element={<EarlybirdEntryPage />} />
-      {/* 회원 영역 — 맛보기 미완주면 /my 포함 어디든 /start 퍼널로 (RequireTrialDone) */}
+      {/* 회원 영역 — 세션 없음 → /login · 맛보기 미완주 → /start. 판정 전엔 그리지 않는다 (RequireTrialDone).
+          퍼널(/start → /trial → /trial/quiz → /weakness)·로그인·가입·정책·랜딩만 가드 밖 */}
       <Route element={<RequireTrialDone />}>
         <Route path="/home" element={<HomePage />} />
         {/* 추천 랜딩 — 알림톡 딥링크(과목 선택) · 나브 추천 버튼(?subject= 로 선택 생략) */}
@@ -120,7 +121,7 @@ export default function App() {
         <Route path="/wrong-note/:subject/units/:unitId/review/:problemId" element={<WrongNoteReviewPage />} />
         <Route path="/report" element={<ReportPage />} />
         <Route path="/my" element={<MyPage />} />
-      <Route path="/my/profile" element={<ProfileEditPage />} />
+        <Route path="/my/profile" element={<ProfileEditPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}

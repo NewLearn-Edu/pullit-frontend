@@ -33,3 +33,15 @@ export async function hasCompletedTrial(): Promise<boolean> {
     completedIn(english, TRIAL_FIXED_GROUPS.english)
   )
 }
+
+/**
+ * 완주 확정 캐시 — 한 번 "완료"로 판정된 유저(id)는 이 탭이 살아 있는 동안 재조회하지 않는다.
+ * 완주는 되돌아가지 않으므로 긍정 결과만 캐시한다 (미완은 퍼널을 끝내면 바뀌니 매번 조회).
+ * 메모리 전용 — localStorage 에 두면 서버 진실원과 어긋난 채 남을 수 있다.
+ */
+const completedUserIds = new Set<number>()
+
+export const isTrialCompletedCached = (userId: number) => completedUserIds.has(userId)
+export const markTrialCompleted = (userId: number) => {
+  completedUserIds.add(userId)
+}
