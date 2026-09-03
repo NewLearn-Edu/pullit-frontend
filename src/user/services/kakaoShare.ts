@@ -53,7 +53,7 @@ function loadSdk(): Promise<void> {
  * public/og-invite.png (1200×630 초대 배너). 카카오 feed 는 2:1 로 가운데를 크롭하므로
  * 상하 약간 잘려도 되게 콘텐츠를 중앙에 둔 이미지. prod 배포 후에야 실제로 노출된다.
  */
-const DEFAULT_THUMBNAIL = 'https://pullit.co.kr/og-invite.png'
+const DEFAULT_THUMBNAIL = 'https://www.pullit.co.kr/og-invite.png' // 서빙 도메인(www) 직접 — apex 는 301
 
 interface KakaoShareOptions {
   /** 카드 제목 (굵게, 최상단) */

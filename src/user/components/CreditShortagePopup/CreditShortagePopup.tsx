@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import coinSvg from '@/assets/coin-reward.svg'
-import { fetchInviteCode } from '@/user/api/authApi'
-import { buildInviteUrl } from '@/user/services/referral'
+import { useInviteUrl } from '@/user/hooks/useInviteUrl'
 import { InviteShareSheet } from '@/user/components/InviteShareSheet/InviteShareSheet'
 import styles from './styles/CreditShortagePopup.module.scss'
 
@@ -21,24 +20,17 @@ interface CreditShortagePopupProps {
  * 링크엔 내 초대 코드(?invite=)가 실려, 친구가 그 링크로 가입하면 크레딧 +5.
  */
 export function CreditShortagePopup({ required, onClose }: CreditShortagePopupProps) {
-  // 내 초대 코드가 실린 공유 링크 (prod 고정). 코드 조회 전엔 코드 없는 /start 로 폴백
-  const [inviteUrl, setInviteUrl] = useState<string>(() => buildInviteUrl(null))
-  const [shareOpen, setShareOpen] = useState(false)
+  // 내 초대 코드가 실린 공유 링크 — 팝업이 뜨면 조회(없으면 서버가 이때 발급). 코드 없는 링크는 절대 안 보낸다
+  const invite = useInviteUrl()
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState(false)
 
-  // 팝업이 뜨면 내 초대 코드를 받아 링크를 완성한다 (없으면 서버가 이때 발급)
-  useEffect(() => {
-    let alive = true
-    fetchInviteCode()
-      .then((code) => {
-        if (alive && code) setInviteUrl(buildInviteUrl(code))
-      })
-      .catch(() => {
-        /* 조회 실패 — 코드 없는 /start 로 유지 (공유 자체는 되게) */
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
+  const openShare = async () => {
+    setInviteError(false)
+    const url = await invite.ensure()
+    if (url) setShareUrl(url)
+    else setInviteError(true)
+  }
 
   return (
     <>
@@ -60,12 +52,17 @@ export function CreditShortagePopup({ required, onClose }: CreditShortagePopupPr
             <br />
             친구를 초대하면 크레딧을 받을 수 있어
           </p>
+          {inviteError && (
+            <p className={styles.desc} role="alert">
+              초대 링크를 불러오지 못했어. 다시 눌러줘
+            </p>
+          )}
 
           <div className={styles.actions}>
             <button type="button" onClick={onClose} className={styles.cancel}>
               취소
             </button>
-            <button type="button" onClick={() => setShareOpen(true)} className={styles.invite}>
+            <button type="button" onClick={openShare} disabled={invite.loading} className={styles.invite}>
               초대하기
             </button>
           </div>
@@ -73,7 +70,7 @@ export function CreditShortagePopup({ required, onClose }: CreditShortagePopupPr
       </div>
 
       {/* 공유 시트 — 크레딧 팝업과 형제로 띄운다 (dim 클릭 버블링으로 팝업까지 닫히지 않게) */}
-      {shareOpen && <InviteShareSheet url={inviteUrl} onClose={() => setShareOpen(false)} />}
+      {shareUrl && <InviteShareSheet url={shareUrl} onClose={() => setShareUrl(null)} />}
     </>
   )
 }

@@ -5,11 +5,11 @@ import { PageHeader } from '@/user/components/PageHeader'
 import { UserNav } from '@/user/components/UserNav'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { Skeleton } from '@/user/components/Skeleton'
+import { Toast } from '@/user/components/Toast'
 import { InviteShareSheet } from '@/user/components/InviteShareSheet/InviteShareSheet'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
-import { fetchInviteCode } from '@/user/api/authApi'
-import { buildInviteUrl } from '@/user/services/referral'
+import { useInviteUrl } from '@/user/hooks/useInviteUrl'
 import { fetchCreditTransactions, type CreditTransaction } from '@/user/api/creditApi'
 import styles from './styles/CreditHistoryPage.module.scss'
 
@@ -39,9 +39,20 @@ export default function CreditHistoryPage() {
   const [failed, setFailed] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
-  // 친구 초대 — 크레딧 부족 팝업과 같은 공유 시트 (내 초대 코드 링크)
-  const [inviteUrl, setInviteUrl] = useState<string>(() => buildInviteUrl(null))
-  const [shareOpen, setShareOpen] = useState(false)
+  // 친구 초대 — 크레딧 부족 팝업과 같은 공유 시트. 코드가 실린 링크가 준비됐을 때만 연다 (코드 없는 링크 금지)
+  const invite = useInviteUrl(sessionStatus === 'ready')
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState(false)
+  useEffect(() => {
+    if (!inviteError) return
+    const t = window.setTimeout(() => setInviteError(false), 2400)
+    return () => window.clearTimeout(t)
+  }, [inviteError])
+  const openShare = async () => {
+    const url = await invite.ensure()
+    if (url) setShareUrl(url)
+    else setInviteError(true)
+  }
 
   useEffect(() => {
     if (sessionStatus === 'anonymous') navigate('/login', {
@@ -63,11 +74,6 @@ export default function CreditHistoryPage() {
           setFailed(true)
         }
       })
-    fetchInviteCode()
-      .then((code) => {
-        if (alive && code) setInviteUrl(buildInviteUrl(code))
-      })
-      .catch(() => {})
     return () => {
       alive = false
     }
@@ -110,7 +116,7 @@ export default function CreditHistoryPage() {
               {credit ?? '—'}
               <span className={styles.heroUnit}>개</span>
             </p>
-            <button type="button" onClick={() => setShareOpen(true)} className={styles.inviteCta}>
+            <button type="button" onClick={openShare} disabled={invite.loading} className={styles.inviteCta}>
               친구 초대하고 +5 받기
             </button>
           </section>
@@ -167,7 +173,14 @@ export default function CreditHistoryPage() {
         </main>
       </div>
 
-      {shareOpen && <InviteShareSheet url={inviteUrl} onClose={() => setShareOpen(false)} />}
+      {shareUrl && <InviteShareSheet url={shareUrl} onClose={() => setShareUrl(null)} />}
+      <Toast
+        show={inviteError}
+        role="alert"
+        className="flex items-center gap-[8px] rounded-[14px] bg-[#23272b] px-[16px] py-[14px] text-[14px] font-semibold text-white shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
+      >
+        초대 링크를 불러오지 못했어. 다시 눌러줘
+      </Toast>
     </div>
   )
 }
