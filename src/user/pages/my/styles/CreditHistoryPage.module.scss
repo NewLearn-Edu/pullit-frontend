@@ -3,16 +3,15 @@
 
 // -----------------------------------------------------------------------------
 // CreditHistoryPage · 크레딧 내역 (마이페이지 › 학습 관리)
-//   회색 페이지 위 — 잔액 카드 + 날짜별 그룹 리스트 (마이페이지 카드 규격 그대로)
+//   토스 자산 내역 톤 — 큰 잔액 히어로 + 초대 CTA · 필터 칩 · 날짜 섹션 리스트 (아이콘 없이 타이포로)
 // -----------------------------------------------------------------------------
 
 $bg: #f8f8f8;
 $line: #ececec;
-$ink: #171211;
-$sub: #626262;
+$ink: #121417;
+$sub: #5e6368;
 $muted: #a6abb1;
 $plus: #ff385c;
-$minus: #2a78ff;
 
 .page {
   display: flex;
@@ -35,95 +34,121 @@ $minus: #2a78ff;
 .content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 8px 20px calc(var(--nav-bottom-h, 0px) + 40px);
+  padding: 0 0 calc(var(--nav-bottom-h, 0px) + 40px);
 }
 
-// 잔액 카드
-.balanceCard {
+// ── 잔액 히어로 ──────────────────────────────────────────────────────────────
+.hero {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px;
-  border: 1px solid $line;
-  border-radius: 16px;
-  background: $color-canvas;
+  gap: 6px;
+  padding: 28px 20px 24px;
 }
 
-.balanceLabel {
+.heroLabel {
   margin: 0;
   font-size: 14px;
   font-weight: $fw-medium;
   color: $sub;
 }
 
-.balanceValue {
+.heroValue {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 24px;
+  font-size: 36px;
   font-weight: $fw-bold;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: $ink;
   font-variant-numeric: tabular-nums;
 
   :global(svg) {
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
   }
 }
 
-.balanceHint {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: $muted;
-}
-
-// 날짜 그룹
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.groupDate {
-  margin: 0;
-  padding: 0 4px;
-  font-size: 13px;
-  font-weight: $fw-bold;
+.heroUnit {
+  font-size: 20px;
+  font-weight: $fw-semibold;
   color: $sub;
 }
 
-.groupCard {
+.inviteCta {
+  @include button-reset;
+  @include flex-center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff1f2;
+  font-size: 13px;
+  font-weight: $fw-semibold;
+  color: $plus;
+  transition: background 150ms ease;
+
+  @include hover { background: #ffe1e5; }
+}
+
+// ── 필터 칩 ──────────────────────────────────────────────────────────────────
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 4px 20px 12px;
+}
+
+.chip {
+  @include button-reset;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #ededf0;
+  font-size: 14px;
+  font-weight: $fw-semibold;
+  color: $sub;
+  transition: background 150ms ease, color 150ms ease;
+
+  @include hover { background: #e3e4e8; }
+}
+
+.chipActive {
+  background: $ink;
+  color: #fff;
+
+  @include hover { background: $ink; }
+}
+
+// ── 리스트 ───────────────────────────────────────────────────────────────────
+.list {
   display: flex;
   flex-direction: column;
-  padding: 4px 16px;
-  border: 1px solid $line;
-  border-radius: 16px;
   background: $color-canvas;
+  border-top: 1px solid $line;
+  border-bottom: 1px solid $line;
+
+  @include desktop-up {
+    border: 1px solid $line;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+}
+
+.dateHead {
+  margin: 0;
+  padding: 18px 20px 6px;
+  font-size: 13px;
+  font-weight: $fw-semibold;
+  color: $muted;
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid $line;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.rowIcon {
-  @include flex-center;
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: #f0f1f3;
-  font-size: 16px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
 }
 
 .rowMain {
@@ -131,12 +156,12 @@ $minus: #2a78ff;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .rowTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: $fw-semibold;
   color: $ink;
   word-break: keep-all;
@@ -144,24 +169,18 @@ $minus: #2a78ff;
 
 .rowSub {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: $muted;
   font-variant-numeric: tabular-nums;
 }
 
-.rowAmounts {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-}
-
 .amount {
+  flex: none;
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: $fw-bold;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   color: $ink;
 }
 
@@ -169,27 +188,13 @@ $minus: #2a78ff;
   color: $plus;
 }
 
-.amountMinus {
-  color: $minus;
-}
-
-.after {
-  margin: 0;
-  font-size: 12px;
-  color: $muted;
-  font-variant-numeric: tabular-nums;
-}
-
-// 빈 상태 · 에러
+// ── 빈 상태 · 스켈레톤 ───────────────────────────────────────────────────────
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 56px 20px;
-  border: 1px solid $line;
-  border-radius: 16px;
-  background: $color-canvas;
+  gap: 6px;
+  padding: 64px 20px;
   text-align: center;
 }
 
@@ -208,12 +213,12 @@ $minus: #2a78ff;
   word-break: keep-all;
 }
 
-.skeletonCard {
+.skeleton {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 16px;
-  border: 1px solid $line;
-  border-radius: 16px;
+  gap: 18px;
+  padding: 20px;
   background: $color-canvas;
+  border-top: 1px solid $line;
+  border-bottom: 1px solid $line;
 }
