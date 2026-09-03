@@ -392,7 +392,8 @@ export default function SignupInfoPage() {
   // 애플 가입자는 이름 수정 불가 (Apple 정책 — SSO 가 내려준 이름 사용). 애플이 이름을
   // 안 준 예외(재가입 등, name 빈값)에는 잠그지 않아 사용자가 직접 입력할 수 있게 둔다
   const nameLocked = provider === 'APPLE' && name.trim().length > 0
-  const phoneValid = /^01[0-9]-\d{3,4}-\d{4}$/.test(phone)
+  // 999 국번은 실존하지 않는 앱스토어 심사용 번호(999-0000-0000) — 서버 검증(DTO @Pattern)과 동일하게 허용
+  const phoneValid = /^(01[0-9]|999)-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
   const under14 = birthValid && koreanAge(birthDate) < 14
   /** 필수 동의 3종 체크 여부 — 버튼 라벨(시작하기 vs 동의하고 시작하기) 분기용 */

@@ -128,6 +128,7 @@ $sub: #80858b;
 .cardPreview {
   @include button-reset;
   position: relative;
+  isolation: isolate; // 안쪽 틴트·페이드·칩 z-index 를 카드 안에 가둔다
   display: block;
   width: 100%;
   height: 168px;
@@ -282,6 +283,7 @@ $sub: #80858b;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 30; // 카드 안 페이드·칩(z-index 1~2)이 위로 올라오지 않게
   min-width: 350px; // 최소 지원 폭 — fixed 는 body min-width 를 안 따라감
   display: flex;
   justify-content: center;
