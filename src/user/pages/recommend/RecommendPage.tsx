@@ -32,6 +32,7 @@ export default function RecommendPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionStatus = useUserStore((s) => s.status)
+  const hasMe = useUserStore((s) => !!s.me)
 
   const raw = searchParams.get('subject')
   const subject: Subject | null = raw === 'math' || raw === 'english' ? raw : null
@@ -48,9 +49,12 @@ export default function RecommendPage() {
   const closeToHome = () => navigate('/home', { replace: true })
 
   // ── 추천 리빌 ──────────────────────────────────────────────────────────────
-  // 세션이 준비돼야 진단 기록·크레딧을 함께 읽을 수 있다
+  // 세션이 준비돼야 진단 기록·크레딧을 함께 읽을 수 있다.
+  // 스피너는 me 가 아직 없을 때만 — status 만 보면 loadMe(true) 잔액 재조회(크레딧 부족 팝업·보상 지급)
+  // 마다 status 가 loading 으로 튀어 리빌이 언마운트→재마운트되고, 팝업이 사라지며 스캔 연출이
+  // 처음부터 다시 돈다 (2026-09-03 무한 반복 버그). me 가 있으면 갱신 중에도 화면을 유지한다
   if (subject) {
-    if (sessionStatus !== 'ready') {
+    if (sessionStatus !== 'ready' && !hasMe) {
       return (
         <div className={styles.page}>
           <OnboardingHeader onClose={closeToHome} />
