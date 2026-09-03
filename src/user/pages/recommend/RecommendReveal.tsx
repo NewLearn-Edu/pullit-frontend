@@ -907,18 +907,17 @@ function UnitCard({
           </span>
         )}
       </div>
-      {/* 마스터 카드(2246-6010 · 3631-9044 캔버스): 진단 = 점수, 순서 잠김 = "미진단" 필,
-          다음 차례·집힌 미진단 = "진단하기" 필. 자물쇠 표기는 폐지 */}
+      {/* 마스터 카드(2246-6010 · 3589-6552 캔버스): 진단 = 점수, 그 외(순서 잠김·다음 차례·집힌 카드)는
+          전부 "미진단" 필 — 캔버스는 현황판이라 행동 유도("진단하기")는 아래 CTA 버튼 한 곳에서만 (2026-09-03).
+          자물쇠 표기는 폐지 */}
       {revealed &&
         (done ? (
           // 애니메이션 캔버스에는 셰브런 없이 점수만 (3681-8056) — 셰브런은 홈 리스트 전용
           <span className={clsx(styles.cardCheck, row.diagnosis?.weak && styles.cardCheckWeak)}>
             {row.diagnosis?.score}점
           </span>
-        ) : locked && !marked ? (
-          <span className={styles.cardStatePill}>미진단</span>
         ) : (
-          <span className={styles.cardPill}>진단하기</span>
+          <span className={styles.cardStatePill}>미진단</span>
         ))}
     </div>
   )
