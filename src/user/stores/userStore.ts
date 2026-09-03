@@ -73,7 +73,11 @@ export const useUserStore = create<UserState>((set, get) => ({
       return Promise.resolve(null)
     }
     if (loadPromise) return loadPromise
-    set({ status: 'loading' })
+    // 이미 me 를 확보한 뒤의 강제 재조회(잔액 갱신 등)는 조용히 — status 를 loading 으로 되돌리면
+    // RequireTrialDone 가드가 페이지 트리를 통째로 언마운트해 추천 리빌 연출이 처음부터 재시작되고
+    // 시작 시트·크레딧 부족 팝업 state 가 날아간다 (2026-09-03)
+    const silent = force && get().status === 'ready' && !!get().me
+    if (!silent) set({ status: 'loading' })
     loadPromise = probeSession()
       .then(({ me, unauthorized }) => {
         if (me) setSessionHint()
