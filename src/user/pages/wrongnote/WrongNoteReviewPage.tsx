@@ -84,6 +84,7 @@ export default function WrongNoteReviewPage() {
       unitLabel={`${subject === 'english' ? '영어' : '수학'} · ${row.name}`}
       answerNo={answerNo}
       serverExplanation={item.explanation ?? null}
+      serverTranslation={item.translation ?? null}
       myChoice={null}
       initialExplainOpen={false}
       onClose={() => navigate(listPath)}

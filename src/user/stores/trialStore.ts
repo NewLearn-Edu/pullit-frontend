@@ -22,6 +22,8 @@ export interface QuizItemResult {
    * 있으면 목 데이터 해설 대신 이걸 보여준다 (어드민 검수 화면과 같은 조판).
    */
   serverExplanation?: string | null
+  /** 서버 지문 해석(영어) — 해설 패널 "해석" 탭 */
+  serverTranslation?: string | null
 }
 
 interface TrialState {

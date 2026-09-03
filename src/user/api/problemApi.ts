@@ -59,6 +59,8 @@ export interface TrialProblemSetItem extends ProblemSetItem {
   answerValue: number | null
   answerText: string | null
   explanation: string | null
+  /** 영어 지문 해석 블록(JSON 문자열) — 없으면 null */
+  translation: string | null
 }
 
 /**

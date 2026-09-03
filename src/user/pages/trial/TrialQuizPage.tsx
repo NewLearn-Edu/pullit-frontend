@@ -337,6 +337,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
           serverCorrect: res.isCorrect,
           serverAnswerNo: res.answerIndex ?? res.answerValue,
           serverExplanation: res.explanation,
+          serverTranslation: res.translation,
           earnedPoints: rescored.earnedPoints,
           timeoverFlag: rescored.timeoverFlag,
         })

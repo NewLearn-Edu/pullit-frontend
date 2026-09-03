@@ -164,6 +164,8 @@ export interface ProblemDetail {
   answerValue: number | null
   answerText: string
   explanation: string
+  /** 영어 지문 해석 블록 JSON 문자열 — 없으면 null */
+  translation: string | null
   difficulty: Difficulty | null
   status: ProblemStatus
   /** 용어 주석 — 순서 보존 배열 (문제 생성 정책 §2) */

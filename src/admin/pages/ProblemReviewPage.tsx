@@ -6,7 +6,7 @@ import {
   MathExplainRender,
   MathProblemRender,
 } from '@/shared/components/ExamRender'
-import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { ProblemExplain, ProblemTranslation, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -267,6 +267,16 @@ function ReviewPreview({
         <div className="pv-explain-body">
           <ProblemExplain explanation={problem.explanation} subject={subject} />
         </div>
+        {parseTranslationParagraphs(problem.translation) && (
+          <>
+            <p className="pv-label" style={{ marginTop: 20 }}>
+              해석
+            </p>
+            <div className="pv-explain-body">
+              <ProblemTranslation translation={problem.translation as string | unknown[]} />
+            </div>
+          </>
+        )}
         </ExamScaleFrame>
       </div>
     </div>

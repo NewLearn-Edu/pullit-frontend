@@ -53,3 +53,48 @@ export function ProblemExplain({
   const text = typeof explanation === 'string' && explanation.trim() ? explanation : emptyText
   return <Render text={text} />
 }
+
+/**
+ * 지문 해석(영어) 블록 파싱 — 원본은 [{text}] (type 없음) 또는 [{type:'paragraph', text}] 배열,
+ * 서버에서는 그 JSON 문자열. 문단 텍스트 배열로 정규화한다. 해석이 없으면 null.
+ */
+export function parseTranslationParagraphs(raw: unknown): string[] | null {
+  let value: unknown = raw
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim()
+    if (!trimmed) return null
+    if (!trimmed.startsWith('[')) return [trimmed]
+    try {
+      value = JSON.parse(trimmed)
+    } catch {
+      return [trimmed]
+    }
+  }
+  if (!Array.isArray(value)) return null
+  const paragraphs = value
+    .map((b) => (typeof b === 'string' ? b : b && typeof b === 'object' ? (b as { text?: unknown }).text : null))
+    .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+  return paragraphs.length > 0 ? paragraphs : null
+}
+
+/**
+ * 지문 해석 렌더 — 문단 하나씩 해설과 같은 조판(밑줄 <u> 보존 · HTML 이스케이프)으로 그린다.
+ * 어드민 미리보기와 학생 해설 패널 "해석" 탭이 같은 컴포넌트를 쓴다.
+ */
+export function ProblemTranslation({
+  translation,
+  emptyText = '해석이 없어요',
+}: {
+  translation: string | unknown[] | null | undefined
+  emptyText?: string
+}) {
+  const paragraphs = parseTranslationParagraphs(translation)
+  if (!paragraphs) return <EnglishExplainRender text={emptyText} />
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {paragraphs.map((text, i) => (
+        <EnglishExplainRender key={i} text={text} />
+      ))}
+    </div>
+  )
+}

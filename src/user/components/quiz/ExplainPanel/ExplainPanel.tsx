@@ -1,8 +1,13 @@
 import { clsx } from 'clsx'
-import { useRef, type Ref } from 'react'
+import { useEffect, useRef, useState, type Ref } from 'react'
 import type { Problem } from '@/user/data/mockProblems'
 import { MathExplainRender } from '@/shared/components/ExamRender'
-import { ProblemExplain, parseExplainBlocks } from '@/shared/components/ProblemExplain'
+import {
+  ProblemExplain,
+  ProblemTranslation,
+  parseExplainBlocks,
+  parseTranslationParagraphs,
+} from '@/shared/components/ProblemExplain'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import type { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
 import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
@@ -29,6 +34,8 @@ interface ExplainPanelProps {
   answerNo?: number | null
   /** 서버가 내려준 해설 — 있으면 목 데이터 대신 이걸 어드민과 같은 조판으로 렌더 */
   serverExplanation?: string | null
+  /** 서버가 내려준 지문 해석(영어) — 있으면 "해석 / 풀이" 두 탭, 없으면 해설 단일 뷰 */
+  serverTranslation?: string | null
   revealed: boolean
   /** md+ 에서 사용자가 divider 로 조절한 폭 (px) */
   width: number
@@ -38,9 +45,13 @@ interface ExplainPanelProps {
   drawing?: ExplainDrawing
 }
 
+type ExplainTab = 'translation' | 'explain'
+
 /**
- * 우측 사이드 패널 — 해설 단일 뷰 (2026-08-26 탭 제거).
- * 본문에 "정답" · "해설" 섹션 타이틀을 두고 위→아래로 읽는다 (어드민 pv-label 구성과 동일).
+ * 우측 사이드 패널 — 해설 뷰.
+ * 영어처럼 지문 해석이 있으면 헤더에 "해석 / 풀이" 탭 (2026-09-03) — 해석 탭은 지문 번역 문단,
+ * 풀이 탭은 "정답" · "해설" 섹션. 해석이 없으면(수학) 탭 없이 해설 단일 뷰.
+ * 필기 캔버스는 탭마다 따로 저장한다 (target: translation / explanation).
  * - 데스크탑 · 태블릿 (md+): inline 사이드바 · 문제 카드를 밀어내며 나타남 (width transition)
  * - 모바일 (< md): 전체 화면 슬라이드 인 · overlay backdrop
  * revealed=false 이면 블러 처리 (답 선택 안 한 상태에서 잠깐 노출된 케이스)
@@ -51,11 +62,23 @@ export function ExplainPanel({
   problem,
   answerNo,
   serverExplanation,
+  serverTranslation,
   revealed,
   width,
   resizing,
   drawing,
 }: ExplainPanelProps) {
+  // 해석 — 서버 응답 우선, 없으면 세트 문항에 실려 온 값. 문단으로 해석되지 않으면 탭을 만들지 않는다
+  const translation = serverTranslation ?? problem.translation ?? null
+  const hasTranslation = problem.subject === 'english' && parseTranslationParagraphs(translation) !== null
+  const problemKey = problem.serverId ?? String(problem.id)
+  // 탭 — 해석이 있으면 해석부터 (지문을 이해한 뒤 풀이). 문제가 바뀌면 다시 첫 탭으로
+  const [tab, setTab] = useState<ExplainTab>(hasTranslation ? 'translation' : 'explain')
+  useEffect(() => {
+    setTab(hasTranslation ? 'translation' : 'explain')
+  }, [problemKey, hasTranslation])
+  const activeTab: ExplainTab = hasTranslation ? tab : 'explain'
+
   // 정답 표시 — 객관식은 원문자, 주관식은 값 그대로. 확인 불가(-)는 서버 응답 전
   const resolvedAnswer = answerNo ?? (problem.answer !== 0 ? problem.answer : null)
   const isShortAnswer = problem.choices.length === 0
@@ -97,8 +120,28 @@ export function ExplainPanel({
       >
         <div className={styles.inner} style={{ '--pw': `${width}px` } as React.CSSProperties}>
           <div className={styles.header}>
-            <div className={styles.tabs}>
-              <span className={clsx(styles.tabButton, styles.tabButtonActive)}>해설</span>
+            <div className={styles.tabs} role={hasTranslation ? 'tablist' : undefined}>
+              {hasTranslation ? (
+                (
+                  [
+                    ['translation', '해석'],
+                    ['explain', '풀이'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === key}
+                    onClick={() => setTab(key)}
+                    className={clsx(styles.tabButton, activeTab === key && styles.tabButtonActive)}
+                  >
+                    {label}
+                  </button>
+                ))
+              ) : (
+                <span className={clsx(styles.tabButton, styles.tabButtonActive)}>해설</span>
+              )}
             </div>
             <button
               type="button"
@@ -117,6 +160,16 @@ export function ExplainPanel({
             {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
             <ExamScaleFrame>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
+              {activeTab === 'translation' ? (
+                <>
+                  {/* 해석 탭 — 지문 번역 문단 (밑줄 <u> 는 지문과 같은 위치에 보존) */}
+                  <p className={styles.answerLabel}>해석</p>
+                  <div style={{ marginTop: 12 }} className={styles.sections}>
+                    <ProblemTranslation translation={translation} />
+                  </div>
+                </>
+              ) : (
+              <>
               {/* 정답 — 어드민 pv-label 구성과 동일하게 타이틀 + 값 */}
               <p className={styles.answerLabel}>정답</p>
               <p className={styles.answerValue}>{answerDisplay}</p>
@@ -154,6 +207,8 @@ export function ExplainPanel({
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
             </ExamScaleFrame>
 
@@ -162,14 +217,13 @@ export function ExplainPanel({
                 className={styles.drawOverlay}
                 onPointerDownCapture={drawing.onActivate}
               >
-                {/* 해설 필기 — 문제 코드별 explanation.pnk 로 저장·복원 (문제가 바뀌면 새로 마운트).
-                    영어 해설/번역 탭이 생기면 탭마다 캔버스를 따로 두고 번역 탭은 target="translation"
-                    (key 에 탭도 포함해 탭 전환 때 저장·복원되게) */}
+                {/* 탭별 필기 — 풀이 탭은 explanation.pnk, 해석 탭은 translation.pnk.
+                    key 에 탭을 넣어 탭 전환 때 이전 탭 필기를 저장하고 새 탭 필기를 복원한다 */}
                 <ProblemNoteCanvas
-                  key={problem.serverId ?? problem.id}
+                  key={`${problemKey}:${activeTab}`}
                   ref={drawing.canvasRef}
                   problemCode={problem.serverId}
-                  target="explanation"
+                  target={activeTab === 'translation' ? 'translation' : 'explanation'}
                   tool={drawing.tool}
                   color={drawing.color}
                   size={drawing.size}

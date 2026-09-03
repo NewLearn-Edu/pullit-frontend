@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
-import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { ProblemExplain, ProblemTranslation } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
@@ -529,6 +529,14 @@ export default function ProblemListPage() {
                   <div className="pv-explain-body">
                     <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
                   </div>
+                  {detail.translation && (
+                    <>
+                      <p className="pv-label" style={{ marginTop: 20 }}>해석</p>
+                      <div className="pv-explain-body">
+                        <ProblemTranslation translation={detail.translation} />
+                      </div>
+                    </>
+                  )}
                   </ExamScaleFrame>
                 </div>
               </div>

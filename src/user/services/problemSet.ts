@@ -96,6 +96,7 @@ function toQuizProblem(
     answer: localAnswer ?? 0,
     // 맛보기는 서버 해설을 로컬로 — 은행 문항은 제출 응답(serverExplanation)으로 채워진다
     explanation: { intent: '', correctAnalysis: withAnswer.explanation ?? '' },
+    translation: withAnswer.translation ?? null,
   }
 }
 

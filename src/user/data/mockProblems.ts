@@ -27,6 +27,8 @@ export interface Problem {
   answer: number // 객관식 1-5 · 주관식은 정답값 자체 (음수 가능)
   /** 용어 주석 [{term, meaning}] — 서버 문항(주로 영어)만. 지문 하단 "* 단어: 뜻" 렌더링 */
   glossary?: { term: string; meaning: string }[]
+  /** 영어 지문 해석 — [{text}] 블록 배열 JSON 문자열. 서버 문항(맛보기·세트)만, 수학은 없음 */
+  translation?: string | null
   explanation: {
     intent: string
     correctAnalysis: string

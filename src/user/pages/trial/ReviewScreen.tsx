@@ -23,6 +23,8 @@ interface ReviewScreenProps {
   answerNo: number | null
   /** 서버 해설 (블록 직렬화) — 없으면 목 데이터 해설 */
   serverExplanation: string | null
+  /** 서버 지문 해석(영어, 블록 직렬화) — 있으면 해설 패널에 "해석" 탭이 생긴다 */
+  serverTranslation?: string | null
   /** 내가 고른 선지 — 오답 선지를 빨갛게. 기록이 없으면 null */
   myChoice: number | null
   /** 문제 헤더 우측 슬롯 — 권장 시간·내가 푼 시간 등 (없으면 비움) */
@@ -49,6 +51,7 @@ export function ReviewScreen({
   unitLabel,
   answerNo,
   serverExplanation,
+  serverTranslation = null,
   myChoice,
   headerMeta,
   initialExplainOpen = true,
@@ -224,6 +227,7 @@ export function ReviewScreen({
           problem={problem}
           answerNo={answerNo}
           serverExplanation={serverExplanation}
+          serverTranslation={serverTranslation}
           revealed
           width={panelWidth}
           resizing={resizing}

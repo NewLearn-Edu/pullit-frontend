@@ -24,6 +24,8 @@ export interface AttemptSubmitResponse {
   answerValue: number | null
   answerText: string | null
   explanation: string | null
+  /** 영어 지문 해석 블록(JSON 문자열) — 해설 패널 "해석" 탭. 수학은 null */
+  translation: string | null
   /** 이 제출로 실제 지급된 보상 (null = 없음) — TRIAL_FIRST_CLEAR 면 첫 진단 축하 시트 신호 */
   grantedReward: 'TRIAL_FIRST_CLEAR' | null
   /** 이 제출로 세트가 완료되며 일어난 난이도 레벨 변동 (null = 없음) */
@@ -64,6 +66,8 @@ export interface WrongNoteItem {
   answerValue: number | null
   answerText: string | null
   explanation: string | null
+  /** 영어 지문 해석 블록(JSON 문자열) — 해설 패널 "해석" 탭. 수학은 null */
+  translation: string | null
   wrongCount: number
   lastWrongAt: string
 }
