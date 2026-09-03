@@ -10,6 +10,7 @@ import {
 } from '@/shared/components/ExamRender'
 import { MathExplainKatexRender } from '@/shared/components/ExamRender'
 import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
+import { ProblemTranslation, ProblemVocabulary, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -639,6 +640,23 @@ export default function ProblemUploadPage() {
                           <ExplainRender text={dupItem.explanation || '해설이 없어요'} />
                         )}
                       </div>
+                      {/* 어휘·해석 (영어 완성본 2026-09-03) — 해설 아래, 학생 화면 풀이 탭·해석 탭과 같은 렌더러 */}
+                      {Array.isArray(dupItem?.vocabulary) && dupItem.vocabulary.length > 0 && (
+                        <>
+                          <p className="pv-label" style={{ marginTop: 16 }}>어휘</p>
+                          <div className="pv-explain-body">
+                            <ProblemVocabulary items={dupItem.vocabulary} />
+                          </div>
+                        </>
+                      )}
+                      {parseTranslationParagraphs(dupItem?.translation) && (
+                        <>
+                          <p className="pv-label" style={{ marginTop: 16 }}>해석</p>
+                          <div className="pv-explain-body">
+                            <ProblemTranslation translation={dupItem.translation as string | unknown[]} />
+                          </div>
+                        </>
+                      )}
                       </ExamScaleFrame>
                     </>
                   )}
@@ -787,6 +805,23 @@ export default function ProblemUploadPage() {
                     <ExplainRender text={item?.explanation || '해설이 없어요'} />
                   )}
                 </div>
+                {/* 어휘·해석 (영어 완성본 2026-09-03) — 해설 아래, 학생 화면 풀이 탭·해석 탭과 같은 렌더러 */}
+                {Array.isArray(item?.vocabulary) && item.vocabulary.length > 0 && (
+                  <>
+                    <p className="pv-label" style={{ marginTop: 20 }}>어휘</p>
+                    <div className="pv-explain-body">
+                      <ProblemVocabulary items={item.vocabulary} />
+                    </div>
+                  </>
+                )}
+                {parseTranslationParagraphs(item?.translation) && (
+                  <>
+                    <p className="pv-label" style={{ marginTop: 20 }}>해석</p>
+                    <div className="pv-explain-body">
+                      <ProblemTranslation translation={item.translation as string | unknown[]} />
+                    </div>
+                  </>
+                )}
                 </ExamScaleFrame>
               </div>
             </div>

@@ -6,7 +6,7 @@ import {
   MathExplainRender,
   MathProblemRender,
 } from '@/shared/components/ExamRender'
-import { ProblemExplain, ProblemTranslation, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
+import { ProblemExplain, ProblemTranslation, ProblemVocabulary, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -267,6 +267,16 @@ function ReviewPreview({
         <div className="pv-explain-body">
           <ProblemExplain explanation={problem.explanation} subject={subject} />
         </div>
+        {Array.isArray(problem.vocabulary) && problem.vocabulary.length > 0 && (
+          <>
+            <p className="pv-label" style={{ marginTop: 20 }}>
+              어휘
+            </p>
+            <div className="pv-explain-body">
+              <ProblemVocabulary items={problem.vocabulary as { term: string; meaning: string }[]} />
+            </div>
+          </>
+        )}
         {parseTranslationParagraphs(problem.translation) && (
           <>
             <p className="pv-label" style={{ marginTop: 20 }}>

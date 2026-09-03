@@ -5,6 +5,7 @@ import { MathExplainRender } from '@/shared/components/ExamRender'
 import {
   ProblemExplain,
   ProblemTranslation,
+  ProblemVocabulary,
   parseExplainBlocks,
   parseTranslationParagraphs,
 } from '@/shared/components/ProblemExplain'
@@ -36,6 +37,8 @@ interface ExplainPanelProps {
   serverExplanation?: string | null
   /** 서버가 내려준 지문 해석(영어) — 있으면 "해석 / 풀이" 두 탭, 없으면 해설 단일 뷰 */
   serverTranslation?: string | null
+  /** 서버가 내려준 어휘(영어) — 풀이 탭 해설 아래 "어휘" 목록 */
+  serverVocabulary?: { term: string; meaning: string }[] | null
   revealed: boolean
   /** md+ 에서 사용자가 divider 로 조절한 폭 (px) */
   width: number
@@ -63,6 +66,7 @@ export function ExplainPanel({
   answerNo,
   serverExplanation,
   serverTranslation,
+  serverVocabulary,
   revealed,
   width,
   resizing,
@@ -70,6 +74,7 @@ export function ExplainPanel({
 }: ExplainPanelProps) {
   // 해석 — 서버 응답 우선, 없으면 세트 문항에 실려 온 값. 문단으로 해석되지 않으면 탭을 만들지 않는다
   const translation = serverTranslation ?? problem.translation ?? null
+  const vocabulary = serverVocabulary?.length ? serverVocabulary : problem.vocabulary?.length ? problem.vocabulary : null
   const hasTranslation = problem.subject === 'english' && parseTranslationParagraphs(translation) !== null
   const problemKey = problem.serverId ?? String(problem.id)
   // 탭 — 해석이 있으면 해석부터 (지문을 이해한 뒤 풀이). 문제가 바뀌면 다시 첫 탭으로
@@ -207,6 +212,18 @@ export function ExplainPanel({
                   </div>
                 )}
               </div>
+
+              {/* 어휘 — 영어 지문 핵심 단어 (풀이 탭 하단) */}
+              {vocabulary && (
+                <>
+                  <p className={styles.answerLabel} style={{ marginTop: 28 }}>
+                    어휘
+                  </p>
+                  <div style={{ marginTop: 12 }} className={styles.sections}>
+                    <ProblemVocabulary items={vocabulary} />
+                  </div>
+                </>
+              )}
               </>
               )}
             </div>

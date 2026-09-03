@@ -82,6 +82,7 @@ export default function TrialReviewPage() {
       answerNo={answerNo}
       serverExplanation={myResult?.serverExplanation ?? null}
       serverTranslation={myResult?.serverTranslation ?? problem.translation ?? null}
+      serverVocabulary={myResult?.serverVocabulary ?? problem.vocabulary ?? null}
       myChoice={myResult?.selectedChoice ?? null}
       onClose={() => navigate('/weakness')}
       headerMeta={

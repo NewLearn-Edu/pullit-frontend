@@ -29,6 +29,8 @@ export interface Problem {
   glossary?: { term: string; meaning: string }[]
   /** 영어 지문 해석 — [{text}] 블록 배열 JSON 문자열. 서버 문항(맛보기·세트)만, 수학은 없음 */
   translation?: string | null
+  /** 영어 어휘 [{term, meaning}] — 풀이 탭 하단 "어휘" */
+  vocabulary?: { term: string; meaning: string }[]
   explanation: {
     intent: string
     correctAnalysis: string

@@ -24,6 +24,8 @@ export interface QuizItemResult {
   serverExplanation?: string | null
   /** 서버 지문 해석(영어) — 해설 패널 "해석" 탭 */
   serverTranslation?: string | null
+  /** 서버 어휘 [{term, meaning}] — 풀이 탭 하단 */
+  serverVocabulary?: { term: string; meaning: string }[]
 }
 
 interface TrialState {

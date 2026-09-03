@@ -98,3 +98,23 @@ export function ProblemTranslation({
     </div>
   )
 }
+
+/**
+ * 어휘 목록 (영어) — 풀이 탭·어드민 미리보기 하단 "어휘". term 은 원문 서체, meaning 은 한국어.
+ * 비어 있으면 아무것도 그리지 않는다 (섹션 타이틀은 호출부가 조건부로).
+ */
+export function ProblemVocabulary({ items }: { items: { term: string; meaning: string }[] | null | undefined }) {
+  if (!items || items.length === 0) return null
+  return (
+    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {items.map((v, i) => (
+        <li key={`${v.term}-${i}`} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+          <span lang="en" style={{ fontWeight: 700, flex: 'none' }}>
+            {v.term}
+          </span>
+          <span>{v.meaning}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}

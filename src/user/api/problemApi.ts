@@ -61,6 +61,8 @@ export interface TrialProblemSetItem extends ProblemSetItem {
   explanation: string | null
   /** 영어 지문 해석 블록(JSON 문자열) — 없으면 null */
   translation: string | null
+  /** 영어 어휘 [{term, meaning}] — 없으면 빈 배열 */
+  vocabulary: GlossaryEntry[]
 }
 
 /**

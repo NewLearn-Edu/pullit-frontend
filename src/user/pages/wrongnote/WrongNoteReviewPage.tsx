@@ -85,6 +85,7 @@ export default function WrongNoteReviewPage() {
       answerNo={answerNo}
       serverExplanation={item.explanation ?? null}
       serverTranslation={item.translation ?? null}
+      serverVocabulary={item.vocabulary ?? null}
       myChoice={null}
       initialExplainOpen={false}
       onClose={() => navigate(listPath)}

@@ -29,6 +29,8 @@ export interface ReviewProblem {
   explanation?: string | ExplainBlock[]
   /** 영어 지문 해석 — 문단 배열 또는 직렬화 문자열 (해설 패널 "해석" 탭 · 수학은 없음) */
   translation?: string | unknown[] | null
+  /** 영어 어휘 [{term, meaning}] — 없으면 undefined */
+  vocabulary?: { term: string; meaning: string }[] | null
   difficulty?: string | null
   score?: number
   recommended_time_sec?: number
