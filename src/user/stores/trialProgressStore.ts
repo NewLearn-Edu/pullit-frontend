@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { CURRICULUM, type CurriculumCategory, type CurriculumUnit } from '@/user/data/curriculum'
-import { fetchTrialDiagnoses, type TrialDiagnosisItem } from '@/user/api/attemptApi'
+import { fetchSkillScores, fetchTrialDiagnoses, type TrialDiagnosisItem } from '@/user/api/attemptApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useUserStore } from '@/user/stores/userStore'
 
@@ -81,8 +81,10 @@ export interface UnitDiagnosis {
   score: number
   /** 서버 WEAK_THRESHOLD(70) 미만 */
   weak: boolean
-  /** 리스트 메타 표기용 */
+  /** 리스트 메타 표기용 — 서버 skill-scores 가 있으면 이 단원 풀이 전체(RETRY 제외) 시간, 없으면 진단 세트 시간 */
   minutes: number
+  /** 이 단원에서 푼 문제 수(RETRY 제외) — 서버 skill-scores 기준. 없으면 진단 세트 문항 수로 폴백 */
+  solved?: number
   correct: number
   /** 진단일 (YYYY-MM-DD) */
   date: string
@@ -192,9 +194,12 @@ export const useTrialProgressStore = create<TrialProgressState>()(
         if (!useUserStore.getState().me) return
         // 미전송 풀이를 먼저 반영 — 방금 푼 진단이 서버에 도착하기 전에 폐기되는 역전 방지
         await flushAttemptQueue().catch(() => {})
-        const [math, english] = await Promise.all([
+        const [math, english, mathScores, englishScores] = await Promise.all([
           fetchTrialDiagnoses('math').catch(() => null),
           fetchTrialDiagnoses('english').catch(() => null),
+          // 라이브 점수·푼 문제 수·시간 — 진단 이후 자유·추천 풀이까지 반영된 값 (RETRY 제외)
+          fetchSkillScores('math').catch(() => null),
+          fetchSkillScores('english').catch(() => null),
         ])
         if (math === null && english === null) return
         const server: Record<string, UnitDiagnosis> = {}
@@ -211,6 +216,17 @@ export const useTrialProgressStore = create<TrialProgressState>()(
             // 서버 문항별 결과 우선 — 없으면(구버전 서버·복원 불가) 로컬 박제분 승계
             items: toDiagnosisItems(d.items) ?? get().diagnosed[unitName]?.items,
           }
+        }
+        // 진단 완료 단원의 점수·푼 문제 수·시간은 라이브 집계(skill-scores)로 덮어쓴다 —
+        // 진단 세트 한 번의 기록이 아니라 이후 자유·추천 풀이까지 누적된 현재 값 (2026-09-03)
+        for (const sc of [...(mathScores ?? []), ...(englishScores ?? [])]) {
+          const unitName = UNIT_NAME_BY_GROUP[sc.unitCode]
+          const diag = unitName ? server[unitName] : undefined
+          if (!diag) continue
+          diag.score = sc.score
+          diag.weak = sc.weak
+          diag.solved = sc.attemptCount
+          diag.minutes = sc.timeSpentMs > 0 ? Math.max(1, Math.round(sc.timeSpentMs / 60000)) : diag.minutes
         }
         set((s) => {
           // 조회 실패 과목·커리큘럼 밖 항목만 로컬 보존 — 성공 과목은 서버 목록으로 대체

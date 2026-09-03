@@ -98,10 +98,16 @@ export async function restoreWrongNote(problemId: string): Promise<void> {
 export interface SkillScore {
   skillNode: string
   unitLarge: string | null
+  /** 소단원 코드 — 커리큘럼 행과 매칭하는 키 (명칭 정규화 불필요) */
+  unitCode: string
   earnedPoints: number
   totalPoints: number
   score: number
   weak: boolean
+  /** 푼 문제 수 (RETRY 제외) — 홈 소단원 카드 "푼 문제 수" */
+  attemptCount: number
+  /** 이 단원 풀이에 쓴 시간 합(ms, RETRY 제외) — 홈 소단원 카드 시간 */
+  timeSpentMs: number
 }
 
 export async function fetchSkillScores(subject: 'math' | 'english'): Promise<SkillScore[]> {

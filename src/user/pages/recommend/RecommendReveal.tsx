@@ -903,7 +903,7 @@ function UnitCard({
         {/* 메타는 집힌 카드에서만 — 축소판에서는 읽히지도 않으면서 줄만 늘린다 */}
         {marked && row.diagnosis && (
           <span className={styles.cardMeta}>
-            푼 문제 수 {row.diagnosis.items?.length ?? SET_SIZE}개 · {row.diagnosis.minutes}분
+            푼 문제 수 {row.diagnosis.solved ?? row.diagnosis.items?.length ?? SET_SIZE}개 · {row.diagnosis.minutes}분
           </span>
         )}
       </div>

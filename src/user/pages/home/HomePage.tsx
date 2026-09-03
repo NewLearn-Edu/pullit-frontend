@@ -346,7 +346,8 @@ export default function HomePage() {
                 }
                 if (row.diagnosis) {
                   // 진단 완료 — 흰 카드 · 메타 · 점수 + 셰브런 (상세 시트)
-                  const total = row.diagnosis.items?.length ?? SET_SIZE
+                  // 푼 문제 수 — 라이브 집계(skill-scores) 우선, 없으면 진단 세트 문항 수
+                  const total = row.diagnosis.solved ?? row.diagnosis.items?.length ?? SET_SIZE
                   return (
                     <li key={row.name} data-unit-card={row.name}>
                       <button
