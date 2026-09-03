@@ -10,6 +10,7 @@ import {
   parseTranslationParagraphs,
 } from '@/shared/components/ProblemExplain'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
+import { PinchZoomScroller } from '@/user/components/quiz/PinchZoomScroller'
 import type { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
 import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import styles from './styles/ExplainPanel.module.scss'
@@ -100,7 +101,8 @@ export function ExplainPanel({
   const drawWrapRef = useRef<HTMLDivElement>(null)
   const applyNoteHeight = (px: number) => {
     const el = drawWrapRef.current
-    if (el) el.style.minHeight = px > 0 ? `max(100%, ${px}px)` : ''
+    // + var(--pinch-slack): 두 손가락 확대의 세로 여유(.drawWrap 기본 min-height 와 같은 규칙)를 유지한 채 필기 끝까지
+    if (el) el.style.minHeight = px > 0 ? `calc(max(100%, ${px}px) + var(--pinch-slack, 0px))` : ''
   }
 
   const cssVars = {
@@ -158,10 +160,10 @@ export function ExplainPanel({
             </button>
           </div>
 
-          <div className={styles.body}>
-            {/* drawWrap: 필기 오버레이 기준 컨테이너 — 스크롤 내용과 같이 움직이고,
-                해설이 짧아도 패널 높이만큼은 채워 아래 여백에도 쓸 수 있다 */}
-            <div ref={drawWrapRef} className={styles.drawWrap}>
+          {/* body(스크롤) + drawWrap(카드) — 두 손가락 확대·이동. 해설·해석 탭 모두 drawWrap 안이라 같이 커진다.
+              drawWrap: 필기 오버레이 기준 컨테이너 — 스크롤 내용과 같이 움직이고,
+              해설이 짧아도 패널 높이만큼은 채워 아래 여백에도 쓸 수 있다 */}
+          <PinchZoomScroller className={styles.body} cardClassName={styles.drawWrap} cardRef={drawWrapRef}>
             {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
             <ExamScaleFrame>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
@@ -251,8 +253,7 @@ export function ExplainPanel({
                 />
               </div>
             )}
-            </div>
-          </div>
+          </PinchZoomScroller>
         </div>
       </aside>
     </>

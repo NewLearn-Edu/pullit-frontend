@@ -9,6 +9,7 @@ import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
 import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
+import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
 import { type Problem } from '@/user/data/mockProblems'
 import { PenToggleIcon } from '@/user/pages/trial/TrialQuizPage'
 import styles from './styles/TrialQuizPage.module.scss'
@@ -92,6 +93,10 @@ export function ReviewScreen({
   // 해설 패널 초기 폭 = 왼쪽 문제 카드의 실제 폭 (2026-09-03) — 열릴 때마다 한 번 맞추고,
   // 패널이 자리를 차지해 카드가 줄어들면 한 번 더 따라간다. 이후 드래그 조절은 그대로
   const problemCardRef = useRef<HTMLElement>(null)
+  // 두 손가락 확대·이동 — 문제 칼럼(main) 기준
+  const mainRef = useRef<HTMLElement>(null)
+  const pinch = usePinchZoom(mainRef, problemCardRef, { maxBaseWidth: 500 }) // 카드 max-width 와 동일
+  useBlockNativePinch() // 카드 밖(헤더·필기 도구·배경)에서는 브라우저 확대도 안 되게
   const matchedRef = useRef(false)
   useLayoutEffect(() => {
     if (!explainOpen) {
@@ -111,10 +116,7 @@ export function ReviewScreen({
     return () => cancelAnimationFrame(raf)
   }, [explainOpen])
 
-  // 액션 푸터는 풀이 화면 답안 바와 같은 fixed 바 — 패널이 inline 사이드바(md+)로 열리면
-  // 문제 칼럼(뷰포트 − 패널 폭)의 가운데로 옮겨 패널 폭 변화에 따라 문제 카드와 함께 움직인다
   const tabletUp = useTabletUp()
-  const footerPanelW = explainOpen && tabletUp ? panelWidth : 0
 
   return (
     <div className={styles.page}>
@@ -153,8 +155,8 @@ export function ReviewScreen({
       />
 
       <div className={styles.content}>
-        <main className={styles.main}>
-          <section ref={problemCardRef} className={styles.problemCard}>
+        <main ref={mainRef} className={styles.main} style={pinch.scrollerStyle}>
+          <section ref={problemCardRef} className={styles.problemCard} style={pinch.cardStyle}>
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {problemNo}</h2>
@@ -225,27 +227,28 @@ export function ReviewScreen({
 
           </section>
 
+          {/* 액션 바 — 문제 칼럼(main) 안 sticky. 칼럼과 같은 폭이라 해설 패널이 열려 칼럼이 좁아지면
+              카드와 함께 줄어든다 (fixed 로 두면 화면 기준 500px 에 고정돼 칼럼을 벗어남) */}
           {footer && (
-            <div
-              className={styles.answerBar}
-              style={{
-                left: `calc((100% - ${footerPanelW}px) / 2)`,
-                transition: resizing ? 'none' : 'left 300ms ease',
-              }}
-            >
+            /* 두 손가락 확대 중엔 카드의 보이는 구간 폭에 맞춘다 (usePinchZoom.stickyBarStyle) */
+            <div className={styles.reviewFooterBar} style={{ left: 0, ...pinch.stickyBarStyle }}>
               <div className={styles.reviewFooterRow}>
                 {footer({ openExplain: () => setExplainOpen(true), explainOpen })}
               </div>
             </div>
           )}
 
-          <ResizeDivider
-            show={explainOpen}
-            onStart={() => setResizing(true)}
-            onDrag={(dx) => setPanelWidth((w) => Math.max(300, Math.min(800, w - dx)))}
-            onEnd={() => setResizing(false)}
-          />
         </main>
+
+        {/* main(overflow auto) 밖 — iPadOS 가 스크롤 컨테이너 경계에서 터치 히트를 잘라내지 않도록 */}
+        <ResizeDivider
+          show={explainOpen}
+          offset={tabletUp ? panelWidth : 0}
+          animated={!resizing}
+          onStart={() => setResizing(true)}
+          onDrag={(dx) => setPanelWidth((w) => Math.max(300, Math.min(800, w - dx)))}
+          onEnd={() => setResizing(false)}
+        />
 
         <ExplainPanel
           open={explainOpen}

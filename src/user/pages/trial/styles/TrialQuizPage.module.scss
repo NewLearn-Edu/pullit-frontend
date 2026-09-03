@@ -13,12 +13,18 @@
 // -----------------------------------------------------------------------------
 
 // 전체 페이지 · 필기 화면 특성상 텍스트 선택 · 콜아웃 완전 차단
+// 높이를 뷰포트에 고정하고 스크롤은 문제 칼럼(.main)·해설 패널 본문이 각자 갖는다 (2026-09-03) —
+// 페이지 스크롤이면 문제를 넘길 때 해설 패널까지 같이 밀려 두 칼럼이 독립적으로 읽히지 않는다
 .page {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;
   min-width: 350px;
+  overflow: hidden;
   background: $color-page-bg;
+  // 브라우저 확대(핀치·더블탭) 금지 — 확대는 문제 카드·해설 카드 안에서 usePinchZoom 만 한다.
+  // iOS 사파리는 viewport user-scalable=no 를 무시하므로 touch-action 으로 막는다 (JS 보강: useBlockNativePinch)
+  touch-action: pan-x pan-y;
 
   // 후손까지 강제 · KaTeX 렌더링된 수식 span 포함
   &,
@@ -51,6 +57,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 .content {
+  position: relative; // ResizeDivider(absolute · right = 패널 폭) 의 기준
   display: flex;
   flex: 1;
   flex-direction: row;
@@ -62,8 +69,18 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   align-items: center;
+  // 문제 칼럼 자체 스크롤 — 해설 패널(.body)과 독립. 손가락 스크롤은 DrawingCanvas 가 이 컨테이너를 찾아 움직인다
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  // 두 손가락 확대는 usePinchZoom 이 카드 폭으로 처리한다 — 헤더·카드 아래 여백처럼 캔버스(touch-action:none)
+  // 밖에서 시작한 핀치를 사파리가 페이지 확대로 가로채지 않도록 pinch-zoom 만 뺀다 (스크롤 pan 은 유지)
+  touch-action: pan-x pan-y;
+  // 확정 직후 본문 높이가 한두 프레임 뒤에 바뀐다 — Chrome 스크롤 앵커링이 우리가 넣은 scrollTop 을 건드리지 않게
+  overflow-anchor: none;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,13 +92,18 @@
   display: flex;
   width: 100%;
   max-width: 500px;
-  flex: 1;
+  // 스크롤 컨테이너(.main) 안에서 내용만큼 자라되 최소 한 화면은 채운다 —
+  // flex:1 이면 overflow:hidden 과 만나 컨테이너 높이로 눌려 본문이 잘린다
+  flex: none;
+  // 두 손가락 확대 확정 때 세로 스크롤 여유가 모자라면 usePinchZoom 이 --pinch-slack 을 준다 —
+  // 내용이 짧으면 min-height 가, 길면 padding-bottom 이 카드 높이를 정하므로 둘 다에 더한다
+  min-height: calc(100% + var(--pinch-slack, 0px));
   flex-direction: column;
   overflow: hidden;
   background: $color-canvas;
   // 하단 고정 답안 바(answerBar) 높이만큼 카드 안쪽에서 확보
   // — 흰 카드가 바까지 이어지고, 여백은 필기 공간으로 쓰인다
-  padding-bottom: calc(150px + env(safe-area-inset-bottom));
+  padding-bottom: calc(150px + env(safe-area-inset-bottom) + var(--pinch-slack, 0px));
 }
 
 // 문제 카드 헤더 · 문제 N · 시간 정보
@@ -207,11 +229,31 @@
   flex: 1;
 }
 
-// 리뷰 화면 액션 푸터 — 답안 바(answerBar) 안의 버튼 행 (오답노트: 해설 보기 · 다시 풀기)
+// 리뷰 화면 액션 바 — 문제 칼럼(.main, 스크롤 컨테이너) 하단에 sticky.
+// 카드와 같은 폭(max 500)·가운데 정렬이라 해설 패널이 열려 칼럼이 좁아지면 카드와 함께 줄어든다.
+// 카드의 padding-bottom(150px)이 바에 가려지는 본문 공간을 확보한다 (풀이 화면 answerBar 와 동일 규격)
+.reviewFooterBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30; // 필기 오버레이($z-canvas) 위 — 바 아래로 지나간 획은 바가 가린다 (풀이 화면 answerBar 와 동일)
+  display: flex;
+  flex: none;
+  width: 100%;
+  max-width: 500px;
+  margin-top: auto;
+  padding: 14px $space-lg calc(14px + env(safe-area-inset-bottom));
+  background: $color-canvas;
+  border-top: 1px solid $color-line;
+}
+
+// 리뷰 화면 액션 바 안의 버튼 행 (오답노트: 해설 보기 · 다시 풀기)
 .reviewFooterRow {
   display: flex;
   gap: 8px;
   width: 100%;
+  // 두 손가락 확대로 바가 카드의 보이는 폭까지 넓어져도 버튼은 1 배 폭(500 - 좌우 패딩) 안에 가운데로
+  max-width: calc(500px - 2 * #{$space-lg});
+  margin: 0 auto;
 }
 
 .reviewSecondary {
@@ -306,6 +348,11 @@
   // 흐린 그림자는 문제 카드 아래에 회색 얼룩처럼 번진다 — 나브 바와 같은 1px 선으로
   border-top: 1px solid $color-line;
   z-index: 30;
+
+  // 두 손가락 확대로 바가 카드의 보이는 폭까지 넓어져도 안쪽(입력·선지·버튼)은 1 배 폭 안에 가운데로
+  > * {
+    max-width: calc(500px - 2 * #{$space-lg});
+  }
 }
 
 // 액션 버튼과 같은 폭(바 내부 100%)을 5칸으로 등분 — 네모 선택 박스

@@ -138,12 +138,19 @@
   flex: 1;
   overflow-y: auto;
   padding: $space-lg;
+  // 두 손가락 확대는 PinchZoomScroller(usePinchZoom) 가 drawWrap 폭으로 처리한다 —
+  // 캔버스 밖에서 시작한 핀치를 사파리가 페이지 확대로 가로채지 않도록 pinch-zoom 만 뺀다 (스크롤 pan 은 유지)
+  touch-action: pan-x pan-y;
+  overflow-anchor: none;
 }
 
 // 필기 오버레이 기준 컨테이너 — 해설 내용과 함께 스크롤 · 짧은 해설도 패널 높이만큼 확보
 .drawWrap {
   position: relative;
-  min-height: 100%;
+  // 두 손가락 확대 확정 때 세로 스크롤 여유가 모자라면 usePinchZoom 이 --pinch-slack 을 준다 —
+  // 내용이 짧으면 min-height 가, 길면 padding-bottom 이 높이를 정하므로 둘 다에 더한다
+  min-height: calc(100% + var(--pinch-slack, 0px));
+  padding-bottom: var(--pinch-slack, 0px);
 }
 
 // 해설 위 필기 캔버스 (문제 카드 .canvasOverlay 와 동일 패턴)

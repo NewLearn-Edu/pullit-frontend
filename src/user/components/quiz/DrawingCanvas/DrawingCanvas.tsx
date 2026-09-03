@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { OneEuroPointFilter } from '@/user/utils/oneEuroFilter'
 import { getStroke } from 'perfect-freehand'
 import { newStrokeId, noteBottom, strokeRect, type NoteStroke } from '@/user/utils/noteStroke'
 import styles from './styles/DrawingCanvas.module.scss'
@@ -46,10 +47,11 @@ export interface DrawingCanvasProps {
 }
 
 /**
- * 입력 게이트 (화면 px) — 이보다 작게 움직인 포인터 리포트는 노이즈로 보고 버린다.
- * 손떨림·펜 센서 노이즈 진폭(±0.5~1px)보다 크고, 작은 글씨 획(10px+)보다는 충분히 작게.
+ * 입력 게이트 (화면 px) — 이보다 작게 움직인 리포트는 같은 점으로 보고 버린다.
+ * 노이즈 제거는 1€ 필터(oneEuroFilter)가 맡으므로 여기서는 중복점만 걸러낸다 (2026-09-03).
+ * 이전 2px 게이트는 작은 글씨에서 점을 통째로 버려 획이 각지고 꿈틀거리는 원인이었다.
  */
-const INPUT_GATE_PX = 2
+const INPUT_GATE_PX = 1
 
 /** 되돌리기 보관 단계 */
 const MAX_HISTORY = 100
@@ -124,6 +126,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const erasedRef = useRef(false)
     const rafRef = useRef<number | null>(null)
     const drawingRef = useRef<boolean>(false)
+    /** 진행 중 획의 입력 필터 (화면 px 기준) — 획마다 새로 만든다. 지우개는 정확한 위치가 중요해 필터 안 씀 */
+    const pointFilterRef = useRef<OneEuroPointFilter | null>(null)
+    /** 진행 중 획을 연 포인터 종류 — 두 손가락 제스처가 시작될 때 손가락 획만 버리기 위해 */
+    const currentPointerTypeRef = useRef<string>('')
     // 레이저 stroke · 그린 후 자동 fade out 되는 임시 stroke (base 저장 안 함)
     // 개별 타이머 없이 배열 · 페이드 시점은 아래 laserActivityEndRef 로 공유 관리
     const fadingLasersRef = useRef<Ink[]>([])
@@ -402,8 +408,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const strokeOptions = (width: number, complete = false) => ({
       size: Math.max(0.5, width),
       thinning: 0,
-      smoothing: 0.65,
-      streamline: 0.7,
+      smoothing: 0.5,
+      // 입력 노이즈는 1€ 필터가 이미 걸러 준다 — 0.7 은 끝이 뒤따라오며 떨리고 작은 글씨가 뭉개졌다
+      streamline: 0.4,
       last: complete,
     })
 
@@ -458,6 +465,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const el = eraserCursorRef.current
       const canvas = liveCanvasRef.current
       if (!el || !canvas) return
+      // 필기 입력이 아닌 포인터(손필기 꺼진 손가락 · 두 번째 손가락)는 커서를 띄우지 않는다 —
+      // 두 손가락 확대 중에 지우개 원이 따라다니던 문제
+      if ((e.pointerType === 'touch' && !allowFinger) || !e.isPrimary) {
+        el.style.opacity = '0'
+        return
+      }
       const rect = canvas.getBoundingClientRect()
       const diameter = Math.max(6, toolWidth('eraser', sizeRef.current) * (scaleRef.current || 1))
       el.style.width = `${diameter}px`
@@ -470,6 +483,115 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const el = eraserCursorRef.current
       if (el) el.style.opacity = '0'
     }
+
+    /**
+     * iPadOS 손글씨 입력(Scribble) 방어 (2026-09-03).
+     * 설정 > Apple Pencil > 손글씨 입력이 켜져 있으면 시스템이 Pencil 획을 "텍스트 입력인가" 먼저 판정하느라
+     * 빠른 획을 페이지에 아예 안 넘긴다 (손가락은 판정 대상이 아니라 멀쩡). 펜 터치의 touchstart/touchmove 를
+     * non-passive 로 preventDefault 하면 시스템이 물러난다 — 순수 테스트 페이지 A(포인터만)/B(터치 preventDefault)
+     * 비교로 확인. 펜은 포인터 이벤트로 그리므로 터치 기본 동작을 막아도 잃는 게 없다.
+     * 손가락은 건드리지 않는다 — 손필기 꺼짐이면 아래 스크롤 처리, 켜짐이면 touch-action:none 이 이미 막는다.
+     */
+    useEffect(() => {
+      const el = liveCanvasRef.current
+      if (!el || disabled) return
+      const isStylus = (e: TouchEvent) =>
+        Array.from(e.changedTouches).some((t) => (t as Touch & { touchType?: string }).touchType === 'stylus')
+      const claim = (e: TouchEvent) => {
+        if (isStylus(e)) e.preventDefault()
+      }
+      el.addEventListener('touchstart', claim, { passive: false })
+      el.addEventListener('touchmove', claim, { passive: false })
+      return () => {
+        el.removeEventListener('touchstart', claim)
+        el.removeEventListener('touchmove', claim)
+      }
+    }, [disabled])
+
+    /**
+     * 손필기 꺼짐 상태의 손가락 드래그 → 가장 가까운 스크롤 컨테이너(없으면 문서) 스크롤.
+     *
+     * 캔버스는 펜 입력 때문에 touch-action:none 이어야 해서(pan-y 로 열면 iPadOS 는 Apple Pencil 도
+     * 스크롤로 처리한다) 브라우저 네이티브 스크롤이 죽는다 — 손가락은 여기서 직접 움직인다.
+     * 포인터 이벤트가 아니라 터치 이벤트로 처리하는 이유: 브라우저가 스크롤 제스처로 판단하면
+     * 첫 이동 뒤 pointercancel 을 보내 포인터 스트림이 끊긴다. touchmove 는 계속 오고
+     * preventDefault 로 네이티브 제스처를 막을 수 있다 (passive:false 로 직접 등록).
+     * - 첫 손가락 하나만 · 세로만 · 이동량은 모아 프레임당 1회 적용 (버벅임 방지)
+     * - Apple Pencil(touchType 'stylus')·이미 진행 중인 펜 획은 건드리지 않는다
+     */
+    useEffect(() => {
+      const el = liveCanvasRef.current
+      if (!el || disabled || allowFinger) return
+
+      let finger: { id: number; lastY: number; target: HTMLElement | null } | null = null
+      let pending = 0
+      let raf: number | null = null
+      const findScrollParent = (from: HTMLElement): HTMLElement | null => {
+        let node = from.parentElement
+        while (node) {
+          const { overflowY } = getComputedStyle(node)
+          if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight + 1) {
+            return node
+          }
+          node = node.parentElement
+        }
+        return null
+      }
+      const flush = () => {
+        raf = null
+        const dy = pending
+        pending = 0
+        if (dy === 0) return
+        if (finger?.target) finger.target.scrollTop += dy
+        else window.scrollBy(0, dy)
+      }
+      const isStylus = (t: Touch) => (t as Touch & { touchType?: string }).touchType === 'stylus'
+
+      const onStart = (e: TouchEvent) => {
+        // 두 번째 손가락이 닿으면 스크롤을 놓는다 — 두 손가락은 확대·이동 제스처(usePinchZoom · main) 몫
+        if (e.touches.length !== 1) {
+          finger = null
+          return
+        }
+        if (finger || drawingRef.current) return
+        const t = e.touches[0]
+        if (isStylus(t)) return
+        finger = { id: t.identifier, lastY: t.clientY, target: findScrollParent(el) }
+      }
+      const onMove = (e: TouchEvent) => {
+        if (!finger) return
+        if (e.touches.length !== 1) {
+          finger = null
+          return
+        }
+        const t = Array.from(e.touches).find((x) => x.identifier === finger!.id)
+        if (!t) return
+        e.preventDefault() // 네이티브 스크롤·확대 제스처 차단 — 우리가 움직인다
+        pending += finger.lastY - t.clientY
+        finger.lastY = t.clientY
+        if (raf == null) raf = requestAnimationFrame(flush)
+      }
+      const onEnd = (e: TouchEvent) => {
+        if (!finger) return
+        if (Array.from(e.touches).some((x) => x.identifier === finger!.id)) return
+        if (raf != null) {
+          cancelAnimationFrame(raf)
+          flush()
+        }
+        finger = null
+      }
+      el.addEventListener('touchstart', onStart, { passive: true })
+      el.addEventListener('touchmove', onMove, { passive: false })
+      el.addEventListener('touchend', onEnd)
+      el.addEventListener('touchcancel', onEnd)
+      return () => {
+        el.removeEventListener('touchstart', onStart)
+        el.removeEventListener('touchmove', onMove)
+        el.removeEventListener('touchend', onEnd)
+        el.removeEventListener('touchcancel', onEnd)
+        if (raf != null) cancelAnimationFrame(raf)
+      }
+    }, [disabled, allowFinger])
 
     const shouldAcceptPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (disabled) return false
@@ -499,12 +621,29 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       notePen(e)
       updateEraserCursor(e)
       if (!shouldAcceptPointer(e)) return
+      // 두 번째 손가락 — 확대·이동 제스처의 시작. 진행 중이던 손가락 획은 버리고(펜 획은 유지) 새 획도 열지 않는다
+      if (e.pointerType === 'touch' && !e.isPrimary) {
+        if (currentRef.current && currentPointerTypeRef.current === 'touch') {
+          currentRef.current = null
+          drawingRef.current = false
+          renderLive()
+        }
+        return
+      }
+      currentPointerTypeRef.current = e.pointerType
       e.preventDefault()
       e.stopPropagation()
       liveCanvasRef.current?.setPointerCapture(e.pointerId)
       const t = toolRef.current
       const k = scaleRef.current || 1
       const [x, y] = getPoint(e)
+      if (t !== 'eraser') {
+        const rect = liveCanvasRef.current!.getBoundingClientRect()
+        pointFilterRef.current = new OneEuroPointFilter()
+        pointFilterRef.current.reset(e.clientX - rect.left, e.clientY - rect.top, e.timeStamp)
+      } else {
+        pointFilterRef.current = null
+      }
       const ink: Ink = {
         points: [[x, y]],
         tool: t,
@@ -544,7 +683,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         typeof e.nativeEvent.getCoalescedEvents === 'function'
           ? e.nativeEvent.getCoalescedEvents()
           : null
-      const events = coalesced && coalesced.length > 0 ? coalesced : [e.nativeEvent]
+      // 병합 목록 검증 (2026-09-03) — 좌표가 유한값이 아니거나 마지막 항목이 원 이벤트 자리와 다르면
+      // (스펙상 같아야 한다) 목록을 버리고 원 이벤트만 쓴다. 오염된 목록 하나가 획 전체를 망치지 않게.
+      const mainX = e.nativeEvent.clientX
+      const mainY = e.nativeEvent.clientY
+      const coalescedOk =
+        !!coalesced &&
+        coalesced.length > 0 &&
+        coalesced.every((ev) => Number.isFinite(ev.clientX) && Number.isFinite(ev.clientY)) &&
+        Math.hypot(coalesced[coalesced.length - 1].clientX - mainX, coalesced[coalesced.length - 1].clientY - mainY) < 64
+      const events = coalescedOk ? coalesced : [e.nativeEvent]
       const rect = liveCanvasRef.current!.getBoundingClientRect()
       const k = scaleRef.current || 1
       /**
@@ -559,9 +707,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const gateSq = gate * gate
       const eraserRadius = cur.tool === 'eraser' ? cur.width / 2 : 0
       let [lx, ly] = pts[pts.length - 1]
+      const filter = pointFilterRef.current
       for (const ev of events) {
-        const x = (ev.clientX - rect.left) / k
-        const y = (ev.clientY - rect.top) / k
+        let sx = ev.clientX - rect.left
+        let sy = ev.clientY - rect.top
+        if (filter) [sx, sy] = filter.next(sx, sy, ev.timeStamp)
+        const x = sx / k
+        const y = sy / k
         const dx = x - lx
         const dy = y - ly
         if (dx * dx + dy * dy < gateSq) continue

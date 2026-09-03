@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
@@ -153,6 +154,11 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [allowFinger, setAllowFinger] = useState(false) // 아이패드 손바닥 걸침 방지 · 기본 펜만
   // 필기 도구 활성화 여부. 모바일 진입 시 DrawingToolbar 가 자동 false 로 세팅 (툴바 접힘 + canvas disabled)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
+  // 두 손가락 확대·이동 — 문제 칼럼(main) 기준
+  const mainRef = useRef<HTMLElement>(null)
+  const problemCardRef = useRef<HTMLElement>(null)
+  const pinch = usePinchZoom(mainRef, problemCardRef, { maxBaseWidth: 500 }) // 카드 max-width 와 동일
+  useBlockNativePinch() // 카드 밖(헤더·필기 도구·배경)에서는 브라우저 확대도 안 되게
   // 모르겠어요·넘어가기 확인 팝업
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false) // 나가기 확인 팝업 (브라우저 confirm 대체)
@@ -503,8 +509,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       />
 
       <div className={styles.content}>
-        <main className={styles.main}>
-          <section className={styles.problemCard}>
+        <main ref={mainRef} className={styles.main} style={pinch.scrollerStyle}>
+          <section ref={problemCardRef} className={styles.problemCard} style={pinch.cardStyle}>
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {idx + 1}</h2>
@@ -581,7 +587,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       </div>
 
       {/* 하단 고정 답안 바 — 객관식 1~5 / 주관식 숫자 입력 + 다음·모르겠어요 */}
-      <div ref={answerBarRef} className={styles.answerBar} data-answer-bar>
+      {/* 두 손가락 확대 중엔 카드의 보이는 구간 폭에 맞춘다 (usePinchZoom.fixedBarStyle) */}
+      <div ref={answerBarRef} className={styles.answerBar} data-answer-bar style={pinch.fixedBarStyle}>
         {isShortAnswer ? (
           <div className={styles.answerInputRow}>
             <input
