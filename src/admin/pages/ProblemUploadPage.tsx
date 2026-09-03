@@ -217,15 +217,16 @@ export default function ProblemUploadPage() {
     if (batch.length === 0 || uploading) return
     setConfirmOpen(false)
     setUploading(true)
-    const results: ProblemImportResult[] = []
-    const next = batch.map((b) => ({ ...b, status: 'pending' as const, result: undefined, error: undefined }))
+    // 파일별 결과 — setBatch 는 비동기라 합계 계산용으로 따로 모은다
+    const perFile: { name: string; result: ProblemImportResult }[] = []
+    const next: BatchFile[] = batch.map((b) => ({ ...b, status: 'pending', result: undefined, error: undefined }))
     setBatch(next)
     for (let i = 0; i < next.length; i++) {
       setUploadingIdx(i)
       setBatch((prev) => prev.map((b, j) => (j === i ? { ...b, status: 'uploading' } : b)))
       try {
         const r = await importProblemFile(next[i].file)
-        results.push(r)
+        perFile.push({ name: next[i].name, result: r })
         setBatch((prev) => prev.map((b, j) => (j === i ? { ...b, status: 'done', result: r } : b)))
       } catch (e) {
         const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
@@ -239,6 +240,7 @@ export default function ProblemUploadPage() {
     setUploadingIdx(null)
     setUploading(false)
 
+    const results = perFile.map((f) => f.result)
     const failedFiles = next.length - results.length
     if (results.length === 0) {
       toast('업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
@@ -246,13 +248,14 @@ export default function ProblemUploadPage() {
     }
     // 합계 — 파일별 결과를 하나로 (오류 행은 파일명을 앞에 붙인다)
     const merged: ProblemImportResult = {
+      fileName: results.length === 1 ? perFile[0].name : `${results.length}개 파일`,
       total: results.reduce((n, r) => n + r.total, 0),
       inserted: results.reduce((n, r) => n + r.inserted, 0),
       updated: results.reduce((n, r) => n + r.updated, 0),
       inactiveCount: results.reduce((n, r) => n + r.inactiveCount, 0),
       failed: results.reduce((n, r) => n + r.failed, 0),
-      errors: next.flatMap((b) =>
-        (b.result?.errors ?? []).map((er) => ({ ...er, problemId: `${b.name} · ${er.problemId ?? ''}` })),
+      errors: perFile.flatMap(({ name, result }) =>
+        (result.errors ?? []).map((er) => ({ ...er, problemId: `${name} · ${er.problemId ?? ''}` })),
       ),
       duplicates: results.flatMap((r) => r.duplicates ?? []),
     }
