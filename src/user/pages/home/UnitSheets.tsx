@@ -5,17 +5,17 @@ import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { Toast } from '@/user/components/Toast'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
-import { useTrialStore, type Subject } from '@/user/stores/trialStore'
+import { type Subject } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { declareUnitLock } from '@/user/api/recommendApi'
 import { fetchActiveProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
 import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
+import { startTrialSetSession } from '@/user/services/trialSetStart'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import {
   SET_CREDIT_COST,
-  useTrialProgressStore,
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
@@ -123,12 +123,7 @@ export function useUnitSheets({
 }) {
   const navigate = useNavigate()
   const loadMe = useUserStore((s) => s.loadMe)
-  const startUnit = useTrialProgressStore((s) => s.startUnit)
   const startSolveSession = useSolveStore((s) => s.startSession)
-  const resetTrial = useTrialStore((s) => s.reset)
-  const setLastSubject = useTrialStore((s) => s.setLastSubject)
-  const setMathSkillNode = useTrialStore((s) => s.setMathSkillNode)
-  const setEnglishType = useTrialStore((s) => s.setEnglishType)
 
   const unitLabel = UNIT_LABEL[subject]
 
@@ -374,33 +369,9 @@ export function useUnitSheets({
     row: { name: string; unitCode: string; nodeId?: string },
     subj: Subject,
   ) => {
-    const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
-    const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(subj, nodeId, row.unitCode, 'TRIAL')
-    // 새 발급 = 차감 발생 → 문제 첫 화면 토스트 (이어풀기는 차감 없음 · 2857-21836)
-    if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST)
-    loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
-    resetTrial()
-    setLastSubject(subj)
-    if (subj === 'math') setMathSkillNode(nodeId)
-    else setEnglishType(nodeId)
-    useTrialStore.getState().setActiveSetId(set.setId)
-    // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
-    set.items.forEach((item, i) => {
-      if (!item.submitted) return
-      const problem = problems[i]
-      useTrialStore.getState().addResult(subj, {
-        problemId: problem.id,
-        selectedChoice: null,
-        correct: item.correct ?? false,
-        serverCorrect: item.correct ?? false,
-        earnedPoints: item.correct ? problem.points : 0,
-        timeoverFlag: false,
-        peekedBeforeAnswer: false,
-        elapsedMs: 0,
-      })
-    })
-    startUnit({ unitName: row.name, returnTo: returnTo() })
-    navigate(`/trial/quiz/${subj}/${firstUnsolvedIdx}`)
+    // 세트 발급·스토어 세팅은 추천 리빌 CTA 와 공용 (services/trialSetStart)
+    const path = await startTrialSetSession(subj, row, returnTo(), credit)
+    navigate(path)
   }
 
   /**

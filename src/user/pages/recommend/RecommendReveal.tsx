@@ -17,15 +17,13 @@ import {
   fetchUnitLocks,
   type Recommendation,
 } from '@/user/api/recommendApi'
-import { useCreditForExtraSet } from '@/user/api/creditApi'
-import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { Toast } from '@/user/components/Toast'
 import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
-import { SkipConfirmContent } from '@/user/pages/home/UnitSheets'
+import { SkipConfirmContent, extractApiMessage } from '@/user/pages/home/UnitSheets'
+import { startTrialSetSession } from '@/user/services/trialSetStart'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
-import { useUserStore } from '@/user/stores/userStore'
-import { useTrialStore, type Subject } from '@/user/stores/trialStore'
+import { type Subject } from '@/user/stores/trialStore'
 import {
   computeCategoryProgress,
   SET_CREDIT_COST,
@@ -165,19 +163,13 @@ interface RecommendRevealProps {
 export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const navigate = useNavigate()
   const { me } = useMe()
-  const loadMe = useUserStore((s) => s.loadMe)
   const credit = me?.creditBalance ?? 0
 
   const categories = CURRICULUM[subject]
 
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
-  const startUnit = useTrialProgressStore((s) => s.startUnit)
 
-  const resetTrial = useTrialStore((s) => s.reset)
-  const setLastSubject = useTrialStore((s) => s.setLastSubject)
-  const setMathSkillNode = useTrialStore((s) => s.setMathSkillNode)
-  const setEnglishType = useTrialStore((s) => s.setEnglishType)
 
   const [serverLocks, setServerLocks] = useState<Record<string, string>>({})
   const [serverRec, setServerRec] = useState<Recommendation | null>(null)
@@ -497,18 +489,18 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     setStarting(true)
     setActionError(null)
     try {
-      await useCreditForExtraSet()
-      setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST) // 첫 문제 화면 토스트
-      loadMe(true)
-      resetTrial()
-      setLastSubject(subject)
-      const nodeId = target.row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
-      if (subject === 'math') setMathSkillNode(nodeId)
-      else setEnglishType(nodeId)
-      startUnit({ unitName: target.row.name, returnTo: '/home' })
-      navigate(`/trial/quiz/${subject}/0`)
-    } catch {
-      setActionError('크레딧 사용에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      // 홈 시트와 같은 진단 세트 발급 경로 — 서버가 차감·문항 구성·세트 박제·완료 판정을 맡는다.
+      // (이전: 크레딧만 따로 차감하고 세트 없이 고정 서빙 문항으로 들어가 진단이 박제되지 않고
+      //  같은 문제가 반복됐다 · 2026-09-03)
+      const path = await startTrialSetSession(
+        subject,
+        { name: target.row.name, unitCode: target.row.unitCode, nodeId: target.row.nodeId },
+        '/home',
+        credit,
+      )
+      navigate(path)
+    } catch (error) {
+      setActionError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
       setStarting(false)
     }
   }
