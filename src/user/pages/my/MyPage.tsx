@@ -226,8 +226,7 @@ export default function MyPage() {
           <p className={styles.menuLabel}>학습 관리</p>
           <div className={styles.menuCard}>
             <MenuItem label="오답 노트" onClick={() => navigate('/wrong-note')} />
-            <MenuItem label="학습 리포트" onClick={comingSoon} />
-            <MenuItem label="크레딧 내역" onClick={() => navigate('/my/credits')} last />
+            <MenuItem label="학습 리포트" onClick={comingSoon} last />
           </div>
         </section>
 
