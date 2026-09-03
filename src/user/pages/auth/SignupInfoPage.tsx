@@ -697,7 +697,7 @@ export default function SignupInfoPage() {
             {revealed >= 3 && (
             <div className="su-step">
             <div className="su-step-inner flex flex-col gap-sm">
-              <span className="text-[14px] font-semibold text-[#23272b]">학년</span>
+              <span className="text-[14px] font-semibold text-[#23272b]">나는</span>
               <div className="flex items-start">
                 {GRADE_GROUPS.map((group) => {
                   const open = gradeGroup === group.key
