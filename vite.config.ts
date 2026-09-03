@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: '풀잇 Pullit',
         short_name: '풀잇',
-        description: '매일 4문제로 약점을 찾는 AI 학습 서비스',
+        description: '매일 3문제로 약점을 찾는 AI 학습 서비스',
         theme_color: '#FF385C',
         background_color: '#FFFFFF',
         display: 'standalone',
