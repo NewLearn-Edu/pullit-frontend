@@ -325,7 +325,11 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<Ad
 // 크레딧
 // ---------------------------------------------------------------------------
 
-export type CreditTransactionType = 'ADMIN_GRANT' | 'ADMIN_DEDUCT'
+/** 관리자 수동 조정으로 만들 수 있는 종류 — 조정 API 는 이 둘만 받는다 */
+export type CreditAdjustType = 'ADMIN_GRANT' | 'ADMIN_DEDUCT'
+
+/** 서버 common.enums.CreditTransactionType 과 동일 값. USE·REWARD 는 서비스가 자동으로 남긴다 */
+export type CreditTransactionType = CreditAdjustType | 'USE' | 'REWARD'
 
 export interface CreditStats {
   totalBalance: number
@@ -399,7 +403,7 @@ export async function fetchCreditTransactions(params: {
 /** 크레딧 수동 지급·차감 — amount 는 항상 양수, 방향은 type 이 갖는다 */
 export async function adjustCredit(
   userId: number,
-  body: { type: CreditTransactionType; amount: number; reason: string },
+  body: { type: CreditAdjustType; amount: number; reason: string },
 ): Promise<CreditTransaction> {
   const { data } = await adminApi.post<BaseResponse<CreditTransaction>>(
     `/api/admin/credits/users/${userId}`,

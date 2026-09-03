@@ -8,6 +8,7 @@ import {
   fetchCreditUsers,
   type CreditStats,
   type CreditTransaction,
+  type CreditAdjustType,
   type CreditTransactionType,
   type CreditUser,
 } from '../api/adminApi'
@@ -19,7 +20,16 @@ import { useToast } from '../components/toast'
 const PAGE_SIZE = 20
 const TX_PAGE_SIZE = 10
 
-const TYPE_LABEL: Record<CreditTransactionType, string> = { ADMIN_GRANT: '지급', ADMIN_DEDUCT: '차감' }
+const TYPE_LABEL: Record<CreditTransactionType, string> = {
+  ADMIN_GRANT: '지급',
+  ADMIN_DEDUCT: '차감',
+  USE: '사용',
+  REWARD: '적립',
+}
+
+/** 잔액을 늘리는 종류 — 부호·배지 색이 이걸로 갈린다 (서버가 amount 를 항상 양수로 준다) */
+const INCREASE_TYPES: readonly CreditTransactionType[] = ['ADMIN_GRANT', 'REWARD']
+const isIncrease = (type: CreditTransactionType) => INCREASE_TYPES.includes(type)
 
 /** 01012345678 → 010-1234-5678. 형식이 다르면 원본 그대로 노출 */
 function formatPhone(phone: string | null): string {
@@ -296,12 +306,12 @@ export default function CreditsPage() {
                     <td className="num">{t.createdAt.slice(0, 16).replace('T', ' ')}</td>
                     <td className="strong">{t.userName ?? '회원'}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <span className={clsx('badge', t.type === 'ADMIN_GRANT' ? 'live' : 'hidden')}>
+                      <span className={clsx('badge', isIncrease(t.type) ? 'live' : 'neutral')}>
                         {TYPE_LABEL[t.type]}
                       </span>
                     </td>
                     <td className="num" style={{ textAlign: 'right' }}>
-                      {t.type === 'ADMIN_GRANT' ? '+' : '−'}
+                      {isIncrease(t.type) ? '+' : '−'}
                       {t.amount.toLocaleString()}
                     </td>
                     <td className="num" style={{ textAlign: 'right' }}>
@@ -344,7 +354,7 @@ function AdjustModal({
 
   // 조정량 = 목표값 − 현재 잔액. 방향은 부호가 갖는다 (최소 0 — 잔액 밑으로 차감 불가)
   const delta = value - user.creditBalance
-  const type: CreditTransactionType = delta > 0 ? 'ADMIN_GRANT' : 'ADMIN_DEDUCT'
+  const type: CreditAdjustType = delta > 0 ? 'ADMIN_GRANT' : 'ADMIN_DEDUCT'
 
   const submit = async () => {
     if (delta === 0 || saving) return
