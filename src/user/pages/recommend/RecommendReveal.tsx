@@ -19,8 +19,9 @@ import {
 } from '@/user/api/recommendApi'
 import { Toast } from '@/user/components/Toast'
 import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
-import { SkipConfirmContent, extractApiMessage } from '@/user/pages/home/UnitSheets'
+import { SkipConfirmContent, extractApiMessage, isCreditShortage } from '@/user/pages/home/UnitSheets'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
+import { useUserStore } from '@/user/stores/userStore'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
 import { type Subject } from '@/user/stores/trialStore'
@@ -482,10 +483,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   /** 시작하기 — 홈 시작 시트와 같은 규칙 (서버 크레딧 차감 성공 시에만 진입) */
   const confirmStart = async () => {
     if (!target || starting) return
-    if (credit < SET_CREDIT_COST) {
-      setShortageOpen(true)
-      return
-    }
+    // 잔액 사전 판정 없음 — 서버가 발급 때 실제 잔액으로 판정 (홈 시작 시트와 같은 규칙 · 2026-09-03)
     setStarting(true)
     setActionError(null)
     try {
@@ -500,7 +498,12 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       )
       navigate(path)
     } catch (error) {
-      setActionError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      if (isCreditShortage(error)) {
+        setShortageOpen(true)
+        useUserStore.getState().loadMe(true) // 표시 잔액도 서버 값으로
+      } else {
+        setActionError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      }
       setStarting(false)
     }
   }

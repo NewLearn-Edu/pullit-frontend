@@ -59,7 +59,22 @@ export default function HomePage() {
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
+  const loadMe = useUserStore((s) => s.loadMe)
   const credit = me?.creditBalance ?? 0
+
+  // 크레딧 등 내 정보는 다른 기기의 사건(초대한 친구 가입 보상)으로도 바뀐다 — useMe 는 한 번 받으면 캐시하므로
+  // 홈에 들어올 때와 탭·앱 복귀 때 서버 값으로 다시 맞춘다 (세션이 있을 때만 · 죽은 세션 401 탐침 방지)
+  useEffect(() => {
+    const refresh = () => {
+      if (useUserStore.getState().me) loadMe(true)
+    }
+    refresh()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [loadMe])
 
   // 서버 동기화(진단 기록 + 잠금) 완료 전에는 그래프·리스트 자리에 스켈레톤 —
   // 빈 데이터를 실물처럼 그렸다가 갈아끼우는 깜빡임(미진단 → 점수)을 없앤다

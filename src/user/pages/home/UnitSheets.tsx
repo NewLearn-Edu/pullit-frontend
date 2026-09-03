@@ -314,10 +314,7 @@ export function useUnitSheets({
   const [freeStarting, setFreeStarting] = useState(false)
   const confirmStartFree = async () => {
     if (!confirmTarget || freeStarting) return
-    if (!freeResumable && credit < SET_CREDIT_COST) {
-      setShortageOpen(true)
-      return
-    }
+    // 잔액 사전 판정 없음 — 서버가 발급 때 실제 잔액으로 판정하고, 부족(CR001)이면 startFreeSolve 가 팝업을 띄운다
     setFreeStarting(true)
     try {
       await startFreeSolve(confirmTarget)
@@ -380,17 +377,19 @@ export function useUnitSheets({
    */
   const confirmStartSet = async () => {
     if (!startSheet || starting) return
-    // 새 발급(이어풀기 아님)인데 크레딧이 모자라면 — 진행 대신 부족 팝업
-    if (!resumable && credit < SET_CREDIT_COST) {
-      setShortageOpen(true)
-      return
-    }
+    // 잔액 사전 판정 없음 — 프론트가 기억한 잔액은 다른 기기의 사건(친구 초대 보상)을 모를 수 있다.
+    // 서버가 발급 트랜잭션에서 실제 잔액으로 판정하고, 부족(CR001)이면 그때 부족 팝업
     setStarting(true)
     setStartError(null)
     try {
       await startTrialSet(startSheet, subject)
     } catch (error) {
-      setStartError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      if (isCreditShortage(error)) {
+        setShortageOpen(true)
+        loadMe(true) // 표시 잔액도 서버 값으로
+      } else {
+        setStartError(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인하고 다시 시도해줘')
+      }
       setStarting(false)
     }
   }
@@ -425,8 +424,9 @@ export function useUnitSheets({
       const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
       const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
         subj, nodeId, row.unitCode, 'FREE')
-      if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, credit - SET_CREDIT_COST)
-      loadMe(true)
+      // 잔액은 서버 재조회 값으로 — 캐시(credit)는 낡았을 수 있다
+      const fresh = await loadMe(true)
+      if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, fresh?.creditBalance ?? credit - SET_CREDIT_COST)
       // 세트 완료 후 "이전 평균 → 현재 평균" 비교용 — 시작 시점 누적 점수를 찍어 둔다
       const scoreBefore = row.name
         ? await snapshotUnitScoreForSet(subj, row.name, set.setId, set.resumed)
@@ -441,7 +441,12 @@ export function useUnitSheets({
       })
       navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {
-      setAlertMsg(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+      if (isCreditShortage(error)) {
+        setShortageOpen(true)
+        loadMe(true) // 표시 잔액도 서버 값으로
+      } else {
+        setAlertMsg(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+      }
     }
   }
 
@@ -990,6 +995,19 @@ export function extractApiMessage(error: unknown): string | null {
     return res?.data?.message ?? null
   }
   return null
+}
+
+/**
+ * 서버가 "크레딧 부족"(CR001 CREDIT_BALANCE_INSUFFICIENT)으로 거절했는지 (2026-09-03).
+ * 세트 시작 가능 여부는 프론트가 기억해 둔 잔액이 아니라 서버가 발급 트랜잭션에서 실제 잔액으로 판정한다 —
+ * 프론트 캐시는 다른 기기의 사건(친구 초대 보상 등)을 모르고 있을 수 있어 사전 판정에 쓰지 않는다.
+ */
+export function isCreditShortage(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const res = (error as { response?: { data?: { errorCode?: string } } }).response
+    return res?.data?.errorCode === 'CR001'
+  }
+  return false
 }
 
 /* --- 진단 시작·건너뛰기·선행 안내 시트 헬퍼 (2842-10194 · 2842-10966 · 3082-5687) --- */

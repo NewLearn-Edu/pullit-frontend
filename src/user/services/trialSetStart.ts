@@ -23,9 +23,10 @@ export async function startTrialSetSession(
   const nodeId = row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
   const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(subject, nodeId, row.unitCode, 'TRIAL')
 
+  // 잔액 갱신 — 새 발급이면 차감이 반영됐다. 토스트의 남은 개수도 이 서버 값으로 (캐시 creditBefore 는 낡았을 수 있다)
+  const me = await useUserStore.getState().loadMe(true)
   // 새 발급 = 차감 발생 → 문제 첫 화면 토스트 (이어풀기는 차감 없음 · 2857-21836)
-  if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, creditBefore - SET_CREDIT_COST)
-  useUserStore.getState().loadMe(true) // 잔액 갱신 — 새 발급이면 차감이 반영됐다
+  if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, me?.creditBalance ?? creditBefore - SET_CREDIT_COST)
 
   const trial = useTrialStore.getState()
   trial.reset()
