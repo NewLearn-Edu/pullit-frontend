@@ -97,6 +97,7 @@ export default function TrialTestPage() {
   const [over, setOver] = useState(false)
   const [progress, setProgress] = useState<UploadProgress | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const folderRef = useRef<HTMLInputElement>(null)
 
   // 미리보기 모달 (문제 목록과 동일 UX — 디바이스 프레임 + 정답·해설)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -211,12 +212,18 @@ export default function TrialTestPage() {
 
   /** 여러 세트 파일을 순차 업로드 — 파일명 순 정렬로 세트 번호가 순서대로 들어간다 */
   const uploadFiles = async (files: File[]) => {
-    const valid = files
+    // 폴더째 선택하면 JSON 외 파일도 섞여 온다 — JSON 만 대상
+    const jsonFiles = files.filter((f) => /\.(jsonl|json)$/i.test(f.name))
+    const valid = jsonFiles
       .filter((f) => FILENAME_PATTERN.test(f.name))
       .sort((a, b) => a.name.localeCompare(b.name))
-    const skipped = files.length - valid.length
+    const skippedNames = jsonFiles.filter((f) => !FILENAME_PATTERN.test(f.name)).map((f) => f.name)
+    const skipped = skippedNames.length
     if (valid.length === 0) {
-      toast('맛보기 파일명 형식(*_testN.jsonl)이 아니에요')
+      toast(
+        `맛보기 파일명 형식(*_testN.jsonl)이 아니에요` +
+          (skippedNames.length > 0 ? ` · ${skippedNames.slice(0, 3).join(', ')}` : ''),
+      )
       return
     }
     const failed: string[] = []
@@ -235,10 +242,11 @@ export default function TrialTestPage() {
     toast(
       `세트 업로드 완료 · ${valid.length - failed.length}파일 · ${mapped.toLocaleString()}문항` +
         (failed.length > 0 ? ` · 실패 ${failed.length}` : '') +
-        (skipped > 0 ? ` · 형식 불일치 ${skipped}건 제외` : ''),
+        (skipped > 0 ? ` · 형식 불일치 ${skipped}건 제외 (${skippedNames.slice(0, 3).join(', ')}${skipped > 3 ? ' …' : ''})` : ''),
     )
     loadGroups()
     if (fileRef.current) fileRef.current.value = ''
+    if (folderRef.current) folderRef.current.value = ''
   }
 
   const onDrop = (e: DragEvent) => {
@@ -363,6 +371,17 @@ export default function TrialTestPage() {
           <div className="formats">
             <span className="chip">JSONL</span>
             <span className="chip">JSON</span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={uploading}
+              onClick={(e) => {
+                e.stopPropagation()
+                folderRef.current?.click()
+              }}
+            >
+              폴더째 선택
+            </button>
           </div>
         </div>
         <input
@@ -371,6 +390,17 @@ export default function TrialTestPage() {
           accept=".json,.jsonl"
           multiple
           style={{ display: 'none' }}
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? [])
+            if (files.length > 0) uploadFiles(files)
+          }}
+        />
+        {/* 폴더 선택 — 하위 세트 파일 전부 (JSON 외·형식 불일치는 uploadFiles 가 거른다) */}
+        <input
+          ref={folderRef}
+          type="file"
+          style={{ display: 'none' }}
+          {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
           onChange={(e) => {
             const files = Array.from(e.target.files ?? [])
             if (files.length > 0) uploadFiles(files)

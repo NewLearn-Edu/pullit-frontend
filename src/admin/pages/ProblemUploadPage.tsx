@@ -34,6 +34,40 @@ const SUBJECT_LABEL: Record<string, string> = { math: '수학', english: '영어
 /** 업로드 파일 1행 — 검수 큐와 같은 스키마를 쓴다 (문제 생성 정책 2026-08 규격) */
 type UploadItem = ReviewProblem
 
+/** 일괄 업로드 대상 파일 1개 — 로컬 파싱 결과 + 서버 업로드 상태 */
+interface BatchFile {
+  file: File
+  name: string
+  /** 단원 경로 (첫 행 unit_code 기준 · 인식 실패면 안내 문구) */
+  path: string
+  rows: UploadItem[]
+  status: 'pending' | 'uploading' | 'done' | 'error'
+  result?: ProblemImportResult
+  error?: string
+}
+
+/** 파일 1개 파싱 — JSON 배열 또는 JSONL. 형식이 아니면 null */
+function parseUploadFile(file: File): Promise<UploadItem[] | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const text = String(reader.result).trim()
+        const parsed: unknown = text.startsWith('[')
+          ? JSON.parse(text)
+          : text.split('\n').filter(Boolean).map((l) => JSON.parse(l))
+        resolve(Array.isArray(parsed) && parsed.length > 0 ? (parsed as UploadItem[]) : null)
+      } catch {
+        resolve(null)
+      }
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsText(file)
+  })
+}
+
+const isJsonFile = (f: File) => /\.(jsonl|json)$/i.test(f.name)
+
 export default function ProblemUploadPage() {
   const { subject: subjectParam = '' } = useParams()
   const toast = useToast()
@@ -42,9 +76,13 @@ export default function ProblemUploadPage() {
   const [idx, setIdx] = useState(0)
   // 문항 번호 점프 — 입력 중인 임시값 (null 이면 현재 번호 표시)
   const [jumpDraft, setJumpDraft] = useState<string | null>(null)
-  const [file, setFile] = useState<File | null>(null)
+  // 선택한 파일 묶음 — 1개면 기존 단일 흐름, 여러 개면 순차 일괄 업로드 (2026-09-03)
+  const [batch, setBatch] = useState<BatchFile[]>([])
   const [fileName, setFileName] = useState('')
   const [filePath, setFilePath] = useState('')
+  // 일괄 업로드 진행 — 현재 올리는 파일 인덱스 (null = 대기)
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const folderRef = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<ProblemImportResult | null>(null)
@@ -98,38 +136,56 @@ export default function ProblemUploadPage() {
   // 알 수 없는 과목 파라미터만 리다이렉트 — 파라미터 없는 /admin/upload 는 파일에서 과목 감지
   if (subjectParam && !SUBJECT_LABEL[subjectParam]) return <Navigate to="/admin/upload" replace />
 
-  const loadFile = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      let parsed: unknown
-      try {
-        const text = String(reader.result).trim()
-        parsed = text.startsWith('[')
-          ? JSON.parse(text)
-          : text.split('\n').filter(Boolean).map((l) => JSON.parse(l))
-      } catch {
-        toast('파일을 읽지 못했어요 · JSON/JSONL 형식을 확인해주세요')
-        return
-      }
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        toast('문항이 없는 파일이에요')
-        return
-      }
-      setItems(parsed as UploadItem[])
-      setIdx(0)
-      setChecked(new Set())
-      setFile(file)
-      setResult(null)
-      setFileName(file.name)
-      // 파일명보다 내용이 정본 — 첫 행의 unit_code 우선, 실패 시 파일명으로 인식
-      const rows = parsed as UploadItem[]
-      const code = rows[0]?.unit_code ?? file.name.replace(/\.(jsonl|json)$/i, '')
-      setFilePath(
-        unitCodeToPath(code) ??
-          '단원 자동 인식 실패 — unit_code 가 math_2022_x_x_x 형식인지 확인해주세요',
-      )
+  /**
+   * 파일 묶음 적재 — 각 파일을 로컬에서 파싱해 문항 수·단원을 미리 보여준다.
+   * 검토 뷰(items)는 모든 파일의 행을 이어 붙인 것 — 파일 경계와 무관하게 번호로 넘겨 본다.
+   */
+  const loadFiles = async (picked: File[]) => {
+    const jsonFiles = picked.filter(isJsonFile).sort((a, b) => a.name.localeCompare(b.name))
+    if (jsonFiles.length === 0) {
+      toast('JSON/JSONL 파일이 없어요')
+      return
     }
-    reader.readAsText(file)
+    const parsed = await Promise.all(jsonFiles.map(parseUploadFile))
+    const loaded: BatchFile[] = []
+    const bad: string[] = []
+    jsonFiles.forEach((f, i) => {
+      const rows = parsed[i]
+      if (!rows) {
+        bad.push(f.name)
+        return
+      }
+      // 파일명보다 내용이 정본 — 첫 행의 unit_code 우선, 실패 시 파일명으로 인식
+      const code = rows[0]?.unit_code ?? f.name.replace(/\.(jsonl|json)$/i, '')
+      loaded.push({
+        file: f,
+        name: f.name,
+        path: unitCodeToPath(code) ?? '단원 자동 인식 실패 — unit_code 가 math_2022_x_x_x 형식인지 확인해주세요',
+        rows,
+        status: 'pending',
+      })
+    })
+    if (loaded.length === 0) {
+      toast('파일을 읽지 못했어요 · JSON/JSONL 형식을 확인해주세요')
+      return
+    }
+    if (bad.length > 0) toast(`읽지 못한 파일 ${bad.length}개 제외 · ${bad.slice(0, 3).join(', ')}`)
+
+    setBatch(loaded)
+    setItems(loaded.flatMap((b) => b.rows))
+    setIdx(0)
+    setChecked(new Set())
+    setResult(null)
+    setDups([])
+    setDupSelectedId(null)
+    setUploadingIdx(null)
+    if (loaded.length === 1) {
+      setFileName(loaded[0].name)
+      setFilePath(loaded[0].path)
+    } else {
+      setFileName(`${loaded.length}개 파일`)
+      setFilePath(`${new Set(loaded.map((b) => b.path)).size}개 단원`)
+    }
   }
 
   /** 체크한 문항을 검수 큐에 적재 — 업로드 성공 직후 1회 */
@@ -156,25 +212,60 @@ export default function ProblemUploadPage() {
     )
   }
 
+  /** 파일 묶음을 순차 업로드 — 파일별 결과를 표에, 합계·중복은 아래 카드에 모아 보여준다 */
   const onUpload = async () => {
-    if (!file || uploading) return
+    if (batch.length === 0 || uploading) return
     setConfirmOpen(false)
     setUploading(true)
-    try {
-      const r = await importProblemFile(file)
-      setResult(r)
-      setDups(r.duplicates ?? [])
-      setDupSelectedId(null)
-      toast(
-        `업로드 완료 · 신규 ${r.inserted.toLocaleString()}${(r.duplicates?.length ?? 0) > 0 ? ` · 중복 ${r.duplicates.length.toLocaleString()}건 건너뜀` : ''}${r.failed > 0 ? ` · 실패 ${r.failed.toLocaleString()}` : ''}`,
-      )
-      pushCheckedToReview()
-    } catch (e) {
-      const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
-      toast(serverMsg ?? '업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
-    } finally {
-      setUploading(false)
+    const results: ProblemImportResult[] = []
+    const next = batch.map((b) => ({ ...b, status: 'pending' as const, result: undefined, error: undefined }))
+    setBatch(next)
+    for (let i = 0; i < next.length; i++) {
+      setUploadingIdx(i)
+      setBatch((prev) => prev.map((b, j) => (j === i ? { ...b, status: 'uploading' } : b)))
+      try {
+        const r = await importProblemFile(next[i].file)
+        results.push(r)
+        setBatch((prev) => prev.map((b, j) => (j === i ? { ...b, status: 'done', result: r } : b)))
+      } catch (e) {
+        const serverMsg = axios.isAxiosError(e) ? e.response?.data?.message : null
+        setBatch((prev) =>
+          prev.map((b, j) =>
+            j === i ? { ...b, status: 'error', error: serverMsg ?? '업로드 실패' } : b,
+          ),
+        )
+      }
     }
+    setUploadingIdx(null)
+    setUploading(false)
+
+    const failedFiles = next.length - results.length
+    if (results.length === 0) {
+      toast('업로드 실패 · 백엔드 연결과 어드민 권한을 확인해주세요')
+      return
+    }
+    // 합계 — 파일별 결과를 하나로 (오류 행은 파일명을 앞에 붙인다)
+    const merged: ProblemImportResult = {
+      total: results.reduce((n, r) => n + r.total, 0),
+      inserted: results.reduce((n, r) => n + r.inserted, 0),
+      updated: results.reduce((n, r) => n + r.updated, 0),
+      inactiveCount: results.reduce((n, r) => n + r.inactiveCount, 0),
+      failed: results.reduce((n, r) => n + r.failed, 0),
+      errors: next.flatMap((b) =>
+        (b.result?.errors ?? []).map((er) => ({ ...er, problemId: `${b.name} · ${er.problemId ?? ''}` })),
+      ),
+      duplicates: results.flatMap((r) => r.duplicates ?? []),
+    }
+    setResult(merged)
+    setDups(merged.duplicates)
+    setDupSelectedId(null)
+    toast(
+      `업로드 완료 · ${results.length}파일 · 신규 ${merged.inserted.toLocaleString()}` +
+        (merged.duplicates.length > 0 ? ` · 중복 ${merged.duplicates.length.toLocaleString()}건 건너뜀` : '') +
+        (merged.failed > 0 ? ` · 실패 ${merged.failed.toLocaleString()}` : '') +
+        (failedFiles > 0 ? ` · 파일 오류 ${failedFiles}개` : ''),
+    )
+    pushCheckedToReview()
   }
 
   /** 중복 문제 덮어쓰기 — 단건(행 버튼) 또는 전체(우측 상단 버튼) */
@@ -226,19 +317,21 @@ export default function ProblemUploadPage() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault()
     setOver(false)
-    const f = e.dataTransfer.files[0]
-    if (f) loadFile(f)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) loadFiles(files)
   }
 
   const reset = () => {
     setItems([])
-    setFile(null)
+    setBatch([])
+    setUploadingIdx(null)
     setResult(null)
     setChecked(new Set())
     setDups([])
     setDupSelectedId(null)
     setConfirmAllOpen(false)
     if (fileRef.current) fileRef.current.value = ''
+    if (folderRef.current) folderRef.current.value = ''
   }
 
   const item = items[idx]
@@ -285,21 +378,43 @@ export default function ProblemUploadPage() {
             onDrop={onDrop}
           >
             <div className="dz-ico"><IcoUpload /></div>
-            <b>JSON 파일을 끌어다 놓거나 클릭해서 선택하세요</b>
+            <b>JSON 파일을 끌어다 놓거나 클릭해서 선택하세요 (여러 개 가능)</b>
             <p>파일명으로 단원이 자동 인식돼요 · 예: 2022_1_1_1.jsonl → 대수 › 지수함수와 로그함수 › 지수와로그</p>
             <div className="formats">
               <span className="chip">JSONL</span>
               <span className="chip">JSON</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  folderRef.current?.click()
+                }}
+              >
+                폴더째 선택
+              </button>
             </div>
           </div>
           <input
             ref={fileRef}
             type="file"
             accept=".json,.jsonl"
+            multiple
             style={{ display: 'none' }}
             onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) loadFile(f)
+              const files = Array.from(e.target.files ?? [])
+              if (files.length > 0) loadFiles(files)
+            }}
+          />
+          {/* 폴더 선택 — 하위 JSON 전부 (형식 밖 파일은 loadFiles 가 거른다) */}
+          <input
+            ref={folderRef}
+            type="file"
+            style={{ display: 'none' }}
+            {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? [])
+              if (files.length > 0) loadFiles(files)
             }}
           />
         </div>
@@ -319,9 +434,58 @@ export default function ProblemUploadPage() {
               disabled={uploading}
               onClick={() => setConfirmOpen(true)}
             >
-              {uploading ? '업로드 중…' : '업로드하기'}
+              {uploading
+                ? `업로드 중… ${(uploadingIdx ?? 0) + 1} / ${batch.length}`
+                : batch.length > 1
+                  ? `${batch.length}개 파일 모두 업로드`
+                  : '업로드하기'}
             </button>
           </div>
+
+          {/* 여러 파일 — 파일별 단원·문항 수·진행 상태 */}
+          {batch.length > 1 && (
+            <div className="card" style={{ margin: '16px 0' }}>
+              <div className="table-wrap">
+                <table>
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col style={{ width: 90 }} />
+                    <col style={{ width: 260 }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>파일</th>
+                      <th>단원</th>
+                      <th>문항</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batch.map((b) => (
+                      <tr key={b.name}>
+                        <td className="strong">{b.name}</td>
+                        <td>{b.path}</td>
+                        <td className="num">{b.rows.length.toLocaleString()}</td>
+                        <td>
+                          {b.status === 'pending' && <span className="badge neutral">대기</span>}
+                          {b.status === 'uploading' && <span className="badge pending">업로드 중…</span>}
+                          {b.status === 'done' && b.result && (
+                            <span>
+                              신규 {b.result.inserted.toLocaleString()}
+                              {(b.result.duplicates?.length ?? 0) > 0 && ` · 중복 ${b.result.duplicates.length.toLocaleString()}`}
+                              {b.result.failed > 0 && ` · 실패 ${b.result.failed.toLocaleString()}`}
+                            </span>
+                          )}
+                          {b.status === 'error' && <span className="badge pending">{b.error}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {result && (
             <div className="card upl-summary">
@@ -679,7 +843,7 @@ export default function ProblemUploadPage() {
           <div className="card cr-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="card-title" style={{ marginBottom: 10 }}>업로드할까요?</h3>
             <p className="page-sub" style={{ marginBottom: 16 }}>
-              아래 파일의 문항이 DB에 저장돼요. 같은 ID가 이미 있으면 건너뛰고
+              {batch.length > 1 ? '아래 파일들이 순서대로' : '아래 파일의 문항이'} DB에 저장돼요. 같은 ID가 이미 있으면 건너뛰고
               중복 목록으로 보여드려요 — 덮어쓸지 그때 선택하면 됩니다.
             </p>
             <div className="upl-confirm-info">
