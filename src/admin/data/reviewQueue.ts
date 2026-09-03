@@ -27,6 +27,8 @@ export interface ReviewProblem {
   answer_text?: string
   /** 블록 배열 — 과목 공통 (문자열은 구 데이터 잔재) */
   explanation?: string | ExplainBlock[]
+  /** 영어 지문 해석 — 문단 배열 또는 직렬화 문자열 (해설 패널 "해석" 탭 · 수학은 없음) */
+  translation?: string | unknown[] | null
   difficulty?: string | null
   score?: number
   recommended_time_sec?: number
