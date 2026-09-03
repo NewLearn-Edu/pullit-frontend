@@ -111,6 +111,23 @@ export async function fetchSkillScores(subject: 'math' | 'english'): Promise<Ski
   return data.data
 }
 
+/** 진단 세트 문항별 결과 — 서버가 첫 TRIAL 제출 기준으로 복원 (시간 가중 획득 점수 포함) */
+export interface TrialDiagnosisItem {
+  sequence: number
+  problemId: string
+  answerType: 'MULTIPLE_CHOICE' | 'SHORT_ANSWER'
+  correct: boolean
+  skipped: boolean
+  submittedNo: number | null
+  submittedText: string | null
+  answerIndex: number | null
+  answerValue: number | null
+  timeSpentMs: number | null
+  recommendedTimeSec: number | null
+  points: number
+  earnedPoints: number
+}
+
 /** 맛보기 진단 완료 기록 — 세트 완주 시 서버가 자동 박제한 행 (trial_diagnoses) */
 export interface TrialDiagnosis {
   skillNode: string
@@ -120,6 +137,8 @@ export interface TrialDiagnosis {
   correctCount: number
   totalCount: number
   timeSpentMs: number | null
+  /** 문항별 결과 — 세트 구성이 바뀌어 복원이 안 되면 빈 배열 (구버전 서버는 undefined) */
+  items?: TrialDiagnosisItem[]
   completedAt: string
 }
 

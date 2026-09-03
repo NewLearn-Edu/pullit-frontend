@@ -24,14 +24,48 @@ export interface SolveSession {
   scoreBefore?: UnitScoreSnapshot | null
 }
 
+/**
+ * 세트 풀이 문항별 결과 — 세트 결과 화면(/solve/result · Figma 3620-8224)과 해설 리뷰의 근거.
+ * 제출 직후엔 내 답·시간만 있고(pending), 서버 채점 응답이 오면 정답·해설·획득 점수가 채워진다
+ * (서버 세트 문항은 로컬에 정답이 없어 채점은 서버 응답으로만 확정).
+ */
+export interface SolveItemResult {
+  problemId: number
+  selectedChoice: number | null
+  elapsedMs: number
+  /** 서버 채점 전 = true */
+  pending: boolean
+  correct?: boolean
+  answerNo?: number | null
+  explanation?: string | null
+  translation?: string | null
+  vocabulary?: { term: string; meaning: string }[] | null
+  earnedPoints?: number
+  timeoverFlag?: boolean
+}
+
 interface SolveState {
   session: SolveSession | null
+  /** problemId → 결과 (세트 시작 시 비움) */
+  results: Record<number, SolveItemResult>
   startSession: (session: SolveSession) => void
+  recordResult: (problemId: number, patch: Partial<SolveItemResult>) => void
   clear: () => void
 }
 
 export const useSolveStore = create<SolveState>((set) => ({
   session: null,
-  startSession: (session) => set({ session }),
-  clear: () => set({ session: null }),
+  results: {},
+  startSession: (session) => set({ session, results: {} }),
+  recordResult: (problemId, patch) =>
+    set((s) => {
+      const base: SolveItemResult = s.results[problemId] ?? {
+        problemId,
+        selectedChoice: null,
+        elapsedMs: 0,
+        pending: true,
+      }
+      return { results: { ...s.results, [problemId]: { ...base, ...patch } } }
+    }),
+  clear: () => set({ session: null, results: {} }),
 }))

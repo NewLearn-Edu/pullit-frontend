@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
 import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
@@ -69,7 +69,7 @@ export function ReviewScreen({
   // 필기 — 캔버스는 문제·해설 두 장. 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.35)
+  const [size, setSize] = useState(0.2)
   const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
   const [allowFinger, setAllowFinger] = useState(false)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
@@ -88,6 +88,28 @@ export function ReviewScreen({
 
   const [panelWidth, setPanelWidth] = useState(420)
   const [resizing, setResizing] = useState(false)
+
+  // 해설 패널 초기 폭 = 왼쪽 문제 카드의 실제 폭 (2026-09-03) — 열릴 때마다 한 번 맞추고,
+  // 패널이 자리를 차지해 카드가 줄어들면 한 번 더 따라간다. 이후 드래그 조절은 그대로
+  const problemCardRef = useRef<HTMLElement>(null)
+  const matchedRef = useRef(false)
+  useLayoutEffect(() => {
+    if (!explainOpen) {
+      matchedRef.current = false
+      return
+    }
+    if (matchedRef.current) return
+    matchedRef.current = true
+    const clamp = (w: number) => Math.max(300, Math.min(800, Math.round(w)))
+    const measure = () => problemCardRef.current?.getBoundingClientRect().width ?? 0
+    const first = measure()
+    if (first > 0) setPanelWidth(clamp(first))
+    const raf = requestAnimationFrame(() => {
+      const second = measure()
+      if (second > 0 && Math.abs(second - first) > 1) setPanelWidth(clamp(second))
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [explainOpen])
 
   // 액션 푸터는 풀이 화면 답안 바와 같은 fixed 바 — 패널이 inline 사이드바(md+)로 열리면
   // 문제 칼럼(뷰포트 − 패널 폭)의 가운데로 옮겨 패널 폭 변화에 따라 문제 카드와 함께 움직인다
@@ -132,7 +154,7 @@ export function ReviewScreen({
 
       <div className={styles.content}>
         <main className={styles.main}>
-          <section className={styles.problemCard}>
+          <section ref={problemCardRef} className={styles.problemCard}>
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {problemNo}</h2>
@@ -154,15 +176,16 @@ export function ReviewScreen({
                         {problem.choices.map((choice, i) => {
                           const choiceNo = i + 1
                           const isAnswer = choiceNo === answerNo
-                          const isMyWrong = choiceNo === myChoice && !isAnswer
+                          const isMine = choiceNo === myChoice
+                          // 내 선택 = 검정 채움 · 내가 못 맞힌 정답(다른 걸 골랐거나 무응답·기록 없음) = 빨강
+                          const missedAnswer = isAnswer && !isMine
                           const answerText = choice.replace(/^[①②③④⑤]\s*/, '')
                           const ChoiceRender =
                             subject === 'english' ? EnglishProblemRender : MathProblemRender
                           return (
                             <span
                               key={choiceNo}
-                              className={clsx('choice', isAnswer && 'correct')}
-                              style={isMyWrong ? { color: '#ff385c' } : undefined}
+                              className={clsx('choice', isMine && 'mine', missedAnswer && 'missed')}
                             >
                               <span className="choice-num">{choiceNo}</span>
                               <span>

@@ -15,6 +15,8 @@ import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
 import SolveResultPage from './user/pages/home/SolveResultPage'
+import SolveSetResultPage from './user/pages/home/SolveSetResultPage'
+import SolveReviewPage from './user/pages/home/SolveReviewPage'
 import PolicyPage from './user/pages/policy/PolicyPage'
 import EarlybirdEntryPage from './user/pages/earlybird/EarlybirdEntryPage'
 import LoginPage from './user/pages/auth/LoginPage'
@@ -131,6 +133,9 @@ export default function App() {
         <Route path="/unit-result/:subject/:unitName" element={<UnitResultPage />} />
         {/* 세트 풀이 완료 — 소단원 평균 점수 변동 (진단 이후 풀이는 /weakness 대신 이 화면) */}
         <Route path="/solve-result/:subject/:unitName" element={<SolveResultPage />} />
+        {/* 세트 풀이 결과(문항별 · 3620-8224) → 완료 → 점수 변동(/solve-result). 해설은 리뷰 화면 */}
+        <Route path="/solve/result/:subject" element={<SolveSetResultPage />} />
+        <Route path="/solve/review/:subject/:index" element={<SolveReviewPage />} />
         {/* 자유 풀이 — 홈·오답노트에서만 진입하므로 회원 영역과 같은 게이트 */}
         <Route path="/solve/:subject/:index" element={<TrialQuizPage mode="solve" />} />
       </Route>

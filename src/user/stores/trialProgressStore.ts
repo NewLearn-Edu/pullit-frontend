@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { CURRICULUM, type CurriculumCategory, type CurriculumUnit } from '@/user/data/curriculum'
-import { fetchTrialDiagnoses } from '@/user/api/attemptApi'
+import { fetchTrialDiagnoses, type TrialDiagnosisItem } from '@/user/api/attemptApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { useUserStore } from '@/user/stores/userStore'
 
@@ -41,6 +41,39 @@ export interface DiagnosisItem {
   correctAnswer: string
   /** 권장 시간 (초) — 초과 보조줄용 */
   recSec: number
+}
+
+/** 선지 번호 → 원문자 (①~⑤) */
+const circledNo = (n: number | null | undefined) => (n == null ? '-' : String.fromCodePoint(0x245f + n))
+
+/**
+ * 서버 문항별 결과 → 재열람용 표시값. 세트 완주 직후 로컬에서 박제하던 것과 같은 규칙
+ * (WeaknessResultPage.diagnosisItems) — 이제 서버가 진실원이라 다른 브라우저·재로그인에도 남는다
+ */
+function toDiagnosisItems(items: TrialDiagnosisItem[] | undefined): DiagnosisItem[] | undefined {
+  if (!items || items.length === 0) return undefined
+  return items.map((it) => {
+    const seconds = Math.round((it.timeSpentMs ?? 0) / 1000)
+    const recSec = it.recommendedTimeSec ?? 0
+    const short = it.answerType === 'SHORT_ANSWER'
+    const myAnswer = it.skipped
+      ? '-'
+      : short
+        ? (it.submittedText ?? '-')
+        : circledNo(it.submittedNo)
+    const answerNo = short ? it.answerValue : it.answerIndex
+    return {
+      correct: it.correct,
+      overTime: recSec > 0 && seconds > recSec,
+      seconds,
+      earned: Number(it.earnedPoints ?? 0),
+      points: Number(it.points ?? 0),
+      short,
+      myAnswer,
+      correctAnswer: answerNo == null ? '-' : short ? String(answerNo) : circledNo(answerNo),
+      recSec,
+    }
+  })
 }
 
 export interface UnitDiagnosis {
@@ -175,7 +208,8 @@ export const useTrialProgressStore = create<TrialProgressState>()(
             correct: d.correctCount,
             date: d.completedAt.slice(0, 10),
             time: d.completedAt.slice(11, 16) || undefined,
-            items: get().diagnosed[unitName]?.items,
+            // 서버 문항별 결과 우선 — 없으면(구버전 서버·복원 불가) 로컬 박제분 승계
+            items: toDiagnosisItems(d.items) ?? get().diagnosed[unitName]?.items,
           }
         }
         set((s) => {

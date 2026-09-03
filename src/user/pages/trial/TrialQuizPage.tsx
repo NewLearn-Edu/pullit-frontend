@@ -90,6 +90,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
   const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTrialStore()
   const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
+  const recordSolveResult = useSolveStore((s) => s.recordResult)
 
   // 맛보기를 이미 완주한 회원의 딥링크 진입 방어 — 미완 유저(게스트·신규 회원)는 통과.
   // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외.
@@ -140,7 +141,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.35) // 0.1 ~ 1.0 슬라이더 값 · 도구별 굵기 매핑은 DrawingCanvas
+  const [size, setSize] = useState(0.2) // 0.1 ~ 1.0 슬라이더 값 · 도구별 굵기 매핑은 DrawingCanvas
   const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
   // 복원한 필기의 세로 끝(px)만큼 캔버스 영역을 확보해 아래쪽 필기가 안 잘리게 (폰 저장 → 태블릿).
   // state 가 아니라 style 직접 — 획마다 문제 본문(KaTeX)까지 다시 그리지 않는다
@@ -323,7 +324,6 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
           useTrialStore.getState().markFirstRewardGranted()
           useUserStore.getState().loadMe(true)
         }
-        if (!isTrial) return // 일반 풀이는 진단 세션 결과를 건드리지 않는다
         const rescored = computeScore({
           points,
           correct: res.isCorrect,
@@ -332,6 +332,20 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
           tMaxSec,
           peekedBeforeAnswer: false,
         })
+        if (!isTrial) {
+          // 일반 풀이 — 진단 세션이 아니라 풀이 세션(solveStore)에 채점 결과를 채운다 (세트 결과 화면용)
+          recordSolveResult(problem.id, {
+            pending: false,
+            correct: res.isCorrect,
+            answerNo: res.answerIndex ?? res.answerValue,
+            explanation: res.explanation,
+            translation: res.translation,
+            vocabulary: res.vocabulary,
+            earnedPoints: rescored.earnedPoints,
+            timeoverFlag: rescored.timeoverFlag,
+          })
+          return
+        }
         updateResult(subject as Subject, problem.id, {
           attemptId: res.attemptId,
           serverCorrect: res.isCorrect,
@@ -372,6 +386,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         peekedBeforeAnswer: false,
         elapsedMs,
       })
+    } else {
+      recordSolveResult(problem.id, { selectedChoice: answerValue, elapsedMs, pending: true })
     }
     recordAttempt(answerValue, elapsedMs)
     goNext()
@@ -393,14 +409,11 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       navigate('/weakness', { replace: true })
       return
     }
-    // 진단 이후의 세트 풀이(FREE·DAILY) — 소단원 평균 점수 변동 화면 (3620-8320 / 2857-21967).
+    // 진단 이후의 세트 풀이(FREE·DAILY) — 세트 결과(문항별 · 3620-8224) → 점수 변동(3620-8320) 순서.
     // 오답 다시 풀기(RETRY·세트 없음)는 점수에 영향이 없어 진입처로 바로 돌아간다
     const returnTo = solveSession?.returnTo ?? '/home'
     if (solveSession?.setId && solveSession.unitName) {
-      navigate(`/solve-result/${subject}/${encodeURIComponent(solveSession.unitName)}`, {
-        replace: true,
-        state: { setId: solveSession.setId, before: solveSession.scoreBefore ?? null, returnTo },
-      })
+      navigate(`/solve/result/${subject}`, { replace: true })
       return
     }
     navigate(returnTo)
@@ -439,6 +452,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         peekedBeforeAnswer: false,
         elapsedMs,
       })
+    } else {
+      recordSolveResult(problem.id, { selectedChoice: null, elapsedMs, pending: true })
     }
     recordAttempt(null, elapsedMs)
     goNext()

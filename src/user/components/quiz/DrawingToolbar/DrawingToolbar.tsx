@@ -6,9 +6,30 @@ import { useIsCompact, useIsTouchDevice } from '@/user/hooks/useMediaQuery'
 import styles from './styles/DrawingToolbar.module.scss'
 
 const COLORS = ['#120C0B', '#2563EB', '#DC2626', '#059669']
+/**
+ * 형광펜 전용 팔레트 (2026-09-03) — 노랑·분홍·하늘·연두. 기본 노랑.
+ * 캔버스가 형광펜을 32% 알파로 칠하므로 원색을 쓰되, 툴바 스와치는 칠해진 느낌(파스텔)으로 보여준다
+ */
+const MARKER_COLORS = ['#FFD60A', '#FF7EB6', '#5AB4FF', '#7DDC7A']
+const MARKER_SWATCH_ALPHA = 0.45
+/** #rrggbb → rgba(…, a) — 형광펜 스와치를 파스텔 톤으로 */
+const withAlpha = (hex: string, a: number) =>
+  `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`
 
-/** 초기 프리셋 두께 (0.1 ~ 1.0) — 사용자가 팝오버에서 조정 시 이 자리를 대체 */
-const DEFAULT_PRESETS: [number, number, number] = [0.2, 0.35, 0.7]
+/**
+ * 프리셋 두께 (0.1 ~ 1.0) — 도구별로 따로 (2026-09-03 확정). 기본 선택은 둘 다 가운데.
+ * 펜 0.1 · 0.2 · 0.4 (기본 0.2) · 형광펜 0.2 · 0.35 · 0.55 (기본 0.35).
+ * 사용자가 팝오버 슬라이더로 조정하면 해당 도구의 그 자리를 대체한다
+ */
+type Presets = [number, number, number]
+type PresetTool = 'mono' | 'marker'
+const DEFAULT_PRESETS: Record<PresetTool, Presets> = {
+  mono: [0.1, 0.2, 0.4],
+  marker: [0.2, 0.35, 0.55],
+}
+const presetToolOf = (t: StrokeTool): PresetTool => (t === 'marker' ? 'marker' : 'mono')
+/** 프리셋 dot 지름(px) — 실제 두께 비례(×14)로 그리면 0.1 이 1.4px 라 안 보여 보기용 단계로 */
+const PRESET_DOT_PX = [5, 8, 12]
 
 /**
  * 지우개 사이즈 4단 (canvas size 값 · × 14 = 기준 폭 500 조판 px · 화면에선 배율만큼 축소)
@@ -72,8 +93,19 @@ export function DrawingToolbar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCompact])
 
-  const [presets, setPresets] = useState<[number, number, number]>(DEFAULT_PRESETS)
-  const [activeIdx, setActiveIdx] = useState(1)
+  // 도구별 색 — 펜은 검정, 형광펜은 노랑에서 시작하고 각자 마지막 색을 기억한다
+  const colorByToolRef = useRef<Record<PresetTool, string>>({ mono: COLORS[0], marker: MARKER_COLORS[0] })
+  const palette = tool === 'marker' ? MARKER_COLORS : COLORS
+  const isMarker = tool === 'marker'
+
+  // 도구별 프리셋·선택 자리 — 펜과 형광펜이 각자 두께를 기억한다
+  const [presetsByTool, setPresetsByTool] = useState<Record<PresetTool, Presets>>(DEFAULT_PRESETS)
+  const [activeIdxByTool, setActiveIdxByTool] = useState<Record<PresetTool, number>>({ mono: 1, marker: 1 })
+  const presetTool = presetToolOf(tool)
+  const presets = presetsByTool[presetTool]
+  const activeIdx = activeIdxByTool[presetTool]
+  const setActiveIdx = (idx: number) => setActiveIdxByTool((prev) => ({ ...prev, [presetTool]: idx }))
+  const setPresets = (next: Presets) => setPresetsByTool((prev) => ({ ...prev, [presetTool]: next }))
   const [eraserSizeIdx, setEraserSizeIdx] = useState(1)
   const [popMounted, setPopMounted] = useState(false)
   const [popVisible, setPopVisible] = useState(false)
@@ -154,10 +186,13 @@ export function DrawingToolbar({
     }
   }, [])
 
-  // 부모 size 가 프리셋과 항상 일치하도록 초기 동기화
+  // 부모 size·color 가 현재 도구의 프리셋·팔레트와 일치하도록 초기 동기화
   useEffect(() => {
     if (size !== presets[activeIdx]) {
       onSizeChange(presets[activeIdx])
+    }
+    if (tool !== 'eraser' && tool !== 'laser' && !palette.includes(color)) {
+      onColorChange(colorByToolRef.current[presetTool])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -171,7 +206,9 @@ export function DrawingToolbar({
     if (newTool === 'eraser') {
       onSizeChange(ERASER_SIZES[eraserSizeIdx])
     } else if (newTool !== 'laser') {
-      onSizeChange(presets[activeIdx])
+      const t = presetToolOf(newTool)
+      onSizeChange(presetsByTool[t][activeIdxByTool[t]])
+      onColorChange(colorByToolRef.current[t])
     }
   }
 
@@ -205,13 +242,14 @@ export function DrawingToolbar({
   }
 
   const handleSliderChange = (v: number) => {
-    const next = [...presets] as [number, number, number]
+    const next = [...presets] as Presets
     next[activeIdx] = v
     setPresets(next)
     onSizeChange(v)
   }
 
-  const dotPx = (v: number) => Math.max(3, Math.round(v * 14))
+  // 프리셋 자리(i)별 고정 지름 — 슬라이더로 값을 바꿔도 dot 은 자리 순서(얇음 < 보통 < 굵음)를 유지
+  const dotPx = (i: number) => PRESET_DOT_PX[i] ?? 8
 
   const [clearFlash, setClearFlash] = useState(false)
   const clearFlashTimer = useRef<number | null>(null)
@@ -230,23 +268,27 @@ export function DrawingToolbar({
     }
   }, [])
 
-  // 색 팔레트
+  // 색 팔레트 — 펜/형광펜 각자. 고른 색은 그 도구의 기억으로 남는다
+  const pickColor = (c: string) => {
+    colorByToolRef.current[presetTool] = c
+    onColorChange(c)
+  }
   const colorsGroup = (
     <div className={styles.colorsGroup}>
-      {COLORS.map((c) => (
+      {palette.map((c) => (
         <button
           key={c}
           type="button"
-          onClick={() => onColorChange(c)}
+          onClick={() => pickColor(c)}
           aria-label={`색 ${c}`}
           className={styles.colorButton}
         >
           <span
             className={styles.colorSwatch}
             style={{
-              background: c,
+              background: isMarker ? withAlpha(c, MARKER_SWATCH_ALPHA) : c,
               boxShadow:
-                color === c ? `0 0 0 2px #FFFFFF, 0 0 0 3.5px ${c}` : undefined,
+                color === c ? `0 0 0 2px #FFFFFF, 0 0 0 3.5px ${isMarker ? withAlpha(c, 0.7) : c}` : undefined,
             }}
           />
         </button>
@@ -311,7 +353,7 @@ export function DrawingToolbar({
   // 두께 프리셋 3개 + 팝오버
   const presetsGroup = (
     <div ref={sizeGroupRef} className={styles.presetsGroup}>
-      {presets.map((v, i) => {
+      {presets.map((_v, i) => {
         const isActive = i === activeIdx
         return (
           <button
@@ -330,7 +372,7 @@ export function DrawingToolbar({
           >
             <span
               className={styles.presetDot}
-              style={{ width: dotPx(v), height: dotPx(v) }}
+              style={{ width: dotPx(i), height: dotPx(i) }}
             />
           </button>
         )
