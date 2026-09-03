@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { PageHeader } from '@/user/components/PageHeader'
-import { logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
+import { GRADE_LABEL, logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
 import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
@@ -164,9 +164,9 @@ export default function MyPage() {
             <p className={styles.profileMeta}>기록은 7일 뒤 사라져요 · 가입하면 그대로 저장돼요</p>
           ) : (
             <p className={styles.profileMeta}>
-              {gradeLabel(me?.birthDate) && (
+              {(me?.grade ? GRADE_LABEL[me.grade] : gradeLabel(me?.birthDate)) && (
                 <>
-                  <span>{gradeLabel(me?.birthDate)}</span>
+                  <span>{me?.grade ? GRADE_LABEL[me.grade] : gradeLabel(me?.birthDate)}</span>
                   <span className={styles.metaDivider} aria-hidden />
                 </>
               )}
@@ -198,16 +198,18 @@ export default function MyPage() {
         {/* 학습 통계 — GET /api/attempts/me/stats 실데이터 (풀이 없으면 0 · —) */}
         <section className={styles.statsCard}>
           <div className={styles.stat}>
-            <span className={styles.statLabel}>풀은 문제</span>
+            <span className={styles.statLabel}>푼 문제</span>
             <span className={styles.statValue}>
               {stats ? `${stats.solvedCount.toLocaleString()}개` : '—'}
             </span>
           </div>
           <span className={styles.statDivider} />
           <div className={styles.stat}>
-            <span className={styles.statLabel}>정답률</span>
+            {/* 구분 — 가입 프로필에서 고른 값. 학부모·선생님·일반인이 섞여 "학년"이 아니다.
+                정답률은 자리를 빼고 학습 리포트에서 다룬다 (2026-09-03) */}
+            <span className={styles.statLabel}>구분</span>
             <span className={styles.statValue}>
-              {stats?.accuracyPct != null ? `${stats.accuracyPct}%` : '—'}
+              {me?.grade ? GRADE_LABEL[me.grade] : gradeLabel(me?.birthDate) ?? '—'}
             </span>
           </div>
           <span className={styles.statDivider} />
