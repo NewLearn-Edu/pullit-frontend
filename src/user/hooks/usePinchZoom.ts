@@ -306,13 +306,21 @@ export function usePinchZoom(
    * 하단 바(답안 바·리뷰 버튼 바) — 확대해도 바는 커지지 않고, 카드의 "보이는 구간"(카드 폭과 컨테이너 폭 중 작은 쪽)을
    * 그대로 덮는다. 1 배 때처럼 카드 폭에 맞춰 두면 커진 카드 한가운데 500px 바가 떠 있게 된다.
    * - stickyBarStyle: 컨테이너 안 sticky 바 (리뷰 화면) — 카드처럼 alignSelf + margin-left
-   * - fixedBarStyle: 뷰포트 fixed 바 (풀이 화면 answerBar) — left 를 컨테이너 기준으로 직접 놓고 가운데 정렬 transform 을 푼다
+   * - fixedBarStyle: 뷰포트 fixed 바 (풀이 화면 answerBar) — transform 은 건드리지 않는다. 바에는 iOS 키보드 보정이
+   *   visualViewport 이벤트마다 transform: translate(-50%, y) 를 직접 쓰므로(TrialQuizPage) 인라인 transform:none 은
+   *   곧 덮어써진다 (아이패드에서 바가 절반 밀려 나가던 원인 · 2026-09-04). 대신 left 를 "바 중심" 좌표로 준다
    */
   const stickyBarStyle: CSSProperties = zoomed
     ? { width: layout.barWidth, maxWidth: 'none', alignSelf: 'flex-start', marginLeft: layout.barOffset }
     : {}
   const fixedBarStyle: CSSProperties = zoomed
-    ? { width: layout.barWidth, maxWidth: 'none', minWidth: 0, left: layout.mainLeft + layout.barOffset, transform: 'none' }
+    ? {
+        width: layout.barWidth,
+        maxWidth: 'none',
+        minWidth: 0,
+        // translateX(-50%) 가 유지되므로 left = 바 중심
+        left: layout.mainLeft + layout.barOffset + layout.barWidth / 2,
+      }
     : {}
 
   return { zoom: layout.zoom, zoomed, scrollerStyle, cardStyle, stickyBarStyle, fixedBarStyle }
