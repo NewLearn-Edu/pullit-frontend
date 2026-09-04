@@ -35,7 +35,6 @@ import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 import RecommendPage from './user/pages/recommend/RecommendPage'
-import AccessGate from './AccessGate'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
@@ -118,7 +117,7 @@ function BlockBackNavigation() {
 
 export default function App() {
   return (
-    <AccessGate>
+    <>
     <MetaPixelPageView />
     <BlockBackNavigation />
     <Routes>
@@ -183,6 +182,6 @@ export default function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </AccessGate>
+    </>
   )
 }

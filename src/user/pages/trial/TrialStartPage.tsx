@@ -54,7 +54,7 @@ export default function TrialStartPage() {
   return (
     <div className={styles.page}>
       {/* 시안 2824-4756 헤더 — 우측 닫기 X 만 (로고 없음) */}
-      {/* 얼리버드 테스터의 X 는 얼리버드 랜딩으로 — 일반 랜딩(/)은 비밀번호 게이트 뒤라 막힌다 */}
+      {/* 얼리버드 테스터의 X 는 얼리버드 랜딩으로, 일반은 랜딩(/) */}
       <OnboardingHeader onClose={() => navigate(isEarlybird() ? '/earlybird' : '/')} />
 
       <main className={styles.main}>
