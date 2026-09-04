@@ -61,9 +61,9 @@ export default function ProgressRadar({
     ? (units.map((u, i) => dataPoint(i, u.score ?? 0)) as [number, number][])
     : null
   const full = fullXY ? roundedPolygon(fullXY, 16) : null
-  const weakestIdx = complete
-    ? diagnosed.reduce((a, b) => (b.score < a.score ? b : a)).i
-    : -1
+  // 최약점 — 진단한 축 중 최저점 전부 (0점이 여러 개면 모두). 진행 중·완성 모두 이 축들이 깜빡인다 (2026-09-04)
+  const minScore = diagnosed.length > 0 ? Math.min(...diagnosed.map((u) => u.score)) : null
+  const weakestSet = new Set(diagnosed.filter((u) => u.score === minScore).map((u) => u.i))
 
   // 채우는 중 — 중심에서 진단 축들을 잇는 조각 (순서 진행이라 진단 축은 항상 연속)
   const partialPts = diagnosed.map((u) => dataPoint(u.i, u.score))
@@ -130,8 +130,8 @@ export default function ProgressRadar({
           )}
           {partialPts.map(([x, y], k) => (
             <g key={diagnosed[k].i}>
-              {/* 마지막(가장 최근) 진단 점 — 은은한 핑으로 살아있는 느낌 */}
-              {k === partialPts.length - 1 && (
+              {/* 최약점 축(들) — 은은한 핑으로 "여기가 가장 약해" */}
+              {weakestSet.has(diagnosed[k].i) && (
                 <>
                   <circle cx={x} cy={y} r="8" fill="none" stroke={RED} strokeWidth="1" className={styles.pulse} />
                   <circle cx={x} cy={y} r="8" fill="none" stroke={RED} strokeWidth="1" className={clsx(styles.pulse, styles.pulseLate)} />
@@ -174,7 +174,7 @@ export default function ProgressRadar({
       )}
       {full &&
         full.apexes.map(([x, y], i) =>
-          i === weakestIdx ? (
+          weakestSet.has(i) ? (
             <g key={units[i].name}>
               <circle cx={x} cy={y} r="9" fill="none" stroke={RED} strokeWidth="1.2" className={styles.pulse} />
               <circle cx={x} cy={y} r="9" fill="none" stroke={RED} strokeWidth="1.2" className={clsx(styles.pulse, styles.pulseLate)} />
@@ -196,7 +196,7 @@ export default function ProgressRadar({
       {/* ── 라벨 ───────────────────────────────────────────────────────── */}
       {units.map((unit, i) => {
         const locked = unit.score == null
-        const weakest = complete && i === weakestIdx
+        const weakest = complete && weakestSet.has(i)
         const weak = !locked && (unit.score ?? 100) < WEAK_THRESHOLD
         // 완성 후엔 최약만 강조, 나머지는 가라앉힌다
         const mutedByConclusion = complete && !weakest
