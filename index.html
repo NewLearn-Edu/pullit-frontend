@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#FF385C" />
+    <!-- 홈 화면 웹앱(iOS): 상태바 아래까지 화면을 쓰고 각 화면 상단이 env(safe-area-inset-top) 만큼 자기 배경으로 채운다 (2026-09-04) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
       // 카카오톡 인앱 브라우저 탈출 — OS 기본 브라우저(iOS 사파리 / Android 크롬 등)로 다시 연다.
       // 인앱 웹뷰는 구글 등 소셜 로그인이 막히는(disallowed_useragent) 문제가 있어 바깥으로 뺀다.

@@ -14,7 +14,8 @@
   gap: $space-sm;
   width: 100%;
   min-height: 64px;
-  padding: 16px 12px 10px; // 위를 조금 더 살린 패딩 (최소 지원 폭 350px 수용)
+  // 위를 조금 더 살린 패딩 (최소 지원 폭 350px 수용) + 홈 화면 웹앱 상태바(safe-area) 만큼 — 헤더 배경이 페이지와 같아 자연히 이어진다
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 12px 10px;
 
   @include desktop-up {
     max-width: 660px;

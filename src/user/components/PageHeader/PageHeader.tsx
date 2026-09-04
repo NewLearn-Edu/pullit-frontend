@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { isStandaloneApp } from '@/user/utils/standalone'
 import styles from './styles/PageHeader.module.scss'
 
 interface PageHeaderProps {
@@ -24,17 +25,7 @@ interface PageHeaderProps {
   hideBackWhenNoHistory?: boolean
 }
 
-/** 홈 화면에 추가한 웹앱으로 실행 중인가 — 안드로이드·iPadOS 공통 media query + iOS 전용 플래그 */
-function isStandaloneApp(): boolean {
-  try {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true
-    )
-  } catch {
-    return false
-  }
-}
+
 
 /**
  * 공통 페이지 헤더 (2026-08-12)

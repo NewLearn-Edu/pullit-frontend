@@ -17,7 +17,7 @@ export default function LandingNav() {
   const displayName = me ? me.name ?? me.nickname ?? '회원' : null
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex min-w-[350px] justify-center bg-black/10 backdrop-blur-[20px]">
+    <nav className="fixed inset-x-0 top-0 z-50 flex min-w-[350px] justify-center bg-black/10 pt-[env(safe-area-inset-top,0px)] backdrop-blur-[20px]">
       <div className="flex w-full max-w-[1000px] items-center justify-between gap-[24px] px-[24px] py-[14px] max-md:px-lg">
         <Link to="/" aria-label="풀잇 홈" className="shrink-0">
           <img src={logoNav} alt="풀잇" className="h-[22px] w-[44px]" />

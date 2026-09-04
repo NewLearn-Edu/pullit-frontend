@@ -14,6 +14,8 @@ import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useTrialStore } from '@/user/stores/trialStore'
 import SkipHeader from '@/user/components/SkipHeader'
+import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { isStandaloneApp } from '@/user/utils/standalone'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
 import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
 
@@ -97,8 +99,9 @@ export default function SignupPromptPage() {
 
   return (
     <div className="flex h-dvh touch-none flex-col overflow-hidden overscroll-none bg-white">
-      {/* 상단바 — 우측 건너뛰기만 (온보딩 공용 SkipHeader) */}
-      <SkipHeader onSkip={() => setSkipConfirmOpen(true)} />
+      {/* 상단바 — 우측 건너뛰기만 (온보딩 공용 SkipHeader).
+          홈 화면 웹앱(아이패드·안드로이드)은 회원 전용이라 건너뛰기(게스트) 없이 상단 여백만 둔다 (2026-09-04) */}
+      {isStandaloneApp() ? <OnboardingHeader /> : <SkipHeader onSkip={() => setSkipConfirmOpen(true)} />}
 
       <main className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden px-[40px] py-[40px] max-md:px-lg max-md:py-[24px]">
         {/* 레이더 카드 — 배경색 없이 그래프만 (2026-08-25).

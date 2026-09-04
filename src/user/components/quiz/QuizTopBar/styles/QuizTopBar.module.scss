@@ -13,6 +13,7 @@
   top: 0;
   z-index: $z-header;
   width: 100%;
+  padding-top: env(safe-area-inset-top, 0px); // 홈 화면 웹앱 — 상태바 영역을 같은 검정으로 채운다
   background: $color-foreground;
   border-bottom: 1px solid $color-white-a10;
 }

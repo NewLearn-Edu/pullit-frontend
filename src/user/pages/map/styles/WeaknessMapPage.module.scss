@@ -290,9 +290,9 @@ $red-tint: #fff1f2;
   align-items: center;
   justify-content: space-between;
   gap: $space-sm;
-  // 세로 규격은 공통 PageHeader 와 동일 — 탭 전환 시 헤더 높이가 안 튀게
+  // 세로 규격은 공통 PageHeader 와 동일 — 탭 전환 시 헤더 높이가 안 튀게 (+ 홈 화면 웹앱 상태바 여백)
   min-height: 64px;
-  padding: 16px 12px 10px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 12px 10px;
   pointer-events: none; // 캔버스 팬을 막지 않게 — 자식만 클릭 가능
 
   > * { pointer-events: auto; }
@@ -431,7 +431,8 @@ $red-tint: #fff1f2;
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
   border-radius: 26px 26px 0 0;
   background: $color-canvas;
-  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
+  // drop-shadow 필터는 transform 마다 전체 리페인트 — 불투명 둥근 사각형이라 box-shadow 와 같은 그림
+  box-shadow: 0 -16px 25px rgba(0, 0, 0, 0.12);
   animation: sheetIn 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
   // 아래로 스와이프 드래그 추종 (--drag-y) · 놓으면 제자리 복귀 트랜지션
   transform: translateY(var(--drag-y, 0px));
@@ -450,7 +451,7 @@ $red-tint: #fff1f2;
     overflow-y: auto;
     transform: none;
     transition: none;
-    filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.12));
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
     animation: sheetInSide 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
   }
 }

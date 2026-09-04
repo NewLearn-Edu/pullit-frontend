@@ -12,6 +12,7 @@ import { isEarlybird } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
 import { isCompleteMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
+import { isStandaloneApp } from '@/user/utils/standalone'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
 import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
@@ -117,14 +118,17 @@ export default function LoginPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {/* 가입 없이 맛보기 진입 — 게스트 세션으로 약점 진단까지 가능 */}
-        <button
-          type="button"
-          onClick={() => navigate('/trial')}
-          className={styles.guestLink}
-        >
-          비회원으로 약점보기
-        </button>
+        {/* 가입 없이 맛보기 진입 — 게스트 세션으로 약점 진단까지 가능.
+            홈 화면 웹앱(아이패드·안드로이드)은 회원 전용이라 비회원 진입을 두지 않는다 (2026-09-04) */}
+        {!isStandaloneApp() && (
+          <button
+            type="button"
+            onClick={() => navigate('/trial')}
+            className={styles.guestLink}
+          >
+            비회원으로 약점보기
+          </button>
+        )}
       </div>
     </div>
   )

@@ -32,6 +32,7 @@
   z-index: $z-panel;
   height: 100dvh;
   width: 100%;
+  padding-top: env(safe-area-inset-top, 0px); // 홈 화면 웹앱 — 화면을 덮는 패널이라 상태바 여백을 직접 확보
   min-width: 350px; // fixed 는 body min-width 를 안 따라감 — 최소 지원 폭 별도 지정
   max-width: 448px; // Tailwind max-w-md
   border-left: 1px solid $color-line;
@@ -46,6 +47,7 @@
     position: static;
     z-index: auto;
     height: auto;
+    padding-top: 0; // inline 사이드바 — 상단바(QuizTopBar)가 이미 여백을 가진다
     // 모바일 fixed 전용 최소 폭 해제 — 안 풀면 --pw 가 350 아래로 내려가도
     // 패널만 350 에 걸려 우측에 빈 띠가 생기고(드래그 하한 300), 닫힘(--pw:0)에도 350 이 남는다
     min-width: 0;
