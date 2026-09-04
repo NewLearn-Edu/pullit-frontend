@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { isStandaloneApp } from '@/user/utils/standalone'
+import { selectCanGoBack, useNavStackStore } from '@/user/stores/navStackStore'
 import styles from './styles/PageHeader.module.scss'
 
 interface PageHeaderProps {
@@ -41,16 +42,16 @@ export function PageHeader({
   hideBackWhenNoHistory,
 }: PageHeaderProps) {
   const navigate = useNavigate()
-  // React Router 가 엔트리마다 붙이는 history.state.idx — 0 이면 이 탭(웹앱)의 첫 화면.
-  // location 을 구독해 화면 이동마다 다시 읽는다 (history.length 는 다른 사이트 엔트리까지 세서 못 쓴다)
-  useLocation()
-  const canGoBack = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0
+  // "직전 화면" 은 앱 방문 스택(navStackStore)이 진실원 — 브라우저 뒤로가기를 전 화면에서 흡수하므로
+  // window.history 는 가드 엔트리로 뒤섞여 navigate(-1)·history.state.idx 를 쓸 수 없다 (2026-09-04)
+  const canGoBack = useNavStackStore(selectCanGoBack)
   const hideBack = backTo === 'history' && !canGoBack && (hideBackWhenNoHistory || isStandaloneApp())
 
   const goBack = () => {
     if (backTo === 'history') {
-      // 딥링크로 바로 진입해 히스토리가 없으면 홈으로
-      if (canGoBack) navigate(-1)
+      // 딥링크로 바로 진입해 직전 화면이 없으면 홈으로. 직전 화면은 replace 로 — 가드 위를 앞으로 덮어쓴다
+      const prev = useNavStackStore.getState().back()
+      if (prev) navigate(prev, { replace: true })
       else navigate('/home')
       return
     }

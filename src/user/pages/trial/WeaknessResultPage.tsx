@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useMe } from '@/user/hooks/useMe'
 import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
-import { flushAttemptQueue } from '@/user/services/attemptQueue'
+import { flushAttemptQueue, waitForPendingAttempts } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { findSkillScore } from '@/user/services/unitScoreSnapshot'
 import { useTrialStore, type QuizItemResult, type Subject } from '@/user/stores/trialStore'
@@ -16,7 +15,7 @@ import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
 import { CreditCelebrationContent } from '@/user/components/CreditCelebration'
-import { setDiagnoseDoneFlash, setLastSolvedFlash } from '@/user/pages/home/UnitSheets'
+import { setDiagnoseDoneFlash, setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
@@ -177,8 +176,6 @@ interface Row {
  */
 export default function WeaknessResultPage() {
   const navigate = useNavigate()
-  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
-  useBlockBackNavigation()
   // 과목은 경로(/trial/{subject}/weakness)가 진실원 — 없거나 이상하면 마지막 진단 과목으로 폴백 (2026-09-04)
   const { subject: routeSubject } = useParams<{ subject: string }>()
   // 세션 로드 — 이 페이지는 익명 퍼널에서도 열리지만, 로그인 유저의 "진단 완료"가
@@ -199,9 +196,19 @@ export default function WeaknessResultPage() {
   // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
   const hydrated = useTrialStore.persist?.hasHydrated?.() ?? true
 
-  // 채점하기 → 결과 직행 플로우 — 전송 실패분 회수를 여기서 수행
+  // 채점하기 → 결과 직행 플로우 — 진행 중 제출(마지막 문항)이 서버에 닿고, 전송 실패분 회수까지 끝난 뒤에
+  // 누적 점수를 조회한다. 그 전에 조회하면 분모에서 마지막 문항이 빠져 점수가 틀린다 (2026-09-04)
+  const [attemptsSettled, setAttemptsSettled] = useState(false)
   useEffect(() => {
-    flushAttemptQueue()
+    let alive = true
+    ;(async () => {
+      await waitForPendingAttempts()
+      await flushAttemptQueue().catch(() => {})
+      if (alive) setAttemptsSettled(true)
+    })()
+    return () => {
+      alive = false
+    }
   }, [])
 
   // 모바일 상단(시계·배터리 상태바 영역)을 페이지 그라데이션 톤으로.
@@ -255,6 +262,8 @@ export default function WeaknessResultPage() {
     if (to !== '/signup' && pendingNameRef.current) {
       setDiagnoseDoneFlash(pendingNameRef.current, subject)
       setLastSolvedFlash(pendingNameRef.current, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
+      // 약점 지도에서 시작한 진단이면 돌아가서 그 단원을 선택(active) + 상세 시트 오픈 — 자유 풀이(SolveResultPage)와 같은 규칙
+      if (to.startsWith('/weakness-map')) setUnitReopenFlash(pendingNameRef.current, subject)
     }
     navigate(to)
   }
@@ -306,6 +315,7 @@ export default function WeaknessResultPage() {
   // 누적 단원 점수 (서버) — 맞춘 배점/푼 배점 ×100 · RETRY 제외 (2026-08-10 정책)
   const [skillScore, setSkillScore] = useState<SkillScore | null>(null)
   useEffect(() => {
+    if (!attemptsSettled) return
     let alive = true
     fetchSkillScores(subject)
       .then((list) => {
@@ -317,7 +327,7 @@ export default function WeaknessResultPage() {
     return () => {
       alive = false
     }
-  }, [subject, unitName])
+  }, [attemptsSettled, subject, unitName])
 
   // 세션 결과 기반 폴백 점수 — 서버와 같은 공식(획득 배점 합 / 푼 배점 합).
   // 획득 배점은 문항별 결과 표와 같은 시간 가중값(earnedPoints · 제안시간 초과 60%·제한시간 초과 0)
@@ -365,16 +375,32 @@ export default function WeaknessResultPage() {
     leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
   }
 
-  // 약점 도장 — 다른 연출과 같이 바로 찍힌다
+  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  /**
+   * 약점 도장은 "이 단원을 처음 진단한" 결과에만 (2026-09-04).
+   * - 온보딩 퍼널(pendingUnit 없음): 항상 첫 진단
+   * - 홈·지도에서 시작한 진단: finishPendingUnit 이 diagnosed 에 쓰기 전, 이 단원이 이미 diagnosed 에 있었는지로 판정
+   *   (재진단·이미 진단한 단원을 다시 푼 경우는 도장 없이 점수만). 확정 뒤엔 diagnosed 에 들어가므로 첫 렌더에 ref 로 고정
+   */
+  const alreadyDiagnosed = useTrialProgressStore((s) =>
+    pendingUnit ? !!s.diagnosed[pendingUnit.unitName] : false,
+  )
+  const firstDiagnosisRef = useRef<boolean | null>(null)
+  if (firstDiagnosisRef.current === null && hydrated) {
+    firstDiagnosisRef.current = !pendingUnit || !alreadyDiagnosed
+  }
+  const firstDiagnosis = firstDiagnosisRef.current ?? true
+
+  // 약점 도장 — 다른 연출과 같이 바로 찍힌다. 첫 진단이 아니면(재진단·다시 풀기) 찍지 않는다
   const [stamped, setStamped] = useState(false)
   useEffect(() => {
-    if (!weak) {
+    if (!weak || !firstDiagnosis) {
       setStamped(false)
       return
     }
     const timer = window.setTimeout(() => setStamped(true), START_MS)
     return () => clearTimeout(timer)
-  }, [weak])
+  }, [weak, firstDiagnosis])
 
   const correctCount = rows.filter(({ result }) => result.serverCorrect ?? result.correct).length
   const totalSec = Math.round(rows.reduce((s, { result }) => s + result.elapsedMs, 0) / 1000)
@@ -382,13 +408,13 @@ export default function WeaknessResultPage() {
   // ── 진단 진행 확정 ──────────────────────────────────────────────────────────
   // 진행 페이지에서 시작한 세트라면 여기서 그 유닛을 "진단 완료" 로 굳히고 오늘 몫을 소진한다.
   // 점수는 서버 누적 점수(skillScore)를 우선 쓰되, 첫 진단이면 세션 점수와 같은 값이라 폴백해도 무방.
-  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   const finishPendingUnit = useTrialProgressStore((s) => s.finishPendingUnit)
   // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로·단원명은 미리 잡아둔다
   const returnToRef = useRef<string | null>(null)
   const pendingNameRef = useRef<string | null>(null)
   if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
   if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
+
 
   // 재열람용 문항별 결과 — 목 문제 데이터 없이도 표를 다시 그릴 수 있게 표시값을 박제
   const diagnosisItems = useMemo(
@@ -704,9 +730,12 @@ function WeakStampSeal() {
   return (
     <svg viewBox="0 0 100 100" width="88" height="88" aria-label="약점" role="img">
       <defs>
-        {/* 원호 텍스트 경로 — 위쪽 반원(왼→오) · 아래쪽 반원(왼→오, 글자가 뒤집히지 않게 역방향) */}
-        <path id="stamp-arc-top" d="M 50 50 m -33 0 a 33 33 0 1 1 66 0" fill="none" />
-        <path id="stamp-arc-bottom" d="M 50 50 m -33 0 a 33 33 0 1 0 66 0" fill="none" />
+        {/* 원호 텍스트 경로 — 위쪽 반원(왼→오) · 아래쪽 반원(왼→오, 글자가 뒤집히지 않게 역방향).
+            글자는 경로(베이스라인)에서 바깥쪽(위)으로 자란다 — 위 글자는 위로, 아래 글자는 중심 쪽으로 뻗는다.
+            같은 반지름을 쓰면 PULLIT 은 바깥 링에 붙고 WEAK POINT 는 중심에 붙어 어긋나 보여, 위는 안쪽(31)·
+            아래는 바깥쪽(37.5) 반지름으로 두어 두 글자 띠가 같은 고리(약 31~37.5)에 놓이게 한다 (2026-09-04) */}
+        <path id="stamp-arc-top" d="M 50 50 m -31 0 a 31 31 0 1 1 62 0" fill="none" />
+        <path id="stamp-arc-bottom" d="M 50 50 m -37.5 0 a 37.5 37.5 0 1 0 75 0" fill="none" />
       </defs>
       <g fill="none" stroke="#ff385c" opacity="0.92">
         <circle cx="50" cy="50" r="46.5" strokeWidth="5" />
@@ -719,9 +748,9 @@ function WeakStampSeal() {
         <text textAnchor="middle">
           <textPath href="#stamp-arc-bottom" startOffset="50%">WEAK POINT</textPath>
         </text>
-        {/* 좌우 구분점 */}
-        <circle cx="13.5" cy="50" r="1.6" />
-        <circle cx="86.5" cy="50" r="1.6" />
+        {/* 좌우 구분점 — 글자 띠 가운데 반지름(약 34.5)에 */}
+        <circle cx="15.5" cy="50" r="1.6" />
+        <circle cx="84.5" cy="50" r="1.6" />
       </g>
       <text
         x="50"

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
+import { waitForPendingAttempts } from '@/user/services/attemptQueue'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
@@ -56,8 +56,6 @@ type Direction = 'up' | 'down' | 'same'
  */
 export default function SolveResultPage() {
   const navigate = useNavigate()
-  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
-  useBlockBackNavigation()
   const { subject: subjectParam, unitName: unitNameParam } = useParams<{ subject: Subject; unitName: string }>()
   const subject: Subject = subjectParam === 'english' ? 'english' : 'math'
   const unitName = unitNameParam ? decodeURIComponent(unitNameParam) : ''
@@ -78,6 +76,7 @@ export default function SolveResultPage() {
     const poll = async () => {
       tries += 1
       try {
+        if (tries === 1) await waitForPendingAttempts() // 마지막 문항 제출이 닿기 전 조회 방지
         const snap = await fetchUnitScoreSnapshot(subject, unitName)
         if (!alive) return
         const applied = !state.before || snap.totalPoints > state.before.totalPoints

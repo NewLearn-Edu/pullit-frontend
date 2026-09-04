@@ -65,7 +65,7 @@ export default function WrongNotePage() {
 
   return (
     <div className={styles.page}>
-      <UserNav active="wrongNote" />
+      <UserNav active="wrongNote" subject={subject} />
 
       <main className={styles.main}>
         {/* 상단 헤더 — 홈과 동일 문법 · 오답노트 아이콘은 활성(채움) 상태 */}

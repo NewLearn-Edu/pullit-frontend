@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { trackPageView } from './user/services/metaPixel'
+import { useBlockBackNavigation } from './user/hooks/useBlockBackNavigation'
 import { type Subject } from './user/stores/trialStore'
 import { CURRICULUM } from './user/data/curriculum'
 import LandingPage from './user/pages/landing/LandingPage'
@@ -104,10 +105,22 @@ function MetaPixelPageView() {
   return null
 }
 
+/**
+ * 브라우저 뒤로가기 전역 차단 (2026-09-04) — 버튼·엣지 스와이프·마우스 제스처 전부. 사용자 화면은 모두
+ * 자체 뒤로가기(헤더 chevron · X · 완료)로만 이동한다. 어드민은 일반 웹 도구라 제외.
+ * Routes 앞에 두어 가드 push 가 각 화면의 mount 리다이렉트(navigate replace)보다 먼저 실행되게 한다.
+ */
+function BlockBackNavigation() {
+  const { pathname } = useLocation()
+  useBlockBackNavigation(!pathname.startsWith('/admin'))
+  return null
+}
+
 export default function App() {
   return (
     <AccessGate>
     <MetaPixelPageView />
+    <BlockBackNavigation />
     <Routes>
       <Route path="/" element={<LandingPage />} />
       {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}

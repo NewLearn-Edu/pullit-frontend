@@ -1,10 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useSolveStore } from '@/user/stores/solveStore'
-import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { type Subject } from '@/user/stores/trialStore'
 import { formatShort, formatSummary, GradeMark } from '@/user/pages/trial/WeaknessResultPage'
 
@@ -24,14 +22,11 @@ const circled = (n: number | null | undefined, short: boolean) =>
  */
 export default function SolveSetResultPage() {
   const navigate = useNavigate()
-  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
-  useBlockBackNavigation()
   const { subject: subjectParam } = useParams<{ subject: Subject }>()
   const subject: Subject = subjectParam === 'english' ? 'english' : 'math'
 
   const session = useSolveStore((s) => s.session)
   const results = useSolveStore((s) => s.results)
-  const diagnosis = useTrialProgressStore((s) => (session?.unitName ? s.diagnosed[session.unitName] : undefined))
 
   useEffect(() => {
     if (!session || !session.setId || !session.unitName) navigate('/home', { replace: true })
@@ -85,18 +80,16 @@ export default function SolveSetResultPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
-      <OnboardingHeader onClose={goScoreChange} />
+      {/* 헤더는 상단 여백만 — 닫기 X 없음. 나가는 길은 하단 완료 버튼(goScoreChange) 하나로 (2026-09-04) */}
+      <OnboardingHeader />
 
       <main className="flex w-full flex-1 flex-col items-center">
         {/* 점수 요약 카드 */}
         <div className="flex w-full justify-center px-[40px] py-[20px] max-md:px-lg">
           <div className="flex w-full max-w-[620px] flex-col items-center overflow-hidden rounded-[16px] border border-[#f8f8f8] bg-white pt-[20px] shadow-[0px_4px_20px_0px_rgba(113,20,39,0.08)]">
             <div className="flex flex-col items-center gap-[8px] px-[20px] pb-[16px]">
-              {diagnosis?.weak && (
-                <span className="rounded-full border border-primary bg-[#fff1f2] px-[6px] py-[4px] text-[12px] font-semibold leading-[1.4] text-primary">
-                  약점
-                </span>
-              )}
+              {/* 약점 표시 없음 — 약점 판정(도장)은 첫 진단 결과(WeaknessResultPage)에서만. 여기는 진단한 단원을 다시 푼 세트라
+                  점수만 보인다 (2026-09-04) */}
               <p className="text-[22px] font-semibold leading-[1.4] text-[#121417]">{session.unitName}</p>
               <p className={clsx('text-[#121417]', !allGraded && 'animate-pulse text-[#a6abb1]')}>
                 <span className="text-[32px] font-bold leading-none">{allGraded ? score : '…'}</span>

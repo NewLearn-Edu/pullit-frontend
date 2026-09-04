@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { UserNav } from '@/user/components/UserNav'
@@ -59,7 +59,13 @@ export default function WeaknessMapPage() {
       })
   }, [sessionStatus, navigate])
 
-  const [subject, setSubject] = useState<Subject>('math')
+  // 과목 탭은 URL 쿼리가 진실원 (홈과 동일 · 2026-09-04) — 풀이 뒤 returnTo 로 돌아와도, 뒤로가기로 돌아와도
+  // 보던 과목이 유지된다. (예전엔 로컬 state 초기값 math 라 영어 단원을 풀고 오면 수학 지도로 떨어졌다)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const subject: Subject = searchParams.get('subject') === 'english' ? 'english' : 'math'
+  const setSubject = (next: Subject) => {
+    setSearchParams(next === 'math' ? {} : { subject: next }, { replace: true })
+  }
 
   // ── 진행 상태 — 홈과 같은 진실원 (trial_diagnoses + unit_locks) ──────────
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
@@ -78,8 +84,13 @@ export default function WeaknessMapPage() {
   )
   useEffect(() => {
     if (sessionStatus !== 'ready') return
-    hydrateFromServer()
-    refreshLocks()
+    let alive = true
+    Promise.allSettled([hydrateFromServer(), refreshLocks()]).then(() => {
+      if (alive) setSynced(true)
+    })
+    return () => {
+      alive = false
+    }
   }, [sessionStatus, hydrateFromServer, refreshLocks])
 
   // 풀다 만 세트 — 해당 노드에 "풀다 만 문제" 표식 (홈 카드 라벨과 같은 진실원, 3681)
@@ -116,7 +127,7 @@ export default function WeaknessMapPage() {
   const sheets = useUnitSheets({
     subject,
     credit: me?.creditBalance ?? 0,
-    returnTo: () => '/weakness-map',
+    returnTo: () => `/weakness-map${subject === 'math' ? '' : `?subject=${subject}`}`,
     onLocksChanged: refreshLocks,
     onAllClosed: () => setSelectedId(null),
     // 선행 안내 시트에서 "OO 먼저 풀기" — 시트가 선행 단원으로 넘어가면 지도 선택 노드도 따라간다 (2026-09-04)
@@ -144,11 +155,20 @@ export default function WeaknessMapPage() {
   // 점수 변동 화면(/solve-result)에서 "완료"로 돌아온 경우 — 방금 푼 소단원을 선택(포커스)하고
   // 상세 시트를 바로 연다 (3699-11683). 플래시는 읽는 즉시 지워져 1회만
   // (플래시는 마운트 때 한 번 읽어 두고, 행 인덱스가 준비되는 시점에 연다 — 잠금 조회 뒤 재계산돼도 1회)
-  const pendingReopenRef = useRef<string | null | undefined>(undefined)
+  const pendingReopenRef = useRef<{ unitName: string; subject: Subject } | null | undefined>(undefined)
+  // 서버 동기화(진단 기록·점수) 완료 여부 — 재오픈 시트는 이게 끝난 뒤 열어야 방금 푼 결과가 반영된 값으로 뜬다
+  const [synced, setSynced] = useState(false)
   useEffect(() => {
-    if (pendingReopenRef.current === undefined) pendingReopenRef.current = consumeUnitReopenFlash(subject)
-    const unitName = pendingReopenRef.current
-    if (!unitName) return
+    if (pendingReopenRef.current === undefined) pendingReopenRef.current = consumeUnitReopenFlash()
+    const pending = pendingReopenRef.current
+    if (!pending) return
+    if (!synced) return // hydrateFromServer 가 끝나기 전엔 지난 스냅샷 — 기다린다
+    // 방금 푼 단원의 과목이 지금 탭과 다르면 탭부터 바꾼다 — 다음 렌더에서 그 과목 rowIndex 로 이어진다
+    if (pending.subject !== subject) {
+      setSubject(pending.subject)
+      return
+    }
+    const unitName = pending.unitName
     const hit = rowIndex.get(unitName)
     const node = (subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES).find((n) => n.name === unitName)
     const category = node ? findCategoryByName(subject, node.cat) : null
@@ -157,7 +177,7 @@ export default function WeaknessMapPage() {
     setSelectedId(node.id)
     sheets.openUnit(hit.row, { category, rows: hit.rows })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject, rowIndex])
+  }, [subject, rowIndex, synced])
 
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: INITIAL_SCALE })
   const [animated, setAnimated] = useState(false) // 포커스 이동 중에만 transform 트랜지션
@@ -377,7 +397,7 @@ export default function WeaknessMapPage() {
 
   return (
     <div className={styles.page}>
-      <UserNav active="map" />
+      <UserNav active="map" subject={subject} />
 
       <div
         className={clsx(

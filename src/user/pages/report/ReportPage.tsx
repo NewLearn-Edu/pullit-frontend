@@ -55,7 +55,7 @@ export default function ReportPage() {
 
   return (
     <div className={styles.page}>
-      <UserNav active="report" />
+      <UserNav active="report" subject={subject} />
 
       <main className={styles.main}>
         {/* 상단 헤더 — 홈·오답노트와 동일 문법 */}

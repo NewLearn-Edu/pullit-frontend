@@ -45,6 +45,33 @@ export function isRetryableAttemptError(error: unknown): boolean {
 
 let flushing = false
 
+/**
+ * 진행 중인 제출(fire-and-forget) 추적 (2026-09-04).
+ * 풀이 화면은 제출을 기다리지 않고 다음 문항·결과 화면으로 넘어간다. 결과 화면이 마지막 제출이 서버에 닿기 전에
+ * 누적 점수를 조회하면 분모에서 그 문항이 빠져 점수가 틀려 보인다 (3·9 중 4점 문항 미도착 → 3/5 = 60점).
+ * 제출 Promise 를 여기 등록해 두고, 결과 화면은 waitForPendingAttempts() 뒤에 조회한다.
+ */
+const inFlight = new Set<Promise<unknown>>()
+
+export function trackAttempt<T>(promise: Promise<T>): Promise<T> {
+  const entry: Promise<unknown> = promise.then(
+    () => undefined,
+    () => undefined, // 실패도 "끝남" — 대기 자체는 풀려야 한다 (재시도는 큐가 맡는다)
+  )
+  inFlight.add(entry)
+  void entry.finally(() => inFlight.delete(entry))
+  return promise
+}
+
+/** 진행 중 제출이 모두 끝날 때까지 (최대 timeoutMs) — 결과 화면의 점수 조회 앞에서 */
+export async function waitForPendingAttempts(timeoutMs = 4000): Promise<void> {
+  if (inFlight.size === 0) return
+  await Promise.race([
+    Promise.all(Array.from(inFlight)),
+    new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs)),
+  ])
+}
+
 /** 큐 순차 재전송 — 성공분 제거, 복구 불가분 폐기, 재시도분 유지 */
 export async function flushAttemptQueue(): Promise<void> {
   if (flushing) return // 로그인 콜백·완료 화면에서 동시 호출될 수 있어 재진입 방지

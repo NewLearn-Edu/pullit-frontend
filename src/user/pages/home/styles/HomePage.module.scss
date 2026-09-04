@@ -272,8 +272,8 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 }
 
 // 방금 푼 단원 강조 — 홈 복귀 직후 카드 테두리가 브랜드색으로 한 번 번지고 사라진다 (1.8s · li 에 붙는다)
+// (border-radius: inherit 금지 — li 는 radius 가 없어 카드가 1.8초 동안 각진 상자로 보였다가 돌아왔다 · 2026-09-04)
 .unitCardFocus > * {
-  border-radius: inherit;
   animation: unitFocusPulse 1.8s ease-out both;
 }
 

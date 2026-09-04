@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
-import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
-import { setLastSolvedFlash } from '@/user/pages/home/UnitSheets'
+import { setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
@@ -23,7 +22,7 @@ import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
-import { enqueueAttempt, isRetryableAttemptError } from '@/user/services/attemptQueue'
+import { enqueueAttempt, isRetryableAttemptError, trackAttempt } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
 import styles from './styles/TrialQuizPage.module.scss'
 
@@ -145,7 +144,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.2) // 0.1 ~ 1.0 슬라이더 값 · 도구별 굵기 매핑은 DrawingCanvas
+  const [size, setSize] = useState(0.15) // 0.05 ~ 1.0 슬라이더 값(펜 기본 프리셋 가운데) · 도구별 굵기 매핑은 DrawingCanvas
   const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
   // 복원한 필기의 세로 끝(px)만큼 캔버스 영역을 확보해 아래쪽 필기가 안 잘리게 (폰 저장 → 태블릿).
   // state 가 아니라 style 직접 — 획마다 문제 본문(KaTeX)까지 다시 그리지 않는다
@@ -169,10 +168,6 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const answerBarRef = useRef<HTMLDivElement>(null)
   const startAt = useRef<number>(Date.now())
-
-  // 풀이 중 뒤로가기(브라우저 버튼·엣지 스와이프) 차단 — 진단·자유 풀이 모두. 이탈은 X 버튼(확인 팝업)으로만.
-  // 뒤로가기로 이전 문항에 다시 들어가 재제출하면 원장이 두 번 적히는 사고를 막는다 (2026-09-04 전 모드로 확대)
-  useBlockBackNavigation()
 
   // 가상 키보드가 열리면 하단 답안 바를 키보드 위로 올린다.
   // iOS·iPadOS(웹앱 standalone 포함)와 안드로이드 크롬 모두 키보드가 열려도
@@ -311,7 +306,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     const elapsedSecAtSubmit = Math.round(elapsedMs / 1000)
     const { points, tRecSec, tMaxSec } = problem
 
-    submitAttempt(req)
+    trackAttempt(submitAttempt(req))
       .then((res) => {
         // 첫 진단 보상 지급 확정 신호 — 서버 원장 기준이라 로컬 추측 없이 축하 시트를 띄운다.
         // 잔액(me.creditBalance)도 즉시 재조회 — 캐시된 me 로 홈 배지가 낡은 잔액을 보여주지 않게
@@ -424,9 +419,16 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const confirmExit = () => {
     setExitConfirmOpen(false)
     clearQuizStart(mode, subject, idx)
-    // 중간에 나가도 홈은 이 단원으로 초점 — 풀다 만 세트가 있는 카드를 바로 보게
-    if (!isTrial && subject && solveSession?.unitName) setLastSolvedFlash(solveSession.unitName, subject)
-    navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
+    // 진입처로 돌아간다 (2026-09-04): 홈·지도에서 시작한 세트는 그 화면(과목 쿼리 포함)으로,
+    // 온보딩 퍼널(pendingUnit 없는 진단)만 /trial. 예전엔 진단 모드면 무조건 /trial 로 가 지도에서 시작해도 홈으로 떨어졌다
+    const unitName = isTrial ? pendingUnit?.unitName : solveSession?.unitName
+    const returnTo = isTrial ? (pendingUnit?.returnTo ?? '/trial') : (solveSession?.returnTo ?? '/home')
+    if (subject && unitName) {
+      // 홈: 그 단원 탭·카드로 초점 · 지도: 그 단원 노드 active + 상세 시트 (풀다 만 세트가 바로 보이게)
+      setLastSolvedFlash(unitName, subject)
+      if (returnTo.startsWith('/weakness-map')) setUnitReopenFlash(unitName, subject)
+    }
+    navigate(returnTo)
   }
 
   /**

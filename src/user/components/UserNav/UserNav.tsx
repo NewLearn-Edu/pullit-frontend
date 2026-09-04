@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useUserStore } from '@/user/stores/userStore'
-import { useTrialStore } from '@/user/stores/trialStore'
+import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import styles from './styles/UserNav.module.scss'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { HomeIcon, MapIcon, ProfileIcon, ReportIcon } from '@/user/components/icons/NavIcons'
@@ -11,6 +11,8 @@ export type UserNavKey = 'recommend' | 'map' | 'wrongNote' | 'report' | 'my'
 
 interface UserNavProps {
   active: UserNavKey
+  /** 지금 화면의 과목 탭 — 추천 문제 버튼이 이 과목으로 간다. 없으면(마이 등) 마지막 학습 과목 (2026-09-04) */
+  subject?: Subject
 }
 
 /**
@@ -19,12 +21,13 @@ interface UserNavProps {
  * - iPad · 모바일: 하단 네비 바 (홈 · 약점 지도 · 학습 기록)
  * 자유 문제 · 리포트 · 마이페이지는 아직 페이지 없음 (POC 시각만).
  */
-export function UserNav({ active }: UserNavProps) {
+export function UserNav({ active, subject }: UserNavProps) {
   // 실제 세션 권한 — 이전 authStore 스텁(role:'admin' 하드코딩)은 모든 방문자에게 어드민 버튼을 노출했다
   const isAdmin = useUserStore((s) => s.me?.role === 'ADMIN')
-  // 나브 추천 버튼은 과목 선택 뷰를 건너뛴다 (2026-08-26 정책) — 마지막 학습 과목으로
+  // 나브 추천 버튼은 과목 선택 뷰를 건너뛴다 (2026-08-26 정책) — 보고 있던 화면의 과목 탭 우선.
+  // (예전엔 마지막으로 "푼" 과목만 봐서 영어 탭에서 눌러도 수학이 추천됐다 · 2026-09-04)
   const lastSubject = useTrialStore((s) => s.lastSubject)
-  const recommendLink = `/recommend?subject=${lastSubject ?? 'math'}`
+  const recommendLink = `/recommend?subject=${subject ?? lastSubject ?? 'math'}`
 
   return (
     <>

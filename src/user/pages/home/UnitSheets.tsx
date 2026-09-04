@@ -50,9 +50,14 @@ function consumeDiagnoseDoneFlash(subject: Subject): string | null {
   try {
     const raw = sessionStorage.getItem(DIAGNOSE_DONE_FLASH_KEY)
     if (!raw) return null
-    sessionStorage.removeItem(DIAGNOSE_DONE_FLASH_KEY)
     const parsed = JSON.parse(raw) as { unitName?: string; subject?: string }
-    if (typeof parsed.unitName !== 'string' || parsed.subject !== subject) return null
+    if (typeof parsed.unitName !== 'string') {
+      sessionStorage.removeItem(DIAGNOSE_DONE_FLASH_KEY)
+      return null
+    }
+    // 과목이 다르면 지우지 않고 남긴다 — 화면이 과목 탭을 바꾼 뒤(URL 과목 복귀) 다시 읽어 소비한다 (2026-09-04)
+    if (parsed.subject !== subject) return null
+    sessionStorage.removeItem(DIAGNOSE_DONE_FLASH_KEY)
     return parsed.unitName
   } catch {
     return null
@@ -74,14 +79,16 @@ export function setUnitReopenFlash(unitName: string, subject: Subject): void {
   }
 }
 
-export function consumeUnitReopenFlash(subject: Subject): string | null {
+export function consumeUnitReopenFlash(): { unitName: string; subject: Subject } | null {
   try {
     const raw = sessionStorage.getItem(UNIT_REOPEN_FLASH_KEY)
     if (!raw) return null
     sessionStorage.removeItem(UNIT_REOPEN_FLASH_KEY)
     const parsed = JSON.parse(raw) as { unitName?: string; subject?: string }
-    if (typeof parsed.unitName !== 'string' || parsed.subject !== subject) return null
-    return parsed.unitName
+    if (typeof parsed.unitName !== 'string') return null
+    if (parsed.subject !== 'math' && parsed.subject !== 'english') return null
+    // 과목을 함께 돌려준다 — 지도가 수학 탭으로 열려 있어도 영어 단원이면 탭을 바꿔 열어야 한다 (2026-09-04)
+    return { unitName: parsed.unitName, subject: parsed.subject }
   } catch {
     return null
   }
@@ -223,9 +230,8 @@ export function useUnitSheets({
   useEffect(() => {
     const consumed = consumeDiagnoseDoneFlash(subject)
     if (consumed) setDoneToast(consumed)
-    // 마운트 시 1회 — 플래시는 읽는 즉시 지워져 과목 전환 재실행에도 안전
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // 과목이 바뀔 때마다 재시도 — 다른 과목 플래시는 소비되지 않고 남아 있다가 그 과목 탭에서 뜬다
+  }, [subject])
   useEffect(() => {
     if (!doneToast) return
     const timer = window.setTimeout(() => setDoneToast(null), 2000)

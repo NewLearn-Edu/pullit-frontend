@@ -82,8 +82,9 @@ $lv4: #ed3451;
 // 칸은 고정폭이 아니라 카드 폭에 맞춰 $cell(최소)~$cell-max(최대) 사이에서
 // 늘어난다 — 패드·웹에서 오른쪽이 비지 않고, 폰에서는 최소폭 유지 + 가로 스크롤.
 
-$cell: 11px;
-$cell-max: 24px;
+$cell: 11px;        // 폰 최소 — 53주가 카드보다 넓어지면 가로 스크롤
+$cell-tablet: 16px; // 패드·PC 최소 (2026-09-04) — 11px 은 너무 작아 보여 키움. 마찬가지로 넘치면 스크롤
+$cell-max: 30px;    // 아주 넓은 화면 상한
 $cell-gap: 3px;
 
 // 요일 축(고정) + 스크롤 영역(잔디)
@@ -148,7 +149,7 @@ $cell-gap: 3px;
 }
 
 .month {
-  flex: 1 1 0;
+  flex: 1 0 $cell-tablet; // 최소 폭을 보장하고 남는 폭은 나눠 늘어난다 (넘치면 .scroll 이 가로 스크롤)
   max-width: $cell-max;
   min-width: 0;
   font-size: 10px;
@@ -171,7 +172,7 @@ $cell-gap: 3px;
   display: flex;
   flex-direction: column;
   gap: $cell-gap;
-  flex: 1 1 0;
+  flex: 1 0 $cell-tablet; // 패드·PC 최소 16px — 53주 × 19px ≈ 1,000px 이라 보통 가로 스크롤이 생긴다 (폰과 같은 방식)
   min-width: 0;
   max-width: $cell-max;
 
