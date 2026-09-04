@@ -64,6 +64,13 @@ export default function ProgressRadar({
   // 최약점 — 진단한 축 중 최저점 전부 (0점이 여러 개면 모두). 진행 중·완성 모두 이 축들이 깜빡인다 (2026-09-04)
   const minScore = diagnosed.length > 0 ? Math.min(...diagnosed.map((u) => u.score)) : null
   const weakestSet = new Set(diagnosed.filter((u) => u.score === minScore).map((u) => u.i))
+  /**
+   * 점수 빨강 규칙 (2026-09-04): 약점(WEAK_THRESHOLD 미만) 축이 하나라도 있으면 그 축들의 점수만 빨강,
+   * 전부 약점 기준 위면 최약점(동점 전부)의 점수를 빨강. 단원명은 어떤 경우에도 빨강으로 물들이지 않는다
+   */
+  const anyWeak = diagnosed.some((u) => u.score < WEAK_THRESHOLD)
+  const highlightScore = (i: number, score: number | undefined) =>
+    score != null && (anyWeak ? score < WEAK_THRESHOLD : weakestSet.has(i))
 
   // 채우는 중 — 중심에서 진단 축들을 잇는 조각 (순서 진행이라 진단 축은 항상 연속)
   const partialPts = diagnosed.map((u) => dataPoint(u.i, u.score))
@@ -196,10 +203,7 @@ export default function ProgressRadar({
       {/* ── 라벨 ───────────────────────────────────────────────────────── */}
       {units.map((unit, i) => {
         const locked = unit.score == null
-        const weakest = complete && weakestSet.has(i)
-        const weak = !locked && (unit.score ?? 100) < WEAK_THRESHOLD
-        // 완성 후엔 최약만 강조, 나머지는 가라앉힌다
-        const mutedByConclusion = complete && !weakest
+        const highlight = highlightScore(i, unit.score)
         const [lx, ly] = point(i, maxR + 20)
         const anchor = Math.abs(lx - cx) < 10 ? 'middle' : lx > cx ? 'start' : 'end'
         const nameParts =
@@ -208,8 +212,7 @@ export default function ProgressRadar({
         const nameY = ly + dy
         const subY = nameY + (nameParts ? 35 : 20)
 
-        const nameFill = weakest ? RED : INK
-        const nameOpacity = locked ? 0.35 : mutedByConclusion ? 0.55 : 1
+        const nameOpacity = locked ? 0.35 : 1
 
         return (
           <g
@@ -234,8 +237,8 @@ export default function ProgressRadar({
               x={lx}
               y={nameY}
               fontSize="14"
-              fontWeight={weakest ? 700 : 500}
-              fill={nameFill}
+              fontWeight={500}
+              fill={INK}
               opacity={nameOpacity}
               className={styles.label}
             >
@@ -266,10 +269,9 @@ export default function ProgressRadar({
               <text
                 x={lx}
                 y={subY}
-                fontSize={weakest ? 16 : weak && !complete ? 15 : 13}
-                fontWeight={weakest || (weak && !complete) ? 700 : 500}
-                fill={weakest || (weak && !complete) ? RED : INK}
-                opacity={mutedByConclusion ? 0.55 : 1}
+                fontSize={highlight ? 15 : 13}
+                fontWeight={highlight ? 700 : 500}
+                fill={highlight ? RED : INK}
                 className={clsx(styles.label, 'tabular-nums')}
               >
                 {Math.round(unit.score ?? 0)}점
