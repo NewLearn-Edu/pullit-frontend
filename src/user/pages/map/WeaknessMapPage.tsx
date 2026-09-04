@@ -461,7 +461,6 @@ export default function WeaknessMapPage() {
                       d={d}
                       className={clsx(
                         edge.indirect ? styles.edgeIndirect : styles.edgeMain,
-                        rowIndex.get(from.name)?.row.diagnosis?.weak && styles.edgeWeak,
                       )}
                       style={{
                         strokeWidth: w,
