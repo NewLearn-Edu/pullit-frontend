@@ -280,30 +280,23 @@ function ClearIcon() {
   )
 }
 
-/** 읽기 전용 계정 필드 — 닉네임 입력과 같은 규격(라벨 13px · 52px 회색 필)에 잠금 표시, 값이 없으면 대시 */
+/**
+ * 읽기 전용 계정 필드 — 닉네임 입력과 같은 규격(라벨 13px · 52px 회색 필). 값이 없으면 대시.
+ * 잠금 아이콘·투명도 없이 글자색만 한 단계 밝게(#5e6368) — disabled 티가 덜 나게 (2026-09-04)
+ */
 function ReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="flex w-full flex-col gap-[8px]">
       <span className="text-[13px] font-semibold text-[#5e6368]">{label}</span>
-      <div className="flex h-[52px] items-center gap-[8px] rounded-[14px] bg-[#f2f4f6] px-[16px] opacity-60">
+      <div className="flex h-[52px] items-center rounded-[14px] bg-[#f2f4f6] px-[16px]">
         <input
           value={value || '—'}
           readOnly
-          disabled
+          tabIndex={-1}
           aria-label={label}
-          className="min-w-0 flex-1 bg-transparent text-[17px] font-medium text-[#121417] outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[17px] font-medium text-[#5e6368] outline-none"
         />
-        <LockIcon />
       </div>
     </div>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a6abb1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
   )
 }
