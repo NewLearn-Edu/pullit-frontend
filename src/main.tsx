@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { captureInviteCode } from './user/services/referral'
+import { applyAppInsets } from './user/utils/standalone'
 import { restoreProblemNotes } from './user/services/problemNotes'
 // Pretendard 셀프호스팅 (dynamic subset) — CDN 통짜 가변 폰트(~2MB) 로드가
 // 매 새로고침마다 시스템 폰트 → Pretendard 교체 깜빡임(FOUT)을 만들어 전환.
@@ -26,6 +27,8 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('qa-r
 // 초대 링크(?invite=)로 진입한 경우 코드를 즉시 저장 — 소셜 로그인 리다이렉트로 URL 이 날아가기 전에.
 // 렌더 전에 실행해 어떤 라우트로 들어오든 붙잡는다
 captureInviteCode()
+// 앱(iPad 래퍼·PWA) 상단 인셋 폴백 — 상태바 아래 여백 (--safe-top)
+applyAppInsets()
 
 // 못 올린 필기(로컬 저널) 복구 — 어떤 화면으로 들어오든 세션이 확인되는 즉시 서버로 보낸다
 void restoreProblemNotes()

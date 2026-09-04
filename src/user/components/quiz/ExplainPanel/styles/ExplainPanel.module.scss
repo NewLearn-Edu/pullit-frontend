@@ -32,7 +32,7 @@
   z-index: $z-panel;
   height: 100dvh;
   width: 100%;
-  padding-top: env(safe-area-inset-top, 0px); // 홈 화면 웹앱 — 화면을 덮는 패널이라 상태바 여백을 직접 확보
+  padding-top: var(--safe-top); // 홈 화면 웹앱 — 화면을 덮는 패널이라 상태바 여백을 직접 확보
   min-width: 350px; // fixed 는 body min-width 를 안 따라감 — 최소 지원 폭 별도 지정
   max-width: 448px; // Tailwind max-w-md
   border-left: 1px solid $color-line;

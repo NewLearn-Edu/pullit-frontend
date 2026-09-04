@@ -75,6 +75,9 @@
 
 @layer base {
   :root {
+    /* 상단 safe-area — env 가 0 을 주는 iPad 앱은 applyAppInsets 가 --safe-top-fallback(24px) 을 세운다.
+       상단에 붙는 헤더·바는 env() 를 직접 쓰지 말고 이 변수를 쓴다 (2026-09-04) */
+    --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-top-fallback, 0px));
     /* 하단 네비 높이 (Figma 3450-8896) — 시안 94px 안에 30px 의 홈 인디케이터 자리가
        이미 들어있고, 그보다 깊은 기기에서만 늘어난다. UserNav 의 padding-bottom 과 짝. */
     --nav-bottom-h: calc(94px + max(0px, env(safe-area-inset-bottom) - 30px));

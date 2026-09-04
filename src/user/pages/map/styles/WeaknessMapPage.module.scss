@@ -292,7 +292,7 @@ $red-tint: #fff1f2;
   gap: $space-sm;
   // 세로 규격은 공통 PageHeader 와 동일 — 탭 전환 시 헤더 높이가 안 튀게 (+ 홈 화면 웹앱 상태바 여백)
   min-height: 64px;
-  padding: calc(16px + env(safe-area-inset-top, 0px)) 12px 10px;
+  padding: calc(16px + var(--safe-top)) 12px 10px;
   pointer-events: none; // 캔버스 팬을 막지 않게 — 자식만 클릭 가능
 
   > * { pointer-events: auto; }

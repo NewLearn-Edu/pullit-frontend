@@ -61,7 +61,7 @@ export default function TrialIntroPage() {
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events
     <div
       onClick={() => setSkipped(true)}
-      className={`relative flex h-dvh flex-col items-center justify-center overflow-hidden bg-black px-[24px] pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)] ${
+      className={`relative flex h-dvh flex-col items-center justify-center overflow-hidden bg-black px-[24px] pb-[env(safe-area-inset-bottom,0px)] pt-[var(--safe-top)] ${
         skipped ? 'intro-skip' : ''
       }`}
     >

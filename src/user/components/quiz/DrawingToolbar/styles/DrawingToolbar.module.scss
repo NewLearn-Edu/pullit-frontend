@@ -12,7 +12,7 @@
 // 툴바 컨테이너 · sticky · 흰 배경
 .container {
   position: sticky;
-  top: calc(56px + env(safe-area-inset-top, 0px)); // 상단바 QuizTopBar height (+ 웹앱 상태바 여백)
+  top: calc(56px + var(--safe-top)); // 상단바 QuizTopBar height (+ 웹앱 상태바 여백)
   z-index: $z-toolbar;
   width: 100%;
   background: $color-canvas;

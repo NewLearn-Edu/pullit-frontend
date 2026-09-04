@@ -13,7 +13,7 @@ interface SkipHeaderProps {
  */
 export default function SkipHeader({ onSkip, label = '건너뛰기' }: SkipHeaderProps) {
   return (
-    <header className="flex w-full shrink-0 items-center justify-center px-[20px] pb-[8px] pt-[max(44px,env(safe-area-inset-top))]">
+    <header className="flex w-full shrink-0 items-center justify-center px-[20px] pb-[8px] pt-[max(44px,var(--safe-top))]">
       <div className="flex w-full max-w-[1280px] items-center justify-end">
         {/* 터치 타깃 확보 — 텍스트는 그대로, 패딩으로 누르는 영역만 키운다 */}
         <button
