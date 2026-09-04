@@ -9,13 +9,15 @@ import { type Subject } from '@/user/stores/trialStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { declareUnitLock } from '@/user/api/recommendApi'
-import { fetchActiveProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
+import { fetchActiveProblemSet, fetchUnitSetHistory, type IssuedProblemSet, type UnitSetHistory } from '@/user/api/problemSetApi'
+import { RecentStudyCard, formatStudyDate, historyToCard } from '@/user/components/RecentStudyCard'
 import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import {
   SET_CREDIT_COST,
+  useTrialProgressStore,
   type UnitProgressRow,
 } from '@/user/stores/trialProgressStore'
 import { UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
@@ -86,8 +88,6 @@ export function consumeUnitReopenFlash(subject: Subject): string | null {
 }
 
 /**
- * 소단원 액션 시트 묶음 — 홈과 약점 지도가 같은 로직·같은 화면을 쓴다 (2026-08-31).
-/**
  * 방금 푼 단원 플래시 (2026-09-04) — 결과 화면·풀이 나가기가 기록하고, 복귀한 홈이 1회 소비한다.
  * 홈은 이 단원의 과목 탭·대단원 칩으로 맞추고 카드로 스크롤 + 잠깐 강조한다. 과목이 현재 탭과 달라도
  * 탭을 바꿔야 하므로 diagnose/reopen 플래시와 달리 과목을 함께 돌려준다.
@@ -116,6 +116,8 @@ export function consumeLastSolvedFlash(): { unitName: string; subject: Subject }
   }
 }
 
+/**
+ * 소단원 액션 시트 묶음 — 홈과 약점 지도가 같은 로직·같은 화면을 쓴다 (2026-08-31).
  *
  * 상태별 분기 (openUnit):
  * - done            → 단원 상세 시트 (요약·학습 경로·최근 학습·추천 문제 풀기)
@@ -138,9 +140,9 @@ export function useUnitSheets({
   onLocksChanged,
   onAllClosed,
   resolveUnit,
+  onUnitSwitched,
 }: {
   subject: Subject
-  onUnitSwitched,
   credit: number
   /** 세트 종료 후 복귀 경로 — 열 때마다 평가 (홈은 쿼리 유지가 필요) */
   returnTo: () => string
@@ -150,10 +152,10 @@ export function useUnitSheets({
   onAllClosed?: () => void
   /** 진단 완료 토스트의 "보기" — 단원명으로 행·컨텍스트를 찾아 상세 시트를 연다 (3575-7884) */
   resolveUnit?: (unitName: string) => { row: UnitProgressRow; context: UnitSheetContext } | null
-}) {
-  const navigate = useNavigate()
   /** 시트 안에서 다른 단원으로 넘어갈 때(선행 안내 → "OO 먼저 풀기") — 지도가 선택 노드를 그 단원으로 옮기는 데 쓴다 */
   onUnitSwitched?: (unitName: string) => void
+}) {
+  const navigate = useNavigate()
   const loadMe = useUserStore((s) => s.loadMe)
   const startSolveSession = useSolveStore((s) => s.startSession)
 
@@ -497,8 +499,28 @@ export function useUnitSheets({
    * 서버 skill-scores(solved·totalCorrect·timeSpentMs)가 있으면 그 값, 없으면(구버전 서버) 진단 세트 기록으로 폴백.
    * 예전엔 라벨은 "누적"인데 값은 진단 세트 3문항만 보여 6문제를 풀어도 0/3 으로 나왔다 (2026-09-04)
    */
-  const sheetDiag = unitSheet?.diagnosis
+  // 시트에 담긴 row 는 연 시점의 스냅샷 — 열린 채로(또는 점수 변동 화면에서 돌아와 다시 열리며) 서버 재조회가
+  // 끝나면 값이 낡는다 (약점 지도: 평균 0점·0/12개로 보이던 문제 · 2026-09-04). 진단 요약은 스토어에서 살아 있는 값을 읽는다
+  const liveDiag = useTrialProgressStore((s) => (unitSheet ? s.diagnosed[unitSheet.name] : undefined))
+  const sheetDiag = liveDiag ?? unitSheet?.diagnosis
   const sheetItems = sheetDiag?.items ?? []
+
+  // 최근 학습 — 이 단원에서 완료한 세트 이력(서버 · 최근 순). 시트엔 3개까지, 나머지는 전체보기(/unit-history).
+  // 조회 전이거나 이력이 비면(구버전 데이터) 박제된 진단 카드 하나로 폴백 (2026-09-04)
+  const [sheetHistory, setSheetHistory] = useState<UnitSetHistory[] | null>(null)
+  const sheetUnitCode = unitSheet?.unitCode
+  useEffect(() => {
+    setSheetHistory(null)
+    if (!sheetUnitCode) return
+    let alive = true
+    fetchUnitSetHistory(sheetUnitCode)
+      .then((rows) => alive && setSheetHistory(rows))
+      .catch(() => alive && setSheetHistory([]))
+    return () => {
+      alive = false
+    }
+  }, [sheetUnitCode])
+  const recentHistory = (sheetHistory ?? []).slice(0, 3)
   const sheetTotal = sheetDiag?.solved ?? (sheetItems.length > 0 ? sheetItems.length : SET_SIZE)
   const sheetCorrect = sheetDiag?.totalCorrect ?? sheetDiag?.correct ?? 0
   const sheetTotalSec =
@@ -511,7 +533,7 @@ export function useUnitSheets({
   const element = (
     <>
       {/* 진단 완료 유닛 상세 (2857-22101) — 웹 우측 패널 · 모바일 바텀시트 */}
-      {unitSheet?.diagnosis && (
+      {unitSheet && sheetDiag && (
         <div className={styles.unitDim} onClick={unitDrag.close}>
           <div
             {...unitDragHandlers}
@@ -552,7 +574,7 @@ export function useUnitSheets({
                 <h2 className="truncate text-[22px] font-semibold leading-[1.4] text-[#121417]">
                   {unitSheet.name}
                 </h2>
-                {unitSheet.diagnosis.weak && (
+                {sheetDiag.weak && (
                   <span className="shrink-0 rounded-full border border-[#ff385c] bg-[#fff1f2] px-[6px] py-[3px] text-[12px] font-semibold leading-[1.4] text-[#ff385c]">
                     약점
                   </span>
@@ -561,7 +583,7 @@ export function useUnitSheets({
               <div className="flex shrink-0 items-end gap-[8px]">
                 <span className="pb-[2px] text-[16px] font-medium text-[#80858b]">평균</span>
                 <span className="text-[26px] font-bold leading-none text-[#121417]">
-                  {unitSheet.diagnosis.score}점
+                  {sheetDiag.score}점
                 </span>
               </div>
             </div>
@@ -603,13 +625,13 @@ export function useUnitSheets({
             {/* 섹션 구분 — 시트 좌우 패딩(20px)을 뚫는 두꺼운 띠. 폴드 기준점(여기까지 보임) */}
             <div ref={foldRef} className="-mx-[20px] h-[10px] shrink-0 bg-[#f8f8f8]" aria-hidden />
 
-            {/* 최근 학습 — 카드 탭/전체보기 → 진단 재열람 페이지 */}
+            {/* 최근 학습 — 완료한 세트 최근 3개, 전체보기 → 전체 이력 페이지 (3808-8044) */}
             <div className="flex w-full items-center justify-between px-[8px]">
               <h3 className="text-[18px] font-bold leading-[1.4] text-[#121417]">최근 학습</h3>
               <button
                 type="button"
                 onClick={() =>
-                  navigate(`/unit-result/${subject}/${encodeURIComponent(unitSheet.name)}`)
+                  navigate(`/unit-history/${subject}/${encodeURIComponent(unitSheet.unitCode)}`)
                 }
                 className="flex items-center gap-[4px] text-[12px] font-semibold text-[#80858b]"
               >
@@ -626,48 +648,23 @@ export function useUnitSheets({
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/unit-result/${subject}/${encodeURIComponent(unitSheet.name)}`)
-              }
-              className="w-full overflow-hidden rounded-[16px] border border-[#e5e7ea] text-left"
-            >
-              <span className="flex w-full items-center justify-between px-[16px] pb-[12px] pt-[16px]">
-                <span className="flex items-center gap-[4px] text-[14px] leading-[1.4]">
-                  <span className="font-semibold text-[#121417]">
-                    {formatDiagnosisDate(unitSheet.diagnosis.date)}
-                  </span>
-                  {unitSheet.diagnosis.time && (
-                    <span className="font-medium text-[#80858b]">{unitSheet.diagnosis.time}</span>
-                  )}
-                </span>
-                <span className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
-                  {unitSheet.diagnosis.score}점
-                </span>
-              </span>
-              {sheetItems.length > 0 ? (
-                <span className="flex w-full items-center border-t border-[#e5e7ea] bg-[#f8f8f8] p-[12px]">
-                  {sheetItems.map((item, i) => (
-                    <span key={i} className="flex min-w-0 flex-1 items-center">
-                      {i > 0 && <span className="h-[32px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />}
-                      <span className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[8px]">
-                        <span className="whitespace-nowrap text-[12px] font-semibold text-[#80858b]">
-                          {i + 1}번({item.points}점)
-                        </span>
-                        <SheetMark
-                          kind={item.correct ? (item.overTime ? 'triangle' : 'circle') : 'x'}
-                        />
-                      </span>
-                    </span>
-                  ))}
-                </span>
+            <div className="flex w-full flex-col gap-[8px]">
+              {recentHistory.length > 0 ? (
+                recentHistory.map((h) => <RecentStudyCard key={h.setId} {...historyToCard(h)} />)
               ) : (
-                <span className="block border-t border-[#e5e7ea] bg-[#f8f8f8] p-[12px] text-center text-[12px] text-[#a6abb1]">
-                  이 진단은 문항별 기록이 저장되기 전에 진행돼서 요약만 볼 수 있어
-                </span>
+                <RecentStudyCard
+                  dateLabel={formatStudyDate(sheetDiag.date)}
+                  time={sheetDiag.time}
+                  score={sheetDiag.score}
+                  items={sheetItems.map((it) => ({ points: it.points, correct: it.correct, overTime: it.overTime }))}
+                  emptyNote={
+                    sheetHistory == null
+                      ? '최근 학습을 불러오는 중이야'
+                      : '이 진단은 문항별 기록이 저장되기 전에 진행돼서 요약만 볼 수 있어'
+                  }
+                />
               )}
-            </button>
+            </div>
 
             </div>
 
@@ -948,11 +945,11 @@ export function useUnitSheets({
 
             <button
               type="button"
-                if (!next) return
-                onUnitSwitched?.(next.name) // 지도: 선택(active) 노드도 선행 단원으로
               onClick={() => {
                 const next = lockedRequired
                 setLockedSheet(null)
+                if (!next) return
+                onUnitSwitched?.(next.name) // 지도: 선택(active) 노드도 선행 단원으로
                 openStartSheet(next)
               }}
               className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
@@ -1253,19 +1250,6 @@ function SheetCoinIcon() {
 
 /* --- 유닛 시트 헬퍼 (Figma 2857-22101) --- */
 
-/** "YYYY-MM-DD" → "오늘"/"어제"/"8월 23일" (최근 학습 카드 진단일 · Figma 3361-5402) */
-function formatDiagnosisDate(date: string): string {
-  const [y, m, d] = date.split('-')
-  if (!y || !m || !d) return date
-  const target = new Date(Number(y), Number(m) - 1, Number(d))
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((today.getTime() - target.getTime()) / 86_400_000)
-  if (diffDays === 0) return '오늘'
-  if (diffDays === 1) return '어제'
-  return `${Number(m)}월 ${Number(d)}일`
-}
-
 /**
  * 상세 시트 학습 경로 — 현재 유닛을 가운데 둔 3개 창.
  * 첫/마지막 유닛이라 이웃이 모자라면 창을 밀어 항상 3개를 보여준다 (3361-5402).
@@ -1289,18 +1273,3 @@ function formatMinSec(totalSec: number): string {
   return m > 0 ? `${m}분 ${s}초` : `${s}초`
 }
 
-/** 최근 학습 카드의 문항 마크 — O(정답) · △(정답이지만 시간 초과) · X(오답), 시안 16px */
-function SheetMark({ kind }: { kind: 'circle' | 'triangle' | 'x' }) {
-  const label = kind === 'circle' ? '정답' : kind === 'triangle' ? '정답 (시간 초과)' : '오답'
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label={label}>
-      {kind === 'circle' && <circle cx="8" cy="8" r="6" stroke="#ff385c" strokeWidth="2" />}
-      {kind === 'triangle' && (
-        <path d="M8 3 14 13H2z" stroke="#ff385c" strokeWidth="2" strokeLinejoin="round" />
-      )}
-      {kind === 'x' && (
-        <path d="m3.5 3.5 9 9M12.5 3.5l-9 9" stroke="#ff385c" strokeWidth="2" strokeLinecap="round" />
-      )}
-    </svg>
-  )
-}

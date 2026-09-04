@@ -14,6 +14,7 @@ import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
+import UnitHistoryPage from './user/pages/home/UnitHistoryPage'
 import SolveResultPage from './user/pages/home/SolveResultPage'
 import SolveSetResultPage from './user/pages/home/SolveSetResultPage'
 import SolveReviewPage from './user/pages/home/SolveReviewPage'
@@ -130,6 +131,7 @@ export default function App() {
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}
         <Route path="/unit-result/:subject/:unitName" element={<UnitResultPage />} />
+        <Route path="/unit-history/:subject/:unitCode" element={<UnitHistoryPage />} />
         {/* 세트 풀이 완료 — 소단원 평균 점수 변동 (진단 이후 풀이는 /weakness 대신 이 화면) */}
         <Route path="/solve-result/:subject/:unitName" element={<SolveResultPage />} />
         {/* 세트 풀이 결과(문항별 · 3620-8224) → 완료 → 점수 변동(/solve-result). 해설은 리뷰 화면 */}
@@ -152,11 +154,11 @@ export default function App() {
       <Route path="/trial" element={<TrialStartPage />} />
       <Route path="/trial/quiz/:subject/:index" element={<TrialQuizPage />} />
       <Route path="/trial/review/:subject/:index" element={<TrialReviewPage />} />
-      <Route path="/weakness" element={<WeaknessResultPage />} />
-      <Route
       {/* 진단 결과 — 같은 화면 두 주소 (2026-09-04): 온보딩 퍼널에서 끝난 진단은 /trial/{subject}/weakness,
           홈·지도 소단원 시트에서 시작한 진단(pendingUnit)은 /weakness */}
       <Route path="/trial/:subject/weakness" element={<WeaknessResultPage />} />
+      <Route path="/weakness" element={<WeaknessResultPage />} />
+      <Route
         path="/admin/*"
         element={
           <Suspense fallback={null}>

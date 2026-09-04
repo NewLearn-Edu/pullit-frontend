@@ -82,3 +82,34 @@ export async function fetchResumableSet(): Promise<ResumableSet | null> {
   const { data } = await api.get<BaseResponse<ResumableSet | null>>('/api/problem-sets/resumable')
   return data.data
 }
+
+/** 단원 학습 이력 — 완료한 세트 하나의 문항 결과 (GET /api/problem-sets/history) */
+export interface UnitSetHistoryItem {
+  sequence: number
+  points: number
+  /** 시간 가중 획득 점수 — 미제출 문항은 0 */
+  earnedPoints: number
+  correct: boolean
+  skipped: boolean
+  submitted: boolean
+  timeSpentMs: number | null
+  recommendedTimeSec: number | null
+}
+
+/** 단원 학습 이력 — 완료한 세트 하나 (최근 순). score 는 이 세트만의 점수(0~100 · 시간 가중) */
+export interface UnitSetHistory {
+  setId: number
+  source: 'TRIAL' | 'FREE' | 'DAILY' | 'RETRY'
+  /** 마지막 문항 제출 시각 — 서버 LocalDateTime ("2026-09-04T08:54:12") */
+  completedAt: string
+  score: number
+  items: UnitSetHistoryItem[]
+}
+
+/** 단원 학습 이력 — 홈 상세 시트 "최근 학습"(3개)과 전체보기 페이지가 같은 응답을 쓴다 */
+export async function fetchUnitSetHistory(unitCode: string): Promise<UnitSetHistory[]> {
+  const { data } = await api.get<BaseResponse<UnitSetHistory[]>>('/api/problem-sets/history', {
+    params: { unitCode },
+  })
+  return data.data ?? []
+}
