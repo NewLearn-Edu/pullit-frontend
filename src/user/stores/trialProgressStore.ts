@@ -85,6 +85,11 @@ export interface UnitDiagnosis {
   minutes: number
   /** 이 단원에서 푼 문제 수(RETRY 제외) — 서버 skill-scores 기준. 없으면 진단 세트 문항 수로 폴백 */
   solved?: number
+  /** 이 단원에서 맞힌 문제 수(RETRY 제외) — 서버 skill-scores 기준. 상세 시트 "누적 정답 수" 분자 */
+  totalCorrect?: number
+  /** 이 단원 풀이 시간 합(ms · RETRY 제외) — 서버 skill-scores 기준. 상세 시트 "총 풀이 시간" */
+  timeSpentMs?: number
+  /** 진단 세트(3문항)에서 맞힌 수 — 진단 재열람·레일 카드용 (누적값은 totalCorrect) */
   correct: number
   /** 진단일 (YYYY-MM-DD) */
   date: string
@@ -226,6 +231,8 @@ export const useTrialProgressStore = create<TrialProgressState>()(
           diag.score = sc.score
           diag.weak = sc.weak
           diag.solved = sc.attemptCount
+          diag.totalCorrect = sc.correctCount
+          diag.timeSpentMs = sc.timeSpentMs
           diag.minutes = sc.timeSpentMs > 0 ? Math.max(1, Math.round(sc.timeSpentMs / 60000)) : diag.minutes
         }
         set((s) => {

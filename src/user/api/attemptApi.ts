@@ -106,6 +106,8 @@ export interface SkillScore {
   weak: boolean
   /** 푼 문제 수 (RETRY 제외) — 홈 소단원 카드 "푼 문제 수" */
   attemptCount: number
+  /** 맞힌 문제 수 (RETRY 제외) — 소단원 상세 시트 "누적 정답 수" (구버전 서버엔 없을 수 있음) */
+  correctCount?: number
   /** 이 단원 풀이에 쓴 시간 합(ms, RETRY 제외) — 홈 소단원 카드 시간 */
   timeSpentMs: number
 }

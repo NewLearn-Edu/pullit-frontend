@@ -460,13 +460,21 @@ export function useUnitSheets({
     ? rows.find((r) => r.offHead)
     : rows.find((r) => r.state === 'next')
 
-  /** 유닛 시트 요약값 — 문항별 기록이 있으면 초 단위 합산, 없으면(구버전) 분 근사 */
-  const sheetItems = unitSheet?.diagnosis?.items ?? []
-  const sheetTotal = sheetItems.length > 0 ? sheetItems.length : SET_SIZE
+  /**
+   * 유닛 시트 요약값 "누적 정답 수 · 총 풀이 시간" — 이 단원에서 푼 전체(진단 + 이후 자유·추천 풀이, RETRY 제외).
+   * 서버 skill-scores(solved·totalCorrect·timeSpentMs)가 있으면 그 값, 없으면(구버전 서버) 진단 세트 기록으로 폴백.
+   * 예전엔 라벨은 "누적"인데 값은 진단 세트 3문항만 보여 6문제를 풀어도 0/3 으로 나왔다 (2026-09-04)
+   */
+  const sheetDiag = unitSheet?.diagnosis
+  const sheetItems = sheetDiag?.items ?? []
+  const sheetTotal = sheetDiag?.solved ?? (sheetItems.length > 0 ? sheetItems.length : SET_SIZE)
+  const sheetCorrect = sheetDiag?.totalCorrect ?? sheetDiag?.correct ?? 0
   const sheetTotalSec =
-    sheetItems.length > 0
-      ? sheetItems.reduce((s, it) => s + it.seconds, 0)
-      : (unitSheet?.diagnosis?.minutes ?? 0) * 60
+    sheetDiag?.timeSpentMs != null
+      ? Math.round(sheetDiag.timeSpentMs / 1000)
+      : sheetItems.length > 0
+        ? sheetItems.reduce((s, it) => s + it.seconds, 0)
+        : (sheetDiag?.minutes ?? 0) * 60
 
   const element = (
     <>
@@ -531,7 +539,7 @@ export function useUnitSheets({
               <div className="flex min-w-0 flex-1 flex-col gap-[16px] rounded-[16px] bg-[#f8f8f8] p-[20px]">
                 <span className="text-[12px] font-semibold text-[#80858b]">누적 정답 수</span>
                 <span className="text-[22px] font-semibold text-[#121417]">
-                  {unitSheet.diagnosis.correct}/{sheetTotal}개
+                  {sheetCorrect}/{sheetTotal}개
                 </span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-[16px] rounded-[16px] bg-[#f8f8f8] p-[20px]">
