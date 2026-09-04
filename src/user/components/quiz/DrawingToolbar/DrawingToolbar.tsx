@@ -17,19 +17,25 @@ const withAlpha = (hex: string, a: number) =>
   `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`
 
 /**
- * 프리셋 두께 (0.1 ~ 1.0) — 도구별로 따로 (2026-09-03 확정). 기본 선택은 둘 다 가운데.
- * 펜 0.1 · 0.2 · 0.4 (기본 0.2) · 형광펜 0.2 · 0.35 · 0.55 (기본 0.35).
+ * 프리셋 두께 (0.05 ~ 1.0) — 도구별로 따로 (2026-09-03 확정 · 펜은 2026-09-04 한 단 더 가늘게). 기본 선택은 둘 다 가운데.
+ * 펜 0.05 · 0.15 · 0.3 (기본 0.15) · 형광펜 0.2 · 0.35 · 0.55 (기본 0.35).
  * 사용자가 팝오버 슬라이더로 조정하면 해당 도구의 그 자리를 대체한다
  */
 type Presets = [number, number, number]
 type PresetTool = 'mono' | 'marker'
 const DEFAULT_PRESETS: Record<PresetTool, Presets> = {
-  mono: [0.1, 0.2, 0.4],
+  mono: [0.05, 0.15, 0.3],
   marker: [0.2, 0.35, 0.55],
 }
 const presetToolOf = (t: StrokeTool): PresetTool => (t === 'marker' ? 'marker' : 'mono')
-/** 프리셋 dot 지름(px) — 실제 두께 비례(×14)로 그리면 0.1 이 1.4px 라 안 보여 보기용 단계로 */
-const PRESET_DOT_PX = [5, 8, 12]
+/**
+ * 프리셋 dot 지름(px) — 도구별. 실제 두께 비례(펜 ×14 · 형광펜 ×32)로 그리면 펜 0.05 가 0.7px 라 안 보여
+ * 보기용 단계로 두되, 펜이 형광펜보다 전체적으로 가는 도구라는 관계는 유지한다 (펜 4·7·11 · 형광펜 5·8·12)
+ */
+const PRESET_DOT_PX: Record<PresetTool, [number, number, number]> = {
+  mono: [4, 7, 11],
+  marker: [5, 8, 12],
+}
 
 /**
  * 지우개 사이즈 4단 (canvas size 값 · × 14 = 기준 폭 500 조판 px · 화면에선 배율만큼 축소)
@@ -251,7 +257,7 @@ export function DrawingToolbar({
   }
 
   // 프리셋 자리(i)별 고정 지름 — 슬라이더로 값을 바꿔도 dot 은 자리 순서(얇음 < 보통 < 굵음)를 유지
-  const dotPx = (i: number) => PRESET_DOT_PX[i] ?? 8
+  const dotPx = (i: number) => PRESET_DOT_PX[presetTool][i] ?? 8
 
   const [clearFlash, setClearFlash] = useState(false)
   const clearFlashTimer = useRef<number | null>(null)
@@ -603,7 +609,7 @@ const SizePopover = forwardRef<HTMLDivElement, {
         <div className={styles.popoverInner}>
           <span className={styles.popoverLabel}>{label}</span>
           <CustomRangeSlider
-            min={0.1}
+            min={0.05}
             max={1}
             step={0.05}
             value={value}

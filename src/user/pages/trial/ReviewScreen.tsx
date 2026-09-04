@@ -74,7 +74,7 @@ export function ReviewScreen({
   // 필기 — 캔버스는 문제·해설 두 장. 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.2)
+  const [size, setSize] = useState(0.15) // 펜 기본 프리셋(가운데) — DrawingToolbar DEFAULT_PRESETS 와 맞춘다
   const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
   const [allowFinger, setAllowFinger] = useState(false)
   const [drawingEnabledState, setDrawingEnabled] = useState(true)
