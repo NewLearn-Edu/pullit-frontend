@@ -18,6 +18,11 @@
   // 시작 시트(z 60) 위에서 뜬다 — 시트 흐름 중간의 안내라 시트를 덮어야 한다
   z-index: 80;
   animation: shortage-dim-in 200ms ease;
+
+  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (ConfirmDialog 와 동일)
+  @include desktop-up {
+    padding-left: calc(224px + 20px);
+  }
 }
 
 .card {
@@ -30,8 +35,14 @@
   padding: 34px 20px;
   border-radius: 24px;
   background: $color-canvas;
-  filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.21));
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.21); // filter 대신 — 등장 애니메이션 중 리페인트 없음
   animation: shortage-card-in 240ms cubic-bezier(0.22, 0.9, 0.3, 1);
+
+  // 패드·웹 — ConfirmDialog 와 같은 440px 규격
+  @include tablet-up {
+    max-width: 440px;
+    padding: 40px 32px 32px;
+  }
 }
 
 // 코인 — 시안은 120px 무대 안 80px 코인 (여백이 숨 쉴 공간)

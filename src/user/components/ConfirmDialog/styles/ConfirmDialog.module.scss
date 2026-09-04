@@ -17,8 +17,14 @@
   padding: $space-lg;
   background: rgba(0, 0, 0, 0.2);
   animation: confirm-fade 180ms ease;
+
+  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (토스트·팝업 규칙)
+  @include desktop-up {
+    padding-left: calc(224px + #{$space-lg});
+  }
 }
 
+// 폰 335px 카드는 패드·웹에서 너무 작다 — 768px 부터 440px 로 키우고 여백·글자도 한 단계 (2026-09-04)
 .card {
   width: 100%;
   max-width: 335px;
@@ -27,6 +33,11 @@
   padding: 34px 20px;
   box-shadow: 0 0 7px rgba(0, 0, 0, 0.21);
   animation: confirm-pop 220ms cubic-bezier(0.22, 0.9, 0.3, 1);
+
+  @include tablet-up {
+    max-width: 440px;
+    padding: 40px 32px 32px;
+  }
 }
 
 .title {
@@ -37,6 +48,8 @@
   line-height: 1.4;
   color: #121417;
   word-break: keep-all;
+
+  @include tablet-up { font-size: 20px; }
 }
 
 .desc {
@@ -47,12 +60,21 @@
   line-height: 1.4;
   color: #121417;
   word-break: keep-all;
+  white-space: pre-line; // 문구에 넣은 줄바꿈(\n)을 그대로 — 긴 안내는 호출부가 줄을 끊어 준다
+
+  @include tablet-up {
+    margin-top: 12px;
+    font-size: 17px;
+    line-height: 1.5;
+  }
 }
 
 .actions {
   display: flex;
   gap: 8px;
   margin-top: 24px;
+
+  @include tablet-up { margin-top: 28px; }
 }
 
 .cancel {
@@ -87,6 +109,11 @@
 
 .okDanger {
   background: $color-danger;
+}
+
+// 권장 동작 강조 — 메인 레드 (탈퇴 팝업 "서비스로 돌아가기")
+.okAccent {
+  background: $color-primary;
 }
 
 @keyframes confirm-fade {

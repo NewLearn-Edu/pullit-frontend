@@ -8,8 +8,10 @@ interface ConfirmDialogProps {
   desc?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
-  /** 파괴적 동작(나가기·삭제)이면 확인 버튼을 빨강으로 */
+  /** 파괴적 동작(나가기·삭제)이면 확인 버튼을 짙은 빨강(danger)으로 */
   danger?: boolean
+  /** 확인이 "머무르기·돌아가기" 같은 권장 동작이면 메인 레드(primary)로 — 탈퇴 팝업의 "서비스로 돌아가기" */
+  accent?: boolean
   onConfirm: () => void
   /** 생략하면 버튼 하나짜리 안내 팝업(alert 대체) — 딤 클릭도 onConfirm 으로 닫힌다 */
   onCancel?: () => void
@@ -31,6 +33,7 @@ export function ConfirmDialog({
   confirmLabel = '확인',
   cancelLabel = '취소',
   danger = false,
+  accent = false,
   onConfirm,
   onCancel,
   onDismiss,
@@ -55,7 +58,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className={clsx(styles.ok, danger && styles.okDanger)}
+            className={clsx(styles.ok, danger && styles.okDanger, accent && styles.okAccent)}
             autoFocus
           >
             {confirmLabel}
