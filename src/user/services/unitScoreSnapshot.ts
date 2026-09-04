@@ -1,4 +1,5 @@
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
+import { CURRICULUM } from '@/user/data/curriculum'
 import type { Subject } from '@/user/stores/trialStore'
 
 /**
@@ -15,10 +16,29 @@ export interface UnitScoreSnapshot {
   totalPoints: number
 }
 
-/** 서버 skill_node 정식 명칭("지수와 로그") ↔ 표시명("지수·로그") 느슨 매칭 */
+/** 서버 skill_node 정식 명칭("지수와 로그") ↔ 표시명("지수·로그") 느슨 매칭 — unitCode 매칭의 폴백 */
 export const normalizeUnitName = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, '')
 
+/** 표시명(커리큘럼 유닛명) → 서버 unit_code. 과목 무관 탐색 (유닛명은 과목 간에도 겹치지 않는다) */
+function unitCodeByName(unitName: string): string | null {
+  const key = normalizeUnitName(unitName)
+  for (const cats of Object.values(CURRICULUM)) {
+    for (const cat of cats) {
+      const unit = cat.units.find((u) => normalizeUnitName(u.name) === key)
+      if (unit) return unit.unitCode
+    }
+  }
+  return null
+}
+
+/**
+ * 유닛의 누적 점수 행 — unitCode 우선 (2026-09-04). 이름 정규화만으로는 "지수·로그함수" ↔
+ * skill_node "지수함수와 로그함수" 가 달라 못 찾았다 (정규화 뒤 "지수로그함수" vs "지수함수로그함수").
+ */
 export function findSkillScore(scores: SkillScore[], unitName: string): SkillScore | null {
+  const code = unitCodeByName(unitName)
+  const byCode = code ? scores.find((s) => s.unitCode === code) : undefined
+  if (byCode) return byCode
   const key = normalizeUnitName(unitName)
   return scores.find((s) => normalizeUnitName(s.skillNode) === key) ?? null
 }

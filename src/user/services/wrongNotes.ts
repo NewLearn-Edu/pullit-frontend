@@ -3,13 +3,16 @@ import { type Problem } from '@/user/data/mockProblems'
 import { MATH_MAP_NODES, type MapNode } from '@/user/data/mathWeaknessMap'
 import { ENGLISH_MAP_NODES } from '@/user/data/englishWeaknessMap'
 import { type Subject } from '@/user/stores/trialStore'
+import { CURRICULUM } from '@/user/data/curriculum'
 
 /**
  * 오답노트 그룹핑 — 서버 오답 항목을 소단원(지도 노드) 행에 배분한다.
  *
- * 서버 skill_node 는 DB 정식 명칭("지수와 로그"), 지도 노드는 축약 표기("지수·로그")라
- * 느슨한 정규화(·/와/과/공백 제거)로 매칭한다. 어느 노드에도 안 붙는 단원은
- * DB 명칭 그대로 해당 대분류 뒤에 추가 행으로 노출 (데이터 유실 방지).
+ * 매칭은 unitCode 우선 (2026-09-04): 서버 unit_code → 커리큘럼(curriculum.ts)의 표시 명칭 → 지도 노드.
+ * 이름만으로 잇던 예전 방식은 skill_node 정식 명칭("지수함수와 로그함수")과 축약 표기("지수·로그함수")가
+ * 정규화 뒤에도 달라 오답이 그 행이 아니라 목록 맨 아래 별도 행으로 빠졌다.
+ * unitCode 가 없거나 커리큘럼에 없는 문항만 skill_node 느슨 정규화(·/와/과/공백 제거)로 폴백하고,
+ * 그래도 안 붙는 단원은 DB 명칭 그대로 해당 대분류 뒤에 추가 행으로 노출 (데이터 유실 방지).
  */
 
 export interface WrongUnitRow {
@@ -26,6 +29,16 @@ function nodesOf(subject: Subject): MapNode[] {
   return subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES
 }
 
+/** 서버 unit_code → 커리큘럼 표시 명칭(지도 노드와 같은 축약 표기) */
+function unitNameByCode(subject: Subject, unitCode: string | null): string | null {
+  if (!unitCode) return null
+  for (const cat of CURRICULUM[subject]) {
+    const unit = cat.units.find((u) => u.unitCode === unitCode)
+    if (unit) return unit.name
+  }
+  return null
+}
+
 export function groupWrongNotes(subject: Subject, items: WrongNoteItem[]): WrongUnitRow[] {
   const nodes = nodesOf(subject)
   const rows: WrongUnitRow[] = nodes.map((n) => ({
@@ -38,7 +51,10 @@ export function groupWrongNotes(subject: Subject, items: WrongNoteItem[]): Wrong
   const extras = new Map<string, WrongUnitRow>()
   for (const item of items) {
     const skill = item.skillNode ?? ''
-    const matched = rows.find((r) => normalize(r.name) === normalize(skill))
+    const byCode = unitNameByCode(subject, item.unitCode)
+    const matched =
+      (byCode && rows.find((r) => normalize(r.name) === normalize(byCode))) ||
+      rows.find((r) => normalize(r.name) === normalize(skill))
     if (matched) {
       matched.items.push(item)
       continue

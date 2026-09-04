@@ -8,6 +8,7 @@ import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
 import { loadQuizProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
+import { findSkillScore } from '@/user/services/unitScoreSnapshot'
 import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
@@ -35,9 +36,6 @@ function circled(choice: number | null): string {
   if (choice == null || choice < 1 || choice > 5) return '-'
   return String.fromCodePoint(0x2460 + choice - 1)
 }
-
-/** 서버 skill_node("지수와 로그") ↔ 표기명("지수·로그") 느슨 매칭 */
-const normalize = (s: string) => s.replace(/[·\s]/g, '').replace(/와|과/g, '')
 
 /**
  * 점수 카운트업 — 채점이 끝나면 0 → 점수로 도르륵 오른다 (easeOutCubic).
@@ -300,9 +298,8 @@ export default function WeaknessResultPage() {
     fetchSkillScores(subject)
       .then((list) => {
         if (!alive) return
-        setSkillScore(
-          list.find((s) => normalize(s.skillNode) === normalize(unitName)) ?? null,
-        )
+        // unitCode 우선 매칭 — 이름 정규화만으로는 "지수·로그함수" 가 서버 "지수함수와 로그함수" 를 못 찾는다
+        setSkillScore(findSkillScore(list, unitName))
       })
       .catch(() => {}) // 실패 시 세션 결과 폴백
     return () => {
