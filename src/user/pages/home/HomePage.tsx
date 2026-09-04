@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
@@ -502,7 +502,11 @@ export default function HomePage() {
 
       {/* 약점 그래프 예시 안내 (Figma 2504-22065) — ? 버튼 시트 */}
       {infoOpen && (
-        <div className={styles.infoDim} onClick={infoDrag.close}>
+        <div
+          className={clsx(styles.infoDim, infoDrag.closing && styles.infoDimOut)}
+          style={{ '--sheet-exit-ms': `${infoDrag.exitMs}ms` } as CSSProperties}
+          onClick={infoDrag.close}
+        >
           <div
             {...infoDrag.sheetProps}
             className={clsx(styles.infoSheet, infoDrag.dragging && styles.infoSheetDragging)}

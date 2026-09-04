@@ -250,6 +250,12 @@ $fill: #f0f1f3; // black/100
   @include desktop-up { align-items: center; }
 }
 
+// 퇴장 — 시트 슬라이드 아웃(--sheet-exit-ms · useSheetDrag)과 같은 시간에 사라진다
+.infoDimOut {
+  opacity: 0;
+  transition: opacity var(--sheet-exit-ms, 220ms) ease;
+}
+
 .infoSheet {
   position: relative;
   display: flex;

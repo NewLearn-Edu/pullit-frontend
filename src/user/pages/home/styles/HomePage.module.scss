@@ -479,12 +479,18 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   align-items: flex-end;
   background: rgba(21, 17, 18, 0.38);
   z-index: 60;
+  animation: unitDimIn 240ms ease;
 
   // 웹은 중앙 다이얼로그
   @include desktop-up {
     align-items: center;
     justify-content: center;
   }
+}
+
+.infoDimOut {
+  opacity: 0;
+  transition: opacity var(--sheet-exit-ms, 220ms) ease;
 }
 
 .infoSheet {
@@ -495,7 +501,9 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
   border-radius: 26px 26px 0 0;
   background: $bg; // 시안 시트 배경 = black/100
-  filter: drop-shadow(0 -16px 25px rgba(0, 0, 0, 0.12));
+  // filter: drop-shadow 는 transform 이 바뀔 때마다 시트 전체를 다시 칠한다(등장·드래그 매 프레임) —
+  // 불투명한 둥근 사각형이라 box-shadow 와 그림이 같고, 합성 레이어에서 함께 움직인다
+  box-shadow: 0 -16px 25px rgba(0, 0, 0, 0.12);
   animation: infoIn 280ms cubic-bezier(0.22, 0.9, 0.3, 1);
   // 아래로 스와이프 드래그 추종 (useSheetDrag) · 놓으면 제자리 복귀
   transform: translateY(var(--drag-y, 0px));
@@ -551,12 +559,21 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   display: flex;
   align-items: flex-end;
   background: rgba(21, 17, 18, 0.38); // Figma #151112 38% — 시트 뒤 딤
+  // 배경색 대신 불투명도로 — 색 애니메이션은 전체 화면을 매 프레임 다시 칠하지만 opacity 는 합성기가 처리한다.
+  // 0 → 0.38 색과 0 → 1 불투명도는 같은 그림 (iPad 시트 버벅 · 2026-09-04)
   animation: unitDimIn 240ms ease;
   z-index: 60;
 }
 
 @keyframes unitDimIn {
-  from { background: rgba(21, 17, 18, 0); }
+  from { opacity: 0; }
+}
+
+// 퇴장 — 시트가 내려가는 시간(--sheet-exit-ms · useSheetDrag)에 맞춰 함께 사라진다.
+// 전엔 시트가 다 내려간 뒤에도 딤이 남아 있다가 언마운트 순간 한 번에 꺼졌다
+.unitDimOut {
+  opacity: 0;
+  transition: opacity var(--sheet-exit-ms, 220ms) ease;
 }
 
 .unitSheet {

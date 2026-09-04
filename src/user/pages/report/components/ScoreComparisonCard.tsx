@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { clsx } from 'clsx'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useMe } from '@/user/hooks/useMe'
@@ -119,7 +119,11 @@ export function ScoreComparisonCard({ subject }: { subject: Subject }) {
       </div>
 
       {infoOpen && (
-        <div className={styles.infoDim} onClick={infoDrag.close}>
+        <div
+          className={clsx(styles.infoDim, infoDrag.closing && styles.infoDimOut)}
+          style={{ '--sheet-exit-ms': `${infoDrag.exitMs}ms` } as CSSProperties}
+          onClick={infoDrag.close}
+        >
           <div
             role="dialog"
             aria-label="점수 계산 방식"

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
@@ -534,7 +534,11 @@ export function useUnitSheets({
     <>
       {/* 진단 완료 유닛 상세 (2857-22101) — 웹 우측 패널 · 모바일 바텀시트 */}
       {unitSheet && sheetDiag && (
-        <div className={styles.unitDim} onClick={unitDrag.close}>
+        <div
+          className={clsx(styles.unitDim, unitDrag.closing && styles.unitDimOut)}
+          style={{ '--sheet-exit-ms': `${unitDrag.exitMs}ms` } as CSSProperties}
+          onClick={unitDrag.close}
+        >
           <div
             {...unitDragHandlers}
             ref={bindSheetEl(unitDragRef)}
@@ -756,7 +760,11 @@ export function useUnitSheets({
 
       {/* ── 진단 시작 시트 (2842-10194) ↔ 건너뛰기 화면 (2842-10966) ─────────── */}
       {startSheet && (
-        <div className={styles.unitDim} onClick={startDrag.close}>
+        <div
+          className={clsx(styles.unitDim, startDrag.closing && styles.unitDimOut)}
+          style={{ '--sheet-exit-ms': `${startDrag.exitMs}ms` } as CSSProperties}
+          onClick={startDrag.close}
+        >
           <div
             {...startDragHandlers}
             ref={bindSheetEl(startDragRef)}
@@ -900,7 +908,11 @@ export function useUnitSheets({
 
       {/* ── 선행 단원 안내 시트 (3082-5687) — 잠긴 단원 클릭 ─────────────────── */}
       {lockedSheet && (
-        <div className={styles.unitDim} onClick={lockedDrag.close}>
+        <div
+          className={clsx(styles.unitDim, lockedDrag.closing && styles.unitDimOut)}
+          style={{ '--sheet-exit-ms': `${lockedDrag.exitMs}ms` } as CSSProperties}
+          onClick={lockedDrag.close}
+        >
           <div
             {...lockedDragHandlers}
             ref={bindSheetEl(lockedDragRef)}
