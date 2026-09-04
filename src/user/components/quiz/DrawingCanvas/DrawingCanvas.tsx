@@ -13,6 +13,8 @@ export type EraserMode = 'stroke' | 'partial'
 export interface DrawingCanvasHandle {
   clear: () => void
   undo: () => void
+  /** 되돌리기 취소 — undo 로 물린 편집을 다시 적용. 새 편집이 들어오면 스택은 비워진다 */
+  redo: () => void
   /** 저장본 복원 — 되돌리기 히스토리를 비우고 통째로 교체. 사용자 편집이 아니라 onStrokesChange 는 부르지 않는다 */
   setStrokes: (strokes: NoteStroke[]) => void
 }
@@ -121,6 +123,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const strokesRef = useRef<NoteStroke[]>([])
     /** 되돌리기 스택 — 편집 직전 목록의 스냅샷 (완성 목록은 불변 취급이라 참조만 보관) */
     const historyRef = useRef<NoteStroke[][]>([])
+    /** 다시 실행 스택 — undo 가 물린 목록. 새 편집(commit)이 들어오면 비운다 */
+    const redoRef = useRef<NoteStroke[][]>([])
     const currentRef = useRef<Ink | null>(null)
     /** 이번 지우개 제스처에서 획을 지웠는가 — 스냅샷은 첫 삭제 때 1회, 통지는 손 뗄 때 1회 */
     const erasedRef = useRef(false)
@@ -165,6 +169,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const history = historyRef.current
       history.push(strokesRef.current)
       if (history.length > MAX_HISTORY) history.shift()
+      redoRef.current = [] // 새 편집 — 갈라진 미래는 버린다
     }
 
     /** 완성 획 목록 교체 (사용자 편집 결과) — 렌더 · 부모 통지 · 높이 보고 */
@@ -191,11 +196,22 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       undo: () => {
         const prev = historyRef.current.pop()
         if (!prev) return
+        redoRef.current.push(strokesRef.current)
         applyStrokes(prev, true)
+        renderLive()
+      },
+      redo: () => {
+        const next = redoRef.current.pop()
+        if (!next) return
+        const history = historyRef.current
+        history.push(strokesRef.current)
+        if (history.length > MAX_HISTORY) history.shift()
+        applyStrokes(next, true)
         renderLive()
       },
       setStrokes: (strokes) => {
         historyRef.current = []
+        redoRef.current = []
         currentRef.current = null
         strokesRef.current = strokes
         rebuildBase()
@@ -231,6 +247,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           }
         }
 
+        // 레이저는 화면 px 기준 포인터 효과 — 폭(배율)이 바뀌면 자리·굵기가 안 맞으니 남은 잔상은 그냥 걷어낸다.
+        // (확대 확정 직후 레이저가 사라지지 않고 남던 문제 · 2026-09-04)
+        fadingLasersRef.current = []
+        laserActivityEndRef.current = null
         rebuildBase()
         renderLive()
         reportContentHeight()
@@ -650,6 +670,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       // 두 번째 손가락 — 확대·이동 제스처의 시작. 진행 중이던 손가락 획은 버리고(펜 획은 유지) 새 획도 열지 않는다
       if (e.pointerType === 'touch' && !e.isPrimary) {
         if (currentRef.current && currentPointerTypeRef.current === 'touch') {
+          // 버리는 획이 레이저면 pointerup 을 거치지 않으므로 여기서 페이드 타이머를 시작해 준다 —
+          // null 로 두면 이전 레이저들이 "그리는 중" 취급돼 100% 로 영원히 남는다
+          if (currentRef.current.tool === 'laser') laserActivityEndRef.current = Date.now()
           currentRef.current = null
           drawingRef.current = false
           renderLive()

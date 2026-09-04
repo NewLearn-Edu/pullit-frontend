@@ -61,6 +61,7 @@ interface DrawingToolbarProps {
   onAllowFingerChange: (v: boolean) => void
   onDrawingEnabledChange: (v: boolean) => void
   onUndo: () => void
+  onRedo: () => void
   onClear: () => void
 }
 
@@ -82,6 +83,7 @@ export function DrawingToolbar({
   onAllowFingerChange,
   onDrawingEnabledChange,
   onUndo,
+  onRedo,
   onClear,
 }: DrawingToolbarProps) {
   const isCompact = useIsCompact()
@@ -432,8 +434,11 @@ export function DrawingToolbar({
     <div className={styles.container}>
       {/* Row 1 : 필수 컨트롤 · 항상 한 줄 */}
       <div className={styles.row}>
-        {/* 좌측: 되돌리기 — 접기 버튼은 없음. 툴바 토글은 상단 바 우측 펜 버튼으로 일원화 */}
-        <div className={styles.left}>
+        {/* 좌측 슬롯 — 비움 (그리드 가운데 정렬용). 툴바 토글은 상단 바 우측 펜 버튼으로 일원화 */}
+        <div className={styles.left} />
+
+        {/* 가운데: 되돌리기·다시 실행 | 도구 | (데스크탑에서만) 색 | 두께 — 다른 그룹처럼 구분선으로 나눈다 */}
+        <div className={styles.center}>
           <button
             type="button"
             onClick={onUndo}
@@ -442,10 +447,15 @@ export function DrawingToolbar({
           >
             <UndoIcon />
           </button>
-        </div>
-
-        {/* 가운데: 도구 + (데스크탑에서만) 색 · 두께 */}
-        <div className={styles.center}>
+          <button
+            type="button"
+            onClick={onRedo}
+            aria-label="다시 실행"
+            className={styles.iconButton}
+          >
+            <RedoIcon />
+          </button>
+          <Divider />
           <ToolButton
             active={tool === 'mono'}
             onClick={() => handleToolChange('mono')}
@@ -747,6 +757,16 @@ function UndoIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7v6h6" />
       <path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+    </svg>
+  )
+}
+
+/** 되돌리기 아이콘의 좌우 반전 */
+function RedoIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 7v6h-6" />
+      <path d="M3 17a9 9 0 0 1 15-6.7L21 13" />
     </svg>
   )
 }

@@ -67,8 +67,9 @@ export function ReviewScreen({
 }: ReviewScreenProps) {
   const subject = problem.subject
   const [explainOpen, setExplainOpen] = useState(initialExplainOpen)
-  // 처음부터 열린 화면(맛보기 해설보기)은 패널 닫기 = 화면 나가기, 아니면 패널만 접는다
-  const closeExplain = initialExplainOpen ? onClose : () => setExplainOpen(false)
+  // 해설 X 는 항상 패널만 접는다 — 화면 나가기는 상단 바 X. (예전엔 처음부터 열린 화면에서 X = 나가기라
+  // 해설을 접으려다 풀이 화면째 닫혔다 · 2026-09-04). 접힌 뒤 다시 여는 버튼은 하단 바(footer 없으면 기본 "해설 보기")
+  const closeExplain = () => setExplainOpen(false)
 
   // 필기 — 캔버스는 문제·해설 두 장. 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
   const [tool, setTool] = useState<StrokeTool>('mono')
@@ -158,7 +159,12 @@ export function ReviewScreen({
           onAllowFingerChange={setAllowFinger}
           onDrawingEnabledChange={setDrawingEnabled}
           onUndo={() => activeCanvas()?.undo()}
-          onClear={() => activeCanvas()?.clear()}
+          onRedo={() => activeCanvas()?.redo()}
+          // 모두 지우기는 문제·해설 필기 둘 다 — 마지막으로 쓴 쪽만 지우면 "다 지웠는데 남아 있다" 가 된다
+          onClear={() => {
+            canvasRef.current?.clear()
+            explainCanvasRef.current?.clear()
+          }}
         />
       )}
 
@@ -237,11 +243,22 @@ export function ReviewScreen({
 
           {/* 액션 바 — 문제 칼럼(main) 안 sticky. 칼럼과 같은 폭이라 해설 패널이 열려 칼럼이 좁아지면
               카드와 함께 줄어든다 (fixed 로 두면 화면 기준 500px 에 고정돼 칼럼을 벗어남) */}
-          {footer && (
+          {(footer || !explainOpen) && (
             /* 두 손가락 확대 중엔 카드의 보이는 구간 폭에 맞춘다 (usePinchZoom.stickyBarStyle) */
             <div className={styles.reviewFooterBar} style={{ left: 0, ...pinch.stickyBarStyle }}>
               <div className={styles.reviewFooterRow}>
-                {footer({ openExplain: () => setExplainOpen(true), explainOpen })}
+                {footer ? (
+                  footer({ openExplain: () => setExplainOpen(true), explainOpen })
+                ) : (
+                  /* footer 없는 화면(맛보기·세트 리뷰)에서 해설을 접었을 때 다시 여는 길 */
+                  <button
+                    type="button"
+                    onClick={() => setExplainOpen(true)}
+                    className={styles.reviewSecondary}
+                  >
+                    해설 보기
+                  </button>
+                )}
               </div>
             </div>
           )}

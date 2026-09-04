@@ -510,6 +510,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         onAllowFingerChange={setAllowFinger}
         onDrawingEnabledChange={setDrawingEnabled}
         onUndo={() => canvasRef.current?.undo()}
+        onRedo={() => canvasRef.current?.redo()}
         onClear={() => canvasRef.current?.clear()}
       />
 
