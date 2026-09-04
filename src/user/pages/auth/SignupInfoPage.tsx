@@ -122,6 +122,8 @@ export default function SignupInfoPage() {
   const [name, setName] = useState(saved.name ?? '')
   // 가입 소셜 — 애플이면 이름 칸을 잠근다 (Apple 정책: SSO 제공 이름 사용). loadMe 로 채운다
   const [provider, setProvider] = useState<'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null>(null)
+  /** SSO(애플)가 이름을 내려줬는가 — 로드 시 1회 판정. 입력값 길이로 판정하면 사용자가 한 글자 치는 순간 잠겨 버린다 */
+  const [ssoNameProvided, setSsoNameProvided] = useState(false)
   const [birthDate, setBirthDate] = useState('')
   // 생년월일 3분할 입력 (토스 패턴) — 숫자 키패드만 뜨고, 자릿수가 차면 다음 칸으로 자동 이동
   const [birthY, setBirthY] = useState(saved.birthY ?? '')
@@ -200,6 +202,9 @@ export default function SignupInfoPage() {
         setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (애플은 수정 불가로 잠김)
         if (loaded.name.trim().length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
       }
+      // 애플이 이름을 실제로 내려준 경우에만 잠근다 — 애플은 최초 인증 1회만 이름을 주므로 재가입·탈퇴 후
+      // 재로그인이면 빈 값으로 온다. 이때는 사용자가 직접 입력해야 하니 잠그지 않는다
+      setSsoNameProvided(loaded.provider === 'APPLE' && !!loaded.name && loaded.name.trim().length > 0)
     })
   }, [loadMe, navigate])
 
@@ -394,8 +399,9 @@ export default function SignupInfoPage() {
 
   const nameValid = name.trim().length >= 2
   // 애플 가입자는 이름 수정 불가 (Apple 정책 — SSO 가 내려준 이름 사용). 애플이 이름을
-  // 안 준 예외(재가입 등, name 빈값)에는 잠그지 않아 사용자가 직접 입력할 수 있게 둔다
-  const nameLocked = provider === 'APPLE' && name.trim().length > 0
+  // 안 준 경우(재가입·탈퇴 후 재로그인 — 애플은 최초 1회만 이름을 준다)에는 잠그지 않아 직접 입력한다.
+  // (예전엔 현재 입력값 길이로 판정해 빈 칸에 한 글자 치는 순간 잠기고 다음 단계가 안 열렸다 · 2026-09-04)
+  const nameLocked = provider === 'APPLE' && ssoNameProvided
   // 999 국번은 실존하지 않는 앱스토어 심사용 번호(999-0000-0000) — 서버 검증(DTO @Pattern)과 동일하게 허용
   const phoneValid = /^(01[0-9]|999)-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
