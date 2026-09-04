@@ -219,6 +219,8 @@ function titleOf(tx: CreditTransaction): string {
       return '회원가입 축하 보상'
     case 'INVITE_FRIEND_COMPLETE':
       return '친구 초대 보상'
+    case 'DAILY_FREE':
+      return '매일 무료 크레딧'
     default:
       break
   }

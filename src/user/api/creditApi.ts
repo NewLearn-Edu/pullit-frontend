@@ -22,7 +22,7 @@ export async function useCreditForExtraSet(): Promise<CreditUseResponse> {
 }
 
 export type CreditTransactionType = 'USE' | 'REWARD' | 'ADMIN_GRANT' | 'ADMIN_DEDUCT'
-export type CreditRewardType = 'TRIAL_FIRST_CLEAR' | 'SIGNUP_WELCOME' | 'INVITE_FRIEND_COMPLETE'
+export type CreditRewardType = 'TRIAL_FIRST_CLEAR' | 'SIGNUP_WELCOME' | 'INVITE_FRIEND_COMPLETE' | 'DAILY_FREE'
 
 export interface CreditTransaction {
   id: number

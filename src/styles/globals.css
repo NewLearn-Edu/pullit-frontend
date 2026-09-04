@@ -87,6 +87,8 @@
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* 당겨서 새로고침·바깥 튐 차단 — 뷰포트 스크롤러는 html 이라 body 만으론 크롬(안드로이드)이 안 잡는다 */
+    overscroll-behavior-y: none;
   }
 
   body {

@@ -8,6 +8,7 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { Skeleton } from '@/user/components/Skeleton'
 import { type Subject } from '@/user/stores/trialStore'
 import { fetchUnitLocks } from '@/user/api/recommendApi'
@@ -104,6 +105,7 @@ export default function HomePage() {
   const catSlug = searchParams.get('cat') ?? CURRICULUM[subject][0].slug
 
   const [infoOpen, setInfoOpen] = useState(false) // 약점 그래프 예시 안내 (? 버튼)
+  const [creditPopupOpen, setCreditPopupOpen] = useState(false) // 크레딧 배지 → 매일 04:00 충전 안내
   // 인포 시트 아래로 스와이프 닫기 — 웹은 중앙 다이얼로그라 제스처 제외
   const infoDrag = useSheetDrag(() => setInfoOpen(false), {
     disabled: () => window.matchMedia('(min-width: 1281px)').matches,
@@ -272,11 +274,12 @@ export default function HomePage() {
   return (
     <div className={styles.page}>
       <UserNav active="recommend" />
+      {creditPopupOpen && <CreditRefillPopup onClose={() => setCreditPopupOpen(false)} />}
 
       <main className={styles.main}>
         {/* 상단 헤더 — 크레딧 · 과목 토글 · 오답노트/마이 */}
         <PageHeader
-          left={<CreditBadge credit={credit} />}
+          left={<CreditBadge credit={credit} onClick={() => setCreditPopupOpen(true)} />}
           center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
           hideRightOnDesktop
           right={

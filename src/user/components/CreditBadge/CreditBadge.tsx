@@ -5,6 +5,8 @@ interface CreditBadgeProps {
   credit: number
   /** sm = 모바일 헤더 (🪙 5) · md = 데스크탑 헤딩 (🪙 크레딧 5) */
   size?: 'sm' | 'md'
+  /** 있으면 버튼으로 렌더 — 홈에서 누르면 충전 안내 팝업 (2026-09-04) */
+  onClick?: () => void
 }
 
 /** 크레딧 코인 — 서비스 크레딧 그래픽(노란 동전 + C)의 미니 버전. 브랜드 고정색 */
@@ -24,13 +26,20 @@ export function CreditCoin() {
 }
 
 /** 크레딧 배지 (공용) — C 코인 + 잔액 */
-export function CreditBadge({ credit, size = 'sm' }: CreditBadgeProps) {
-  return (
-    <span
-      className={clsx(styles.badge, size === 'sm' ? styles.badgeSm : styles.badgeMd)}
-    >
+export function CreditBadge({ credit, size = 'sm', onClick }: CreditBadgeProps) {
+  const className = clsx(styles.badge, size === 'sm' ? styles.badgeSm : styles.badgeMd, onClick && styles.badgeButton)
+  const content = (
+    <>
       <CreditCoin />
       {size === 'md' ? `크레딧 ${credit}` : credit}
-    </span>
+    </>
   )
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-label={`크레딧 ${credit}개 · 충전 안내`} className={className}>
+        {content}
+      </button>
+    )
+  }
+  return <span className={className}>{content}</span>
 }

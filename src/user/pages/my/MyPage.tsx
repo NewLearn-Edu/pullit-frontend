@@ -81,10 +81,19 @@ export default function MyPage() {
   // 마케팅 수신동의 토글 — 진실원은 me.marketingConsentAt, 저장 중엔 잠금
   const marketingOn = !!me?.marketingConsentAt
   const [consentSaving, setConsentSaving] = useState(false)
-  const toggleMarketing = async () => {
+  // 끄기(철회)만 확인 팝업을 거친다 — 켜기는 바로 저장 (2026-09-04)
+  const [consentOffOpen, setConsentOffOpen] = useState(false)
+  const toggleMarketing = () => {
+    if (consentSaving) return
+    if (marketingOn) {
+      setConsentOffOpen(true)
+      return
+    }
+    void saveMarketing(true)
+  }
+  const saveMarketing = async (next: boolean) => {
     if (consentSaving) return
     setConsentSaving(true)
-    const next = !marketingOn
     try {
       await updateMarketingConsent(next)
       await loadMe(true) // marketingConsentAt 갱신 반영
@@ -244,30 +253,28 @@ export default function MyPage() {
 
         {/* 로그아웃 · 회원탈퇴 · 버전 */}
         <div className={styles.footerActions}>
-          {/* "로그아웃 | 회원탈퇴" 한 줄 — 얇은 세로 구분선, 밑줄 없는 회색 텍스트 (2026-09-04) */}
-          <div className={styles.accountLinks}>
-            <button
-              type="button"
-              onClick={() => setLogoutOpen(true)}
-              disabled={signingOut}
-              className={styles.logoutLink}
-            >
-              {signingOut ? '로그아웃 중…' : '로그아웃'}
-            </button>
-            {/* 게스트는 탈퇴 개념 없음 — 7일 미접속 시 자동 삭제 */}
-            {!isGuest && (
-              <>
-                <span className={styles.accountDivider} aria-hidden />
-                <button
-                  type="button"
-                  onClick={() => setWithdrawOpen(true)}
-                  className={styles.logoutLink}
-                >
-                  회원탈퇴
-                </button>
-              </>
-            )}
-          </div>
+          {/* "로그아웃 | 회원탈퇴" 한 줄 — 얇은 세로 구분선, 밑줄 없는 회색 텍스트 (2026-09-04).
+              게스트(비회원)에겐 둘 다 없다 — 계정이 아니라 브라우저 세션이고 7일 미접속 시 자동 삭제. 가입 전환은 위 CTA */}
+          {!isGuest && (
+            <div className={styles.accountLinks}>
+              <button
+                type="button"
+                onClick={() => setLogoutOpen(true)}
+                disabled={signingOut}
+                className={styles.logoutLink}
+              >
+                {signingOut ? '로그아웃 중…' : '로그아웃'}
+              </button>
+              <span className={styles.accountDivider} aria-hidden />
+              <button
+                type="button"
+                onClick={() => setWithdrawOpen(true)}
+                className={styles.logoutLink}
+              >
+                회원탈퇴
+              </button>
+            </div>
+          )}
           <span className={styles.version}>{APP_VERSION}</span>
         </div>
         </div>
@@ -277,6 +284,22 @@ export default function MyPage() {
       <Toast show={!!toast} fit bottom="calc(var(--nav-bottom-h) + 24px)" className={styles.toast}>
         {toast}
       </Toast>
+
+      {/* 마케팅 수신동의 철회 확인 — 켜기는 바로, 끄기만 묻는다 */}
+      {consentOffOpen && (
+        <ConfirmDialog
+          title="마케팅 수신동의를 철회할까?"
+          desc="철회하면 새 문제·이벤트 같은 소식을 알림톡으로 받을 수 없어. 언제든 다시 켤 수 있어."
+          cancelLabel="취소"
+          confirmLabel="철회하기"
+          danger
+          onCancel={() => setConsentOffOpen(false)}
+          onConfirm={() => {
+            setConsentOffOpen(false)
+            void saveMarketing(false)
+          }}
+        />
+      )}
 
       {/* 로그아웃 확인 — 풀이 나가기 등과 같은 공용 팝업. 확인은 파괴적 동작이라 빨강 */}
       {logoutOpen && (
@@ -295,9 +318,10 @@ export default function MyPage() {
       {withdrawOpen && (
         <ConfirmDialog
           title="탈퇴 전에 꼭 확인하세요"
-          desc="탈퇴하면 30일 뒤 계정과 풀이 기록·크레딧이 완전히 삭제돼. 그 전에 다시 로그인하면 복구할 수 있어."
+          desc={'탈퇴하면 30일 뒤 계정과\n풀이 기록·크레딧이 완전히 삭제돼.\n\n그 전에 다시 로그인하면\n복구할 수 있어.'}
           cancelLabel="그래도 탈퇴하기"
           confirmLabel="서비스로 돌아가기"
+          accent
           onCancel={() => {
             setWithdrawOpen(false)
             navigate('/my/withdraw')

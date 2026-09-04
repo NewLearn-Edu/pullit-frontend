@@ -373,6 +373,10 @@ export interface MeResult {
   provider: 'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null
   /** 가입 시각 (ISO) — 리포트 잔디의 시작 기준(가입 월) */
   joinedAt: string | null
+  /** 다음 무료 크레딧 충전 시각 (epoch ms · 다음 04:00 KST) — 크레딧 팝업 카운트다운 기준 (구버전 서버엔 없음) */
+  nextDailyCreditAtMs?: number
+  /** 매일 충전량 (3) */
+  dailyCreditAmount?: number
 }
 
 /** 학년/신분 — 서버 common.enums.Grade 와 동일 값 */
