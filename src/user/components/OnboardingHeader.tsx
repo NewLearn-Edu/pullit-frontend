@@ -1,7 +1,8 @@
 import iconClose from '@/assets/auth/icon-close.svg'
 
 interface OnboardingHeaderProps {
-  onClose: () => void
+  /** 우측 닫기 X. 생략하면 X 없이 상단 여백만 유지한다 (약점 결과 화면 — 하단 CTA 로만 나간다 · 2026-09-04) */
+  onClose?: () => void
 }
 
 /**
@@ -15,14 +16,16 @@ export default function OnboardingHeader({ onClose }: OnboardingHeaderProps) {
   return (
     <header className="flex w-full shrink-0 items-center justify-center px-[20px] pb-[8px] pt-[max(44px,env(safe-area-inset-top))]">
       <div className="flex w-full max-w-[1280px] items-center justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="닫기"
-          className="flex size-[24px] items-center justify-center"
-        >
-          <img src={iconClose} alt="" className="size-[24px]" />
-        </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="flex size-[24px] items-center justify-center"
+          >
+            <img src={iconClose} alt="" className="size-[24px]" />
+          </button>
+        )}
       </div>
     </header>
   )

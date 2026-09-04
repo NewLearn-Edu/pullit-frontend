@@ -450,8 +450,8 @@ export default function WeaknessResultPage() {
   return (
     // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
     <div className="flex min-h-dvh flex-col bg-gradient-to-b from-[#fff1f2] to-white">
-      {/* 로고 없이 닫기 X 만 (시안 2886-29391 — 헤더 좌측 비움) */}
-      <OnboardingHeader onClose={() => leaveResult(isEarlybird() ? '/earlybird' : '/home')} />
+      {/* 헤더는 상단 여백만 — 닫기 X 없음. 나가는 길은 하단 CTA(leaveResult) 하나로 (2026-09-04) */}
+      <OnboardingHeader />
 
       <main
         className={clsx('flex w-full flex-1 flex-col items-center', stamped && markStyles.shake)}
