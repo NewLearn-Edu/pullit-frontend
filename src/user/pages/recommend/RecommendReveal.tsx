@@ -21,8 +21,11 @@ import { Toast } from '@/user/components/Toast'
 import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
 import { SkipConfirmContent, extractApiMessage, isCreditShortage } from '@/user/pages/home/UnitSheets'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
+import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
+import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
+import { useSolveStore } from '@/user/stores/solveStore'
 import { useUserStore } from '@/user/stores/userStore'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
 import { type Subject } from '@/user/stores/trialStore'
 import {
@@ -76,6 +79,13 @@ const SHEET_MAX_W = 560
  *  expand 카드가 아래로 커지며 상세 카드가 되고 문구·스탯·CTA 가 붙는다
  */
 type Phase = 'scan' | 'mark' | 'zoom' | 'lift' | 'expand' | 'ready'
+
+/** 풀다 만 세트 요약 — 남은 문항 수와 남은 문항의 권장 시간 합(초 · 세트 문항을 못 받았으면 null) */
+interface ResumeInfo {
+  set: ResumableSet
+  remaining: number
+  remainingSec: number | null
+}
 
 const PHASE_MS = {
   settle: 420, // 다 훑고 한 박자 쉬는 시간
@@ -174,6 +184,11 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
   const [serverLocks, setServerLocks] = useState<Record<string, string>>({})
   const [serverRec, setServerRec] = useState<Recommendation | null>(null)
+  /**
+   * 풀다 만 세트(이어풀기 · 3631-13956) — 있으면 추천보다 우선해 그 단원을 집고, 남은 문항·시간·크레딧 없음으로 보여준다.
+   * undefined = 조회 중(대상 선정 보류) · null = 없음
+   */
+  const [resume, setResume] = useState<ResumeInfo | null | undefined>(undefined)
   const [failed, setFailed] = useState(false)
   const [phase, setPhase] = useState<Phase>('scan')
   /** 건너뛰기·모션 최소화 — 트랜지션 없이 최종 상태로 */
@@ -186,7 +201,24 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const load = useCallback(() => {
     setFailed(false)
     setServerRec(null)
-    if (isRecommendDemo()) return
+    setResume(undefined)
+    if (isRecommendDemo()) {
+      setResume(null)
+      return
+    }
+    fetchResumableSet()
+      .then(async (found) => {
+        if (!found || found.subject.toLowerCase() !== subject) return null
+        // 남은 문항·예상 시간은 세트 문항 단위로 — 이어풀기 팝업(홈)과 같은 계산 (권장 시간 합)
+        const active = await fetchActiveProblemSet(subject, found.unitCode, found.source).catch(() => null)
+        const left = active?.items.filter((item) => !item.submitted) ?? null
+        return {
+          set: found,
+          remaining: left ? left.length : Math.max(0, found.totalCount - found.submittedCount),
+          remainingSec: left ? left.reduce((sum, item) => sum + item.recommendedTimeSec, 0) : null,
+        }
+      })
+      .then(setResume, () => setResume(null))
     // 진단 기록·잠금은 캔버스를 그리는 재료, 추천은 어느 카드를 집을지 결정한다
     hydrateFromServer().catch(() => {})
     fetchUnitLocks(subject)
@@ -245,18 +277,23 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       }
       return null
     }
+    if (resume === undefined) return null // 풀다 만 세트 조회 전 — 먼저 결정하지 않는다
+    if (resume) {
+      const hit = pick((r) => r.unitCode === resume.set.unitCode)
+      if (hit) return hit
+    }
     if (rec && rec.type !== 'NONE' && rec.unitCode) {
       const hit = pick((r) => r.unitCode === rec.unitCode)
       if (hit) return hit
     }
     if (!rec) return null
     return pick((r) => r.state === 'next')
-  }, [rec, columns])
+  }, [rec, resume, columns])
 
   /** 추천이 끝났는데 집을 카드가 없다 = 전 대단원 진단 완료. 홈으로 돌려보낸다 */
   useEffect(() => {
-    if (rec && !target) navigate('/home', { replace: true })
-  }, [rec, target, navigate])
+    if (rec && resume !== undefined && !target) navigate('/home', { replace: true })
+  }, [rec, resume, target, navigate])
 
   // ── 단계 진행 ─────────────────────────────────────────────────────────────
   const reduceMotion = useMemo(
@@ -490,6 +527,25 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       // 홈 시트와 같은 진단 세트 발급 경로 — 서버가 차감·문항 구성·세트 박제·완료 판정을 맡는다.
       // (이전: 크레딧만 따로 차감하고 세트 없이 고정 서빙 문항으로 들어가 진단이 박제되지 않고
       //  같은 문제가 반복됐다 · 2026-09-03)
+      if (resume && resume.set.source !== 'TRIAL') {
+        // 풀다 만 추천(FREE)·데일리 세트 — 홈 시작 시트(startFreeSolve)와 같은 재개 경로. 진행 중 세트라 재차감 없음
+        const nodeId = target.row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
+        const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
+          subject, nodeId, target.row.unitCode, resume.set.source)
+        await useUserStore.getState().loadMe(true)
+        const scoreBefore = await snapshotUnitScoreForSet(subject, target.row.name, set.setId, set.resumed)
+        useSolveStore.getState().startSession({
+          problems,
+          source: resume.set.source,
+          returnTo: '/home',
+          setId: set.setId,
+          unitName: target.row.name,
+          scoreBefore,
+        })
+        navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
+        return
+      }
+      // 진단(TRIAL) 세트 — 풀다 만 세트가 있으면 서버가 그대로 돌려줘(재차감 없음) 첫 미제출 문항부터 재개된다
       const path = await startTrialSetSession(
         subject,
         { name: target.row.name, unitCode: target.row.unitCode, nodeId: target.row.nodeId },
@@ -564,8 +620,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   /** 확대가 끝난 시점 — 여기서 그리드를 끄고 무대가 카드를 직접 들기 시작한다 */
   const solo = phase === 'lift' || phase === 'expand' || phase === 'ready'
   const revealed = phase === 'expand' || phase === 'ready'
-  const badge = unitBadge(rec, target?.row)
-  const reason = defaultReason(target?.row)
+  const badge = resume ? { text: '이어 풀기', weak: true } : unitBadge(rec, target?.row)
+  const reason = resume ? '풀다 만 문제' : defaultReason(target?.row)
+  const resumeUnitCode = resume?.set.unitCode ?? null
   // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
 
@@ -599,7 +656,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           </div>
           <div className={clsx(styles.titleLayer, !revealed && styles.titleLayerOut)}>
             <h1 className={styles.title}>지금 필요한 추천문제</h1>
-            <p className={styles.subtitle}>현재 학습 상태에 맞춰 문제를 골랐어</p>
+            <p className={styles.subtitle}>
+              {resume ? '풀다 만 문제가 있어' : '현재 학습 상태에 맞춰 문제를 골랐어'}
+            </p>
           </div>
         </div>
 
@@ -679,6 +738,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                             key={slot.row!.unitCode}
                             row={slot.row!}
                             marked={isTarget && phase !== 'scan'}
+                            resuming={slot.row!.unitCode === resumeUnitCode}
                             scan={state}
                             mute={mute}
                           />
@@ -697,7 +757,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
             {/* 확대가 끝난 뒤의 카드 — 그리드의 대상 카드와 픽셀이 겹치는 자리에서 이어받는다 */}
             {target && solo && (
               <div className={clsx(styles.solo, revealed && styles.soloOut)} aria-hidden>
-                <UnitCard row={target.row} marked bare />
+                <UnitCard row={target.row} marked bare resuming={target.row.unitCode === resumeUnitCode} />
               </div>
             )}
 
@@ -729,23 +789,25 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           <div style={{ height: `${detailH}px` }} aria-hidden />
 
           <div className={clsx(styles.stats, revealed && styles.statsIn)}>
+            {/* 이어풀기(3631-13956): 남은 문항 수 · 남은 문항 권장 시간 합 · 크레딧 없음 */}
             <div className={styles.stat}>
-              <span className={styles.statLabel}>문제 수</span>
-              <span className={styles.statValue}>{SET_SIZE}문제</span>
+              <span className={styles.statLabel}>{resume ? '남은 문제' : '문제 수'}</span>
+              <span className={styles.statValue}>{resume ? resume.remaining : SET_SIZE}문제</span>
             </div>
             <span className={styles.statDivider} aria-hidden />
             <div className={styles.stat}>
               <span className={styles.statLabel}>예상 시간</span>
               <span className={styles.statValue}>
-                {estimatedSec != null
-                  ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
-                  : '약 —분'}
+                {(() => {
+                  const sec = resume ? (resume.remainingSec ?? estimatedSec) : estimatedSec
+                  return sec != null ? `약 ${Math.max(1, Math.round(sec / 60))}분` : '약 —분'
+                })()}
               </span>
             </div>
             <span className={styles.statDivider} aria-hidden />
             <div className={styles.stat}>
               <span className={styles.statLabel}>필요 크레딧</span>
-              <span className={styles.statValue}>{SET_CREDIT_COST}개</span>
+              <span className={styles.statValue}>{resume ? '없음' : `${SET_CREDIT_COST}개`}</span>
             </div>
           </div>
         </div>
@@ -772,11 +834,13 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           >
             {starting
               ? '시작 중…'
-              : target?.row.diagnosis
-                ? '추천 문제 풀기'
-                : `${target?.row.name ?? ''} 진단하기`.trim()}
+              : resume
+                ? '이어 풀기'
+                : target?.row.diagnosis
+                  ? '추천 문제 풀기'
+                  : `${target?.row.name ?? ''} 진단하기`.trim()}
           </button>
-          {!target?.row.diagnosis && (
+          {!resume && !target?.row.diagnosis && (
             <button
               type="button"
               onClick={() => setSkipMode(true)}
@@ -863,12 +927,15 @@ function UnitCard({
   bare,
   mute = 'none',
   scan = 'done',
+  resuming = false,
 }: {
   row: UnitProgressRow
   marked?: boolean
   bare?: boolean
   mute?: 'none' | 'dim' | 'hide'
   scan?: ScanState
+  /** 이 단원에 풀다 만 세트가 있다 — 점수·미진단 대신 "이어풀기" 필 (3631-13956) */
+  resuming?: boolean
 }) {
   const locked = row.state === 'locked'
   const next = row.state === 'next'
@@ -906,7 +973,9 @@ function UnitCard({
           전부 "미진단" 필 — 캔버스는 현황판이라 행동 유도("진단하기")는 아래 CTA 버튼 한 곳에서만 (2026-09-03).
           자물쇠 표기는 폐지 */}
       {revealed &&
-        (done ? (
+        (resuming ? (
+          <span className={clsx(styles.cardStatePill, styles.cardStatePillResume)}>이어풀기</span>
+        ) : done ? (
           // 애니메이션 캔버스에는 셰브런 없이 점수만 (3681-8056) — 셰브런은 홈 리스트 전용
           <span className={clsx(styles.cardCheck, row.diagnosis?.weak && styles.cardCheckWeak)}>
             {row.diagnosis?.score}점
@@ -986,17 +1055,17 @@ function Ellipsis() {
   )
 }
 
+/** 보유 크레딧 코인 (20px) — 홈 상단 CreditBadge · 시작 시트(SheetCoinIcon)와 동일 그래픽 (2026-09-04 통일) */
 function CoinIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <circle cx="10" cy="10" r="8" fill="#FFC93C" />
-      <circle cx="10" cy="10" r="5.2" fill="#FFDE7D" />
+      <circle cx="10" cy="10" r="9.2" fill="#F8D558" />
+      <circle cx="10" cy="10" r="6.9" stroke="#EC9C40" strokeWidth="1.6" />
       <path
-        d="M10 6.6v6.8M8 8.2h3a1.4 1.4 0 0 1 0 2.8H8"
-        stroke="#B4801A"
-        strokeWidth="1.2"
+        d="M12.9 7.9a3.4 3.4 0 100 4.2"
+        stroke="#E08E39"
+        strokeWidth="2.2"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   )
