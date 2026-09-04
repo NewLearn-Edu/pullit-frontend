@@ -99,23 +99,23 @@ export default function WrongNotePage() {
             ))}
           </div>
 
-          {/* 소단원별 오답 행 — 오답 있는 단원만 상세로 진입 */}
+          {/* 소단원별 오답 행 — 오답 있는 단원만 상세로 진입, 없는 단원은 비활성 표시 (눌리지 않음) */}
           <div className={styles.list}>
             {rows.map((r) => {
               const count = r.items.length
+              const empty = count === 0
               return (
                 <button
                   key={r.key}
                   type="button"
-                  onClick={() =>
-                    count > 0 &&
-                    navigate(`/wrong-note/${subject}/units/${encodeURIComponent(r.key)}`)
-                  }
-                  className={styles.row}
+                  disabled={empty}
+                  aria-disabled={empty}
+                  onClick={() => navigate(`/wrong-note/${subject}/units/${encodeURIComponent(r.key)}`)}
+                  className={clsx(styles.row, empty && styles.rowDisabled)}
                 >
                   <span className={styles.rowName}>{r.name}</span>
                   <span className={styles.rowRight}>
-                    {count > 0 && <span className={styles.countBadge}>{count}개</span>}
+                    {!empty && <span className={styles.countBadge}>{count}개</span>}
                     <ChevronIcon />
                   </span>
                 </button>
@@ -133,8 +133,9 @@ export default function WrongNotePage() {
 
 
 function ChevronIcon() {
+  // 색은 부모(.rowChevron)에서 — 비활성 행이면 더 흐리게
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a6abb1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={styles.rowChevron} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m9 5 7 7-7 7" />
     </svg>
   )
