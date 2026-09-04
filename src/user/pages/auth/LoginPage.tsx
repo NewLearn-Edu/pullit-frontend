@@ -93,7 +93,9 @@ export default function LoginPage() {
   return (
     <div className={styles.page}>
       {/* 뒤로가기 — 직전 화면으로. 첫 진입(웹앱 시작 화면·딥링크)이면 갈 곳이 없어 버튼 자체를 숨긴다 */}
-      <PageHeader backTo="history" hideBackWhenNoHistory />
+      {/* 앱(래퍼 웹뷰·PWA)에서는 로그인이 첫 화면 — 어디서 왔든(X·로그아웃·탈퇴 뒤) 뒤로가기 chevron 을 두지 않는다.
+          웹은 직전 화면이 있을 때만 (hideBackWhenNoHistory) */}
+      <PageHeader backTo={isStandaloneApp() ? undefined : 'history'} hideBackWhenNoHistory />
 
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />

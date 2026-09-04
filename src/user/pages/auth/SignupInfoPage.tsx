@@ -19,6 +19,7 @@ import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { finishLogin, resolvePostAuthDestination } from '@/user/services/finishLogin'
 import { useUserStore } from '@/user/stores/userStore'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { isStandaloneApp } from '@/user/utils/standalone'
 
 /**
  * 가입 추가 정보 입력 (/signup/info) — 소셜 로그인 직후 프로필 완성 단계.
@@ -106,6 +107,9 @@ export function clearSavedSignupForm() {
     /* noop */
   }
 }
+
+/** 닫기 후 갈 곳 — 웹은 마케팅 랜딩, 앱(래퍼 웹뷰·PWA)은 회원 전용이라 로그인 */
+const exitPath = () => (isStandaloneApp() ? '/login' : '/')
 
 export default function SignupInfoPage() {
   const navigate = useNavigate()
@@ -467,7 +471,8 @@ export default function SignupInfoPage() {
   if (blocked) {
     return (
       <div className="flex min-h-dvh flex-col bg-white">
-        <OnboardingHeader onClose={() => navigate('/', { replace: true })} />
+        {/* 앱은 랜딩 대신 로그인으로 (isStandaloneApp) */}
+        <OnboardingHeader onClose={() => navigate(exitPath(), { replace: true })} />
         <main className="flex w-full flex-1 flex-col items-center justify-center px-[40px] max-md:px-lg">
           <div className="flex w-full max-w-[620px] flex-col items-center gap-md text-center">
             <h1 className="break-keep text-[24px] font-bold text-[#121417] max-md:text-[22px]">
@@ -496,11 +501,11 @@ export default function SignupInfoPage() {
     <div className="flex min-h-dvh flex-col bg-white">
       <OnboardingHeader
         onClose={async () => {
-          // 프로필 미완성 회원은 홈 이용이 막히므로, 닫기 = 로그아웃 후 랜딩으로
+          // 프로필 미완성 회원은 홈 이용이 막히므로, 닫기 = 로그아웃 후 랜딩으로 (앱은 랜딩이 없어 로그인으로 · 2026-09-04)
           clearSavedSignupForm() // 명시적 이탈 — 다른 계정으로 다시 올 수 있으니 작성 내용 폐기
           await logout().catch(() => {})
           clearSession()
-          navigate('/', { replace: true })
+          navigate(exitPath(), { replace: true })
         }}
       />
 
