@@ -16,6 +16,8 @@ export interface SolveSession {
   source: AttemptSource
   /** 완료·닫기 시 돌아갈 경로 */
   returnTo: string
+  /** 마지막 문항 제출 뒤 먼저 들를 결과 화면 (오답 다시 풀기 — 정답/오답 결과 페이지). 없으면 setId 여부로 세트 결과 또는 returnTo */
+  resultTo?: string
   /** 발급 세트 id — 세트 풀이(FREE·DAILY)만, 오답 재풀이(RETRY)는 없음 */
   setId?: number
   /** 세트가 속한 소단원 표시명 — 세트 완료 후 점수 변동 결과 화면(/solve-result)의 제목·조회 키 */

@@ -143,7 +143,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
   const [size, setSize] = useState(0.2) // 0.1 ~ 1.0 슬라이더 값 · 도구별 굵기 매핑은 DrawingCanvas
-  const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
+  const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
   // 복원한 필기의 세로 끝(px)만큼 캔버스 영역을 확보해 아래쪽 필기가 안 잘리게 (폰 저장 → 태블릿).
   // state 가 아니라 style 직접 — 획마다 문제 본문(KaTeX)까지 다시 그리지 않는다
   const canvasAreaRef = useRef<HTMLDivElement>(null)
@@ -416,8 +416,13 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       return
     }
     // 진단 이후의 세트 풀이(FREE·DAILY) — 세트 결과(문항별 · 3620-8224) → 점수 변동(3620-8320) 순서.
-    // 오답 다시 풀기(RETRY·세트 없음)는 점수에 영향이 없어 진입처로 바로 돌아간다
+    // 오답 다시 풀기(RETRY·세트 없음)는 점수에 영향이 없다 — 결과 화면(resultTo)이 지정돼 있으면
+    // 거기서 정답/오답을 보여주고, 없으면(단원 전체 다시 풀기) 진입처로 바로 돌아간다
     const returnTo = solveSession?.returnTo ?? '/home'
+    if (solveSession?.resultTo) {
+      navigate(solveSession.resultTo, { replace: true })
+      return
+    }
     if (solveSession?.setId && solveSession.unitName) {
       navigate(`/solve/result/${subject}`, { replace: true })
       return

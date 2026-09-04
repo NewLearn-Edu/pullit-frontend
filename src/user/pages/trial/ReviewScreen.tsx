@@ -37,6 +37,8 @@ interface ReviewScreenProps {
    * false 면 문제만 먼저 보이고, footer 의 "해설 보기"로 열었다 닫을 수 있다 (오답노트)
    */
   initialExplainOpen?: boolean
+  /** 필기 기능 자체의 유무 (기본 있음). 오답노트 문제 보기·다시 풀기 결과처럼 "보기" 화면은 false — 펜 토글·툴바가 아예 없고 캔버스도 입력을 받지 않는다 */
+  drawingTools?: boolean
   /** 문제 카드 아래 액션 영역 — 풀이 화면의 답안 바 자리 (다시 풀기 등). openExplain 으로 해설을 연다 */
   footer?: (ctx: { openExplain: () => void; explainOpen: boolean }) => ReactNode
   onClose: () => void
@@ -59,6 +61,7 @@ export function ReviewScreen({
   myChoice,
   headerMeta,
   initialExplainOpen = true,
+  drawingTools = true,
   footer,
   onClose,
 }: ReviewScreenProps) {
@@ -71,9 +74,10 @@ export function ReviewScreen({
   const [tool, setTool] = useState<StrokeTool>('mono')
   const [color, setColor] = useState('#120C0B')
   const [size, setSize] = useState(0.2)
-  const [eraserMode, setEraserMode] = useState<EraserMode>('partial') // 지우개 종류 — 기본 일부 (패스노트와 동일)
+  const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
   const [allowFinger, setAllowFinger] = useState(false)
-  const [drawingEnabled, setDrawingEnabled] = useState(true)
+  const [drawingEnabledState, setDrawingEnabled] = useState(true)
+  const drawingEnabled = drawingTools && drawingEnabledState
   const canvasRef = useRef<DrawingCanvasHandle>(null)
   const explainCanvasRef = useRef<DrawingCanvasHandle>(null)
   const activeCanvasRef = useRef<'problem' | 'explain'>('problem')
@@ -125,34 +129,38 @@ export function ReviewScreen({
         subjectLabel={unitLabel}
         onClose={onClose}
         rightExtra={
-          <button
-            type="button"
-            onClick={() => setDrawingEnabled(!drawingEnabled)}
-            aria-pressed={drawingEnabled}
-            aria-label={drawingEnabled ? '필기 도구 끄기' : '필기 도구 켜기'}
-            className={clsx(styles.penToggle, drawingEnabled && styles.penToggleActive)}
-          >
-            <PenToggleIcon />
-          </button>
+          drawingTools && (
+            <button
+              type="button"
+              onClick={() => setDrawingEnabled(!drawingEnabled)}
+              aria-pressed={drawingEnabled}
+              aria-label={drawingEnabled ? '필기 도구 끄기' : '필기 도구 켜기'}
+              className={clsx(styles.penToggle, drawingEnabled && styles.penToggleActive)}
+            >
+              <PenToggleIcon />
+            </button>
+          )
         }
       />
 
-      <DrawingToolbar
-        tool={tool}
-        color={color}
-        size={size}
-        eraserMode={eraserMode}
-        allowFinger={allowFinger}
-        drawingEnabled={drawingEnabled}
-        onToolChange={setTool}
-        onColorChange={setColor}
-        onSizeChange={setSize}
-        onEraserModeChange={setEraserMode}
-        onAllowFingerChange={setAllowFinger}
-        onDrawingEnabledChange={setDrawingEnabled}
-        onUndo={() => activeCanvas()?.undo()}
-        onClear={() => activeCanvas()?.clear()}
-      />
+      {drawingTools && (
+        <DrawingToolbar
+          tool={tool}
+          color={color}
+          size={size}
+          eraserMode={eraserMode}
+          allowFinger={allowFinger}
+          drawingEnabled={drawingEnabled}
+          onToolChange={setTool}
+          onColorChange={setColor}
+          onSizeChange={setSize}
+          onEraserModeChange={setEraserMode}
+          onAllowFingerChange={setAllowFinger}
+          onDrawingEnabledChange={setDrawingEnabled}
+          onUndo={() => activeCanvas()?.undo()}
+          onClear={() => activeCanvas()?.clear()}
+        />
+      )}
 
       <div className={styles.content}>
         <main ref={mainRef} className={styles.main} style={pinch.scrollerStyle}>

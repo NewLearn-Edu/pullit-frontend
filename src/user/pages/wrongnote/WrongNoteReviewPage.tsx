@@ -67,12 +67,16 @@ export default function WrongNoteReviewPage() {
   const problem = toSolveProblem(item, index)
   const answerNo = item.answerIndex ?? item.answerValue ?? null
 
-  /** 다시 풀기 — 이 문제 하나로 RETRY 세션, 끝나면 단원 오답 목록으로 (맞히면 서버가 오답노트에서 해소) */
+  /**
+   * 다시 풀기 — 이 문제 하나로 RETRY 세션. 제출하면 결과 화면(정답 → 오답노트 해소 안내 / 오답 → 다시 풀기)으로,
+   * X 로 나가면 단원 오답 목록으로 (맞히면 서버가 오답노트에서 해소)
+   */
   const retry = () => {
     startSolveSession({
       problems: [toSolveProblem(item, 0)],
       source: 'RETRY',
       returnTo: listPath,
+      resultTo: `${listPath}/review/${encodeURIComponent(item.problemId)}/result`,
     })
     navigate(`/solve/${subject}/0`)
   }
@@ -88,6 +92,7 @@ export default function WrongNoteReviewPage() {
       serverVocabulary={item.vocabulary ?? null}
       myChoice={null}
       initialExplainOpen={false}
+      drawingTools={false} // 문제 "보기" 화면 — 필기 기능 없음(토글도 없음). 필기는 다시 풀기(/solve)에서 (2026-09-04)
       onClose={() => navigate(listPath)}
       headerMeta={<div className={styles.problemTime}>오답 {item.wrongCount}회</div>}
       footer={({ openExplain, explainOpen }) => (

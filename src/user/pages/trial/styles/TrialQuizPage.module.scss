@@ -143,6 +143,27 @@
   white-space: nowrap;
 }
 
+// 오답 다시 풀기 결과 배지 (헤더 메타) — 정답: 초록, 오답: 빨강, 채점 대기: 회색
+.resultBadge {
+  padding: 6px 12px;
+  border-radius: $radius-full;
+  font-size: $fs-caption;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
+  background: #f0f1f3;
+  color: #40464c;
+}
+
+.resultBadgeCorrect {
+  background: #e6f6ec;
+  color: #157f44;
+}
+
+.resultBadgeWrong {
+  background: #fdecee;
+  color: #d93a44;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 문제 본문 · 선지 · 캔버스 오버레이 영역
 // ─────────────────────────────────────────────────────────────────────────────
