@@ -38,7 +38,7 @@ export function UserNav({ active }: UserNavProps) {
           <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
           <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
           <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
-          <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 리포트" active={active === 'report'} />
+          <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 기록" active={active === 'report'} />
           <NavItem to="/my" icon={<ProfileIcon filled={active === 'my'} />} label="마이페이지" active={active === 'my'} />
         </nav>
         <div className={styles.footer}>

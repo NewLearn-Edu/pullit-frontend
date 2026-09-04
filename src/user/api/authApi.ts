@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import type { WithdrawalReason } from '@/user/data/withdrawalReasons'
 
 /**
  * 인증 API — httpOnly 쿠키 방식
@@ -313,8 +314,9 @@ export async function logout(): Promise<void> {
  * 회원 탈퇴 (DELETE /api/users/me) — 서버가 소프트 삭제(DELETED) 후 인증 쿠키를 만료시킨다.
  * 유예 기간(30일) 안에 같은 소셜로 재로그인하면 복구되고, 지나면 완전 삭제된다.
  */
-export async function withdrawAccount(): Promise<void> {
-  await api.delete('/api/users/me')
+export async function withdrawAccount(reason: WithdrawalReason, detail?: string): Promise<void> {
+  // 사유는 필수 · 상세는 "기타" 등 선택 — 서버 users.withdrawal_reason/detail 에 남아 이탈 집계에 쓰인다 (2026-09-04)
+  await api.delete('/api/users/me', { data: { reason, detail: detail?.trim() || null } })
 }
 
 /** 마케팅 수신동의 변경 — 동의(시각 기록) / 철회(삭제). 마이페이지 토글 */

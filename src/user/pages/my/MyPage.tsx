@@ -5,7 +5,10 @@ import { clsx } from 'clsx'
 import { UserNav } from '@/user/components/UserNav'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { PageHeader } from '@/user/components/PageHeader'
-import { GRADE_LABEL, logout, updateMarketingConsent, withdrawAccount } from '@/user/api/authApi'
+import { ConfirmDialog } from '@/user/components/ConfirmDialog'
+import { isStandaloneApp } from '@/user/utils/standalone'
+import { GRADE_LABEL, logout, updateMarketingConsent } from '@/user/api/authApi'
+import { clearLocalTraces } from '@/user/utils/localTraces'
 import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
@@ -37,7 +40,7 @@ function gradeLabel(birthDate: string | null | undefined): string | null {
 /**
  * 마이페이지 (/my · Figma 2627-2336)
  * 프로필 카드 + 학습 통계 + 메뉴 리스트(학습 관리·계정) + 로그아웃.
- * 리포트·크레딧 내역·설정·공지·고객센터는 페이지 준비 전 (POC 시각만).
+ * 리포트·설정은 페이지 준비 전 (POC 시각만).
  */
 export default function MyPage() {
   const navigate = useNavigate()
@@ -74,7 +77,6 @@ export default function MyPage() {
     const timer = setTimeout(() => setToast(null), 2200)
     return () => clearTimeout(timer)
   }, [toast])
-  const comingSoon = () => setToast('아직 준비 중이에요')
 
   // 마케팅 수신동의 토글 — 진실원은 me.marketingConsentAt, 저장 중엔 잠금
   const marketingOn = !!me?.marketingConsentAt
@@ -94,23 +96,8 @@ export default function MyPage() {
     }
   }
 
-  /**
-   * 이 브라우저에 남는 개인 흔적 정리 — 로그아웃·탈퇴 공용.
-   * 특히 풀이 재전송 큐를 안 지우면 같은 브라우저에서 다른 계정으로
-   * 로그인했을 때 이전 사람의 풀이가 새 계정으로 전송된다.
-   */
-  const clearLocalTraces = () => {
-    localStorage.removeItem('pullit_trial_progress')
-    ;[
-      'pullit_trial_session',
-      'pullit_attempt_queue',
-      'pullit_signup_form', // 가입 폼 보존분 (이름·생년월일·전화번호)
-      'pullit_post_login_redirect',
-      'pullit_oauth_state_naver',
-      'pullit_oauth_state_google',
-    ].forEach((key) => sessionStorage.removeItem(key))
-  }
-
+  // 로그아웃 — 확인 팝업(공용 ConfirmDialog)을 거친다 (2026-09-04)
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const handleLogout = async () => {
     if (signingOut) return
     setSigningOut(true)
@@ -118,33 +105,16 @@ export default function MyPage() {
       await logout().catch(() => {}) // 서버 실패해도 프론트 세션은 정리하고 나간다
       clearLocalTraces()
       clearSession()
-      // 전체 리로드 — zustand 메모리 상태(trialStore 등)가 스토리지를 다시 쓰지 않게
-      window.location.replace('/')
+      // 전체 리로드 — zustand 메모리 상태(trialStore 등)가 스토리지를 다시 쓰지 않게.
+      // 홈 화면 웹앱(패드·모바일)은 회원 전용이라 로그인으로, 웹은 마케팅 랜딩으로
+      window.location.replace(isStandaloneApp() ? '/login' : '/')
     } finally {
       setSigningOut(false)
     }
   }
 
-  // 회원탈퇴 — 확인 다이얼로그를 거쳐 서버 탈퇴 후 로컬 학습 데이터까지 정리
+  // 회원탈퇴 — 확인 팝업(공용 ConfirmDialog) → 사유 선택 화면(/my/withdraw)에서 진행 (2026-09-04)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
-  const [withdrawing, setWithdrawing] = useState(false)
-  const [withdrawError, setWithdrawError] = useState(false)
-  const handleWithdraw = async () => {
-    if (withdrawing) return
-    setWithdrawing(true)
-    setWithdrawError(false)
-    try {
-      await withdrawAccount()
-      clearLocalTraces()
-      clearSession()
-      // 전체 리로드 — zustand 메모리 상태가 스토리지를 다시 쓰지 않게
-      window.location.replace('/')
-    } catch {
-      setWithdrawing(false)
-      setWithdrawError(true)
-    }
-  }
-
   return (
     <div className={styles.page}>
       <UserNav active="my" />
@@ -226,7 +196,8 @@ export default function MyPage() {
           <p className={styles.menuLabel}>학습 관리</p>
           <div className={styles.menuCard}>
             <MenuItem label="오답 노트" onClick={() => navigate('/wrong-note')} />
-            <MenuItem label="학습 리포트" onClick={comingSoon} last />
+            {/* 하단 네비 "학습 기록"(/report)과 같은 화면·같은 이름 — 눌러 가면 네비도 학습 기록이 켜진다 */}
+            <MenuItem label="학습 기록" onClick={() => navigate('/report')} last />
           </div>
         </section>
 
@@ -250,7 +221,6 @@ export default function MyPage() {
                 </button>
               </div>
             )}
-            <MenuItem label="공지사항" onClick={comingSoon} />
             <MenuItem
               label="고객센터"
               onClick={() => {
@@ -274,27 +244,30 @@ export default function MyPage() {
 
         {/* 로그아웃 · 회원탈퇴 · 버전 */}
         <div className={styles.footerActions}>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={signingOut}
-            className={styles.logoutLink}
-          >
-            {signingOut ? '로그아웃 중…' : '로그아웃'}
-          </button>
-          {/* 게스트는 탈퇴 개념 없음 — 7일 미접속 시 자동 삭제 */}
-          {!isGuest && (
+          {/* "로그아웃 | 회원탈퇴" 한 줄 — 얇은 세로 구분선, 밑줄 없는 회색 텍스트 (2026-09-04) */}
+          <div className={styles.accountLinks}>
             <button
               type="button"
-              onClick={() => {
-                setWithdrawError(false)
-                setWithdrawOpen(true)
-              }}
+              onClick={() => setLogoutOpen(true)}
+              disabled={signingOut}
               className={styles.logoutLink}
             >
-              회원탈퇴
+              {signingOut ? '로그아웃 중…' : '로그아웃'}
             </button>
-          )}
+            {/* 게스트는 탈퇴 개념 없음 — 7일 미접속 시 자동 삭제 */}
+            {!isGuest && (
+              <>
+                <span className={styles.accountDivider} aria-hidden />
+                <button
+                  type="button"
+                  onClick={() => setWithdrawOpen(true)}
+                  className={styles.logoutLink}
+                >
+                  회원탈퇴
+                </button>
+              </>
+            )}
+          </div>
           <span className={styles.version}>{APP_VERSION}</span>
         </div>
         </div>
@@ -305,43 +278,33 @@ export default function MyPage() {
         {toast}
       </Toast>
 
-      {/* 회원탈퇴 확인 다이얼로그 */}
+      {/* 로그아웃 확인 — 풀이 나가기 등과 같은 공용 팝업. 확인은 파괴적 동작이라 빨강 */}
+      {logoutOpen && (
+        <ConfirmDialog
+          title="로그아웃 할까?"
+          desc="다시 로그인하면 학습 기록은 그대로 이어져."
+          cancelLabel="취소"
+          confirmLabel={signingOut ? '로그아웃 중…' : '로그아웃'}
+          danger
+          onCancel={() => !signingOut && setLogoutOpen(false)}
+          onConfirm={handleLogout}
+        />
+      )}
+
+      {/* 회원탈퇴 확인 — 주 버튼은 "서비스로 돌아가기", 탈퇴는 왼쪽 보조. 딤 클릭은 팝업만 닫힌다 */}
       {withdrawOpen && (
-        <div className={styles.withdrawDim} onClick={() => !withdrawing && setWithdrawOpen(false)}>
-          <div
-            role="dialog"
-            aria-label="회원탈퇴 확인"
-            className={styles.withdrawCard}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className={styles.withdrawTitle}>정말 탈퇴할까?</h2>
-            <p className={styles.withdrawDesc}>
-              지금 탈퇴하면 30일 뒤 계정과 풀이 기록·크레딧이 완전히 삭제돼.
-              <br />그 전에 같은 계정으로 다시 로그인하면 그대로 복구할 수 있어.
-            </p>
-            {withdrawError && (
-              <p className={styles.withdrawError}>탈퇴에 실패했어. 잠시 후 다시 시도해줘</p>
-            )}
-            <div className={styles.withdrawActions}>
-              <button
-                type="button"
-                onClick={() => setWithdrawOpen(false)}
-                disabled={withdrawing}
-                className={styles.withdrawCancel}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleWithdraw}
-                disabled={withdrawing}
-                className={styles.withdrawConfirm}
-              >
-                {withdrawing ? '탈퇴 처리 중…' : '탈퇴하기'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="탈퇴 전에 꼭 확인하세요"
+          desc="탈퇴하면 30일 뒤 계정과 풀이 기록·크레딧이 완전히 삭제돼. 그 전에 다시 로그인하면 복구할 수 있어."
+          cancelLabel="그래도 탈퇴하기"
+          confirmLabel="서비스로 돌아가기"
+          onCancel={() => {
+            setWithdrawOpen(false)
+            navigate('/my/withdraw')
+          }}
+          onConfirm={() => setWithdrawOpen(false)}
+          onDismiss={() => setWithdrawOpen(false)}
+        />
       )}
     </div>
   )

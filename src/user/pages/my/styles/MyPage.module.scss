@@ -234,15 +234,28 @@ $red-tint: #fff1f2;   // red/100 · 아바타 배경
   padding-top: 12px;
 }
 
+// "로그아웃 | 회원탈퇴" — 한 줄 가운데, 얇은 세로 구분선 (레퍼런스 시안 · 2026-09-04)
+.accountLinks {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.accountDivider {
+  width: 1px;
+  height: 12px;
+  background: $color-line;
+}
+
 .logoutLink {
   @include button-reset;
+  padding: 4px 2px; // 터치 여유
   font-size: $fs-body-sm;
   font-weight: $fw-medium;
   color: $disabled;
-  text-decoration: underline;
   transition: color 150ms ease;
 
-  @include hover { color: $color-danger; }
+  @include hover { color: $color-body; }
 
   &:disabled { opacity: 0.5; }
 }
