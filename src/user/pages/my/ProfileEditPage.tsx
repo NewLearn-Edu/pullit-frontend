@@ -210,6 +210,15 @@ export default function ProfileEditPage() {
             {error ?? helper}
           </p>
         </div>
+
+        {/* 계정 정보 — 이름 · 이메일 · 휴대전화번호. 소셜 로그인(네이버 등)으로 받은 값이라 여기서는 보기만 하고
+            수정할 수 없다 (네이버 로그인 검수 "제공 정보 활용처" 캡처 대상 · 2026-09-04) */}
+        <div className="mt-[28px] flex w-full flex-col gap-[20px]">
+          <ReadOnlyField label="이름" value={me?.name} />
+          <ReadOnlyField label="이메일 주소" value={me?.email} />
+          <ReadOnlyField label="휴대전화번호" value={me?.phoneNumber} />
+          <p className="text-[13px] text-[#80858b]">이름·이메일·휴대전화번호는 가입한 소셜 계정 정보라 여기서 바꿀 수 없어요.</p>
+        </div>
       </main>
 
       {/* 저장 — 하단 고정 (모든 구간 공통, 620px 컬럼 정렬) */}
@@ -267,6 +276,34 @@ function ClearIcon() {
   return (
     <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden>
       <path d="M1.5 1.5 8.5 8.5M8.5 1.5 1.5 8.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** 읽기 전용 계정 필드 — 닉네임 입력과 같은 규격(라벨 13px · 52px 회색 필)에 잠금 표시, 값이 없으면 대시 */
+function ReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="flex w-full flex-col gap-[8px]">
+      <span className="text-[13px] font-semibold text-[#5e6368]">{label}</span>
+      <div className="flex h-[52px] items-center gap-[8px] rounded-[14px] bg-[#f2f4f6] px-[16px] opacity-60">
+        <input
+          value={value || '—'}
+          readOnly
+          disabled
+          aria-label={label}
+          className="min-w-0 flex-1 bg-transparent text-[17px] font-medium text-[#121417] outline-none"
+        />
+        <LockIcon />
+      </div>
+    </div>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a6abb1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
   )
 }
