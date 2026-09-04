@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { OneEuroPointFilter } from '@/user/utils/oneEuroFilter'
-import { getStroke } from 'perfect-freehand'
+import { getStroke, getStrokePoints } from 'perfect-freehand'
 import { newStrokeId, noteBottom, strokeRect, type NoteStroke } from '@/user/utils/noteStroke'
 import styles from './styles/DrawingCanvas.module.scss'
 
@@ -102,7 +102,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       disabled,
       allowFinger = false,
       base = 500,
-      eraserMode = 'partial',
+      eraserMode = 'stroke',
       onStrokesChange,
       onContentHeight,
     },
@@ -130,6 +130,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const pointFilterRef = useRef<OneEuroPointFilter | null>(null)
     /** 진행 중 획을 연 포인터 종류 — 두 손가락 제스처가 시작될 때 손가락 획만 버리기 위해 */
     const currentPointerTypeRef = useRef<string>('')
+    /** 이번 획에서 마지막으로 받아들인 원 입력(화면 좌표·시각) — 병합 이벤트 중복·역순 제거용 */
+    const lastRawRef = useRef<{ x: number; y: number; t: number } | null>(null)
     // 레이저 stroke · 그린 후 자동 fade out 되는 임시 stroke (base 저장 안 함)
     // 개별 타이머 없이 배열 · 페이드 시점은 아래 laserActivityEndRef 로 공유 관리
     const fadingLasersRef = useRef<Ink[]>([])
@@ -383,16 +385,40 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         return
       }
 
-      const outline = getStroke(points, strokeOptions(width, complete))
-      if (outline.length < 2) return
-      const path = new Path2D(getSvgPathFromStroke(outline))
+      // 펜·형광펜은 외곽선 폴리곤 채우기 대신 중심선 stroke (2026-09-04).
+      // 굵기가 일정(thinning 0)해서 모양은 같고, 입력 점이 한 칸 뒤로 튀어도(빠른 획에서 iPad 가
+      // 병합 이벤트를 겹쳐 주는 경우) 외곽선이 꼬여 채우기가 뚫리던 핀홀이 원리적으로 생기지 않는다.
+      const spts = getStrokePoints(points, strokeOptions(width, complete))
+      if (spts.length === 0) return
+      const path = centerlinePath(spts.map((sp) => sp.point))
 
       ctx.save()
       ctx.globalCompositeOperation = 'source-over'
-      ctx.fillStyle = color
+      ctx.strokeStyle = color
+      ctx.lineWidth = Math.max(0.5, width)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
       ctx.globalAlpha = tool === 'marker' ? 0.32 : 1
-      ctx.fill(path)
+      ctx.stroke(path)
       ctx.restore()
+    }
+
+    /** 중심선 점열 → 중점 2차 베지어로 이어 붙인 열린 경로 (점 하나면 캡만 남아 점으로 찍힌다) */
+    const centerlinePath = (pts: number[][]): Path2D => {
+      const path = new Path2D()
+      path.moveTo(pts[0][0], pts[0][1])
+      if (pts.length === 1) {
+        path.lineTo(pts[0][0], pts[0][1])
+        return path
+      }
+      for (let i = 1; i < pts.length - 1; i++) {
+        const [x0, y0] = pts[i]
+        const [x1, y1] = pts[i + 1]
+        path.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2)
+      }
+      const last = pts[pts.length - 1]
+      path.lineTo(last[0], last[1])
+      return path
     }
 
     /**
@@ -644,6 +670,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       } else {
         pointFilterRef.current = null
       }
+      lastRawRef.current = { x: e.clientX, y: e.clientY, t: e.timeStamp }
       const ink: Ink = {
         points: [[x, y]],
         tool: t,
@@ -709,6 +736,11 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       let [lx, ly] = pts[pts.length - 1]
       const filter = pointFilterRef.current
       for (const ev of events) {
+        // 병합 목록이 앞 이벤트와 겹쳐 오면(같은 좌표 재전달 · 시각 역순) 버린다 — 필터를 거치면
+        // 같은 원점도 다른 값이 돼 "한 칸 뒤로 튀는 점"이 되고, 빠른 획에선 1px 게이트도 못 걸러낸다
+        const raw = lastRawRef.current
+        if (raw && (ev.timeStamp < raw.t || (ev.clientX === raw.x && ev.clientY === raw.y))) continue
+        lastRawRef.current = { x: ev.clientX, y: ev.clientY, t: ev.timeStamp }
         let sx = ev.clientX - rect.left
         let sy = ev.clientY - rect.top
         if (filter) [sx, sy] = filter.next(sx, sy, ev.timeStamp)
