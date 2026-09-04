@@ -111,7 +111,7 @@ export default function App() {
       {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}
       <Route path="/earlybird" element={<EarlybirdEntryPage />} />
       {/* 회원 영역 — 세션 없음 → /login · 맛보기 미완주 → /start. 판정 전엔 그리지 않는다 (RequireTrialDone).
-          퍼널(/start → /trial → /trial/quiz → /weakness)·로그인·가입·정책·랜딩만 가드 밖 */}
+          퍼널(/start → /trial → /trial/quiz → /trial/{subject}/weakness · 홈 진단은 /weakness)·로그인·가입·정책·랜딩만 가드 밖 */}
       <Route element={<RequireTrialDone />}>
         <Route path="/home" element={<HomePage />} />
         {/* 추천 랜딩 — 알림톡 딥링크(과목 선택) · 나브 추천 버튼(?subject= 로 선택 생략) */}
@@ -154,6 +154,9 @@ export default function App() {
       <Route path="/trial/review/:subject/:index" element={<TrialReviewPage />} />
       <Route path="/weakness" element={<WeaknessResultPage />} />
       <Route
+      {/* 진단 결과 — 같은 화면 두 주소 (2026-09-04): 온보딩 퍼널에서 끝난 진단은 /trial/{subject}/weakness,
+          홈·지도 소단원 시트에서 시작한 진단(pendingUnit)은 /weakness */}
+      <Route path="/trial/:subject/weakness" element={<WeaknessResultPage />} />
         path="/admin/*"
         element={
           <Suspense fallback={null}>

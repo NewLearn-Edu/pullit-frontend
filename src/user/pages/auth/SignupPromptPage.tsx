@@ -11,6 +11,8 @@ import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
+import { weaknessResultPath } from '@/user/services/trialRoutes'
+import { useTrialStore } from '@/user/stores/trialStore'
 import SkipHeader from '@/user/components/SkipHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
 import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
@@ -70,16 +72,18 @@ export default function SignupPromptPage() {
     }
   }, [])
 
+  // 로그인 후 돌아갈 결과 화면 — 이 화면은 온보딩 퍼널에서만 뜨므로 /trial/{subject}/weakness
+  const lastSubject = useTrialStore((s) => s.lastSubject)
   /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 보던 결과 화면으로 복귀 */
   const withReturn = (startLogin: () => void) => () => {
-    setPostLoginRedirect('/weakness')
+    setPostLoginRedirect(weaknessResultPath(lastSubject, true))
     startLogin()
   }
 
   // 애플만 팝업 방식이라 콜백 페이지 없이 이 화면에서 완료·이동까지 처리
   const handleAppleLogin = async () => {
     setError(null)
-    setPostLoginRedirect('/weakness')
+    setPostLoginRedirect(weaknessResultPath(lastSubject, true))
     try {
       await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
       await loginWithApple()

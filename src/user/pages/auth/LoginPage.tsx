@@ -91,8 +91,8 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
-      {/* 뒤로가기 — 직전 화면으로 (딥링크로 바로 온 경우 홈 폴백) */}
-      <PageHeader backTo="history" />
+      {/* 뒤로가기 — 직전 화면으로. 첫 진입(웹앱 시작 화면·딥링크)이면 갈 곳이 없어 버튼 자체를 숨긴다 */}
+      <PageHeader backTo="history" hideBackWhenNoHistory />
 
       <div className={styles.content}>
         <img src={logoImg} alt="풀잇" className={styles.logo} />

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { weaknessResultPath } from '@/user/services/trialRoutes'
+import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { type Problem } from '@/user/data/mockProblems'
 import { loadQuizProblems } from '@/user/services/problemSet'
@@ -24,6 +26,8 @@ const SUBJECT_LABEL: Record<Subject, string> = {
  */
 export default function TrialReviewPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
+  // 결과 화면 주소 — 온보딩 퍼널(pendingUnit 없음)만 /trial/{subject}/weakness (TrialQuizPage 와 같은 기준)
+  const funnel = !useTrialProgressStore((s) => s.pendingUnit)
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
@@ -66,7 +70,7 @@ export default function TrialReviewPage() {
 
   // 풀이 기록 없이 접근하면 결과 페이지로 (세트 로드가 끝난 뒤에만 판정)
   useEffect(() => {
-    if (problems && !problem) navigate('/weakness', { replace: true })
+    if (problems && !problem) navigate(weaknessResultPath(subject, funnel), { replace: true })
   }, [problems, problem, navigate])
 
   if (!problem) return null
@@ -84,7 +88,7 @@ export default function TrialReviewPage() {
       serverTranslation={myResult?.serverTranslation ?? problem.translation ?? null}
       serverVocabulary={myResult?.serverVocabulary ?? problem.vocabulary ?? null}
       myChoice={myResult?.selectedChoice ?? null}
-      onClose={() => navigate('/weakness')}
+      onClose={() => navigate(weaknessResultPath(subject, funnel))}
       headerMeta={
         myResult && (
           <>

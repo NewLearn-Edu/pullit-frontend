@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
+import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
+import { setLastSolvedFlash } from '@/user/pages/home/UnitSheets'
+import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { QuizTopBar } from '@/user/components/quiz/QuizTopBar'
@@ -74,14 +77,14 @@ type QuizMode = 'trial' | 'solve'
  * 문제풀이 화면 (2026-08-07 플로우 변경 · 2026-08-11 solve 모드 추가)
  *
  * mode='trial' (기본, /trial/quiz/*): 맛보기 진단 — 진행바·문항 카운트 표시,
- *   결과를 trialStore 에 쌓고 마지막 문제에서 결과 페이지(/weakness)로.
+ *   결과를 trialStore 에 쌓고 마지막 문제에서 결과 페이지(/trial/{subject}/weakness)로.
  * mode='solve' (/solve/*): 일반 문제풀이 — 진행 표시 없음, source=FREE,
  *   진단 세션을 오염시키지 않고 마지막 문제 완료 시 홈으로 (결과 화면은 후속).
  * 상단 2행 (네비 + 필기 툴바) 고정 · 아래는 문제카드 (필기 캔버스) · 보기 5개.
  *
  * 풀이 중에는 정답·해설 접근 불가 — 채점은 마지막 문제의 "채점하기"에서 일괄.
  * 보기를 선택하면 하단에서 다음/채점하기 버튼이 올라오고, 선택 해제하면 내려간다.
- * 해설은 결과 페이지(/weakness)의 문항별 "해설보기"로 확인한다.
+ * 해설은 결과 페이지(/trial/{subject}/weakness)의 문항별 "해설보기"로 확인한다.
  */
 export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const isTrial = mode === 'trial'
@@ -167,23 +170,9 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const answerBarRef = useRef<HTMLDivElement>(null)
   const startAt = useRef<number>(Date.now())
 
-  // 진단 중 뒤로가기(브라우저 버튼·엣지 스와이프) 차단 — 팝이 감지되면 즉시 현재
-  // 문항으로 되돌리고(replace) 가드 엔트리를 재적재한다. 이탈은 X 버튼(확인 팝업)으로만.
-  // (가드만 쌓는 방식은 히스토리 밑단의 이전 문항 엔트리로 라우터가 되돌아가 버린다)
-  const currentQuizUrl = useRef('')
-  useEffect(() => {
-    currentQuizUrl.current = `/trial/quiz/${subject}/${idx}`
-  }, [subject, idx])
-  useEffect(() => {
-    if (!isTrial) return
-    window.history.pushState(null, '', window.location.href) // 첫 back 흡수용 가드
-    const onPop = () => {
-      navigate(currentQuizUrl.current, { replace: true }) // 팝된 엔트리를 현재 문항으로 교체
-      window.history.pushState(null, '', currentQuizUrl.current) // 가드 재적재
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [isTrial, navigate])
+  // 풀이 중 뒤로가기(브라우저 버튼·엣지 스와이프) 차단 — 진단·자유 풀이 모두. 이탈은 X 버튼(확인 팝업)으로만.
+  // 뒤로가기로 이전 문항에 다시 들어가 재제출하면 원장이 두 번 적히는 사고를 막는다 (2026-09-04 전 모드로 확대)
+  useBlockBackNavigation()
 
   // 가상 키보드가 열리면 하단 답안 바를 키보드 위로 올린다.
   // iOS·iPadOS(웹앱 standalone 포함)와 안드로이드 크롬 모두 키보드가 열려도
@@ -412,7 +401,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     // 결과 화면은 세트를 막 끝낸 직후에만 열린다 — 여기서 1회용 열람권을 발급한다
     if (isTrial) useTrialStore.getState().grantResultPass()
     if (isTrial) {
-      navigate('/weakness', { replace: true })
+      // 온보딩 퍼널(pendingUnit 없음)만 /trial/{subject}/weakness — 홈에서 시작한 진단은 /weakness
+      navigate(weaknessResultPath(subject, !pendingUnit), { replace: true })
       return
     }
     // 진단 이후의 세트 풀이(FREE·DAILY) — 세트 결과(문항별 · 3620-8224) → 점수 변동(3620-8320) 순서.
@@ -434,6 +424,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const confirmExit = () => {
     setExitConfirmOpen(false)
     clearQuizStart(mode, subject, idx)
+    // 중간에 나가도 홈은 이 단원으로 초점 — 풀다 만 세트가 있는 카드를 바로 보게
+    if (!isTrial && subject && solveSession?.unitName) setLastSolvedFlash(solveSession.unitName, subject)
     navigate(isTrial ? '/trial' : (solveSession?.returnTo ?? '/home'))
   }
 

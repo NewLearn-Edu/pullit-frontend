@@ -19,7 +19,7 @@ import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/tr
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
 import graphExample from '@/assets/home/graph-example.png'
-import { useUnitSheets } from './UnitSheets'
+import { consumeLastSolvedFlash, useUnitSheets } from './UnitSheets'
 import styles from './styles/HomePage.module.scss'
 
 /** 맛보기 세트 문항 수 — 정책 3문항 */
@@ -122,6 +122,25 @@ export default function HomePage() {
   const categories = CURRICULUM[subject]
   const category = categories.find((c) => c.slug === catSlug) ?? categories[0]
 
+  // 방금 푼 단원으로 초점 (2026-09-04) — 결과 화면·풀이 나가기가 남긴 플래시를 1회 소비해
+  // 그 단원의 과목 탭·대단원 칩으로 맞추고, 카드가 그려지면 스크롤 + 잠깐 강조한다
+  const [focusUnit, setFocusUnit] = useState(() => consumeLastSolvedFlash())
+  useEffect(() => {
+    if (!focusUnit) return
+    const cats = CURRICULUM[focusUnit.subject]
+    const cat = cats.find((c) => c.units.some((u) => u.name === focusUnit.unitName))
+    if (!cat) {
+      setFocusUnit(null) // 커리큘럼에 없는 단원명 — 초점 없이 평소대로
+      return
+    }
+    if (subject === focusUnit.subject && category.slug === cat.slug) return
+    const next: Record<string, string> = {}
+    if (focusUnit.subject !== 'math') next.subject = focusUnit.subject
+    if (cat.slug !== cats[0].slug) next.cat = cat.slug
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusUnit])
+
   // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 유닛코드 → off 시작점 매핑
   const [locks, setLocks] = useState<Record<string, string>>({}) // categoryCode → offFromUnitCode
   const refreshLocks = useCallback(
@@ -182,6 +201,23 @@ export default function HomePage() {
       .querySelector(`[data-unit-card="${CSS.escape(name)}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
+
+  // 초점 단원 카드가 실제로 그려진 뒤(서버 동기화 끝 · 해당 탭) 스크롤 + 강조. 리스트 진입 애니메이션이
+  // 시작된 다음 프레임에 잡아야 위치가 맞는다
+  useEffect(() => {
+    if (!focusUnit || !synced || subject !== focusUnit.subject) return
+    if (!progress.rows.some((r) => r.name === focusUnit.unitName)) return
+    const name = focusUnit.unitName
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-unit-card="${CSS.escape(name)}"]`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add(styles.unitCardFocus)
+        window.setTimeout(() => el.classList.remove(styles.unitCardFocus), 1800)
+      }
+      setFocusUnit(null)
+    })
+  }, [focusUnit, synced, subject, progress.rows])
 
   /**
    * 약점 그래프 해제 (Figma 2842-8069 · 2026-08-20 개편) —

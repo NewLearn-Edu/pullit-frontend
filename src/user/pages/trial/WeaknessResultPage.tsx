@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useMe } from '@/user/hooks/useMe'
@@ -9,12 +10,13 @@ import { loadQuizProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { findSkillScore } from '@/user/services/unitScoreSnapshot'
-import { useTrialStore, type QuizItemResult } from '@/user/stores/trialStore'
+import { useTrialStore, type QuizItemResult, type Subject } from '@/user/stores/trialStore'
+import { isTrialSubject } from '@/user/services/trialRoutes'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
 import { CreditCelebrationContent } from '@/user/components/CreditCelebration'
-import { setDiagnoseDoneFlash } from '@/user/pages/home/UnitSheets'
+import { setDiagnoseDoneFlash, setLastSolvedFlash } from '@/user/pages/home/UnitSheets'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
@@ -175,6 +177,10 @@ interface Row {
  */
 export default function WeaknessResultPage() {
   const navigate = useNavigate()
+  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
+  useBlockBackNavigation()
+  // 과목은 경로(/trial/{subject}/weakness)가 진실원 — 없거나 이상하면 마지막 진단 과목으로 폴백 (2026-09-04)
+  const { subject: routeSubject } = useParams<{ subject: string }>()
   // 세션 로드 — 이 페이지는 익명 퍼널에서도 열리지만, 로그인 유저의 "진단 완료"가
   // 회원 판정(isMember) 없이 /signup 으로 새던 버그 방지 (조회 전용, 게스트 생성 없음)
   useMe()
@@ -187,6 +193,8 @@ export default function WeaknessResultPage() {
     lastSubject,
     hasCompletedSession,
   } = useTrialStore()
+
+  const subject: Subject = isTrialSubject(routeSubject) ? routeSubject : (lastSubject ?? 'math')
 
   // persist rehydrate 전에 판정하면 정상 완주자도 튕긴다
   const hydrated = useTrialStore.persist?.hasHydrated?.() ?? true
@@ -216,7 +224,7 @@ export default function WeaknessResultPage() {
   /**
    * 이 화면은 "방금 끝낸 세트"의 결과 전용 (2026-08-27) — 지난 결과 재열람은
    * /unit-result 가 담당한다. 세트 완료 시 발급한 1회용 열람권(resultPass)이
-   * 없으면 되돌린다. 주소창에 /weakness 를 직접 쳐서 sessionStorage 에 남은
+   * 없으면 되돌린다. 주소창에 /trial/math/weakness 를 직접 쳐서 sessionStorage 에 남은
    * 지난 세트 결과가 계속 열리던 문제를 막는다.
    * 열람권은 새로고침·해설 왕복·소셜 로그인 왕복에는 유지되고, 결과를 다 보고
    * 홈으로 나갈 때 소비된다.
@@ -224,13 +232,17 @@ export default function WeaknessResultPage() {
   const resultPass = useTrialStore((s) => s.resultPass)
   useEffect(() => {
     if (!hydrated) return
+    if (routeSubject !== undefined && !isTrialSubject(routeSubject)) {
+      navigate('/trial', { replace: true }) // 과목 자리에 엉뚱한 값 — 퍼널 시작으로
+      return
+    }
     if (!hasCompletedSession()) {
       navigate('/trial', { replace: true })
       return
     }
     // 회원을 /trial 로 보내면 온보딩 퍼널로 새므로 홈으로 되돌린다
     if (!resultPass) navigate(isMember ? '/home' : '/trial', { replace: true })
-  }, [hydrated, hasCompletedSession, resultPass, isMember, navigate])
+  }, [hydrated, routeSubject, hasCompletedSession, resultPass, isMember, navigate])
 
   /**
    * 결과 화면에서 나간다 — 열람권을 소비하고 이동.
@@ -240,12 +252,12 @@ export default function WeaknessResultPage() {
   const leaveResult = (to: string) => {
     if (to !== '/signup') useTrialStore.getState().consumeResultPass()
     // 소단원 시트에서 시작한 진단(pendingUnit)이면 복귀한 홈·지도에 완료 토스트 예약 (3575-7884)
-    if (to !== '/signup' && pendingNameRef.current)
-      setDiagnoseDoneFlash(pendingNameRef.current, lastSubject ?? 'math')
+    if (to !== '/signup' && pendingNameRef.current) {
+      setDiagnoseDoneFlash(pendingNameRef.current, subject)
+      setLastSolvedFlash(pendingNameRef.current, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
+    }
     navigate(to)
   }
-
-  const subject = lastSubject ?? 'math'
 
   // 풀이 화면과 같은 세트를 봐야 결과 매칭이 맞는다 — problemSet 캐시 공유 (보통 즉시 resolve)
   const [mathProblems, setMathProblems] = useState<Problem[]>([])

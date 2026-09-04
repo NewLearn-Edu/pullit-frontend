@@ -43,7 +43,7 @@ interface TrialState {
   /** 축하 시트 노출 완료 — 같은 세션에서 결과 화면을 재방문해도 다시 뜨지 않게 */
   firstCreditCelebrated: boolean
   /**
-   * 결과 화면(/weakness) 열람권 — 세트를 막 끝낸 직후에만 유효한 1회용 패스.
+   * 결과 화면(/weakness · 퍼널은 /trial/{subject}/weakness) 열람권 — 세트를 막 끝낸 직후에만 유효한 1회용 패스.
    * 세트 완료 시 발급하고, 결과를 다 보고 홈으로 나갈 때 소비한다.
    * 해설 왕복·소셜 로그인 왕복은 결과 화면으로 되돌아오므로 유지된다.
    */

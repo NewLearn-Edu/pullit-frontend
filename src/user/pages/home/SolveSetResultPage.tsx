@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useSolveStore } from '@/user/stores/solveStore'
@@ -23,6 +24,8 @@ const circled = (n: number | null | undefined, short: boolean) =>
  */
 export default function SolveSetResultPage() {
   const navigate = useNavigate()
+  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
+  useBlockBackNavigation()
   const { subject: subjectParam } = useParams<{ subject: Subject }>()
   const subject: Subject = subjectParam === 'english' ? 'english' : 'math'
 

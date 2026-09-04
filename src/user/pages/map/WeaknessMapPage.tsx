@@ -119,6 +119,11 @@ export default function WeaknessMapPage() {
     returnTo: () => '/weakness-map',
     onLocksChanged: refreshLocks,
     onAllClosed: () => setSelectedId(null),
+    // 선행 안내 시트에서 "OO 먼저 풀기" — 시트가 선행 단원으로 넘어가면 지도 선택 노드도 따라간다 (2026-09-04)
+    onUnitSwitched: (name) => {
+      const node = (subject === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES).find((n) => n.name === name)
+      if (node) setSelectedId(node.id)
+    },
     // 진단 완료 토스트 "보기" (3575-7884) — 노드 클릭과 같은 경로로 선택 + 상세 시트
     resolveUnit: (name) => {
       const hit = rowIndex.get(name)

@@ -87,6 +87,35 @@ export function consumeUnitReopenFlash(subject: Subject): string | null {
 
 /**
  * 소단원 액션 시트 묶음 — 홈과 약점 지도가 같은 로직·같은 화면을 쓴다 (2026-08-31).
+/**
+ * 방금 푼 단원 플래시 (2026-09-04) — 결과 화면·풀이 나가기가 기록하고, 복귀한 홈이 1회 소비한다.
+ * 홈은 이 단원의 과목 탭·대단원 칩으로 맞추고 카드로 스크롤 + 잠깐 강조한다. 과목이 현재 탭과 달라도
+ * 탭을 바꿔야 하므로 diagnose/reopen 플래시와 달리 과목을 함께 돌려준다.
+ */
+const LAST_SOLVED_FLASH_KEY = 'pullit_last_solved_flash'
+
+export function setLastSolvedFlash(unitName: string, subject: Subject): void {
+  try {
+    sessionStorage.setItem(LAST_SOLVED_FLASH_KEY, JSON.stringify({ unitName, subject }))
+  } catch {
+    /* storage 불가 환경 — 초점 이동 생략 */
+  }
+}
+
+export function consumeLastSolvedFlash(): { unitName: string; subject: Subject } | null {
+  try {
+    const raw = sessionStorage.getItem(LAST_SOLVED_FLASH_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(LAST_SOLVED_FLASH_KEY)
+    const parsed = JSON.parse(raw) as { unitName?: string; subject?: string }
+    if (typeof parsed.unitName !== 'string') return null
+    if (parsed.subject !== 'math' && parsed.subject !== 'english') return null
+    return { unitName: parsed.unitName, subject: parsed.subject }
+  } catch {
+    return null
+  }
+}
+
  *
  * 상태별 분기 (openUnit):
  * - done            → 단원 상세 시트 (요약·학습 경로·최근 학습·추천 문제 풀기)
@@ -111,6 +140,7 @@ export function useUnitSheets({
   resolveUnit,
 }: {
   subject: Subject
+  onUnitSwitched,
   credit: number
   /** 세트 종료 후 복귀 경로 — 열 때마다 평가 (홈은 쿼리 유지가 필요) */
   returnTo: () => string
@@ -122,6 +152,8 @@ export function useUnitSheets({
   resolveUnit?: (unitName: string) => { row: UnitProgressRow; context: UnitSheetContext } | null
 }) {
   const navigate = useNavigate()
+  /** 시트 안에서 다른 단원으로 넘어갈 때(선행 안내 → "OO 먼저 풀기") — 지도가 선택 노드를 그 단원으로 옮기는 데 쓴다 */
+  onUnitSwitched?: (unitName: string) => void
   const loadMe = useUserStore((s) => s.loadMe)
   const startSolveSession = useSolveStore((s) => s.startSession)
 
@@ -916,6 +948,8 @@ export function useUnitSheets({
 
             <button
               type="button"
+                if (!next) return
+                onUnitSwitched?.(next.name) // 지도: 선택(active) 노드도 선행 단원으로
               onClick={() => {
                 const next = lockedRequired
                 setLockedSheet(null)

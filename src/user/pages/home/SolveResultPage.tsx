@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useBlockBackNavigation } from '@/user/hooks/useBlockBackNavigation'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
-import { setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
+import { setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import arrowIcon from '@/assets/score-change-arrow.svg'
 import upIcon from '@/assets/score-change-up.svg'
 import downIcon from '@/assets/score-change-down.svg'
@@ -55,6 +56,8 @@ type Direction = 'up' | 'down' | 'same'
  */
 export default function SolveResultPage() {
   const navigate = useNavigate()
+  // 결과 화면에서 뒤로가기 차단 — 풀이 화면으로 되돌아가 재제출되는 길을 막는다. 나가기는 화면 버튼으로만
+  useBlockBackNavigation()
   const { subject: subjectParam, unitName: unitNameParam } = useParams<{ subject: Subject; unitName: string }>()
   const subject: Subject = subjectParam === 'english' ? 'english' : 'math'
   const unitName = unitNameParam ? decodeURIComponent(unitNameParam) : ''
@@ -149,6 +152,7 @@ export default function SolveResultPage() {
   const leave = () => {
     const to = state.returnTo || '/home'
     if (to.startsWith('/weakness-map') && unitName) setUnitReopenFlash(unitName, subject)
+    if (unitName) setLastSolvedFlash(unitName, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
     navigate(to, { replace: true })
   }
 

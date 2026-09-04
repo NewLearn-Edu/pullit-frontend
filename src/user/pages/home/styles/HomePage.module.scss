@@ -271,6 +271,18 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   background: $color-canvas;
 }
 
+// 방금 푼 단원 강조 — 홈 복귀 직후 카드 테두리가 브랜드색으로 한 번 번지고 사라진다 (1.8s · li 에 붙는다)
+.unitCardFocus > * {
+  border-radius: inherit;
+  animation: unitFocusPulse 1.8s ease-out both;
+}
+
+@keyframes unitFocusPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 56, 92, 0.6); }
+  55% { box-shadow: 0 0 0 8px rgba(255, 56, 92, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 56, 92, 0); }
+}
+
 // 다음 차례 — 흰 카드 + 빨간 보더. 카드 전체가 진단 시작 버튼이다
 .unitCardNext {
   justify-content: space-between;
