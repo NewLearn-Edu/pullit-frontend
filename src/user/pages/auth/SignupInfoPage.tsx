@@ -92,6 +92,8 @@ interface SavedSignupForm {
   agreePrivacy: boolean
   agreeMarketing: boolean
   revealed: number
+  /** 동의 시트 열림 — "보기"로 정책 화면을 다녀와 페이지가 다시 마운트돼도 시트가 그대로 떠 있게 (2026-09-06) */
+  consentOpen?: boolean
 }
 
 function loadSavedForm(): Partial<SavedSignupForm> {
@@ -178,6 +180,12 @@ export default function SignupInfoPage() {
    */
   const [revealed, setRevealed] = useState(saved.revealed ?? 1)
   const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
+  /**
+   * 동의 바텀시트 열림 — 선언 위치가 저장 효과보다 앞이어야 해서 여기 둔다.
+   * 복원: 정책 "보기"로 떠났다 돌아온 재마운트에서도 시트가 열린 채 이어진다
+   * (예전엔 닫힌 채 폼이 뜨고 인풋에 키보드까지 올라왔다 · 2026-09-06)
+   */
+  const [consentOpen, setConsentOpen] = useState(saved.consentOpen ?? false)
 
   // 작성 내용 실시간 보존 — 정책 보기 등으로 떠났다 돌아와도 이어서 작성
   useEffect(() => {
@@ -186,13 +194,13 @@ export default function SignupInfoPage() {
         SIGNUP_FORM_KEY,
         JSON.stringify({
           name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt,
-          agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed,
+          agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen,
         } satisfies SavedSignupForm),
       )
     } catch {
       /* noop */
     }
-  }, [name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed])
+  }, [name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
 
   // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
   useEffect(() => {
@@ -215,7 +223,7 @@ export default function SignupInfoPage() {
    * 동의 패널이 화면 아래에서 올라온다. 딤 영역 탭 = 닫고 폼 수정,
    * 하단 "동의하고 시작하기" 버튼으로 다시 연다.
    */
-  const [consentOpen, setConsentOpen] = useState(false)
+  // consentOpen 상태는 저장 효과보다 위(revealed 옆)에 선언 — 아래 주석 참고
 
   // 단계 자동 진행 — "이번 세션에서 인증이 막 완료된" 순간에만 동의 시트를 올린다.
   // 새로고침 복원(restoredVerified)까지 열면 생년월일 에러 등 미완 상태에서도
@@ -603,7 +611,7 @@ export default function SignupInfoPage() {
                 <input
                   type="text"
                   autoComplete="name"
-                  autoFocus={!nameLocked}
+                  autoFocus={!nameLocked && !consentOpen}
                   readOnly={nameLocked}
                   aria-disabled={nameLocked}
                   placeholder="이름을 입력해주세요"
@@ -636,7 +644,7 @@ export default function SignupInfoPage() {
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  autoFocus
+                  autoFocus={!consentOpen}
                   maxLength={4}
                   placeholder="년"
                   value={birthY}
@@ -792,7 +800,7 @@ export default function SignupInfoPage() {
                   inputMode="numeric"
                   pattern="[0-9\-]*"
                   autoComplete="tel-national"
-                  autoFocus
+                  autoFocus={!consentOpen}
                   placeholder="010-0000-0000"
                   value={phone}
                   onChange={(e) => handlePhone(e.target.value)}
@@ -824,7 +832,7 @@ export default function SignupInfoPage() {
                   <div className="relative min-w-0 flex-1">
                     <input
                       type="text"
-                      autoFocus
+                      autoFocus={!consentOpen}
                       inputMode="numeric"
                       pattern="[0-9]*"
                       autoComplete="one-time-code"
