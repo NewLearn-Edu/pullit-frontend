@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
-import { ProblemExplain } from '@/shared/components/ProblemExplain'
+import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
@@ -611,7 +611,7 @@ export default function TrialTestPage() {
                                     <span className="choice-num">
                                       {i + 1}
                                     </span>
-                                    <span><ProblemRender text={c} /></span>
+                                    <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                                   </span>
                                 )
                               })}
@@ -622,21 +622,17 @@ export default function TrialTestPage() {
                       </div>
                     </div>
                     {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
-                    <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
-                      <ExamScaleFrame>
-                      <p className="pv-label">정답</p>
-                      <div className="pv-explain-body pv-explain-answer">
-                        {detail.choices.length > 0 && detail.answerIndex != null ? (
-                          String.fromCodePoint(0x245f + detail.answerIndex)
-                        ) : (
-                          <ExplainRender text={detail.answerText} />
-                        )}
-                      </div>
-                      <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
-                      <div className="pv-explain-body">
-                        <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
-                      </div>
-                      </ExamScaleFrame>
+                    <div className={clsx('pv-modal-explain pv-explain-live', device === 'mobile' && 'fixed-375')}>
+                      <ExplainPreview
+                        subject={detail.subject}
+                        answerDisplay={detail.choices.length > 0 && detail.answerIndex != null
+                        ? String.fromCodePoint(0x245f + detail.answerIndex)
+                        : <ExplainRender text={detail.answerText} />}
+                        explanation={detail.explanation}
+                        translation={detail.translation}
+                        vocabulary={detail.vocabulary}
+                        resetKey={detail.id}
+                      />
                     </div>
                   </div>
                 )}

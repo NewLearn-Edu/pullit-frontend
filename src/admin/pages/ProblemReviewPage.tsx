@@ -6,7 +6,7 @@ import {
   MathExplainRender,
   MathProblemRender,
 } from '@/shared/components/ExamRender'
-import { ProblemExplain, ProblemTranslation, ProblemVocabulary, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
+import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -236,7 +236,7 @@ function ReviewPreview({
                         {i + 1}
                       </span>
                       <span>
-                        <ProblemRender text={c} />
+                        <ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} />
                       </span>
                     </span>
                   )
@@ -251,43 +251,17 @@ function ReviewPreview({
       {/* 패드: 가운데 디바이더 드래그로 좌우 폭 조절 */}
       {device === 'pad' && <div className="pv-divider" onMouseDown={onPadDrag} />}
 
-      <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
-        <ExamScaleFrame>
-        <p className="pv-label">정답</p>
-        <div className="pv-explain-body pv-explain-answer">
-          {(problem.choices?.length ?? 0) > 0 && problem.answer_index != null ? (
-            String.fromCodePoint(0x245f + problem.answer_index)
-          ) : (
-            <ExplainRender text={String(problem.answer_text ?? problem.answer_value ?? '-')} />
-          )}
-        </div>
-        <p className="pv-label" style={{ marginTop: 20 }}>
-          해설
-        </p>
-        <div className="pv-explain-body">
-          <ProblemExplain explanation={problem.explanation} subject={subject} />
-        </div>
-        {Array.isArray(problem.vocabulary) && problem.vocabulary.length > 0 && (
-          <>
-            <p className="pv-label" style={{ marginTop: 20 }}>
-              어휘
-            </p>
-            <div className="pv-explain-body">
-              <ProblemVocabulary items={problem.vocabulary as { term: string; meaning: string }[]} />
-            </div>
-          </>
-        )}
-        {parseTranslationParagraphs(problem.translation) && (
-          <>
-            <p className="pv-label" style={{ marginTop: 20 }}>
-              해석
-            </p>
-            <div className="pv-explain-body">
-              <ProblemTranslation translation={problem.translation as string | unknown[]} />
-            </div>
-          </>
-        )}
-        </ExamScaleFrame>
+      <div className={clsx('pv-modal-explain pv-explain-live', device === 'mobile' && 'fixed-375')}>
+        <ExplainPreview
+          subject={subject}
+          answerDisplay={(problem.choices?.length ?? 0) > 0 && problem.answer_index != null
+          ? String.fromCodePoint(0x245f + problem.answer_index)
+          : <ExplainRender text={String(problem.answer_text ?? problem.answer_value ?? '-')} />}
+          explanation={problem.explanation}
+          translation={problem.translation as string | unknown[] | null | undefined}
+          vocabulary={Array.isArray(problem.vocabulary) ? (problem.vocabulary as { term: string; meaning: string }[]) : null}
+          resetKey={problem.problem_code ?? ''}
+        />
       </div>
     </div>
   )

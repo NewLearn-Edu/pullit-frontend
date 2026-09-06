@@ -6,6 +6,7 @@
 // -----------------------------------------------------------------------------
 // - 데스크탑 (md+): inline 사이드바 · width 애니메이션으로 등장·수축
 // - 모바일 (< md): 전체 화면 slide-in · overlay backdrop
+// - 탭·정답·해설·어휘 조판은 shared/components/ExplainView.module.scss (어드민 미리보기와 공용)
 // -----------------------------------------------------------------------------
 
 // 모바일 dim 오버레이
@@ -82,44 +83,6 @@
     width: var(--pw, 420px);
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 상단 탭 헤더
-// ─────────────────────────────────────────────────────────────────────────────
-
-.header {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  height: 48px;
-  padding: 0 $space-lg;
-  border-bottom: 1px solid $color-line;
-}
-
-.tabs {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-}
-
-// 좌측 "문제 N" 타이틀(.problemTitle)과 같은 크기·굵기 — 두 패널 헤더가 한 줄로 읽히게
-.tabButton {
-  @include button-reset;
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  color: $color-muted;
-  transition: color 150ms ease;
-
-  @include hover { color: $color-body; }
-}
-
-.tabButtonActive {
-  color: $color-primary;
-
-  @include hover { color: $color-primary; }
-}
-
 .closeButton {
   @include button-reset;
   @include flex-center;
@@ -135,74 +98,3 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 본문 영역 (스크롤 가능)
 // ─────────────────────────────────────────────────────────────────────────────
-
-.body {
-  flex: 1;
-  overflow-y: auto;
-  padding: $space-lg;
-  // 두 손가락 확대는 PinchZoomScroller(usePinchZoom) 가 drawWrap 폭으로 처리한다 —
-  // 캔버스 밖에서 시작한 핀치를 사파리가 페이지 확대로 가로채지 않도록 pinch-zoom 만 뺀다 (스크롤 pan 은 유지)
-  touch-action: pan-x pan-y;
-  overflow-anchor: none;
-}
-
-// 필기 오버레이 기준 컨테이너 — 해설 내용과 함께 스크롤 · 짧은 해설도 패널 높이만큼 확보
-.drawWrap {
-  position: relative;
-  // 두 손가락 확대 확정 때 세로 스크롤 여유가 모자라면 usePinchZoom 이 --pinch-slack 을 준다 —
-  // 내용이 짧으면 min-height 가, 길면 padding-bottom 이 높이를 정하므로 둘 다에 더한다
-  min-height: calc(100% + var(--pinch-slack, 0px));
-  padding-bottom: var(--pinch-slack, 0px);
-}
-
-// 해설 위 필기 캔버스 (문제 카드 .canvasOverlay 와 동일 패턴)
-.drawOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: $z-canvas;
-}
-
-// revealed=false 시 답 노출 방지 (블러 처리)
-.bodyBlurred {
-  user-select: none;
-  filter: blur(4px);
-}
-
-// 정답 뷰
-// 정답 · 해설 섹션 타이틀 (2026-08-26 — 본문과 같은 15px · 볼드 · 블랙)
-.answerLabel {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #121417;
-}
-
-.answerValue {
-  margin: $space-md 0 0;
-  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', 'Nanum Myeongjo', serif);
-  font-size: 20px;
-  line-height: 1.4;
-  font-weight: $fw-bold;
-  color: $color-primary;
-}
-
-// 해설 · 여러 섹션 세로 배치
-.sections {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-}
-
-// 각 섹션 (정답 분석 · 오답 분석)
-.sectionTitle {
-  margin: 0;
-  font-size: $fs-body-sm;
-  font-weight: $fw-semibold;
-  color: $color-muted;
-}
-
-.sectionBody {
-  margin-top: $space-xs;
-  font-size: $fs-body;
-  color: $color-foreground;
-}

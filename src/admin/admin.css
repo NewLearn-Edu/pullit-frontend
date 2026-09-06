@@ -563,6 +563,8 @@
     background: var(--color-canvas);
   }
   .pv-modal-explain.fixed-375 { flex: 0 0 350px; min-width: 350px; } /* 모바일 — 해설도 350px */
+  /* 학생 해설 패널과 동일 조판(ExplainPreview) — 뷰가 헤더 48px·본문 패딩을 스스로 가지므로 카드 패딩은 뺀다 */
+  .pv-modal-explain.pv-explain-live { padding: 0; overflow: hidden; }
 
   /* 업로드 검토 — 목록 미리보기 모달과 동일: 왼쪽 문제(500px) · 오른쪽 해설 */
   /* 업로드 검토 — 헤더 카드 밖, 페이지 배경 위의 독립 카드 2개 (문제 · 정답해설) */

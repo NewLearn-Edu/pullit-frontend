@@ -9,7 +9,8 @@ import './exam.css'
  *
  * AI 변환 파이프라인이 만드는 explanation 배열을 수능 조판으로 렌더한다.
  * 블록: paragraph(lead) · derivation(정렬 등식 체인) · formula(단일 식) ·
- *       cases((i)(ii) 분기) · conclusion(마무리) · note(부가 설명)
+ *       cases((i)(ii) 분기) · conclusion(마무리) · note(부가 설명) · table · box(실선 박스)
+ *       + 섹션 insight · solution · diagnosis (2026-09 3섹션 규격, ExplainBlocksRender 가 제목을 단다)
  *
  * 수식은 KatexText 재사용 — 수능 보정(굵은 |·큰 ∪∩·dfrac 승격)이 그대로 적용된다.
  * 단 **wrap 모드 고정** — 식마다 배율이 달라지면 한 해설 안에서 수식 크기가
@@ -28,11 +29,13 @@ export interface ExplainBlock {
   lead?: boolean
   /** derivation — "좌변 &= 우변" 형태의 줄들 */
   lines?: string[]
+  /** derivation — 식 참조 라벨(㉠~㉮). 뒤 문장에서 "㉠에서" 로 가리킨다 (2026-09 규격) */
+  ref?: string
   /** formula */
   latex?: string
-  /** cases */
-  items?: Array<{ label: string; blocks: ExplainBlock[] }>
-  /** conclusion */
+  /** cases — {label, blocks} · diagnosis — {choice, role, blocks} (2026-09 3섹션 규격) */
+  items?: Array<{ label?: string; choice?: number; role?: string; blocks: ExplainBlock[] }>
+  /** conclusion · box · 섹션(insight·solution) */
   blocks?: ExplainBlock[]
   /** table — 셀 값은 $...$ 수식 문자열 */
   rows?: string[][]
@@ -111,13 +114,73 @@ function normalizeBlocks(blocks: ExplainBlock[]): ExplainBlock[] {
   return mergeOpenParenParagraphs(blocks.map(normalizeBlock))
 }
 
+/**
+ * 3섹션 해설(2026-09 규격) — 최상위가 insight·solution·diagnosis 섹션이면 섹션 제목을 달아 그린다.
+ * 섹션 제목은 정책 확정 표기 그대로: [핵심 발상] · [풀이] · [선택지별 진단].
+ * 구 평면 배열(섹션 없는 수학·영어 데이터)은 종전대로 블록을 순서대로 그린다.
+ */
+const SECTION_TITLES: Record<string, string> = {
+  insight: '[핵심 발상]',
+  solution: '[풀이]',
+  diagnosis: '[선택지별 진단]',
+}
+const CIRCLED = ['①', '②', '③', '④', '⑤']
+const FILLED = ['❶', '❷', '❸', '❹', '❺']
+
+function isSectionBlock(b: ExplainBlock): boolean {
+  return Object.prototype.hasOwnProperty.call(SECTION_TITLES, b.type)
+}
+
+/** diagnosis.items — 선지 번호(정답은 채운 원문자 ❶~❺, 어드민 선지 표기와 동일 관례) + 진단 본문 */
+function renderDiagnosis(b: ExplainBlock): React.ReactNode {
+  const items = b.items ?? []
+  if (items.length === 0) return null
+  return (
+    <div className="xb-diag">
+      {items.map((it, j) => {
+        const no = typeof it.choice === 'number' ? it.choice : j + 1
+        const correct = it.role === 'correct'
+        const glyph = (correct ? FILLED : CIRCLED)[no - 1] ?? String(no)
+        return (
+          <div key={j} className={clsx('xb-diag-item', correct && 'xb-diag-correct')}>
+            <span className="xb-diag-num" aria-label={`${no}번${correct ? ' 정답' : ''}`}>
+              {glyph}
+            </span>
+            <div className="xb-diag-body">
+              {normalizeBlocks(it.blocks ?? []).map((c, k) => renderBlock(c, k))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function renderSection(b: ExplainBlock, key: number): React.ReactNode {
+  const body =
+    b.type === 'diagnosis'
+      ? renderDiagnosis(b)
+      : normalizeBlocks(b.blocks ?? []).map((c, i) => renderBlock(c, i))
+  if (body == null || (Array.isArray(body) && body.length === 0)) return null
+  return (
+    <section key={key} className={`xb-section xb-section-${b.type}`}>
+      <p className="xb-section-title">{SECTION_TITLES[b.type]}</p>
+      <div className="xb-section-body">{body}</div>
+    </section>
+  )
+}
+
 export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
+  const sectioned = blocks.some(isSectionBlock)
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
     // .exam-blocks 폰트가 13~15.5px 로 움직인다 (MathExplainLayout 과 동일 규칙)
     <div className="exam-explain-root">
       <div className="exam-blocks">
-        {normalizeBlocks(blocks).map((b, i) => renderBlock(b, i))}
+        {sectioned
+          ? // 섹션 사이에 섞인 일반 블록(규격 위반 데이터)도 버리지 않고 제자리에 그린다
+            blocks.map((b, i) => (isSectionBlock(b) ? renderSection(b, i) : renderBlock(normalizeBlock(b), i)))
+          : normalizeBlocks(blocks).map((b, i) => renderBlock(b, i))}
       </div>
     </div>
   )
@@ -242,7 +305,7 @@ const MIN_STEPS_SCALE = 0.45
  * 한 유도 안에서 수식 크기가 들쭉날쭉해지지 않는다.
  * 가로 스크롤은 쓰지 않는다 — 넘치면 축소로만 맞춘다.
  */
-function StepsBlock({ lines }: { lines: string[] }) {
+function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const scaleRef = useRef(1)
@@ -280,7 +343,9 @@ function StepsBlock({ lines }: { lines: string[] }) {
   }, [lines, scale])
 
   return (
-    <div ref={wrapRef} className="xb-math xb-steps-fit">
+    <div ref={wrapRef} className={clsx('xb-math xb-steps-fit', refLabel && 'has-ref')}>
+      {/* 식 참조 라벨(㉠) — 수능 조판처럼 식 오른쪽 끝에 붙인다 */}
+      {refLabel && <span className="xb-ref">{refLabel}</span>}
       <div
         ref={gridRef}
         className="xb-steps"
@@ -343,8 +408,32 @@ function splitColumnPairs(line: string): string[] {
   return out.length > 0 ? out : [line]
 }
 
-function renderSteps(lines: string[], key: number) {
-  return <StepsBlock key={key} lines={lines.flatMap(splitColumnPairs)} />
+function renderSteps(lines: string[], key: number, refLabel?: string) {
+  return <StepsBlock key={key} lines={lines.flatMap(splitColumnPairs)} refLabel={refLabel} />
+}
+
+/** box 안 paragraph — '|' 구분 줄들이면 표, 여러 줄이면 줄 단위 문단, 그 외는 일반 블록 */
+function renderBoxChild(b: ExplainBlock, key: number): React.ReactNode {
+  if (b.type !== 'paragraph' || !b.text) return renderBlock(b, key)
+  const lines = b.text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  if (lines.length >= 2 && lines.every((l) => l.includes('|'))) {
+    return renderBlock({ type: 'table', rows: lines.map((l) => l.split('|').map((c) => c.trim())) }, key)
+  }
+  if (lines.length >= 2) {
+    return (
+      <div key={key}>
+        {lines.map((l, j) => (
+          <p key={j} className="xb-p xb-box-line">
+            <KatexText wrap text={l} />
+          </p>
+        ))}
+      </div>
+    )
+  }
+  return renderBlock(b, key)
 }
 
 function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
@@ -378,7 +467,7 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
     case 'derivation': {
       const lines = b.lines ?? []
       if (lines.length === 0) return null
-      return renderSteps(lines, key)
+      return renderSteps(lines, key, b.ref?.trim() || undefined)
     }
 
     case 'formula':
@@ -441,7 +530,7 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
               <div key={j} className="xb-case">
                 <p className="xb-p">
                   <span className="xb-case-label">
-                    <KatexText wrap text={item.label} />
+                    <KatexText wrap text={item.label ?? ''} />
                   </span>
                   {mergeFirst && <KatexText wrap text={firstText} />}
                 </p>
@@ -468,6 +557,16 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
         <p key={key} className="xb-note">
           <KatexText wrap text={b.text ?? ''} />
         </p>
+      )
+
+    case 'box':
+      // 실선 박스(문제 본문의 pv-box 와 같은 조판). 수학 해설 실데이터(2026-09-04 수능형)는
+      // 증감표를 "x | ⋯ | -1 | ⋯\nf'(x) | + | 0 | −" 처럼 '|' 구분·줄바꿈 문단 하나로 담아 오므로
+      // 그 문단은 표로, 그 밖의 여러 줄 문단은 줄마다 한 문단으로 푼다
+      return (
+        <div key={key} className="xb-box">
+          {(b.blocks ?? []).map((c, j) => renderBoxChild(c, j))}
+        </div>
       )
 
     default:

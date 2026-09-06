@@ -521,3 +521,79 @@ span.katex-block {
   font-size: 13px;
   color: #8a8582;
 }
+
+/* 실선 박스(box) — 증감표·범위별 정리 등. 문제 본문 .pv-box 와 같은 테두리 */
+.exam-blocks .xb-box {
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 12px 16px;
+  margin: 14px 0;
+}
+
+.exam-blocks .xb-box > .exam-table-wrap {
+  margin: 0;
+}
+
+.exam-blocks .xb-box .xb-box-line {
+  margin: 4px 0;
+}
+
+/* ── 3섹션 해설 (insight · solution · diagnosis — 2026-09 규격) ── */
+.exam-blocks .xb-section + .xb-section {
+  margin-top: 24px;
+}
+
+/* 섹션 제목 — 정책 표기 그대로 "[핵심 발상]" 등. 본문과 같은 서체, 굵게만 */
+.exam-blocks .xb-section-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.exam-blocks .xb-section-body > .xb-p:first-child {
+  margin-top: 0;
+}
+
+/* 선택지별 진단 — 번호 열 + 본문 열. 정답 항목은 채운 원문자(❶)로만 구분 (색은 currentColor 유지) */
+.exam-blocks .xb-diag {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exam-blocks .xb-diag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.exam-blocks .xb-diag-num {
+  flex: none;
+  font-weight: 700;
+}
+
+.exam-blocks .xb-diag-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-blocks .xb-diag-body > .xb-p:first-child {
+  margin-top: 0;
+}
+
+.exam-blocks .xb-diag-body > .xb-p:last-child {
+  margin-bottom: 0;
+}
+
+/* 식 참조 라벨(㉠) — derivation 오른쪽 끝, 세로 가운데 */
+.exam-blocks .xb-steps-fit.has-ref {
+  position: relative;
+  padding-right: 28px;
+}
+
+.exam-blocks .xb-ref {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+}

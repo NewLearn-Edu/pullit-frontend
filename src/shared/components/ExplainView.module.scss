@@ -1,0 +1,101 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ExplainView · 해설 뷰 공용 조판 (학생 ExplainPanel · 어드민 미리보기가 같은 클래스를 쓴다)
+// -----------------------------------------------------------------------------
+// 탭 헤더(해석 / 풀이 · 해설) 와 본문(정답 · 해설 · 어휘 / 해석) 의 글자·간격 정의.
+// 여기 값을 바꾸면 학생 화면과 어드민 미리보기가 함께 바뀐다 — 한쪽만 고치지 않는다.
+// -----------------------------------------------------------------------------
+
+// ── 탭 헤더 ────────────────────────────────────────────────────────────────
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.tabButton {
+  @include button-reset;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-muted;
+  transition: color 150ms ease;
+
+  @include hover { color: $color-body; }
+}
+
+.tabButtonActive {
+  color: $color-primary;
+
+  @include hover { color: $color-primary; }
+}
+
+// ── 본문 ───────────────────────────────────────────────────────────────────
+// 정답 · 해설 · 어휘 · 해석 섹션 타이틀 (2026-08-26 — 본문과 같은 15px · 볼드 · 블랙)
+.answerLabel {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #121417;
+}
+
+.answerValue {
+  margin: $space-md 0 0;
+  font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', 'Nanum Myeongjo', serif);
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: $fw-bold;
+  color: $color-primary;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// 구 문자열 포맷(정답 분석 / 오답 분석) 전용
+.sectionTitle {
+  margin: 0;
+  font-size: $fs-body-sm;
+  font-weight: $fw-semibold;
+  color: $color-muted;
+}
+
+.sectionBody {
+  margin-top: $space-xs;
+  font-size: $fs-body;
+  color: $color-foreground;
+}
+
+// ── 어드민 미리보기 래퍼 (ExplainPreview) — 학생 패널의 header/body 와 같은 치수 ──
+.previewRoot {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.previewHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 48px;
+  padding: 0 $space-lg;
+  border-bottom: 1px solid $color-line;
+}
+
+.previewBody {
+  padding: $space-lg;
+}
+
+// 카드 안 인라인(bare) — 문제 본문 아래 이어질 때: 위 여백 + 얇은 구분선
+.bareRoot {
+  margin-top: 24px;
+}
+
+.bareHeader {
+  padding-bottom: 12px;
+  margin-bottom: $space-lg;
+  border-bottom: 1px solid $color-line;
+}

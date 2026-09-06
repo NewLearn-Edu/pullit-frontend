@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
-import { ProblemExplain, ProblemTranslation, ProblemVocabulary } from '@/shared/components/ProblemExplain'
+import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
@@ -503,7 +503,7 @@ export default function ProblemListPage() {
                               <span className="choice-num">
                                 {i + 1}
                               </span>
-                              <span><ProblemRender text={c} /></span>
+                              <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                             </span>
                           )
                         })}
@@ -515,37 +515,17 @@ export default function ProblemListPage() {
                 </div>
                 {/* 패드: 맛보기와 동일한 드래그 디바이더 (좌우 폭 조절) */}
                 {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
-                <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
-                  <ExamScaleFrame>
-                  <p className="pv-label">정답</p>
-                  <div className="pv-explain-body pv-explain-answer">
-                    {detail.choices.length > 0 && detail.answerIndex != null ? (
-                      String.fromCodePoint(0x245f + detail.answerIndex)
-                    ) : (
-                      <ExplainRender text={detail.answerText} />
-                    )}
-                  </div>
-                  <p className="pv-label" style={{ marginTop: 20 }}>해설</p>
-                  <div className="pv-explain-body">
-                    <ProblemExplain explanation={detail.explanation} subject={detail.subject} />
-                  </div>
-                  {detail.vocabulary?.length > 0 && (
-                    <>
-                      <p className="pv-label" style={{ marginTop: 20 }}>어휘</p>
-                      <div className="pv-explain-body">
-                        <ProblemVocabulary items={detail.vocabulary} />
-                      </div>
-                    </>
-                  )}
-                  {detail.translation && (
-                    <>
-                      <p className="pv-label" style={{ marginTop: 20 }}>해석</p>
-                      <div className="pv-explain-body">
-                        <ProblemTranslation translation={detail.translation} />
-                      </div>
-                    </>
-                  )}
-                  </ExamScaleFrame>
+                <div className={clsx('pv-modal-explain pv-explain-live', device === 'mobile' && 'fixed-375')}>
+                  <ExplainPreview
+                    subject={detail.subject}
+                    answerDisplay={detail.choices.length > 0 && detail.answerIndex != null
+                    ? String.fromCodePoint(0x245f + detail.answerIndex)
+                    : <ExplainRender text={detail.answerText} />}
+                    explanation={detail.explanation}
+                    translation={detail.translation}
+                    vocabulary={detail.vocabulary}
+                    resetKey={detail.id}
+                  />
                 </div>
               </div>
             )}

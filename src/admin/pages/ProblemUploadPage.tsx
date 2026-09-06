@@ -8,9 +8,7 @@ import {
   MathExplainRender,
   MathProblemRender,
 } from '@/shared/components/ExamRender'
-import { MathExplainKatexRender } from '@/shared/components/ExamRender'
-import { ExplainBlocksRender } from '@/shared/components/ExamBlocks'
-import { ProblemTranslation, ProblemVocabulary, parseTranslationParagraphs } from '@/shared/components/ProblemExplain'
+import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -114,7 +112,6 @@ export default function ProblemUploadPage() {
   // 검토 디바이스 프레임 — 목록 미리보기 모달과 동일 (웹/패드-드래그/모바일 375)
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
   // 해설 엔진 비교 — mathjax(검수 도구 방식·기본) vs katex(우리 구 조판)
-  const [engine, setEngine] = useState<'katex' | 'mathjax'>('mathjax')
   // 원본 JSON 뷰 — 렌더링 결과와 소스 대조용, 현재 문항을 따라간다
   const [showJson, setShowJson] = useState(false)
   const [padWidth, setPadWidth] = useState(524)
@@ -617,46 +614,24 @@ export default function ProblemUploadPage() {
                                   <span className="choice-num">
                                     {i + 1}
                                   </span>
-                                  <span><ProblemRender text={c} /></span>
+                                  <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                                 </span>
                               )
                             })}
                           </div>
                         )}
                       </div>
-                      <p className="pv-label" style={{ marginTop: 16 }}>정답</p>
-                      <div className="pv-explain-body pv-explain-answer">
-                        {(dupItem.choices?.length ?? 0) > 0 && dupItem.answer_index != null ? (
-                          String.fromCodePoint(0x245f + dupItem.answer_index)
-                        ) : (
-                          <ExplainRender text={String(dupItem.answer_text ?? dupItem.answer_value ?? '-')} />
-                        )}
-                      </div>
-                      <p className="pv-label" style={{ marginTop: 16 }}>해설</p>
-                      <div className="pv-explain-body">
-                        {Array.isArray(dupItem.explanation) ? (
-                          <ExplainBlocksRender blocks={dupItem.explanation} />
-                        ) : (
-                          <ExplainRender text={dupItem.explanation || '해설이 없어요'} />
-                        )}
-                      </div>
-                      {/* 어휘·해석 (영어 완성본 2026-09-03) — 해설 아래, 학생 화면 풀이 탭·해석 탭과 같은 렌더러 */}
-                      {Array.isArray(dupItem?.vocabulary) && dupItem.vocabulary.length > 0 && (
-                        <>
-                          <p className="pv-label" style={{ marginTop: 16 }}>어휘</p>
-                          <div className="pv-explain-body">
-                            <ProblemVocabulary items={dupItem.vocabulary} />
-                          </div>
-                        </>
-                      )}
-                      {parseTranslationParagraphs(dupItem?.translation) && (
-                        <>
-                          <p className="pv-label" style={{ marginTop: 16 }}>해석</p>
-                          <div className="pv-explain-body">
-                            <ProblemTranslation translation={dupItem.translation as string | unknown[]} />
-                          </div>
-                        </>
-                      )}
+                      <ExplainPreview
+                        bare
+                        subject={subject}
+                        answerDisplay={(dupItem.choices?.length ?? 0) > 0 && dupItem.answer_index != null
+                          ? String.fromCodePoint(0x245f + dupItem.answer_index)
+                          : <ExplainRender text={String(dupItem.answer_text ?? dupItem.answer_value ?? '-')} />}
+                        explanation={dupItem.explanation ?? null}
+                        translation={dupItem.translation as string | unknown[] | null | undefined}
+                        vocabulary={Array.isArray(dupItem.vocabulary) ? (dupItem.vocabulary as { term: string; meaning: string }[]) : null}
+                        resetKey={dupItem.problem_code ?? dupSelectedId ?? ''}
+                      />
                       </ExamScaleFrame>
                     </>
                   )}
@@ -757,7 +732,7 @@ export default function ProblemUploadPage() {
                               <span className="choice-num">
                                 {i + 1}
                               </span>
-                              <span><ProblemRender text={c} /></span>
+                              <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                             </span>
                           )
                         })}
@@ -769,60 +744,17 @@ export default function ProblemUploadPage() {
               </div>
               {/* 패드: 가운데 디바이더 드래그로 좌우 폭 조절 */}
               {device === 'pad' && <div className="pv-divider" onMouseDown={startPadDrag} />}
-              <div className={clsx('pv-modal-explain', device === 'mobile' && 'fixed-375')}>
-                <ExamScaleFrame>
-                <p className="pv-label">정답</p>
-                <div className="pv-explain-body pv-explain-answer">
-                  {(item?.choices?.length ?? 0) > 0 && item?.answer_index != null ? (
-                    String.fromCodePoint(0x245f + item.answer_index)
-                  ) : (
-                    <ExplainRender text={String(item?.answer_text ?? item?.answer_value ?? '-')} />
-                  )}
-                </div>
-                <p className="pv-label" style={{ marginTop: 20 }}>
-                  해설
-                  {/* 블록 스키마(배열)는 전용 렌더러 고정 — 엔진 토글은 구 문자열 포맷 비교용 */}
-                  {Array.isArray(item?.explanation) ? (
-                    <span className="upl-engine-toggle" title="블록 스키마 해설 (B안 포맷)">
-                      블록
-                    </span>
-                  ) : (
-                    <button
-                      className="upl-engine-toggle"
-                      onClick={() => setEngine(engine === 'katex' ? 'mathjax' : 'katex')}
-                      title="해설 렌더 엔진 전환 (비교용)"
-                    >
-                      {engine === 'katex' ? 'KaTeX' : 'MathJax'}
-                    </button>
-                  )}
-                </p>
-                <div className="pv-explain-body">
-                  {Array.isArray(item?.explanation) ? (
-                    <ExplainBlocksRender blocks={item.explanation} />
-                  ) : engine === 'katex' ? (
-                    <MathExplainKatexRender text={item?.explanation || '해설이 없어요'} />
-                  ) : (
-                    <ExplainRender text={item?.explanation || '해설이 없어요'} />
-                  )}
-                </div>
-                {/* 어휘·해석 (영어 완성본 2026-09-03) — 해설 아래, 학생 화면 풀이 탭·해석 탭과 같은 렌더러 */}
-                {Array.isArray(item?.vocabulary) && item.vocabulary.length > 0 && (
-                  <>
-                    <p className="pv-label" style={{ marginTop: 20 }}>어휘</p>
-                    <div className="pv-explain-body">
-                      <ProblemVocabulary items={item.vocabulary} />
-                    </div>
-                  </>
-                )}
-                {parseTranslationParagraphs(item?.translation) && (
-                  <>
-                    <p className="pv-label" style={{ marginTop: 20 }}>해석</p>
-                    <div className="pv-explain-body">
-                      <ProblemTranslation translation={item.translation as string | unknown[]} />
-                    </div>
-                  </>
-                )}
-                </ExamScaleFrame>
+              <div className={clsx('pv-modal-explain pv-explain-live', device === 'mobile' && 'fixed-375')}>
+                <ExplainPreview
+                  subject={subject}
+                  answerDisplay={(item?.choices?.length ?? 0) > 0 && item?.answer_index != null
+                    ? String.fromCodePoint(0x245f + item.answer_index)
+                    : <ExplainRender text={String(item?.answer_text ?? item?.answer_value ?? '-')} />}
+                  explanation={item?.explanation ?? null}
+                  translation={item?.translation as string | unknown[] | null | undefined}
+                  vocabulary={Array.isArray(item?.vocabulary) ? (item.vocabulary as { term: string; meaning: string }[]) : null}
+                  resetKey={item?.problem_code ?? idx}
+                />
               </div>
             </div>
 

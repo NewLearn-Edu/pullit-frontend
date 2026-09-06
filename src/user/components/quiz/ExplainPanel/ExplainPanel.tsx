@@ -1,14 +1,13 @@
 import { clsx } from 'clsx'
-import { useEffect, useRef, useState, type Ref } from 'react'
+import { useRef, type Ref } from 'react'
 import type { Problem } from '@/user/data/mockProblems'
-import { MathExplainRender } from '@/shared/components/ExamRender'
 import {
-  ProblemExplain,
-  ProblemTranslation,
-  ProblemVocabulary,
-  parseExplainBlocks,
-  parseTranslationParagraphs,
-} from '@/shared/components/ProblemExplain'
+  ExplainBody,
+  ExplainTabBar,
+  formatAnswerDisplay,
+  hasTranslationTab,
+  useExplainTab,
+} from '@/shared/components/ExplainView'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { PinchZoomScroller } from '@/user/components/quiz/PinchZoomScroller'
 import type { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/quiz/DrawingCanvas'
@@ -49,8 +48,6 @@ interface ExplainPanelProps {
   drawing?: ExplainDrawing
 }
 
-type ExplainTab = 'translation' | 'explain'
-
 /**
  * 우측 사이드 패널 — 해설 뷰.
  * 영어처럼 지문 해석이 있으면 헤더에 "해석 / 풀이" 탭 (2026-09-03) — 해석 탭은 지문 번역 문단,
@@ -73,27 +70,21 @@ export function ExplainPanel({
   resizing,
   drawing,
 }: ExplainPanelProps) {
-  // 해석 — 서버 응답 우선, 없으면 세트 문항에 실려 온 값. 문단으로 해석되지 않으면 탭을 만들지 않는다
+  // 해석·어휘 — 서버 응답 우선, 없으면 세트 문항에 실려 온 값. 문단으로 해석되지 않으면 탭을 만들지 않는다
   const translation = serverTranslation ?? problem.translation ?? null
   const vocabulary = serverVocabulary?.length ? serverVocabulary : problem.vocabulary?.length ? problem.vocabulary : null
-  const hasTranslation = problem.subject === 'english' && parseTranslationParagraphs(translation) !== null
+  const hasTranslation = hasTranslationTab(problem.subject, translation)
   const problemKey = problem.serverId ?? String(problem.id)
   // 탭 — 해석이 있으면 해석부터 (지문을 이해한 뒤 풀이). 문제가 바뀌면 다시 첫 탭으로
-  const [tab, setTab] = useState<ExplainTab>(hasTranslation ? 'translation' : 'explain')
-  useEffect(() => {
-    setTab(hasTranslation ? 'translation' : 'explain')
-  }, [problemKey, hasTranslation])
-  const activeTab: ExplainTab = hasTranslation ? tab : 'explain'
+  const [activeTab, setTab] = useExplainTab(hasTranslation, problemKey)
 
   // 정답 표시 — 객관식은 원문자, 주관식은 값 그대로. 확인 불가(-)는 서버 응답 전
   const resolvedAnswer = answerNo ?? (problem.answer !== 0 ? problem.answer : null)
   const isShortAnswer = problem.choices.length === 0
-  const answerDisplay =
-    resolvedAnswer == null
-      ? '-'
-      : isShortAnswer
-        ? String(resolvedAnswer)
-        : ['①', '②', '③', '④', '⑤'][resolvedAnswer - 1] ?? '-'
+  const answerDisplay = formatAnswerDisplay(resolvedAnswer, isShortAnswer)
+  // 해설 원본 — 서버 해설 우선, 없으면 세트 문항(맛보기 블록 직렬화 문자열 또는 구 목 데이터 문자열)
+  const explanation = serverExplanation ?? problem.explanation.correctAnalysis
+  const legacyWrongAnalysis = serverExplanation ? undefined : problem.explanation.wrongAnalysis
 
   // 복원한 해설 필기의 세로 끝(px)만큼 drawWrap 을 늘린다 — 짧은 해설이라도 아래쪽 필기가 안 잘리게.
   // state 가 아니라 style 직접 — 획마다 패널이 다시 그려지면 MathJax 조판이 풀린다
@@ -127,29 +118,7 @@ export function ExplainPanel({
       >
         <div className={styles.inner} style={{ '--pw': `${width}px` } as React.CSSProperties}>
           <div className={styles.header}>
-            <div className={styles.tabs} role={hasTranslation ? 'tablist' : undefined}>
-              {hasTranslation ? (
-                (
-                  [
-                    ['translation', '해석'],
-                    ['explain', '풀이'],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === key}
-                    onClick={() => setTab(key)}
-                    className={clsx(styles.tabButton, activeTab === key && styles.tabButtonActive)}
-                  >
-                    {label}
-                  </button>
-                ))
-              ) : (
-                <span className={clsx(styles.tabButton, styles.tabButtonActive)}>해설</span>
-              )}
-            </div>
+            <ExplainTabBar hasTranslation={hasTranslation} activeTab={activeTab} onChange={setTab} />
             <button
               type="button"
               onClick={onClose}
@@ -167,67 +136,16 @@ export function ExplainPanel({
             {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
             <ExamScaleFrame>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
-              {activeTab === 'translation' ? (
-                <>
-                  {/* 해석 탭 — 지문 번역 문단 (밑줄 <u> 는 지문과 같은 위치에 보존) */}
-                  <p className={styles.answerLabel}>해석</p>
-                  <div style={{ marginTop: 12 }} className={styles.sections}>
-                    <ProblemTranslation translation={translation} />
-                  </div>
-                </>
-              ) : (
-              <>
-              {/* 정답 — 어드민 pv-label 구성과 동일하게 타이틀 + 값 */}
-              <p className={styles.answerLabel}>정답</p>
-              <p className={styles.answerValue}>{answerDisplay}</p>
-
-              {/* 해설 */}
-              <p className={styles.answerLabel} style={{ marginTop: 28 }}>
-                해설
-              </p>
-              <div style={{ marginTop: 12 }}>
-                {serverExplanation ? (
-                  /* 서버 해설 — 어드민 업로드·검수 화면과 동일 렌더러 */
-                  <div className={styles.sections}>
-                    <ProblemExplain explanation={serverExplanation} subject={problem.subject} />
-                  </div>
-                ) : parseExplainBlocks(problem.explanation.correctAnalysis) ? (
-                  /* 맛보기(익명) 서버 문항 — 로컬 채점용으로 받은 해설이 블록 직렬화 문자열 */
-                  <div className={styles.sections}>
-                    <ProblemExplain
-                      explanation={problem.explanation.correctAnalysis}
-                      subject={problem.subject}
-                    />
-                  </div>
-                ) : (
-                  <div className={styles.sections}>
-                    <Section
-                      title="정답 분석"
-                      body={problem.explanation.correctAnalysis}
-                    />
-                    {problem.explanation.wrongAnalysis && (
-                      <Section
-                        title="오답 분석"
-                        body={problem.explanation.wrongAnalysis}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* 어휘 — 영어 지문 핵심 단어 (풀이 탭 하단) */}
-              {vocabulary && (
-                <>
-                  <p className={styles.answerLabel} style={{ marginTop: 28 }}>
-                    어휘
-                  </p>
-                  <div style={{ marginTop: 12 }} className={styles.sections}>
-                    <ProblemVocabulary items={vocabulary} />
-                  </div>
-                </>
-              )}
-              </>
-              )}
+              {/* 정답 · 해설 · 어휘 / 해석 — 어드민 미리보기(ExplainPreview)와 같은 컴포넌트 */}
+              <ExplainBody
+                activeTab={activeTab}
+                answerDisplay={answerDisplay}
+                explanation={explanation}
+                subject={problem.subject}
+                translation={translation}
+                vocabulary={vocabulary}
+                legacyWrongAnalysis={legacyWrongAnalysis}
+              />
             </div>
             </ExamScaleFrame>
 
@@ -260,13 +178,3 @@ export function ExplainPanel({
   )
 }
 
-function Section({ title, body }: { title: string; body: string }) {
-  return (
-    <div>
-      <p className={styles.sectionTitle}>{title}</p>
-      <div className={styles.sectionBody}>
-        <MathExplainRender text={body} />
-      </div>
-    </div>
-  )
-}
