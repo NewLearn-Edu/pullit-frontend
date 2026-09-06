@@ -715,7 +715,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
         )}
         {answerValue != null ? (
           <button type="button" onClick={submitAndNext} className={styles.nextButton}>
-            {isLast ? (isTrial ? '채점하기' : '완료') : '다음'}
+            {/* 오답 다시 풀기(resultTo)는 누르는 즉시 채점 결과 화면으로 — 맛보기와 같은 "채점하기" */}
+            {isLast ? (isTrial || solveSession?.resultTo ? '채점하기' : '완료') : '다음'}
           </button>
         ) : (
           <button
