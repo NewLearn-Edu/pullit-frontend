@@ -48,6 +48,66 @@
   margin-top: 8px;
 }
 
+/* ── 안내문 박스 (영어 4영역 "안내문" 유형) — title/subtitle/cases ── */
+
+/* 행사명 — 박스 첫 줄, 본문보다 굵고 살짝 크게 */
+.qb-title {
+  margin: 0 0 2px;
+  font-size: 1.06em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* 부제(일시 등) — 제목 아래 회색 한 줄 */
+.qb-subtitle {
+  margin: 0 0 10px;
+  color: var(--color-muted, #8b95a1);
+  line-height: 1.5;
+}
+
+.qb-cases + .qb-cases,
+.qb-paragraph + .qb-cases {
+  margin-top: 12px;
+}
+
+/* 섹션 제목(ELIGIBILITY · SCHEDULE …) — 본문 명조와 구분되게 UI 서체 대문자 */
+.qb-cases-label {
+  margin: 0 0 4px;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted, #8b95a1);
+}
+
+.qb-case-list {
+  margin: 0;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+.qb-case-item {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.qb-case-item + .qb-case-item {
+  margin-top: 2px;
+}
+
+/* 항목 안 단락은 목록 자체가 간격을 담당 — 양쪽 정렬도 끈다 (짧은 줄이 벌어져 보인다) */
+.qb-case-item .qb-paragraph {
+  margin: 0;
+  text-align: left;
+}
+
+/* 의미 있는 label 이 들어온 경우에만 (실데이터는 전부 '-' 라 보통 렌더되지 않는다) */
+.qb-case-label {
+  margin-right: 0.35em;
+  font-weight: 700;
+}
+
 /* ── 수능 지면 공통 조판 (.pv-body 계열) — 어드민 미리보기·학생 문제풀이 공용 ──
    어드민에서 확정한 스펙 그대로 (KoPubWorld Batang 16px/500/lh1.85 · 영어 STIX).
    색·서체 변수는 어드민(.admin-root)이 재정의하면 그 값이 이기고(다크모드 등),

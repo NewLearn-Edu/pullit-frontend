@@ -9,6 +9,8 @@ import './exam.css'
  * 발문·지문·조판을 통합한 question 배열을 수능 조판으로 렌더한다.
  * 블록: prompt(발문) · paragraph(지문 단락) · box(주어진 문장·안내문 박스, 중첩 블록) ·
  *       table(도표 — headers/rows/align, 해설 table 과 동일 스키마)
+ * 안내문 박스 전용(box 안): title(행사명) · subtitle(부제) ·
+ *       cases(섹션 — label + items 불릿. 영어 4영역 "안내문" 유형 1,522블록 · 2026-09-06)
  *
  * 텍스트는 ExamText 재사용 — 백틱 박스·<u>밑줄·**볼드**·KaTeX 인라인 마커가
  * 그대로 적용된다. ①~⑤(문장 삽입·무관한 문장 위치 표시)는 본문 문자 그대로 노출.
@@ -16,10 +18,14 @@ import './exam.css'
 
 export interface QuestionBlock {
   type: string
-  /** prompt · paragraph */
+  /** prompt · paragraph · title · subtitle */
   text?: string
   /** box — 중첩 블록 */
   blocks?: QuestionBlock[]
+  /** cases — 안내문 섹션 제목 (Eligibility · Schedule · How to Apply …) */
+  label?: string
+  /** cases — 섹션 항목. label 은 불릿 마커('-')라 표기하지 않는다 */
+  items?: { label?: string; blocks?: QuestionBlock[] }[]
   /** table */
   headers?: string[]
   rows?: string[][]
@@ -75,6 +81,43 @@ function renderBlock(
         </div>
       )
     }
+
+    // ── 안내문 박스 전용 (english_2015_4_* 안내문 유형) ──
+    case 'title':
+      return (
+        <p key={key} className="qb-title">
+          {english ? <span lang="en"><ExamText text={b.text ?? ''} keepChoiceMarkersInline /></span>
+            : <ExamText text={b.text ?? ''} keepChoiceMarkersInline />}
+        </p>
+      )
+
+    case 'subtitle':
+      return (
+        <p key={key} className="qb-subtitle">
+          {english ? <span lang="en"><ExamText text={b.text ?? ''} keepChoiceMarkersInline /></span>
+            : <ExamText text={b.text ?? ''} keepChoiceMarkersInline />}
+        </p>
+      )
+
+    case 'cases':
+      // 섹션 제목 + 불릿 목록. 항목 label 은 실데이터가 전부 '-' (불릿 마커)라 표기하지 않고,
+      // 의미 있는 label 이 들어오면 항목 앞에 인라인으로 붙인다
+      return (
+        <div key={key} className="qb-cases">
+          {b.label && <p className="qb-cases-label">{b.label}</p>}
+          <ul className="qb-case-list">
+            {(b.items ?? []).map((item, j) => {
+              const label = item.label?.trim() ?? ''
+              return (
+                <li key={j} className="qb-case-item">
+                  {label && label !== '-' && <span className="qb-case-label">{label}</span>}
+                  {(item.blocks ?? []).map((c, k) => renderBlock(c, k, english))}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )
 
     case 'box':
       return (
