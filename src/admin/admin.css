@@ -484,9 +484,12 @@
     max-height: 100%;
     animation: pvModalPop .38s cubic-bezier(.34, 1.56, .64, 1) both;
   }
-  /* 모바일 탭 — 실기기 폭 그대로: 팝업 전체를 375px 폰 프레임으로 축소 */
-  .pv-modal-wrap.mobile { width: min(375px, 100%); }
-  .pv-modal-wrap.mobile .pv-modal-head { padding: 16px 16px 8px; }
+  /* 모바일 탭 — 웹과 같은 가로 배치(문제 · 해설)에 문제 프레임만 350px (2026-09-06).
+     예전엔 팝업 전체를 375px 폰 프레임으로 줄여 해설이 아래로 스택됐는데, 학생 화면이 폰에서도
+     같은 조판(350px 문제 영역)이라 프레임 폭만 확인하면 된다.
+     폭은 "카드 안쪽 패딩을 뺀 콘텐츠 350px" 기준 — 문제 카드 본문 패딩 24×2 → 398, 해설 본문 패딩 16×2 → 382.
+     래퍼 = 문제 398 + 간격 28 + 해설 382 + 패딩 48 */
+  .pv-modal-wrap.mobile { width: min(856px, 100%); }
   /* 디바이스 토글 — 오버레이 위에 뜨는 필(pill) 세그먼트, 기본 .seg 보다 여유 있게 */
   .pv-device-seg {
     padding: 6px;
@@ -522,12 +525,11 @@
   /* 창이 좁을 때 안쪽 최소폭(해설 350)을 지키도록 문제 프레임이 양보 */
   .pv-modal-body .pv-device.web,
   .pv-modal-body .pv-device.pad { flex-shrink: 1; min-width: 422px; }
-  /* 디바이스별 배치 — 업로드 검토와 동일: 웹 524+524 벌림 · 모바일 350 세로 스택 */
-  .pv-modal-body.web { justify-content: space-between; }
+  /* 디바이스별 배치 — 업로드 검토와 동일: 웹 524+524 벌림 · 모바일 398+382 벌림 (같은 가로 배치) */
+  .pv-modal-body.web,
+  .pv-modal-body.mobile { justify-content: space-between; }
   .pv-modal-body.web .pv-modal-explain { flex: 0 0 524px; }
-  .pv-modal-body.mobile { flex-direction: column; padding: 4px 12px 16px; }
-  .pv-modal-body.mobile .pv-modal-explain { flex: 0 0 auto; width: 100%; }
-  .pv-modal-body.mobile .pv-device.mobile { width: 100%; }
+  .pv-modal-body.mobile .pv-modal-explain { flex: 0 0 382px; }
   /* 디바이스 프레임 — 실서비스(맛보기) 레이아웃 규칙: 해설은 항상 오른쪽,
      문제 영역은 웹·패드 500px 고정 · 모바일(375 프레임)만 ~350px 로 축소 */
   .pv-device {
@@ -539,7 +541,7 @@
   }
   .pv-device.web { width: 524px; } /* 내부 문제 영역 500px */
   .pv-device.pad { width: 524px; } /* 기본값 — 실제 폭은 디바이더 드래그로 조절 (인라인 스타일) */
-  .pv-device.mobile { width: 350px; }
+  .pv-device.mobile { width: 398px; } /* 콘텐츠 350 + 본문 패딩 24×2 */
 
   /* 패드 드래그 디바이더 — 맛보기 페이지와 동일한 좌우 폭 조절 */
   .pv-divider {
@@ -562,7 +564,7 @@
     padding: 20px 24px;
     background: var(--color-canvas);
   }
-  .pv-modal-explain.fixed-375 { flex: 0 0 350px; min-width: 350px; } /* 모바일 — 해설도 350px */
+  .pv-modal-explain.fixed-375 { flex: 0 0 382px; min-width: 382px; } /* 모바일 — 해설도 콘텐츠 350 + 본문 패딩 16×2 */
   /* 학생 해설 패널과 동일 조판(ExplainPreview) — 뷰가 헤더 48px·본문 패딩을 스스로 가지므로 카드 패딩은 뺀다 */
   .pv-modal-explain.pv-explain-live { padding: 0; overflow: hidden; }
 
@@ -587,10 +589,10 @@
   .upl-preview.pad .pv-modal-explain { flex: 1; min-width: 350px; }
   /* 공간이 모자라면 안쪽 최소폭(해설 350)을 지키기 위해 문제 프레임이 먼저 양보 */
   .upl-preview.pad .pv-device { flex-shrink: 1; min-width: 422px; }
-  /* 모바일: 실기기처럼 세로 흐름 — 문제 카드 아래로 정답·해설 카드, 각 350px */
-  .upl-preview.mobile { flex-direction: column; }
-  .upl-preview .pv-device.mobile { width: 350px; }
-  .upl-preview.mobile .pv-modal-explain { flex: 0 0 auto; width: 350px; min-width: 350px; }
+  /* 모바일: 웹과 같은 가로 배치 — 문제·해설 모두 콘텐츠 350px 기준(398·382) (2026-09-06, 세로 스택 폐지) */
+  .upl-preview.mobile { justify-content: flex-start; }
+  .upl-preview .pv-device.mobile { width: 398px; }
+  .upl-preview.mobile .pv-modal-explain { flex: 0 0 382px; min-width: 382px; }
   @media (max-width: 1220px) {
     .upl-preview { flex-direction: column; }
     .upl-preview .pv-modal-explain { width: 100%; min-width: 0; }
