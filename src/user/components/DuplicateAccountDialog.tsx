@@ -4,6 +4,8 @@ import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import {
   finishAppleLogin,
   openAppleSignIn,
+  shouldUseAppleRedirect,
+  startAppleRedirectLogin,
   startGoogleLogin,
   startKakaoLogin,
   startNaverLogin,
@@ -38,6 +40,7 @@ export function DuplicateAccountDialog({
     else if (info.provider === 'NAVER') startNaverLogin()
     else if (info.provider === 'GOOGLE') startGoogleLogin()
     else if (info.provider === 'APPLE') {
+      if (shouldUseAppleRedirect()) return startAppleRedirectLogin() // 안드로이드 — 리다이렉트 방식
       // 애플은 팝업 방식 — 콜백 페이지 없이 여기서 완료·이동까지.
       // ★ openAppleSignIn 앞에 await 를 두지 말 것 (제스처가 끊기면 안드로이드에서 팝업이 막힌다)
       openAppleSignIn()

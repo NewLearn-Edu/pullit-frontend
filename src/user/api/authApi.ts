@@ -291,6 +291,64 @@ export function openAppleSignIn(): Promise<AppleAuthResult> {
   })
 }
 
+/**
+ * 애플 로그인을 팝업 대신 전체 페이지 리다이렉트(form_post)로 해야 하는 환경인가 (2026-09-06).
+ * 안드로이드 웹앱(홈 화면 PWA·TWA·래퍼 웹뷰)은 팝업이 브라우저 새 탭으로 튀어나가 원래 창과
+ * 연결(window.opener)이 끊겨 빈 화면으로 남는다. 안드로이드는 브라우저에서도 팝업 차단이 잦아
+ * 통째로 리다이렉트로 간다. iOS·iPadOS·데스크톱은 팝업 유지 (게스트 승격 등 기존 흐름 그대로)
+ */
+export function shouldUseAppleRedirect(): boolean {
+  try {
+    return /Android/i.test(navigator.userAgent || '')
+  } catch {
+    return false
+  }
+}
+
+/** 리다이렉트 방식 콜백 — 애플이 form_post 로 보내므로 SPA 가 아니라 백엔드가 받는다 (AppleRedirectController) */
+const APPLE_REDIRECT_URI = `${API_BASE}/api/auth/oauth/apple/redirect`
+const APPLE_STATE_KEY = 'pullit_oauth_state_apple'
+
+const base64Url = (s: string) =>
+  btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+/**
+ * 리다이렉트 방식 애플 인가 시작 — 페이지 전체가 appleid.apple.com 으로 이동한다.
+ * state = "{nonce}.{base64url(origin)}": nonce 는 콜백(AppleCallbackPage)이 대조하고, origin 은 백엔드가
+ * 허용 목록 검증 뒤 복귀 대상(/auth/apple/callback)으로 쓴다 (로컬·dev·운영 프론트가 같은 백엔드를 공유)
+ */
+export function startAppleRedirectLogin(): void {
+  const nonce = randomOauthState()
+  try {
+    sessionStorage.setItem(APPLE_STATE_KEY, nonce)
+  } catch {
+    /* noop — 대조 불가면 콜백이 state 검증을 건너뛴다 */
+  }
+  const state = `${nonce}.${base64Url(window.location.origin)}`
+  const url =
+    'https://appleid.apple.com/auth/authorize' +
+    `?client_id=${encodeURIComponent(APPLE_CLIENT_ID)}` +
+    `&redirect_uri=${encodeURIComponent(APPLE_REDIRECT_URI)}` +
+    '&response_type=code' +
+    `&scope=${encodeURIComponent('name email')}` +
+    '&response_mode=form_post' +
+    `&state=${encodeURIComponent(state)}`
+  window.location.href = url
+}
+
+/** 콜백에서 state 의 nonce 대조 (1회용). 보관값이 없으면(저장 불가 환경) 검증 생략 = true */
+export function verifyAppleRedirectState(state: string | null): boolean {
+  let saved: string | null = null
+  try {
+    saved = sessionStorage.getItem(APPLE_STATE_KEY)
+    sessionStorage.removeItem(APPLE_STATE_KEY)
+  } catch {
+    return true
+  }
+  if (!saved) return true
+  return !!state && state.split('.')[0] === saved
+}
+
 /** 팝업으로 받은 code 를 백엔드에 넘겨 교환·검증·쿠키 발급 (네트워크는 팝업이 닫힌 뒤라 제스처와 무관) */
 export async function finishAppleLogin(res: AppleAuthResult): Promise<void> {
   await api.post('/api/auth/oauth/apple/code', {

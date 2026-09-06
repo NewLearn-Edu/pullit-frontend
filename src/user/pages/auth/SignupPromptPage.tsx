@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   finishAppleLogin,
   openAppleSignIn,
+  shouldUseAppleRedirect,
+  startAppleRedirectLogin,
   prepareAppleLogin,
   startGoogleLogin,
   startKakaoLogin,
@@ -123,6 +125,10 @@ export default function SignupPromptPage() {
   const handleAppleLogin = () => {
     setError(null)
     setPostLoginRedirect(returnTo)
+    if (shouldUseAppleRedirect()) {
+      startAppleRedirectLogin() // 안드로이드 — 팝업 대신 전체 페이지 리다이렉트 (AppleCallbackPage 에서 마무리)
+      return
+    }
     openAppleSignIn()
       .then(async (res) => {
         // 팝업이 닫힌 뒤라 제스처와 무관 — 여기서부터는 await 로 이어도 된다

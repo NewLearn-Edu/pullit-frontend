@@ -7,6 +7,8 @@ import {
   finishAppleLogin,
   logout,
   openAppleSignIn,
+  shouldUseAppleRedirect,
+  startAppleRedirectLogin,
   requestPhoneCode,
   startGoogleLogin,
   startKakaoLogin,
@@ -389,6 +391,7 @@ export default function SignupInfoPage() {
     else if (dupProvider.provider === 'NAVER') startNaverLogin()
     else if (dupProvider.provider === 'GOOGLE') startGoogleLogin()
     else if (dupProvider.provider === 'APPLE') {
+      if (shouldUseAppleRedirect()) return startAppleRedirectLogin() // 안드로이드 — 리다이렉트 방식
       // ★ openAppleSignIn 앞에 await 를 두지 말 것 (제스처가 끊기면 안드로이드에서 팝업이 막힌다)
       openAppleSignIn()
         .then(async (res) => {

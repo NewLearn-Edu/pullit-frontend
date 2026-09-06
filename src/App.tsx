@@ -29,6 +29,7 @@ import SignupInfoPage from './user/pages/auth/SignupInfoPage'
 import KakaoCallbackPage from './user/pages/auth/KakaoCallbackPage'
 import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
 import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
+import AppleCallbackPage from './user/pages/auth/AppleCallbackPage'
 import TrialStartPage from './user/pages/trial/TrialStartPage'
 import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
@@ -163,6 +164,8 @@ export default function App() {
       <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route path="/auth/naver/callback" element={<NaverCallbackPage />} />
       <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+      {/* 애플 리다이렉트(form_post) 방식 전용 — 안드로이드 웹앱. 팝업 방식은 콜백 페이지 없음 */}
+      <Route path="/auth/apple/callback" element={<AppleCallbackPage />} />
       {/* 마케팅 인트로 → 과목 선택 → 퀴즈 순서 (랜딩 CTA 는 /start 로 진입) */}
       <Route path="/start" element={<TrialIntroPage />} />
       <Route path="/trial" element={<TrialStartPage />} />
