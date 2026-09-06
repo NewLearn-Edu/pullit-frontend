@@ -106,6 +106,9 @@ function CheckMark({ on }: { on: boolean }) {
  */
 const SIGNUP_FORM_KEY = 'pullit_signup_form'
 
+/** 잠긴 이름 칸 안내용 소셜 표시명 */
+const PROVIDER_LABEL: Record<string, string> = { KAKAO: '카카오', NAVER: '네이버', GOOGLE: '구글', APPLE: 'Apple' }
+
 interface SavedSignupForm {
   name: string
   birthY: string
@@ -236,14 +239,16 @@ export default function SignupInfoPage() {
     loadMe().then((loaded) => {
       if (!loaded || loaded.type !== 'USER') { navigate('/login', { replace: true }); return }
       if (loaded.phoneNumber && loaded.birthDate) { navigate('/home', { replace: true }); return }
-      setProvider(loaded.provider) // 애플이면 이름 칸 잠금 근거
-      if (loaded.name) {
-        setName((prev) => prev || loaded.name!) // 소셜 이름 프리필 (애플은 수정 불가로 잠김)
-        if (loaded.name.trim().length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
+      setProvider(loaded.provider)
+      const ssoName = loaded.name?.trim() ?? ''
+      if (ssoName) {
+        // 소셜이 이름을 준 경우 — 그 값을 그대로 쓰고 칸을 잠근다 (2026-09-06: 애플만 잠그던 것을 전 소셜로 확대).
+        // 저장 폼에 남은 편집값이 있어도 소셜 이름으로 덮는다 — 잠긴 칸의 값은 소셜 이름이어야 한다
+        setName(ssoName)
+        if (ssoName.length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
       }
-      // 애플이 이름을 실제로 내려준 경우에만 잠근다 — 애플은 최초 인증 1회만 이름을 주므로 재가입·탈퇴 후
-      // 재로그인이면 빈 값으로 온다. 이때는 사용자가 직접 입력해야 하니 잠그지 않는다
-      setSsoNameProvided(loaded.provider === 'APPLE' && !!loaded.name && loaded.name.trim().length > 0)
+      // 이름이 null·빈 값으로 온 경우(애플 재가입·탈퇴 후 재로그인, 이름 미제공 계정 등)에만 직접 입력해 저장한다
+      setSsoNameProvided(ssoName.length > 0)
     })
   }, [loadMe, navigate])
 
@@ -441,10 +446,10 @@ export default function SignupInfoPage() {
   }
 
   const nameValid = name.trim().length >= 2
-  // 애플 가입자는 이름 수정 불가 (Apple 정책 — SSO 가 내려준 이름 사용). 애플이 이름을
-  // 안 준 경우(재가입·탈퇴 후 재로그인 — 애플은 최초 1회만 이름을 준다)에는 잠그지 않아 직접 입력한다.
+  // 소셜이 이름을 내려줬으면 어느 소셜이든 수정 불가 — 가입 이름은 SSO 값을 그대로 저장한다 (2026-09-06).
+  // 소셜이 이름을 안 준 경우(애플 재가입·탈퇴 후 재로그인 — 애플은 최초 1회만 이름을 준다)에만 직접 입력.
   // (예전엔 현재 입력값 길이로 판정해 빈 칸에 한 글자 치는 순간 잠기고 다음 단계가 안 열렸다 · 2026-09-04)
-  const nameLocked = provider === 'APPLE' && ssoNameProvided
+  const nameLocked = ssoNameProvided
   // 999 국번은 실존하지 않는 앱스토어 심사용 번호(999-0000-0000) — 서버 검증(DTO @Pattern)과 동일하게 허용
   const phoneValid = /^(01[0-9]|999)-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
@@ -644,8 +649,7 @@ export default function SignupInfoPage() {
                   type="text"
                   autoComplete="name"
                   autoFocus={!nameLocked && !consentOpen}
-                  readOnly={nameLocked}
-                  aria-disabled={nameLocked}
+                  disabled={nameLocked}
                   placeholder="이름을 입력해주세요"
                   value={name}
                   onChange={(e) => !nameLocked && setName(e.target.value)}
@@ -659,7 +663,7 @@ export default function SignupInfoPage() {
                 />
                 {nameLocked && (
                   <span className="text-[13px] text-[#80858b]">
-                    Apple 계정으로 가입해 이름은 수정할 수 없어요
+                    {PROVIDER_LABEL[provider ?? ''] ?? '소셜'} 계정의 이름을 그대로 사용해요 (수정 불가)
                   </span>
                 )}
               </label>
