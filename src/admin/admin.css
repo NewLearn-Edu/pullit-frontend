@@ -477,6 +477,26 @@
     display: grid; place-items: center;
     padding: 24px;
   }
+  /* 앞뒤 문항 이동 버튼 — 오버레이 좌우 가장자리 (클릭 · ← → 키 동일 동작) */
+  .pv-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    z-index: 1;
+    display: grid; place-items: center;
+    width: 44px; height: 44px;
+    border: none; border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    color: var(--color-fg);
+    box-shadow: var(--shadow-dialog);
+    cursor: pointer;
+    transition: background .15s ease, opacity .15s ease;
+  }
+  .pv-nav.prev { left: 20px; }
+  .pv-nav.next { right: 20px; }
+  .pv-nav:hover:not(:disabled) { background: #fff; }
+  .pv-nav:disabled { opacity: .28; cursor: default; }
+  /* 현재 위치 — "12 / 1,235" (미리보기 헤드 부제 뒤) */
+  .pv-pos { margin-left: 8px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+
   /* 토글(카드 밖 상단) + 모달 카드를 세로로 묶는 래퍼 */
   .pv-modal-wrap {
     display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -741,11 +761,9 @@
   }
   .jump-input:focus { border-color: var(--line-strong); }
   .vw-body { max-width: 760px; }
-  /* 검수 화면 정답 — 채운 원을 primary 로 (본문은 exam.css 가 검정 채움) */
+  /* 검수 화면 정답 — 해설의 정답 표기와 같이 원기호만 primary 색 */
   .pv-choices .choice.correct .choice-num {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: #fff;
+    color: var(--color-primary);
   }
   .vw-answer { margin-top: 20px; font-size: 13px; font-weight: 600; color: var(--color-muted); }
   .vw-expl { margin-top: 16px; border-top: 1px solid var(--color-line); padding-top: 14px; }

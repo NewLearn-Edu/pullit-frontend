@@ -9,9 +9,10 @@
 // - 탭·정답·해설·어휘 조판은 shared/components/ExplainView.module.scss (어드민 미리보기와 공용)
 // -----------------------------------------------------------------------------
 
-// 모바일 dim 오버레이
+// 모바일 dim 오버레이 — 문제 영역(.content)만 덮는다.
+// 화면 전체를 덮으면 상단바·필기 툴바까지 가려져 해설에 필기하는 중에 도구를 못 바꾼다
 .backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: $z-panel-backdrop;
   background: $color-foreground-a20;
@@ -26,15 +27,15 @@
   flex-direction: column;
   background: $color-canvas;
 
-  // 모바일: 우측 fixed slide-in
-  position: fixed;
+  // 모바일: 우측 slide-in — 상단바·필기 툴바 "아래" 인 .content 영역 안에서만 덮는다.
+  // fixed(top:0)로 화면 전체를 덮으면 해설에 필기하는 중에 툴바(도구·색·undo·지우개)를 쓸 수 없다
+  position: absolute;
   right: 0;
   top: 0;
+  bottom: 0;
   z-index: $z-panel;
-  height: 100dvh;
   width: 100%;
-  padding-top: var(--safe-top); // 홈 화면 웹앱 — 화면을 덮는 패널이라 상태바 여백을 직접 확보
-  min-width: 350px; // fixed 는 body min-width 를 안 따라감 — 최소 지원 폭 별도 지정
+  min-width: 350px; // 부모 폭을 그대로 받지 않도록 최소 지원 폭 별도 지정
   max-width: 448px; // Tailwind max-w-md
   border-left: 1px solid $color-line;
   box-shadow: $shadow-xl;
@@ -48,7 +49,6 @@
     position: static;
     z-index: auto;
     height: auto;
-    padding-top: 0; // inline 사이드바 — 상단바(QuizTopBar)가 이미 여백을 가진다
     // 모바일 fixed 전용 최소 폭 해제 — 안 풀면 --pw 가 350 아래로 내려가도
     // 패널만 350 에 걸려 우측에 빈 띠가 생기고(드래그 하한 300), 닫힘(--pw:0)에도 350 이 남는다
     min-width: 0;
@@ -83,6 +83,21 @@
     width: var(--pw, 420px);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 상단 탭 헤더
+// ─────────────────────────────────────────────────────────────────────────────
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 $space-lg;
+  border-bottom: 1px solid $color-line;
+}
+
 .closeButton {
   @include button-reset;
   @include flex-center;
@@ -98,3 +113,46 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 본문 영역 (스크롤 가능)
 // ─────────────────────────────────────────────────────────────────────────────
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-lg;
+  // 두 손가락 확대는 PinchZoomScroller(usePinchZoom) 가 drawWrap 폭으로 처리한다 —
+  // 캔버스 밖에서 시작한 핀치를 사파리가 페이지 확대로 가로채지 않도록 pinch-zoom 만 뺀다 (스크롤 pan 은 유지)
+  touch-action: pan-x pan-y;
+  overflow-anchor: none;
+}
+
+// 필기 오버레이 기준 컨테이너 — 해설 내용과 함께 스크롤 · 짧은 해설도 패널 높이만큼 확보
+.drawWrap {
+  position: relative;
+  // 두 손가락 확대 확정 때 세로 스크롤 여유가 모자라면 usePinchZoom 이 --pinch-slack 을 준다 —
+  // 내용이 짧으면 min-height 가, 길면 padding-bottom 이 높이를 정하므로 둘 다에 더한다
+  min-height: calc(100% + var(--pinch-slack, 0px));
+  padding-bottom: var(--pinch-slack, 0px);
+}
+
+// 해설 필기 캔버스 — 본문 "아래" 에 깔린다 (2026-09-06).
+// 해설·해석은 읽는 화면이라 획이 글자를 덮으면 내용을 못 읽는다.
+// 문제 카드(.canvasOverlay)는 반대로 본문 위 — 거기선 밑줄·동그라미가 보여야 한다.
+.drawOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+// 해설 본문 — 잉크 위 레이어. 포인터는 통과시켜 아래 캔버스가 그대로 필기를 받는다
+// (캔버스가 본문 전체를 덮고 있던 이전 구조와 입력 동작은 동일하다)
+.content {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+// revealed=false 시 답 노출 방지 (블러 처리)
+.bodyBlurred {
+  user-select: none;
+  filter: blur(4px);
+}
+

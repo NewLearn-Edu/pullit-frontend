@@ -38,3 +38,15 @@ export function EnglishProblemRender({ text }: { text: string }) {
 export function EnglishExplainRender({ text }: { text: string }) {
   return <MathJaxExplainRender text={text} />
 }
+
+/**
+ * 보기 번호 → 원기호. 원을 직접 그리지 않고 해설(선택지별 진단)과 똑같은
+ * 유니코드 글리프를 그대로 쓴다 — 문제와 해설의 원기호 모양을 일치시키기 위함.
+ * filled=true 는 학생 리뷰 화면의 "내가 고른 보기"(채운 원 ❶~❺).
+ */
+export function choiceMark(no: number, filled = false): string {
+  const marks = filled
+    ? ['❶', '❷', '❸', '❹', '❺']
+    : ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+  return marks[no - 1] ?? String(no)
+}

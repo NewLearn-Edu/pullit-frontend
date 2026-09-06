@@ -7,6 +7,7 @@ import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
+  choiceMark,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -607,10 +608,7 @@ export default function TrialTestPage() {
                                 const correct = detail.answerIndex === i + 1
                                 return (
                                   <span key={i} className={clsx('choice', correct && 'correct')}>
-                                    {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
-                                    <span className="choice-num">
-                                      {i + 1}
-                                    </span>
+                                    <span className="choice-num">{choiceMark(i + 1)}</span>
                                     <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                                   </span>
                                 )

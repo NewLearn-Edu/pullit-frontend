@@ -95,11 +95,13 @@ export function DrawingToolbar({
   const isCompact = useIsCompact()
   const isTouch = useIsTouchDevice()
 
-  // 뷰포트 breakpoint 이동 시 초기 상태 재설정
+  // 필기 도구는 어느 폭에서든 기본 ON (2026-09-06).
+  // 예전엔 compact(모바일)만 기본 OFF 라 툴바가 숨겨진 채 시작했는데, 모바일에서도 바로 쓰도록 켜둔다.
+  // 마운트 1회만 — 사용자가 상단 네비 펜 토글로 끈 상태를 리사이즈 때 되살리지 않는다
   useEffect(() => {
-    onDrawingEnabledChange(!isCompact)
+    onDrawingEnabledChange(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompact])
+  }, [])
 
   // 도구별 색 — 펜은 검정, 형광펜은 노랑에서 시작하고 각자 마지막 색을 기억한다
   const colorByToolRef = useRef<Record<PresetTool, string>>({ mono: COLORS[0], marker: MARKER_COLORS[0] })
@@ -409,12 +411,14 @@ export function DrawingToolbar({
   // 필기 꺼짐 — 툴바 미노출. 켜기는 상단 네비의 펜 토글 (2026-08-07 UI 정리 · 미니 스트립 제거)
   if (!drawingEnabled) return null
 
-  // 손필기 토글 (터치 기기에서만)
-  const fingerToggle = isTouch && (
+  // 손필기 토글 — 터치 기기 + 모바일 폭.
+  // (pointer: coarse) 만 보면 PC 브라우저를 폰 폭으로 줄여 모바일을 확인할 때 토글이 사라진다
+  const fingerToggle = (isTouch || isCompact) && (
     <button
       type="button"
       onClick={() => onAllowFingerChange(!allowFinger)}
       aria-pressed={allowFinger}
+      aria-label={allowFinger ? '손필기 끄기' : '손필기 켜기'}
       className={styles.fingerToggle}
       title={allowFinger ? '손필기 켜짐 · 눌러서 끄기' : '손필기 꺼짐 · 눌러서 켜기'}
     >

@@ -14,7 +14,7 @@ import type { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/compone
 import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import styles from './styles/ExplainPanel.module.scss'
 
-/** 해설 위 필기 옵션 — 페이지의 공용 툴바 상태를 그대로 받는다 (리뷰 화면용) */
+/** 해설 필기 옵션 — 페이지의 공용 툴바 상태를 그대로 받는다 (리뷰 화면용) */
 export interface ExplainDrawing {
   tool: StrokeTool
   color: string
@@ -44,7 +44,7 @@ interface ExplainPanelProps {
   width: number
   /** divider 드래그 중 · true 면 width transition off (매끄러운 드래그) */
   resizing: boolean
-  /** 있으면 해설 본문 위에 필기 캔버스를 얹는다 */
+  /** 있으면 해설 본문 아래에 필기 캔버스를 깐다 (획이 글자를 덮지 않게) */
   drawing?: ExplainDrawing
 }
 
@@ -133,8 +133,10 @@ export function ExplainPanel({
               drawWrap: 필기 오버레이 기준 컨테이너 — 스크롤 내용과 같이 움직이고,
               해설이 짧아도 패널 높이만큼은 채워 아래 여백에도 쓸 수 있다 */}
           <PinchZoomScroller className={styles.body} cardClassName={styles.drawWrap} cardRef={drawWrapRef}>
-            {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책) */}
-            <ExamScaleFrame>
+            {/* 500px 기준 고정 조판 → 패널 폭 비례 확대 (줄바꿈 불변 · 문제 본문과 동일 정책).
+                .content: 해설 본문은 필기 잉크 "위" 에 그린다 — 획이 글자를 덮으면 해설을 못 읽는다.
+                포인터는 pointer-events:none 로 아래 캔버스에 그대로 흘려보낸다 */}
+            <ExamScaleFrame className={drawing ? styles.content : undefined}>
             <div className={clsx(!revealed && styles.bodyBlurred)}>
               {/* 정답 · 해설 · 어휘 / 해석 — 어드민 미리보기(ExplainPreview)와 같은 컴포넌트 */}
               <ExplainBody

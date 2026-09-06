@@ -3,6 +3,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import clsx from 'clsx'
 import {
+  choiceMark,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -611,9 +612,7 @@ export default function ProblemUploadPage() {
                               const correct = dupItem.answer_index === i + 1
                               return (
                                 <span key={i} className={clsx('choice', correct && 'correct')}>
-                                  <span className="choice-num">
-                                    {i + 1}
-                                  </span>
+                                  <span className="choice-num">{choiceMark(i + 1)}</span>
                                   <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                                 </span>
                               )
@@ -728,10 +727,7 @@ export default function ProblemUploadPage() {
                           const correct = item?.answer_index === i + 1
                           return (
                             <span key={i} className={clsx('choice', correct && 'correct')}>
-                              {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
-                              <span className="choice-num">
-                                {i + 1}
-                              </span>
+                              <span className="choice-num">{choiceMark(i + 1)}</span>
                               <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                             </span>
                           )

@@ -108,59 +108,36 @@
   color: var(--pv-fg, #120c0b);
 }
 
-/* 보기 번호 — 유니코드 원문자(①·❶) 대신 원을 직접 그리고 숫자만 얹는다.
-   유니코드 글리프는 빈 원(①)과 채운 원(❶)의 지름·잉크 메트릭이 서로 달라
-   정답만 작고 어긋나 보였다. 직접 그리면 두 상태의 지름이 정확히 같다.
-   숫자는 본문과 같은 KoPubWorld Batang (영어 보기에서도 STIX 로 넘어가지 않게 명시). */
+/* 보기 번호 — 해설(선택지별 진단)과 똑같은 유니코드 원문자 글리프를 그대로 쓴다.
+   원을 직접 그리면 문제의 원기호만 해설과 다른 모양이 되어 두 영역이 따로 놀았다.
+   서체는 본문과 같은 KoPubWorld Batang (영어 보기에서도 STIX 로 넘어가지 않게 명시). */
 .choice-num {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 1.3em;
-  height: 1.3em;
-  border: 1px solid currentColor;
-  border-radius: 50%;
   font-family: var(--font-batang, 'KoPubWorld Batang', 'Apple SD Gothic Neo', 'Nanum Myeongjo', serif);
-  font-size: 0.76em;
+  font-size: 1.125em;
   font-weight: 500;
   line-height: 1;
-  color: var(--pv-fg, #120c0b);
-  /* 숫자를 원 정중앙에 — KoPub 은 어센트(12)가 디센트(6)의 두 배라
-     단순 center 정렬이면 숫자 잉크가 원 중심보다 위로 뜬다 (패딩 절반만큼 내림) */
-  padding-top: 0.19em;
-  /* 원의 세로 위치 — inline-flex 의 baseline 은 안쪽 숫자의 baseline 이라
-     그대로 두면 원 중심이 baseline 근처로 내려앉는다.
-     보기 값의 시각 중심(cap height 의 절반)에 원 중심을 맞춘다 */
-  position: relative;
-  top: -0.07em;
+  color: inherit;
+  /* 세로 위치 보정 없음 — baseline 정렬 그대로가 정답이다.
+     KoPub Batang 의 ① 은 baseline 아래로 0.137em 내려오고 높이는 0.876em 이라
+     1.125em 으로 키우면 원 중심이 baseline+0.339em → 영문 대문자(STIX cap 0.657em)의
+     시각 중심 0.329em, 한글 시각 중심 0.318em 과 사실상 일치한다. */
 }
 
-/* 정답 — 같은 지름 그대로 원 안을 채우고 숫자를 반전 (어드민 미리보기) */
+/* 정답 — 해설의 정답 표기와 같이 원기호만 굵게 (어드민 미리보기는 admin.css 가 빨강으로 덮음) */
 .choice.correct .choice-num {
-  border-color: var(--pv-fg, #120c0b);
-  background: var(--pv-fg, #120c0b);
-  color: #fff;
+  font-weight: 700;
 }
 
 /* 학생 리뷰 화면 (2026-09-03 확정)
-   - mine   : 내가 고른 보기 — 검정 채움 원
-   - missed : 틀렸을 때의 정답 보기 — 값·원기호 모두 빨강 (원도 채움) */
-.choice.mine .choice-num {
-  border-color: var(--pv-fg, #120c0b);
-  background: var(--pv-fg, #120c0b);
-  color: #fff;
-}
-
+   - mine   : 내가 고른 보기 — 채운 원문자 ❶~❺ (마크업에서 글리프를 바꿔 넣는다)
+   - missed : 틀렸을 때의 정답 보기 — 값·원기호 모두 빨강 */
 .choice.missed {
   color: #ff385c;
 }
 
 .choice.missed .choice-num {
-  border-color: #ff385c;
-  background: #ff385c;
-  color: #fff;
+  font-weight: 700; /* 빨간 정답 원기호는 굵게 (2026-09-06) */
 }
 
 /* 서체는 지정하지 않는다 — 한글 컨텍스트는 부모(.pv-question 등)의 바탕체를 상속,
@@ -211,13 +188,6 @@
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-}
-
-/* 영어 보기 번호 — 값이 STIX 라 cap height 가 KoPub 보다 높다.
-   원 중심을 영문 대문자 높이의 절반에 맞추려면 수학보다 조금 더 올린다
-   (두 줄 보기도 첫 줄 기준선에 맞으므로 동작은 그대로) */
-.pv-body.en .choice-num {
-  top: -0.16em;
 }
 
 /* 세로로 큰 인라인 수식(분수·적분 등, KatexText 가 판별) — 포함된 줄만 위아래 간격 확보.

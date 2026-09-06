@@ -9,7 +9,7 @@ import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/q
 import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
-import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
+import { choiceMark, EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
@@ -635,9 +635,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
                           subject === 'english' ? EnglishProblemRender : MathProblemRender
                         return (
                           <span key={i} className="choice">
-                            <span className="choice-num">
-                              {i + 1}
-                            </span>
+                            <span className="choice-num">{choiceMark(i + 1)}</span>
                             <span>
                               <ChoiceRender text={answerText} />
                             </span>

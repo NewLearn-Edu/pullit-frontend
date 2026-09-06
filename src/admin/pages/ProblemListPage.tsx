@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
@@ -6,6 +6,7 @@ import { ExplainPreview } from '@/shared/components/ExplainView'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
+  choiceMark,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -107,6 +108,10 @@ export default function ProblemListPage() {
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
   // 패드: 맛보기와 동일하게 가운데 디바이더 드래그로 문제 패널 폭 조절
   const [padWidth, setPadWidth] = useState(524)
+  // 미리보기 좌우 이동이 페이지 경계를 넘을 때, 새 페이지가 도착하면 어느 쪽 끝을 열지
+  const [pendingEdge, setPendingEdge] = useState<'first' | 'last' | null>(null)
+  // 키보드 핸들러가 항상 최신 이동 함수를 보게 (효과 의존성에 목록/페이지를 넣지 않기 위해)
+  const moveRef = useRef<(dir: -1 | 1) => void>(() => {})
 
   const startPadDrag = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -174,13 +179,21 @@ export default function ProblemListPage() {
       .catch(() => setData(null))
   }, [apiSubject, isMath, cas, status, difficulty, q, page])
 
+  // 페이지 경계를 넘어온 좌우 이동 — 새 페이지가 실제로 도착한 뒤에 끝 문항을 연다
+  useEffect(() => {
+    if (pendingEdge == null) return
+    if (data == null || data.page !== page) return
+    const list = data.content
+    setSelectedId(list.length > 0 ? (pendingEdge === 'first' ? list[0].id : list[list.length - 1].id) : null)
+    setPendingEdge(null)
+  }, [pendingEdge, data, page])
+
   // 미리보기 상세 로드
   useEffect(() => {
     if (selectedId == null) {
       setDetail(null)
       return
     }
-    setDevice('web')
     fetchProblemDetail(selectedId).then(setDetail).catch(() => setDetail(null))
   }, [selectedId])
 
@@ -188,7 +201,15 @@ export default function ProblemListPage() {
   useEffect(() => {
     if (selectedId == null) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedId(null)
+      if (e.key === 'Escape') {
+        setSelectedId(null)
+        return
+      }
+      // ← → 로 앞뒤 문항 이동 (목록 필터 입력에 포커스가 있어도 모달이 우선)
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault()
+        moveRef.current(e.key === 'ArrowLeft' ? -1 : 1)
+      }
     }
     window.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
@@ -228,7 +249,35 @@ export default function ProblemListPage() {
     setPage(0)
     setSelectedId(null)
   }
-  const toggleRow = (id: string) => setSelectedId((prev) => (prev === id ? null : id))
+  const toggleRow = (id: string) => {
+    if (selectedId === id) {
+      setSelectedId(null)
+      return
+    }
+    if (selectedId == null) setDevice('web') // 모달을 새로 열 때만 초기화 (좌우 이동 중엔 유지)
+    setSelectedId(id)
+  }
+
+  // 미리보기 앞뒤 이동 — 현재 페이지 안에서 이동하고, 끝에 닿으면 앞/뒤 페이지로 이어간다
+  const previewIndex = selectedId == null ? -1 : rows.findIndex((r) => r.id === selectedId)
+  const canPrevPreview = previewIndex > 0 || page > 0
+  const canNextPreview = (previewIndex >= 0 && previewIndex < rows.length - 1) || page < totalPages - 1
+  const movePreview = (dir: -1 | 1) => {
+    if (previewIndex < 0 || pendingEdge != null) return
+    const next = previewIndex + dir
+    if (next >= 0 && next < rows.length) {
+      setSelectedId(rows[next].id)
+      return
+    }
+    if (dir === 1 && page < totalPages - 1) {
+      setPendingEdge('first')
+      setPage(page + 1)
+    } else if (dir === -1 && page > 0) {
+      setPendingEdge('last')
+      setPage(page - 1)
+    }
+  }
+  moveRef.current = movePreview
 
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1
   const rangeEnd = Math.min((page + 1) * PAGE_SIZE, total)
@@ -447,6 +496,35 @@ export default function ProblemListPage() {
       {selectedId != null &&
         createPortal(
         <div className="pv-modal-overlay" onClick={() => setSelectedId(null)}>
+          {/* 앞뒤 문항 이동 — 클릭 또는 ← → 키. 목록 페이지 경계도 이어서 넘어간다 */}
+          <button
+            type="button"
+            className="pv-nav prev"
+            aria-label="이전 문제"
+            disabled={!canPrevPreview}
+            onClick={(e) => {
+              e.stopPropagation()
+              movePreview(-1)
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="pv-nav next"
+            aria-label="다음 문제"
+            disabled={!canNextPreview}
+            onClick={(e) => {
+              e.stopPropagation()
+              movePreview(1)
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
           <div className={clsx('pv-modal-wrap', device)} onClick={(e) => e.stopPropagation()}>
             {/* 디바이스 토글 — 팝업 카드 바깥 상단 */}
             <div className="seg pv-device-seg">
@@ -462,6 +540,11 @@ export default function ProblemListPage() {
                 <div className="card-title">문제 미리보기</div>
                 <div className="card-sub">
                   {detail ? `${detail.id} · ${previewPath}` : '불러오는 중…'}
+                  {detail && previewIndex >= 0 && total > 0 && (
+                    <span className="pv-pos">
+                      {(page * PAGE_SIZE + previewIndex + 1).toLocaleString()} / {total.toLocaleString()}
+                    </span>
+                  )}
                 </div>
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedId(null)}>
@@ -499,10 +582,7 @@ export default function ProblemListPage() {
                           const correct = detail.answerIndex === i + 1
                           return (
                             <span key={i} className={clsx('choice', correct && 'correct')}>
-                              {/* ①~⑤(U+2460) · 정답은 채운 원문자 ❶~❺(U+2776) */}
-                              <span className="choice-num">
-                                {i + 1}
-                              </span>
+                              <span className="choice-num">{choiceMark(i + 1)}</span>
                               <span><ProblemRender text={c.replace(/^[①②③④⑤]\s*/, '')} /></span>
                             </span>
                           )
