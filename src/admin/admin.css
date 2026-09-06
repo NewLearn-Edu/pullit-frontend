@@ -521,7 +521,14 @@
     display: flex; gap: 28px;
     padding: 4px 24px 24px;
     overflow-y: auto;
+    min-height: 0; /* flex 자식 기본 min-height:auto 면 84vh 안에서 줄어들지 않아 스크롤이 안 생긴다 */
   }
+  /* 웹·패드(가로 배치): 문제·해설 카드가 본문 높이로 stretch 되면 overflow:hidden 카드 안에서 내용이 잘리고
+     본문엔 넘치는 게 없어 스크롤이 안 생긴다 (2026-09-06). 카드는 내용 높이만큼만 — 스크롤은 본문 하나가 맡는다 */
+  .pv-modal-body.web .pv-device-live,
+  .pv-modal-body.pad .pv-device-live,
+  .pv-modal-body.web .pv-explain-live,
+  .pv-modal-body.pad .pv-explain-live { align-self: flex-start; }
   /* 창이 좁을 때 안쪽 최소폭(해설 350)을 지키도록 문제 프레임이 양보 */
   .pv-modal-body .pv-device.web,
   .pv-modal-body .pv-device.pad { flex-shrink: 1; min-width: 422px; }
