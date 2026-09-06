@@ -450,7 +450,7 @@ export default function HomePage() {
                       >
                         <span className={styles.unitCardName}>{row.name}</span>
                         <span className={styles.unitDiagnoseBtn}>
-                          {resumableByUnit[row.unitCode]?.source === 'TRIAL' ? '이어풀기' : '진단하기'}
+                          {resumableByUnit[row.unitCode]?.source === 'TRIAL' ? '이어 풀기' : '진단하기'}
                         </span>
                       </button>
                     </li>
