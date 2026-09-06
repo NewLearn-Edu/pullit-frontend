@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Navigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { ExplainPreview } from '@/shared/components/ExplainView'
+import { ProblemCardBody, ProblemCardHeader } from '@/shared/components/ProblemCardHeader'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
@@ -554,10 +555,12 @@ export default function ProblemListPage() {
             {detail && (
               <div className={clsx('pv-modal-body', device)}>
                 <div
-                  className={clsx('pv-device', device)}
+                  className={clsx('pv-device pv-device-live', device)}
                   style={device === 'pad' ? { width: padWidth } : undefined}
                 >
                   <div className="pv-device-inner">
+                  <ProblemCardHeader no={1} recSec={detail.recommendedTimeSec} />
+                  <ProblemCardBody>
                   {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변 · 학생 화면과 동일 정책) */}
                   <ExamScaleFrame>
                   <div className={clsx('pv-body', detail.subject === 'ENGLISH' && 'en')}>
@@ -591,6 +594,7 @@ export default function ProblemListPage() {
                     )}
                   </div>
                   </ExamScaleFrame>
+                  </ProblemCardBody>
                   </div>
                 </div>
                 {/* 패드: 맛보기와 동일한 드래그 디바이더 (좌우 폭 조절) */}

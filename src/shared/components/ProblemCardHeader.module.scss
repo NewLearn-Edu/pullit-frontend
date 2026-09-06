@@ -1,0 +1,51 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// ProblemCardHeader · 문제 카드 헤더 (문제 N · 권장 시간 · 타이머) — 어드민 미리보기용
+// -----------------------------------------------------------------------------
+// 학생 문제풀이 카드(TrialQuizPage.module.scss 의 .problemHeader / .problemTitle /
+// .problemMeta / .problemTime / .bodyWrap)와 같은 값. 학생 화면을 건드리지 않고
+// 어드민이 그 조판을 그대로 재현하기 위한 사본이므로, 학생 쪽 값이 바뀌면 여기도 맞춘다.
+// -----------------------------------------------------------------------------
+
+.header {
+  display: flex;
+  height: 48px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $space-lg;
+  border-bottom: 1px solid $color-line;
+}
+
+.titleWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: $fs-body;
+  font-weight: $fw-bold;
+  color: $color-foreground;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.time {
+  font-size: $fs-body-sm;
+  font-variant-numeric: tabular-nums;
+  color: $color-muted;
+  white-space: nowrap;
+}
+
+// 본문 래퍼 — 학생 카드의 .bodyWrap 패딩(위·좌우) + 카드 아래 여백
+.body {
+  padding: $space-lg $space-xl $space-lg;
+}

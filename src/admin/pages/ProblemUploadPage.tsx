@@ -10,6 +10,7 @@ import {
   MathProblemRender,
 } from '@/shared/components/ExamRender'
 import { ExplainPreview } from '@/shared/components/ExplainView'
+import { ProblemCardBody, ProblemCardHeader } from '@/shared/components/ProblemCardHeader'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useToast } from '../components/toast'
@@ -700,11 +701,13 @@ export default function ProblemUploadPage() {
           <div className={clsx('upl-compare', showJson && 'json-on')}>
           <div className={clsx('upl-preview', device)}>
               <div
-                className={clsx('pv-device', device)}
+                className={clsx('pv-device pv-device-live', device)}
                 style={device === 'pad' ? { width: padWidth } : undefined}
               >
                 <div className="pv-device-inner">
-                  {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변) */}
+                  <ProblemCardHeader no={idx + 1} recSec={item?.recommended_time_sec} />
+                  <ProblemCardBody>
+                  {/* 375px 기준 고정 조판 → 프레임 폭 비례 확대 (줄바꿈 불변 · 학생 화면과 동일 정책) */}
                   <ExamScaleFrame>
                   <div className={clsx('pv-body', subject === 'english' && 'en')}>
                     <div className="pv-question">
@@ -736,6 +739,7 @@ export default function ProblemUploadPage() {
                     )}
                   </div>
                   </ExamScaleFrame>
+                  </ProblemCardBody>
                 </div>
               </div>
               {/* 패드: 가운데 디바이더 드래그로 좌우 폭 조절 */}

@@ -547,8 +547,10 @@
      본문엔 넘치는 게 없어 스크롤이 안 생긴다 (2026-09-06). 카드는 내용 높이만큼만 — 스크롤은 본문 하나가 맡는다 */
   .pv-modal-body.web .pv-device-live,
   .pv-modal-body.pad .pv-device-live,
+  .pv-modal-body.mobile .pv-device-live,
   .pv-modal-body.web .pv-explain-live,
-  .pv-modal-body.pad .pv-explain-live { align-self: flex-start; }
+  .pv-modal-body.pad .pv-explain-live,
+  .pv-modal-body.mobile .pv-explain-live { align-self: flex-start; }
   /* 창이 좁을 때 안쪽 최소폭(해설 350)을 지키도록 문제 프레임이 양보 */
   .pv-modal-body .pv-device.web,
   .pv-modal-body .pv-device.pad { flex-shrink: 1; min-width: 422px; }
@@ -569,6 +571,8 @@
   .pv-device.web { width: 524px; } /* 내부 문제 영역 500px */
   .pv-device.pad { width: 524px; } /* 기본값 — 실제 폭은 디바이더 드래그로 조절 (인라인 스타일) */
   .pv-device.mobile { width: 398px; } /* 콘텐츠 350 + 본문 패딩 24×2 */
+  /* 학생 문제 카드와 동일 조판(ProblemCardHeader + ProblemCardBody) — 헤더가 카드 전폭, 본문 여백은 래퍼가 가짐 */
+  .pv-device.pv-device-live { padding: 0; overflow: hidden; }
 
   /* 패드 드래그 디바이더 — 맛보기 페이지와 동일한 좌우 폭 조절 */
   .pv-divider {

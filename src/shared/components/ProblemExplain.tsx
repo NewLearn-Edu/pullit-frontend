@@ -44,12 +44,12 @@ export function ProblemExplain({
   subject,
   emptyText = '해설이 없어요',
 }: ProblemExplainProps) {
+  const isEnglish = String(subject ?? '').toLowerCase() === 'english'
   const blocks = parseExplainBlocks(explanation)
-  if (blocks) return <ExplainBlocksRender blocks={blocks} />
+  // 영어는 [핵심 발상] 없이 [풀이] → [선택지별 진단] 만 (2026-09-06)
+  if (blocks) return <ExplainBlocksRender blocks={blocks} hideInsight={isEnglish} />
 
-  const Render = String(subject ?? '').toLowerCase() === 'english'
-    ? EnglishExplainRender
-    : MathExplainRender
+  const Render = isEnglish ? EnglishExplainRender : MathExplainRender
   const text = typeof explanation === 'string' && explanation.trim() ? explanation : emptyText
   return <Render text={text} />
 }
@@ -91,7 +91,8 @@ export function ProblemTranslation({
   const paragraphs = parseTranslationParagraphs(translation)
   if (!paragraphs) return <EnglishExplainRender text={emptyText} />
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    // exam-translation: 해석 본문 행간을 해설(1.6)보다 넉넉하게 — 한국어 장문 가독성 (exam.css)
+    <div className="exam-translation" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {paragraphs.map((text, i) => (
         <EnglishExplainRender key={i} text={text} />
       ))}

@@ -15,10 +15,11 @@
   gap: $space-md;
 }
 
+// 비활성 탭 = 가늘고 회색 · 활성 탭 = 문제 카드 제목("문제 1")과 같은 굵기·색 (2026-09-06)
 .tabButton {
   @include button-reset;
   font-size: $fs-body;
-  font-weight: $fw-bold;
+  font-weight: $fw-normal;
   color: $color-muted;
   transition: color 150ms ease;
 
@@ -26,9 +27,10 @@
 }
 
 .tabButtonActive {
-  color: $color-primary;
+  font-weight: $fw-bold;
+  color: $color-foreground;
 
-  @include hover { color: $color-primary; }
+  @include hover { color: $color-foreground; }
 }
 
 // ── 본문 ───────────────────────────────────────────────────────────────────
@@ -80,9 +82,19 @@
   display: flex;
   flex: none;
   align-items: center;
+  justify-content: space-between;
   height: 48px;
   padding: 0 $space-lg;
   border-bottom: 1px solid $color-line;
+}
+
+// 학생 패널 .closeButton 과 같은 치수 (32px 원형)
+.closeGhost {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  color: $color-body;
 }
 
 .previewBody {

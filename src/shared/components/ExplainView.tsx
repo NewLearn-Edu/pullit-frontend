@@ -17,7 +17,7 @@ import styles from './ExplainView.module.scss'
  * 같은 탭 헤더 · 같은 본문 컴포넌트를 쓴다. 어드민에서 보이는 해설·해석이 곧 학생이 보는 화면이어야 하므로
  * 여기 밖에서 정답/해설/어휘/해석 조판을 따로 만들지 않는다.
  *
- * - 해석(translation)이 있으면 "해석 / 풀이" 두 탭, 없으면 "해설" 단일 라벨 (영어만 해석이 있다)
+ * - 해석(translation)이 있으면 "해석 / 풀이" 두 탭(기본 풀이), 없으면 "해설" 단일 라벨 (영어만 해석이 있다)
  * - 풀이 탭 = 정답 · 해설(3섹션 블록 렌더) · 어휘
  * - 해석 탭 = 지문 번역 문단
  */
@@ -28,11 +28,11 @@ export function hasTranslationTab(subject: string | null | undefined, translatio
   return String(subject ?? '').toLowerCase() === 'english' && parseTranslationParagraphs(translation) !== null
 }
 
-/** 탭 상태 — 해석이 있으면 해석부터(지문을 이해한 뒤 풀이). resetKey(문항)가 바뀌면 첫 탭으로 */
+/** 탭 상태 — 기본은 풀이(2026-09-06). resetKey(문항)가 바뀌면 다시 풀이 탭으로 */
 export function useExplainTab(hasTranslation: boolean, resetKey: string | number): [ExplainTab, (t: ExplainTab) => void] {
-  const [tab, setTab] = useState<ExplainTab>(hasTranslation ? 'translation' : 'explain')
+  const [tab, setTab] = useState<ExplainTab>('explain')
   useEffect(() => {
-    setTab(hasTranslation ? 'translation' : 'explain')
+    setTab('explain')
   }, [resetKey, hasTranslation])
   return [hasTranslation ? tab : 'explain', setTab]
 }
@@ -138,16 +138,19 @@ export function ExplainBody({
         )}
       </div>
 
-      {/* 어휘 — 영어 지문 핵심 단어 (풀이 탭 하단) */}
+      {/* 어휘 — 영어 지문 핵심 단어. 해설 섹션([핵심 발상] · [풀이] · [선택지별 진단])에 이어지는
+          네 번째 섹션처럼 같은 제목 조판([어휘])으로 붙인다 */}
       {vocab && (
-        <>
-          <p className={styles.answerLabel} style={{ marginTop: 28 }}>
-            어휘
-          </p>
-          <div style={{ marginTop: 12 }} className={styles.sections}>
-            <ProblemVocabulary items={vocab} />
+        <div className="exam-explain-root" style={{ marginTop: 24 }}>
+          <div className="exam-blocks">
+            <section className="xb-section xb-section-vocabulary">
+              <p className="xb-section-title">[어휘]</p>
+              <div className="xb-section-body">
+                <ProblemVocabulary items={vocab} />
+              </div>
+            </section>
           </div>
-        </>
+        </div>
       )}
     </>
   )
@@ -213,6 +216,10 @@ export function ExplainPreview({
     <div className={styles.previewRoot}>
       <div className={styles.previewHeader}>
         <ExplainTabBar hasTranslation={hasTranslation} activeTab={tab} onChange={setTab} />
+        {/* 학생 패널의 닫기 버튼 자리 — 미리보기에선 동작 없음, 조판만 동일하게 */}
+        <span className={styles.closeGhost} aria-hidden="true">
+          ×
+        </span>
       </div>
       <div className={styles.previewBody}>
         {/* 500px 기준 고정 조판 → 폭 비례 확대 — 학생 패널과 동일 */}

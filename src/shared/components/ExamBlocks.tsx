@@ -124,14 +124,13 @@ const SECTION_TITLES: Record<string, string> = {
   solution: '[풀이]',
   diagnosis: '[선택지별 진단]',
 }
-const CIRCLED = ['①', '②', '③', '④', '⑤']
-const FILLED = ['❶', '❷', '❸', '❹', '❺']
-
 function isSectionBlock(b: ExplainBlock): boolean {
   return Object.prototype.hasOwnProperty.call(SECTION_TITLES, b.type)
 }
 
-/** diagnosis.items — 선지 번호(정답은 채운 원문자 ❶~❺, 어드민 선지 표기와 동일 관례) + 진단 본문 */
+const CIRCLED = ['①', '②', '③', '④', '⑤']
+
+/** diagnosis.items — 선지 번호(원문자 ①~⑤ · 명조 서체 · 정답은 메인 컬러) + 진단 본문 */
 function renderDiagnosis(b: ExplainBlock): React.ReactNode {
   const items = b.items ?? []
   if (items.length === 0) return null
@@ -140,11 +139,10 @@ function renderDiagnosis(b: ExplainBlock): React.ReactNode {
       {items.map((it, j) => {
         const no = typeof it.choice === 'number' ? it.choice : j + 1
         const correct = it.role === 'correct'
-        const glyph = (correct ? FILLED : CIRCLED)[no - 1] ?? String(no)
         return (
           <div key={j} className={clsx('xb-diag-item', correct && 'xb-diag-correct')}>
             <span className="xb-diag-num" aria-label={`${no}번${correct ? ' 정답' : ''}`}>
-              {glyph}
+              {CIRCLED[no - 1] ?? String(no)}
             </span>
             <div className="xb-diag-body">
               {normalizeBlocks(it.blocks ?? []).map((c, k) => renderBlock(c, k))}
@@ -170,7 +168,15 @@ function renderSection(b: ExplainBlock, key: number): React.ReactNode {
   )
 }
 
-export function ExplainBlocksRender({ blocks }: { blocks: ExplainBlock[] }) {
+export function ExplainBlocksRender({
+  blocks,
+  hideInsight = false,
+}: {
+  blocks: ExplainBlock[]
+  /** 영어는 핵심 발상 섹션을 보여주지 않는다 (2026-09-06 결정) — 데이터에 있어도 렌더에서 뺀다 */
+  hideInsight?: boolean
+}) {
+  if (hideInsight) blocks = blocks.filter((b) => b.type !== 'insight')
   const sectioned = blocks.some(isSectionBlock)
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
