@@ -431,6 +431,19 @@ export async function updateMarketingConsent(agree: boolean): Promise<void> {
   await api.patch('/api/users/me/marketing-consent', { agree })
 }
 
+/**
+ * 닉네임 사용 가능 여부 (가입 화면 · 2026-09-06).
+ * 형식 위반도 false 로 내려온다 — 호출부가 형식을 먼저 걸러 쓰기를 권한다.
+ * 조회 실패(네트워크 등)는 막지 않는다 — 최종 판정은 가입 요청의 409 가 한다.
+ */
+export async function checkNicknameAvailable(nickname: string): Promise<boolean> {
+  const { data } = await api.get<{ data: { available: boolean } | null }>(
+    '/api/users/nickname-availability',
+    { params: { nickname } },
+  )
+  return data.data?.available ?? true
+}
+
 /** 닉네임 변경 (프로필 편집) — 형식·중복 위반 시 4xx (message = UX 카피) */
 export async function updateNickname(nickname: string): Promise<void> {
   await api.patch('/api/users/me/nickname', { nickname })
@@ -501,6 +514,8 @@ export const GRADE_LABEL: Record<Grade, string> = {
 export interface ProfileCompleteRequest {
   /** 이름 — 구글(프로필명)·애플(최초 1회)은 SSO 값이 부정확할 수 있어 직접 입력 */
   name: string
+  /** 닉네임 — 화면 표시명. 한글·영문·숫자 2~10자 · 중복 불가 (409 U019) */
+  nickname: string
   birthDate: string // YYYY-MM-DD
   /** 학년/신분 — 필수 선택 (자기신고, 생년월일과 정합성 검증 안 함) */
   grade: Grade

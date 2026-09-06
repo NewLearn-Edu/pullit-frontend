@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import {
+  checkNicknameAvailable,
   completeProfile,
   confirmPhoneCode,
   finishAppleLogin,
@@ -35,7 +36,7 @@ import { isStandaloneApp } from '@/user/utils/standalone'
  */
 /** 캐스케이드 단계별 타이틀 — 현재 단계에 맞춰 상단 카피가 바뀐다 (토스 패턴) */
 const STEP_TITLES = [
-  { title: '이름을 알려줄래?', sub: '가입에 필요한 것들을 하나씩 물어볼게' },
+  { title: '어떻게 부르면 될까?', sub: '가입에 필요한 것들을 하나씩 물어볼게' },
   { title: '생년월일을 알려줘', sub: '만 14세 이상부터 가입할 수 있어' },
   { title: '지금 어디에 해당해?', sub: '딱 맞는 문제를 추천하는 데 필요해' },
   { title: '휴대폰 번호를 인증해줘', sub: '학습 알림을 받을 번호가 필요해' },
@@ -108,11 +109,9 @@ function CheckMark({ on }: { on: boolean }) {
  */
 const SIGNUP_FORM_KEY = 'pullit_signup_form'
 
-/** 잠긴 이름 칸 안내용 소셜 표시명 */
-const PROVIDER_LABEL: Record<string, string> = { KAKAO: '카카오', NAVER: '네이버', GOOGLE: '구글', APPLE: 'Apple' }
-
 interface SavedSignupForm {
   name: string
+  nickname: string
   birthY: string
   birthM: string
   birthD: string
@@ -158,8 +157,13 @@ export default function SignupInfoPage() {
   const [saved] = useState(loadSavedForm)
 
   const [name, setName] = useState(saved.name ?? '')
-  // 가입 소셜 — 애플이면 이름 칸을 잠근다 (Apple 정책: SSO 제공 이름 사용). loadMe 로 채운다
-  const [provider, setProvider] = useState<'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null>(null)
+  const [nickname, setNickname] = useState(saved.nickname ?? '')
+  /**
+   * 닉네임 중복 조회 상태 (2026-09-06).
+   * idle=조회 전 · checking=조회 중 · ok=사용 가능 · taken=이미 사용 중
+   * 형식 위반은 조회하지 않고 nicknameFormatError 로 바로 안내한다.
+   */
+  const [nickState, setNickState] = useState<'idle' | 'checking' | 'ok' | 'taken'>('idle')
   /** SSO(애플)가 이름을 내려줬는가 — 로드 시 1회 판정. 입력값 길이로 판정하면 사용자가 한 글자 치는 순간 잠겨 버린다 */
   const [ssoNameProvided, setSsoNameProvided] = useState(false)
   const [birthDate, setBirthDate] = useState('')
@@ -214,6 +218,30 @@ export default function SignupInfoPage() {
    */
   const [revealed, setRevealed] = useState(saved.revealed ?? 1)
   const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
+
+  /**
+   * 닉네임 중복 조회 — 타이핑이 멎고 400ms 뒤 1회 (2026-09-06).
+   * 형식이 틀리면 조회하지 않는다(서버도 false 를 주지만 왕복이 낭비다).
+   * 조회 실패는 통과로 둔다 — 최종 판정은 가입 요청의 409(U019)가 한다.
+   */
+  useEffect(() => {
+    const value = nickname.trim()
+    if (!/^[가-힣a-zA-Z0-9]{2,10}$/.test(value)) {
+      setNickState('idle')
+      return
+    }
+    setNickState('checking')
+    let alive = true
+    const timer = setTimeout(() => {
+      checkNicknameAvailable(value)
+        .then((available) => alive && setNickState(available ? 'ok' : 'taken'))
+        .catch(() => alive && setNickState('ok'))
+    }, 400)
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [nickname])
   /**
    * 동의 바텀시트 열림 — 선언 위치가 저장 효과보다 앞이어야 해서 여기 둔다.
    * 복원: 정책 "보기"로 떠났다 돌아온 재마운트에서도 시트가 열린 채 이어진다
@@ -227,27 +255,26 @@ export default function SignupInfoPage() {
       sessionStorage.setItem(
         SIGNUP_FORM_KEY,
         JSON.stringify({
-          name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt,
+          name, nickname, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt,
           agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen,
         } satisfies SavedSignupForm),
       )
     } catch {
       /* noop */
     }
-  }, [name, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
+  }, [name, nickname, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
 
   // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
   useEffect(() => {
     loadMe().then((loaded) => {
       if (!loaded || loaded.type !== 'USER') { navigate('/login', { replace: true }); return }
       if (loaded.phoneNumber && loaded.birthDate) { navigate('/home', { replace: true }); return }
-      setProvider(loaded.provider)
       const ssoName = loaded.name?.trim() ?? ''
       if (ssoName) {
         // 소셜이 이름을 준 경우 — 그 값을 그대로 쓰고 칸을 잠근다 (2026-09-06: 애플만 잠그던 것을 전 소셜로 확대).
         // 저장 폼에 남은 편집값이 있어도 소셜 이름으로 덮는다 — 잠긴 칸의 값은 소셜 이름이어야 한다
         setName(ssoName)
-        if (ssoName.length >= 2) reveal(2) // 이름이 이미 있으면 생년월일부터
+        // 닉네임은 아직 비어 있으므로 여기서 다음 단계로 넘기지 않는다 (2026-09-06)
       }
       // 이름이 null·빈 값으로 온 경우(애플 재가입·탈퇴 후 재로그인, 이름 미제공 계정 등)에만 직접 입력해 저장한다
       setSsoNameProvided(ssoName.length > 0)
@@ -449,6 +476,18 @@ export default function SignupInfoPage() {
   }
 
   const nameValid = name.trim().length >= 2
+
+  /** 닉네임 형식 — 서버 UserService.NICKNAME_REGEX 와 같은 규칙 (완성형 한글·영문·숫자 2~10자) */
+  const nicknameFormatOk = /^[가-힣a-zA-Z0-9]{2,10}$/.test(nickname.trim())
+  const nicknameTouched = nickname.trim().length > 0
+  const nicknameValid = nicknameFormatOk && nickState === 'ok'
+  const nicknameError = !nicknameTouched
+    ? null
+    : !nicknameFormatOk
+      ? '한글·영문·숫자 2~10자로 지어줘'
+      : nickState === 'taken'
+        ? '이미 사용중인 닉네임이야'
+        : null
   // 소셜이 이름을 내려줬으면 어느 소셜이든 수정 불가 — 가입 이름은 SSO 값을 그대로 저장한다 (2026-09-06).
   // 소셜이 이름을 안 준 경우(애플 재가입·탈퇴 후 재로그인 — 애플은 최초 1회만 이름을 준다)에만 직접 입력.
   // (예전엔 현재 입력값 길이로 판정해 빈 칸에 한 글자 치는 순간 잠기고 다음 단계가 안 열렸다 · 2026-09-04)
@@ -461,7 +500,7 @@ export default function SignupInfoPage() {
   const requiredAgreed = agreeAge && agreeTerms && agreePrivacy
   /** 동의 단계까지 왔고 제출 가능한 상태 — 동의 자체는 버튼 클릭이 의사표시 (토스 패턴) */
   const readyForConsent =
-    nameValid && birthValid && !under14 && grade != null && phoneVerified && !pending
+    nameValid && nicknameValid && birthValid && !under14 && grade != null && phoneVerified && !pending
 
   const submit = async () => {
     if (!readyForConsent) return
@@ -474,6 +513,7 @@ export default function SignupInfoPage() {
     try {
       const { welcomeCreditGranted } = await completeProfile({
         name: name.trim(),
+        nickname: nickname.trim(),
         birthDate,
         grade: grade!, // readyForConsent 가 null 을 걸러준다
         phoneNumber: phone,
@@ -516,6 +556,16 @@ export default function SignupInfoPage() {
         })
       } else if (errCode === 'U017') {
         setError('이미 가입된 전화번호예요. 기존 계정으로 로그인해주세요.')
+      } else if (errCode === 'U019') {
+        // 조회 이후 누가 먼저 선점한 경우 — 닉네임 칸에 에러를 세우고 1단계로 되돌린다
+        setConsentOpen(false)
+        setNickState('taken')
+        setRevealed(1)
+      } else if (errCode === 'U018') {
+        setConsentOpen(false)
+        setNickState('idle')
+        setRevealed(1)
+        setError('닉네임은 한글·영문·숫자 2~10자로 지어줘')
       } else {
         setError('저장에 실패했어요. 입력 내용을 확인하고 다시 시도해주세요.')
       }
@@ -645,30 +695,52 @@ export default function SignupInfoPage() {
           {/* 토스식 캐스케이드 — DOM 은 논리 순서(이름→…→약관), col-reverse 로 최신 단계가
               시각적으로 맨 위에 온다. 탭 순서·스크린리더는 논리 순서 유지 */}
           <div className="mt-lg flex flex-col-reverse gap-lg">
-            <Step>
+            {/* 1단계 — 닉네임(위) + 이름(아래). 이름은 소셜이 준 값이면 잠기므로
+                실제로 처음 입력하는 칸은 닉네임이다 (2026-09-06) */}
+            <Step className="flex flex-col gap-lg">
+              <label className="flex flex-col gap-sm">
+                <span className="text-[14px] font-semibold text-[#23272b]">닉네임</span>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  autoFocus={!consentOpen}
+                  maxLength={10}
+                  placeholder="닉네임을 입력해주세요"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  onBlur={() => nicknameValid && nameValid && reveal(2)}
+                  onKeyDown={(e) => e.key === 'Enter' && nicknameValid && nameValid && reveal(2)}
+                  className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(
+                    nickname.trim().length > 0,
+                    !!nicknameError,
+                  )}`}
+                />
+                {nicknameError ? (
+                  <span className="text-[13px] text-danger">{nicknameError}</span>
+                ) : (
+                  <span className="text-[13px] text-[#80858b]">
+                    {nickState === 'ok' ? '사용할 수 있는 닉네임이야' : '한글·영문·숫자 2~10자'}
+                  </span>
+                )}
+              </label>
+
               <label className="flex flex-col gap-sm">
                 <span className="text-[14px] font-semibold text-[#23272b]">이름</span>
                 <input
                   type="text"
                   autoComplete="name"
-                  autoFocus={!nameLocked && !consentOpen}
                   disabled={nameLocked}
                   placeholder="이름을 입력해주세요"
                   value={name}
                   onChange={(e) => !nameLocked && setName(e.target.value)}
-                  onBlur={() => nameValid && reveal(2)}
-                  onKeyDown={(e) => e.key === 'Enter' && nameValid && reveal(2)}
+                  onBlur={() => nameValid && nicknameValid && reveal(2)}
+                  onKeyDown={(e) => e.key === 'Enter' && nameValid && nicknameValid && reveal(2)}
                   className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${
                     nameLocked
                       ? 'cursor-not-allowed border-[#ebedf0] bg-[#f7f8f9] text-[#80858b]'
                       : `text-[#121417] ${borderOf(name.trim().length > 0)}`
                   }`}
                 />
-                {nameLocked && (
-                  <span className="text-[13px] text-[#80858b]">
-                    {PROVIDER_LABEL[provider ?? ''] ?? '소셜'} 계정의 이름을 그대로 사용해요 (수정 불가)
-                  </span>
-                )}
               </label>
             </Step>
 
