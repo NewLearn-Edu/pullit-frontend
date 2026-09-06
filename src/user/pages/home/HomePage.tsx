@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
@@ -11,7 +11,7 @@ import { CreditBadge } from '@/user/components/CreditBadge'
 import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { Skeleton } from '@/user/components/Skeleton'
 import { type Subject } from '@/user/stores/trialStore'
-import { fetchUnitLocks } from '@/user/api/recommendApi'
+import { useUnitLocks } from '@/user/hooks/useUnitLocks'
 import { fetchResumableSet, fetchResumableSets, indexResumableByUnit, type ResumableSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
@@ -79,7 +79,7 @@ export default function HomePage() {
 
   // 서버 동기화(진단 기록 + 잠금) 완료 전에는 그래프·리스트 자리에 스켈레톤 —
   // 빈 데이터를 실물처럼 그렸다가 갈아끼우는 깜빡임(미진단 → 점수)을 없앤다
-  const [synced, setSynced] = useState(false)
+  const [diagnosisSynced, setDiagnosisSynced] = useState(false)
 
   // 홈은 세션(게스트·회원)이 있어야 하는 페이지 — 조회를 마쳤는데 아무 세션도 없으면 로그인으로
   useEffect(() => {
@@ -143,32 +143,31 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusUnit])
 
-  // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 유닛코드 → off 시작점 매핑
-  const [locks, setLocks] = useState<Record<string, string>>({}) // categoryCode → offFromUnitCode
-  const refreshLocks = useCallback(
-    () =>
-      fetchUnitLocks(subject)
-        .then((list) => {
-          const map: Record<string, string> = {}
-          for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
-          setLocks(map)
-        })
-        .catch(() => {}),
-    [subject],
-  )
+  // "안배웠어요" 잠금 — 서버(unit_locks)가 진실원. 과목이 바뀌면 새 조회가 끝날 때까지
+  // locksReady=false 라 카드 리스트를 그리지 않는다 (이전 과목 맵으로 건너뛴 유형이 열려 보이던 버그)
+  const {
+    locks,
+    ready: locksReady,
+    refresh: refreshLocks,
+  } = useUnitLocks(subject, sessionStatus === 'ready')
 
-  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 잠금과 함께 동기화.
+  // 소단원 진행 상태의 진실원은 서버(trial_diagnoses) — 세션 확보 후 동기화.
   // 실패해도 스켈레톤에 갇히지 않게 settled 기준으로 연다 (그때는 로컬 상태 폴백)
   useEffect(() => {
     if (sessionStatus !== 'ready') return
     let alive = true
-    Promise.allSettled([hydrateFromServer(), refreshLocks()]).then(() => {
-      if (alive) setSynced(true)
-    })
+    hydrateFromServer()
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setDiagnosisSynced(true)
+      })
     return () => {
       alive = false
     }
-  }, [sessionStatus, hydrateFromServer, refreshLocks])
+  }, [sessionStatus, hydrateFromServer])
+
+  // 리스트·그래프를 여는 기준 — 진단 기록과 "이 과목" 잠금이 둘 다 손에 있을 때
+  const synced = diagnosisSynced && locksReady
 
   const categoryCodeOf = (cat: (typeof categories)[number]) =>
     cat.units[0].unitCode.split('_').slice(0, 3).join('_')

@@ -9,7 +9,7 @@ import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
-import { fetchUnitLocks } from '@/user/api/recommendApi'
+import { useUnitLocks } from '@/user/hooks/useUnitLocks'
 import { fetchResumableSets, indexResumableByUnit, type ResumableSet } from '@/user/api/problemSetApi'
 import { findCategoryByName } from '@/user/data/curriculum'
 import {
@@ -72,28 +72,25 @@ export default function WeaknessMapPage() {
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
   const [creditPopupOpen, setCreditPopupOpen] = useState(false) // 크레딧 배지 → 매일 04:00 충전 안내 (홈과 동일)
-  const [locks, setLocks] = useState<Record<string, string>>({})
-  const refreshLocks = useCallback(
-    () =>
-      fetchUnitLocks(subject)
-        .then((list) => {
-          const map: Record<string, string> = {}
-          for (const lock of list) map[lock.categoryCode] = lock.offFromUnitCode
-          setLocks(map)
-        })
-        .catch(() => {}),
-    [subject],
-  )
+  // 잠금 맵은 과목이 바뀌면 새 조회 전까지 비어 있다 — 이전 과목 맵으로 "건너뜀" 배지가
+  // 엉뚱한 노드에 붙던 문제를 useUnitLocks 가 막는다 (2026-09-06)
+  const {
+    locks,
+    ready: locksReady,
+    refresh: refreshLocks,
+  } = useUnitLocks(subject, sessionStatus === 'ready')
   useEffect(() => {
     if (sessionStatus !== 'ready') return
     let alive = true
-    Promise.allSettled([hydrateFromServer(), refreshLocks()]).then(() => {
-      if (alive) setSynced(true)
-    })
+    hydrateFromServer()
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setDiagnosisSynced(true)
+      })
     return () => {
       alive = false
     }
-  }, [sessionStatus, hydrateFromServer, refreshLocks])
+  }, [sessionStatus, hydrateFromServer])
 
   // 풀다 만 세트 — 해당 노드에 "풀다 만 문제" 표식 (홈 카드 라벨과 같은 진실원, 3681)
   // 진행 중 세트 전부 — 풀다 만 단원마다 표식 (2026-09-06, 예전엔 최근 1건만)
@@ -159,8 +156,9 @@ export default function WeaknessMapPage() {
   // 상세 시트를 바로 연다 (3699-11683). 플래시는 읽는 즉시 지워져 1회만
   // (플래시는 마운트 때 한 번 읽어 두고, 행 인덱스가 준비되는 시점에 연다 — 잠금 조회 뒤 재계산돼도 1회)
   const pendingReopenRef = useRef<{ unitName: string; subject: Subject } | null | undefined>(undefined)
-  // 서버 동기화(진단 기록·점수) 완료 여부 — 재오픈 시트는 이게 끝난 뒤 열어야 방금 푼 결과가 반영된 값으로 뜬다
-  const [synced, setSynced] = useState(false)
+  // 서버 동기화(진단 기록·점수·잠금) 완료 여부 — 재오픈 시트는 이게 끝난 뒤 열어야 방금 푼 결과가 반영된 값으로 뜬다
+  const [diagnosisSynced, setDiagnosisSynced] = useState(false)
+  const synced = diagnosisSynced && locksReady
   useEffect(() => {
     if (pendingReopenRef.current === undefined) pendingReopenRef.current = consumeUnitReopenFlash()
     const pending = pendingReopenRef.current
