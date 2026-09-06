@@ -82,27 +82,6 @@
   text-overflow: ellipsis;
 }
 
-.vDivider {
-  flex: none;
-  width: 1px;
-  height: 12px;
-  background: $color-white-a20;
-}
-
-.remaining {
-  flex: none;
-  color: $color-white-a60;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.remainingCount {
-  color: $color-white-a80;
-  font-weight: $fw-semibold;
-  font-variant-numeric: tabular-nums;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 우측 · 해설 · 정답 · 채점
 // ─────────────────────────────────────────────────────────────────────────────

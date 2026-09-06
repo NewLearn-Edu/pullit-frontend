@@ -541,7 +541,6 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       {/* 크레딧 사용 토스트 — 차감이 있던 첫 문제 화면에서만 1회/2초 (2857-21836) */}
       <CreditUsedToast />
       <QuizTopBar
-        progress={isTrial ? { current: idx + 1, total: problems.length } : undefined}
         subjectLabel={
           startedUnitName
             ? `${subject === 'math' ? '수학' : '영어'} · ${startedUnitName}`
