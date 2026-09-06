@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import {
@@ -54,6 +54,35 @@ const GRADE_GROUPS = [
 ] as const satisfies readonly { key: string; label: string; options: readonly Grade[] }[]
 
 type GradeGroupKey = (typeof GRADE_GROUPS)[number]['key']
+
+/** 등장 애니메이션(su-step-expand) 길이 + 여유 — 이 시간이 지나면 잘라내기를 푼다 */
+const STEP_SETTLE_MS = 700
+
+/**
+ * 캐스케이드 단계 하나 — 높이 0 에서 내용 높이까지 펼쳐지며 등장한다.
+ *
+ * 펼침은 바깥 grid 의 grid-template-rows 를 0fr → 1fr 로 움직이고 안쪽이 overflow:hidden 으로
+ * 넘치는 부분을 잘라내는 구조다. 그래서 애니메이션이 중간에 멈추거나 되감기면 그 단계가 반쯤 잘린 채로 남는다 —
+ * 동의 시트에서 약관 "보기"(새 탭)에 다녀오면 휴대폰 입력이 잘려 보이던 원인 (2026-09-06 제보).
+ * 모바일 브라우저는 탭이 백그라운드로 가면 CSS 애니메이션을 멈춰 세우고, 잘린 안쪽은 스크롤 영역이 생겨
+ * 포커스 이동만으로도 내용이 위로 밀려 올라간다.
+ *
+ * 등장이 끝난 뒤에는 자를 이유가 없으므로 여기서 한 번 풀어 준다.
+ * animationend 대신 타이머를 쓴다 — 애니메이션이 멈춰 있으면 그 신호가 영영 오지 않는다
+ * (타이머는 탭이 다시 보이는 순간 밀렸던 것이 실행된다).
+ */
+function Step({ className, children }: { className?: string; children: ReactNode }) {
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), STEP_SETTLE_MS)
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <div className={`su-step${settled ? ' su-step-settled' : ''}`}>
+      <div className={`su-step-inner${className ? ` ${className}` : ''}`}>{children}</div>
+    </div>
+  )
+}
 
 /** 토스식 동의 리스트 체크 — 체크박스 대신 가벼운 ✓ 글리프 (on: 진회색 · off: 연회색) */
 function CheckMark({ on }: { on: boolean }) {
@@ -552,6 +581,10 @@ export default function SignupInfoPage() {
             backface-visibility: hidden;
             animation: su-step-in 480ms cubic-bezier(0.33, 1, 0.68, 1) both;
           }
+          /* 등장이 끝난 단계 — 펼침 장치(grid + overflow:hidden)를 걷어낸다.
+             남겨 두면 애니메이션이 멈춘 순간의 높이로 내용이 잘린 채 굳는다 (Step 주석 참고) */
+          .su-step-settled { display: block; animation: none }
+          .su-step-settled > .su-step-inner { overflow: visible; animation: none }
           /* 학년 그룹 탭 — 한 줄 3등분. 하나를 고르면 그 탭이 왼쪽으로 작아지고
              나머지 둘은 폭 0 으로 접혀 사라지며, 오른쪽에 세부 칩이 순서대로 슬라이드 인 */
           /* flex 전환은 남는 공간 재계산이 프레임마다 얽혀 덜컥거린다 —
@@ -604,8 +637,7 @@ export default function SignupInfoPage() {
           {/* 토스식 캐스케이드 — DOM 은 논리 순서(이름→…→약관), col-reverse 로 최신 단계가
               시각적으로 맨 위에 온다. 탭 순서·스크린리더는 논리 순서 유지 */}
           <div className="mt-lg flex flex-col-reverse gap-lg">
-            <div className="su-step">
-            <div className="su-step-inner">
+            <Step>
               <label className="flex flex-col gap-sm">
                 <span className="text-[14px] font-semibold text-[#23272b]">이름</span>
                 <input
@@ -631,12 +663,10 @@ export default function SignupInfoPage() {
                   </span>
                 )}
               </label>
-            </div>
-            </div>
+            </Step>
 
             {revealed >= 2 && (
-            <div className="su-step">
-            <div className="su-step-inner flex flex-col gap-sm">
+            <Step className="flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">생년월일</span>
               <div className="flex gap-sm">
                 <input
@@ -715,13 +745,11 @@ export default function SignupInfoPage() {
                   만 14세 미만은 아직 가입할 수 없어 — 가입 없이 문제 풀이는 이용할 수 있어
                 </p>
               )}
-            </div>
-            </div>
+            </Step>
             )}
 
             {revealed >= 3 && (
-            <div className="su-step">
-            <div className="su-step-inner flex flex-col gap-sm">
+            <Step className="flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">나는</span>
               <div className="flex items-start">
                 {GRADE_GROUPS.map((group) => {
@@ -786,13 +814,11 @@ export default function SignupInfoPage() {
                   </div>
                 )}
               </div>
-            </div>
-            </div>
+            </Step>
             )}
 
             {revealed >= 4 && (
-            <div className="su-step">
-            <div className="su-step-inner flex flex-col gap-sm">
+            <Step className="flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">휴대폰 번호</span>
               <div className="flex gap-sm">
                 <input
@@ -827,8 +853,7 @@ export default function SignupInfoPage() {
 
               {/* 인증번호 입력 — 발송 후 스윽 내려오며 자동 포커스, 인증 완료 시 숨김 */}
               {codeSent && !phoneVerified && (
-                <div className="su-step">
-                <div className="su-step-inner flex gap-sm">
+                <Step className="flex gap-sm">
                   <div className="relative min-w-0 flex-1">
                     <input
                       type="text"
@@ -860,8 +885,7 @@ export default function SignupInfoPage() {
                   >
                     확인
                   </button>
-                </div>
-                </div>
+                </Step>
               )}
 
               {phoneVerified && (
@@ -886,8 +910,7 @@ export default function SignupInfoPage() {
                   {dupProvider.providerName ? `${dupProvider.providerName}로 계속하기` : '로그인하러 가기'}
                 </button>
               )}
-            </div>
-            </div>
+            </Step>
             )}
 
           </div>
