@@ -3,6 +3,7 @@ import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { useTrialProgressStore, SET_CREDIT_COST } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
+import { computeScore } from '@/user/utils/scoring'
 
 /**
  * 소단원 진단(TRIAL) 세트 시작 — 홈 시트·추천 리빌 CTA 가 같은 경로를 탄다 (2026-09-03).
@@ -36,19 +37,34 @@ export async function startTrialSetSession(
   trial.setActiveSetId(set.setId)
   trial.setActiveUnitName(row.name) // 결과 화면 제목·점수 키 — 리뷰 왕복 뒤에도 유지 (pendingUnit 은 확정 시 비워짐)
   trial.setActiveReturnTo(returnTo) // 결과 화면 "진단 완료"의 복귀 경로 + 홈 초점 플래시 — 같은 이유로 여기 보관
-  // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
+  // 이어풀기 — 이미 제출한 문항의 결과를 서버 원장(problem_attempts) 값으로 복원한다.
+  // 내 답·풀이 시간까지 그대로 살려야 결과 화면이 "내 답 —, 0:00" 으로 비지 않는다 (2026-09-06)
   set.items.forEach((item, i) => {
     if (!item.submitted) return
     const problem = problems[i]
+    const correct = item.correct ?? false
+    const elapsedMs = item.timeSpentMs ?? 0
+    const { earnedPoints, timeoverFlag } = computeScore({
+      points: problem.points,
+      correct,
+      elapsedSec: Math.round(elapsedMs / 1000),
+      tRecSec: problem.tRecSec,
+      tMaxSec: problem.tMaxSec,
+      peekedBeforeAnswer: false,
+    })
+    const shortAnswer = item.submittedText != null ? Number(item.submittedText) : null
     useTrialStore.getState().addResult(subject, {
       problemId: problem.id,
-      selectedChoice: null,
-      correct: item.correct ?? false,
-      serverCorrect: item.correct ?? false,
-      earnedPoints: item.correct ? problem.points : 0,
-      timeoverFlag: false,
+      selectedChoice:
+        item.submittedNo ?? (shortAnswer != null && Number.isFinite(shortAnswer) ? shortAnswer : null),
+      correct,
+      serverCorrect: correct,
+      // TRIAL 세트는 정답이 함께 내려온다(includeAnswer) — 표에 "정답 ⑤" 가 비지 않게 채운다
+      serverAnswerNo: problem.answer !== 0 ? problem.answer : null,
+      earnedPoints,
+      timeoverFlag,
       peekedBeforeAnswer: false,
-      elapsedMs: 0,
+      elapsedMs,
     })
   })
   useTrialProgressStore.getState().startUnit({ unitName: row.name, returnTo, unitCode: row.unitCode, nodeId })

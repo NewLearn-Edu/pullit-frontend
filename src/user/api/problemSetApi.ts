@@ -24,6 +24,12 @@ export interface IssuedProblemItem extends TrialProblemSetItem {
   submitted: boolean
   /** 제출했을 때의 채점 결과 (미제출이면 null) */
   correct: boolean | null
+  /** 제출한 선지 번호 (객관식 · 미제출·단답형은 null) — 이어풀기 뒤 결과 화면의 "내 답" */
+  submittedNo: number | null
+  /** 제출한 단답 (단답형 · 미제출·객관식은 null) */
+  submittedText: string | null
+  /** 제출 시 측정된 풀이 시간(ms) — 미측정이면 null */
+  timeSpentMs: number | null
 }
 
 export interface IssuedProblemSet {

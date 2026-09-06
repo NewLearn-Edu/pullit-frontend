@@ -11,7 +11,7 @@ import { useSolveStore } from '@/user/stores/solveStore'
 import { declareUnitLock } from '@/user/api/recommendApi'
 import { fetchActiveProblemSet, fetchUnitSetHistory, type IssuedProblemSet, type UnitSetHistory } from '@/user/api/problemSetApi'
 import { RecentStudyCard, formatStudyDate, historyToCard } from '@/user/components/RecentStudyCard'
-import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
+import { loadIssuedSet, loadQuizProblems, restoreSubmittedResults } from '@/user/services/problemSet'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
@@ -482,6 +482,8 @@ export function useUnitSheets({
         unitCode: row.unitCode,
         nodeId,
       })
+      // 이어풀기 — 앞서 제출한 문항 결과를 복원 (startSession 이 results 를 비운다)
+      restoreSubmittedResults(set, problems)
       navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {
       if (isCreditShortage(error)) {

@@ -11,6 +11,8 @@ import {
   type IssuedProblemSet,
 } from '@/user/api/problemSetApi'
 import { useTrialStore } from '@/user/stores/trialStore'
+import { useSolveStore } from '@/user/stores/solveStore'
+import { computeScore } from '@/user/utils/scoring'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -238,6 +240,47 @@ export async function loadTrialSessionProblems(subject: Subject, nodeId: string)
     }
   }
   return loadQuizProblems(subject, nodeId)
+}
+
+/**
+ * 이어풀기 복원 — 이미 제출한 문항의 결과를 풀이 세션(solveStore)에 채운다 (2026-09-06).
+ *
+ * startSession 이 results 를 비우므로, 재개(resumed)로 들어가면 앞서 제출한 문항의 결과가
+ * 사라져 세트 결과 화면(/solve/result)에서 그 행이 영원히 "채점 중(…)" 으로 남고
+ * 총점·정답 수도 확정되지 않는다. 반드시 startSession 직후에 호출한다.
+ *
+ * 값은 전부 서버 원장(problem_attempts)에서 온다 — 내 답(submittedNo·submittedText),
+ * 풀이 시간(timeSpentMs), 채점 결과(correct). 획득 점수는 그 시간으로 다시 계산해
+ * 이어서 푼 문항과 같은 규칙(권장 초과 60% · 제한 초과 0)을 적용한다.
+ */
+export function restoreSubmittedResults(set: IssuedProblemSet, problems: Problem[]) {
+  const { recordResult } = useSolveStore.getState()
+  set.items.forEach((item, i) => {
+    if (!item.submitted) return
+    const problem = problems[i]
+    if (!problem) return
+    const correct = item.correct ?? false
+    const elapsedMs = item.timeSpentMs ?? 0
+    const { earnedPoints, timeoverFlag } = computeScore({
+      points: problem.points,
+      correct,
+      elapsedSec: Math.round(elapsedMs / 1000),
+      tRecSec: problem.tRecSec,
+      tMaxSec: problem.tMaxSec,
+      peekedBeforeAnswer: false,
+    })
+    // 단답형은 숫자 답만 쓰는 규격 — 숫자로 못 읽으면 비운다 (표시가 NaN 이 되지 않게)
+    const shortAnswer = item.submittedText != null ? Number(item.submittedText) : null
+    recordResult(problem.id, {
+      pending: false,
+      correct,
+      selectedChoice:
+        item.submittedNo ?? (shortAnswer != null && Number.isFinite(shortAnswer) ? shortAnswer : null),
+      elapsedMs,
+      earnedPoints,
+      timeoverFlag,
+    })
+  })
 }
 
 /** 이미 로드된 세트 동기 조회 — 캐시가 없으면(새로고침 직행 등) null */

@@ -25,7 +25,7 @@ import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/u
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { useUserStore } from '@/user/stores/userStore'
-import { loadIssuedSet, loadQuizProblems } from '@/user/services/problemSet'
+import { loadIssuedSet, loadQuizProblems, restoreSubmittedResults } from '@/user/services/problemSet'
 import { useMe } from '@/user/hooks/useMe'
 import { type Subject } from '@/user/stores/trialStore'
 import {
@@ -545,6 +545,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           unitCode: target.row.unitCode,
           nodeId,
         })
+        // 이어풀기 — 앞서 제출한 문항 결과를 복원 (startSession 이 results 를 비운다)
+        restoreSubmittedResults(set, problems)
         navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
         return
       }

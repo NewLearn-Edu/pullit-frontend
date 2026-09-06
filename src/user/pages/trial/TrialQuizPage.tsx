@@ -13,7 +13,7 @@ import { choiceMark, EnglishProblemRender, MathProblemRender } from '@/shared/co
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
-import { loadTrialSessionProblems, restoreActiveSet } from '@/user/services/problemSet'
+import { loadTrialSessionProblems, restoreActiveSet, restoreSubmittedResults } from '@/user/services/problemSet'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { CreditUsedToast } from '@/user/components/CreditUsedToast'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
@@ -165,19 +165,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
             nodeId: meta.nodeId,
           })
           // 재시작으로 비워진 문항 결과 — 이미 제출한 문항은 서버 채점 결과로 채워 세트 결과 화면 집계가 맞게
-          // (내 답·풀이 시간은 서버 응답에 없어 비움 · 획득 점수는 배점 기준 근사)
-          const { recordResult } = useSolveStore.getState()
-          restored.set.items.forEach((item, i) => {
-            if (!item.submitted) return
-            const problem = restored.problems[i]
-            recordResult(problem.id, {
-              pending: false,
-              correct: item.correct ?? false,
-              selectedChoice: null,
-              elapsedMs: 0,
-              earnedPoints: item.correct ? problem.points : 0,
-            })
-          })
+          restoreSubmittedResults(restored.set, restored.problems)
           const current = idxRef.current
           if (current < restored.firstUnsolvedIdx || current >= restored.problems.length) {
             navigate(`/solve/${meta.subject}/${restored.firstUnsolvedIdx}`, { replace: true })
