@@ -48,6 +48,11 @@ interface ReviewScreenProps {
    * toggleExplain 으로 해설을 열고 닫는다 (explainOpen 으로 버튼 라벨을 "해설 보기"/"해설 닫기" 로)
    */
   footer?: (ctx: { toggleExplain: () => void; explainOpen: boolean }) => ReactNode
+  /**
+   * 문제 카드와 액션 바 사이에 끼우는 부가 영역 — 오답노트의 "풀이 이력" (2026-09-06).
+   * 카드가 한 화면을 채우므로 스크롤해야 보인다. 카드 밖이라 필기 캔버스와 겹치지 않는다.
+   */
+  afterCard?: ReactNode
   onClose: () => void
 }
 
@@ -70,6 +75,7 @@ export function ReviewScreen({
   initialExplainOpen = true,
   drawingTools = true,
   footer,
+  afterCard,
   onClose,
 }: ReviewScreenProps) {
   const subject = problem.subject
@@ -177,7 +183,11 @@ export function ReviewScreen({
 
       <div className={styles.content}>
         <main ref={mainRef} className={styles.main} style={pinch.scrollerStyle}>
-          <section ref={problemCardRef} className={styles.problemCard} style={pinch.cardStyle}>
+          <section
+            ref={problemCardRef}
+            className={clsx(styles.problemCard, afterCard && styles.problemCardPeek)}
+            style={pinch.cardStyle}
+          >
             <div className={styles.problemHeader}>
               <div className={styles.problemTitleWrap}>
                 <h2 className={styles.problemTitle}>문제 {problemNo}</h2>
@@ -247,6 +257,8 @@ export function ReviewScreen({
             </div>
 
           </section>
+
+          {afterCard}
 
           {/* 액션 바 — 문제 칼럼(main) 안 sticky. 칼럼과 같은 폭이라 해설 패널이 열려 칼럼이 좁아지면
               카드와 함께 줄어든다 (fixed 로 두면 화면 기준 500px 에 고정돼 칼럼을 벗어남) */}

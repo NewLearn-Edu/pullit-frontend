@@ -8,6 +8,7 @@ import { useSolveStore } from '@/user/stores/solveStore'
 import { clearProblemNotes } from '@/user/services/problemNotes'
 import { type Subject } from '@/user/stores/trialStore'
 import { ReviewScreen } from '@/user/pages/trial/ReviewScreen'
+import { AttemptHistorySection } from './AttemptHistorySection'
 import styles from '@/user/pages/trial/styles/TrialQuizPage.module.scss'
 
 /**
@@ -98,6 +99,12 @@ export default function WrongNoteRetryResultPage() {
       myChoice={result.selectedChoice}
       initialExplainOpen={false}
       drawingTools={false}
+      afterCard={
+        problem.serverId ? (
+          // 채점이 끝난 뒤에 그린다 — 방금 낸 답이 이력에 들어간 상태로 조회되게
+          <AttemptHistorySection key={graded ? 'graded' : 'pending'} problemId={problem.serverId} />
+        ) : undefined
+      }
       onClose={() => navigate(listPath)}
       headerMeta={<div className={clsx(styles.resultBadge, badge.className)}>{badge.text}</div>}
       footer={({ toggleExplain, explainOpen }) => (

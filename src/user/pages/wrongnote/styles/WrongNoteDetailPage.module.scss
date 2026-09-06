@@ -199,6 +199,21 @@ $sub: #80858b;
   color: #40464c;
 }
 
+// 다시 풀어 맞힌 문제 — 목록에는 남기고 칩만 바꾼다 (2026-09-06)
+.resolvedChip {
+  composes: wrongChip;
+  background: rgba(0, 176, 118, 0.12);
+  color: #00875c;
+}
+
+// 상단 "오답 N문제" 옆 해결 수 — 보조 정보라 톤을 낮춘다
+.resolvedCount {
+  margin: 0 0 0 6px;
+  font-size: $fs-body;
+  font-weight: $fw-semibold;
+  color: $sub;
+}
+
 // 하단 정보 바 — 구분선 아래 문제 정보 + 다시 풀기
 .cardInfo {
   display: flex;

@@ -12,14 +12,15 @@ import { type Subject } from '@/user/stores/trialStore'
 import { MATH_MAP_NODES } from '@/user/data/mathWeaknessMap'
 import { ENGLISH_MAP_NODES } from '@/user/data/englishWeaknessMap'
 import { fetchWrongNotes, type WrongNoteItem } from '@/user/api/attemptApi'
-import { groupWrongNotes } from '@/user/services/wrongNotes'
+import { groupWrongNotes, isResolved } from '@/user/services/wrongNotes'
 import styles from './styles/WrongNotePage.module.scss'
 
 /**
  * 오답노트 (/wrong-note · Figma 2632-7566)
  * 홈과 같은 헤더·대분류 칩 아래, 소단원(유형)별 오답 수 행 목록.
  * 단원 목록은 약점 지도 그래프 노드에서 파생, 오답 수는 서버 원장
- * (GET /api/attempts/wrong-notes — 마지막 시도가 오답인 문제) 실데이터.
+ * (GET /api/attempts/wrong-notes — 틀린 적 있는 문제) 실데이터.
+ * 다시 풀어 맞힌 문제도 목록에 남으므로(2026-09-06) 행의 개수는 아직 못 맞힌 것만 센다.
  */
 export default function WrongNotePage() {
   const navigate = useNavigate()
@@ -102,8 +103,9 @@ export default function WrongNotePage() {
           {/* 소단원별 오답 행 — 오답 있는 단원만 상세로 진입, 없는 단원은 비활성 표시 (눌리지 않음) */}
           <div className={styles.list}>
             {rows.map((r) => {
-              const count = r.items.length
-              const empty = count === 0
+              const count = r.items.filter((it) => !isResolved(it)).length
+              // 다 맞힌 단원도 복습하러 들어갈 수 있게 — 항목이 아예 없을 때만 비활성
+              const empty = r.items.length === 0
               return (
                 <button
                   key={r.key}
@@ -115,7 +117,11 @@ export default function WrongNotePage() {
                 >
                   <span className={styles.rowName}>{r.name}</span>
                   <span className={styles.rowRight}>
-                    {!empty && <span className={styles.countBadge}>{count}개</span>}
+                    {!empty && (
+                      <span className={clsx(styles.countBadge, count === 0 && styles.countBadgeDone)}>
+                        {count > 0 ? `${count}개` : '해결'}
+                      </span>
+                    )}
                     <ChevronIcon />
                   </span>
                 </button>

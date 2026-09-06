@@ -46,7 +46,7 @@ export async function submitAttempt(req: AttemptSubmitRequest): Promise<AttemptS
   return data.data
 }
 
-/** 오답노트 항목 — 마지막 시도가 오답인 문제 (정답·해설은 미포함) */
+/** 오답노트 항목 — 틀린 적 있는 문제 (다시 풀어 맞혀도 resolvedAt 만 찍히고 목록에 남는다) */
 export interface WrongNoteItem {
   problemId: string
   subject: 'MATH' | 'ENGLISH'
@@ -74,10 +74,14 @@ export interface WrongNoteItem {
   vocabulary: { term: string; meaning: string }[]
   wrongCount: number
   lastWrongAt: string
+  /** 다시 풀어 맞힌 시각 — null 이면 아직 못 맞힌 오답 (맞혀도 목록에서 사라지지 않는다) */
+  resolvedAt: string | null
   /** 내가 마지막으로 고른 선지 1~5 — 단답형·무응답("모르겠어요")·기록 없음은 null */
   lastSubmittedNo: number | null
   /** 내가 마지막으로 낸 단답 — 객관식·기록 없음은 null */
   lastSubmittedText: string | null
+  /** 이 문제의 내 풀이 이력 — 오래된 순 (마지막 원소가 가장 최근 제출) */
+  attempts: AttemptHistoryItem[]
 }
 
 /** 오답노트 조회 (과목별 · 맛보기 오답 포함) */
@@ -85,6 +89,31 @@ export async function fetchWrongNotes(subject: 'math' | 'english'): Promise<Wron
   const { data } = await api.get<BaseResponse<WrongNoteItem[]>>('/api/attempts/wrong-notes', {
     params: { subject: subject.toUpperCase() },
   })
+  return data.data
+}
+
+/** 한 문제의 내 풀이 이력 1건 — 원장(problem_attempts) 행 그대로 */
+export interface AttemptHistoryItem {
+  attemptId: number
+  /** 제출 시각 (ISO) */
+  attemptedAt: string
+  /** 진입 경로 */
+  source: 'DAILY' | 'FREE' | 'RETRY' | 'TRIAL'
+  correct: boolean
+  /** 무응답("모르겠어요")으로 넘긴 제출 — 고른 답이 없다 */
+  skipped: boolean
+  /** 고른 선지 1~5 (단답형·무응답은 null) */
+  submittedNo: number | null
+  /** 낸 단답 (객관식·무응답은 null) */
+  submittedText: string | null
+  timeSpentMs: number | null
+}
+
+/** 한 문제의 내 풀이 이력 (오래된 순) — 오답노트 문제 보기의 "풀이 이력" */
+export async function fetchAttemptHistory(problemId: string): Promise<AttemptHistoryItem[]> {
+  const { data } = await api.get<BaseResponse<AttemptHistoryItem[]>>(
+    `/api/attempts/problems/${encodeURIComponent(problemId)}/history`,
+  )
   return data.data
 }
 

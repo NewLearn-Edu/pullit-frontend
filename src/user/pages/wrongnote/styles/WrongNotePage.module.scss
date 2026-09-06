@@ -175,3 +175,9 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   font-weight: $fw-bold;
   color: $color-primary;
 }
+
+// 남은 오답이 없는 단원 — 행은 남지만(복습용) 빨간 카운트는 아니다 (2026-09-06)
+.countBadgeDone {
+  background: rgba(0, 176, 118, 0.12);
+  color: #00875c;
+}

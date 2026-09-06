@@ -88,7 +88,7 @@ export function formatStudyDate(date: string): string {
 }
 
 /** 문항 마크 — O(정답) · △(정답이지만 시간 초과) · X(오답), 시안 16px */
-function StudyMark({ kind }: { kind: 'circle' | 'triangle' | 'x' }) {
+export function StudyMark({ kind }: { kind: 'circle' | 'triangle' | 'x' }) {
   const label = kind === 'circle' ? '정답' : kind === 'triangle' ? '정답 (시간 초과)' : '오답'
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" role="img" aria-label={label}>

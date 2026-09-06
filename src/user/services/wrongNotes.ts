@@ -83,6 +83,9 @@ export function findWrongUnit(
   return groupWrongNotes(subject, items).find((r) => r.key === key)
 }
 
+/** 다시 풀어 맞힌 문제인가 — 해결돼도 목록에 남으므로 표시·집계는 이 값으로 가른다 */
+export const isResolved = (item: WrongNoteItem): boolean => item.resolvedAt != null
+
 /** "2026.08.10 06:00" — 시안 타임스탬프 표기 */
 export function formatWrongAt(iso: string): string {
   const d = new Date(iso)

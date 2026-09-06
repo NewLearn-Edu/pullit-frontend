@@ -1,1 +1,7 @@
-export { RecentStudyCard, formatStudyDate, historyToCard, type RecentStudyCardProps } from './RecentStudyCard'
+export {
+  RecentStudyCard,
+  StudyMark,
+  formatStudyDate,
+  historyToCard,
+  type RecentStudyCardProps,
+} from './RecentStudyCard'

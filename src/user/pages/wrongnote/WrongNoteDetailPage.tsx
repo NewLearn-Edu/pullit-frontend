@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { PageHeader } from '@/user/components/PageHeader'
 import { deleteWrongNote, fetchWrongNotes, restoreWrongNote, type WrongNoteItem } from '@/user/api/attemptApi'
-import { findWrongUnit, formatWrongAt, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
+import { findWrongUnit, formatWrongAt, isResolved, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
@@ -15,7 +15,9 @@ import styles from './styles/WrongNoteDetailPage.module.scss'
  * 오답노트 상세 (/wrong-note/:subject/units/:unitId · Figma 2653-16311)
  * unitId = 단원 식별자 (약점 지도·홈과 공유하는 노드 id, 예: exp-log)
  * 단원의 오답 문제 목록 — 문제 N · 마지막 오답 시각 · 본문 미리보기 · 풀기 버튼.
- * 다시 풀기 = 풀이 세션(RETRY)으로 /solve 진입, 맞히면 서버가 오답노트에서 해소.
+ * 다시 풀기 = 풀이 세션(RETRY)으로 /solve 진입.
+ * 맞혀도 목록에서 사라지지 않고 "해결" 칩만 붙는다 (2026-09-06) — 복습할 길을 남긴다.
+ * 상단 개수와 "오답 전체 풀기"는 아직 못 맞힌 문제 기준.
  */
 export default function WrongNoteDetailPage() {
   const { subject = 'math', unitId = '' } = useParams<{ subject: Subject; unitId: string }>()
@@ -99,6 +101,13 @@ export default function WrongNoteDetailPage() {
     }
   }
 
+  // 해결(다시 풀어 맞힘)은 목록에 남기되 개수·전체 풀기 대상에서는 뺀다
+  const unresolvedCount = useMemo(
+    () => (row?.items ?? []).filter((it) => !isResolved(it)).length,
+    [row],
+  )
+  const resolvedCount = (row?.items.length ?? 0) - unresolvedCount
+
   const sortedItems = useMemo(() => {
     if (!row) return []
     const items = [...row.items]
@@ -109,8 +118,8 @@ export default function WrongNoteDetailPage() {
     return items
   }, [row, sort])
 
-  /** 다시 풀기 — 오답 문제를 풀이 세션(RETRY)으로 넘기고 /solve 진입 */
-  const reviewPath = (problemId: string) =>
+  /** 문제 하나 다시 풀기 — 이 주소가 RETRY 세션을 열고 /solve 로 넘긴다 (WrongNoteReviewPage) */
+  const retryPath = (problemId: string) =>
     `/wrong-note/${subject}/units/${encodeURIComponent(unitId)}/review/${encodeURIComponent(problemId)}`
 
   const startRetry = (items: WrongNoteItem[]) => {
@@ -133,7 +142,10 @@ export default function WrongNoteDetailPage() {
       <main className={styles.main}>
         <h1 className={styles.title}>{row.name}</h1>
         <div className={styles.countRow}>
-          <p className={styles.count}>오답 {row.items.length}문제</p>
+          <p className={styles.count}>
+            오답 {unresolvedCount}문제
+            {resolvedCount > 0 && <span className={styles.resolvedCount}>해결 {resolvedCount}</span>}
+          </p>
 
           {/* 정렬 — 마지막 오답 시각 기준 */}
           <div ref={sortRef} className={styles.sort}>
@@ -169,11 +181,11 @@ export default function WrongNoteDetailPage() {
           {/* 고정 높이 미리보기(잘림) + 하단 정보 바 — 지문이 긴 문제도 카드 리듬 일정 */}
           {sortedItems.map((item: WrongNoteItem, i: number) => (
             <div key={item.problemId} className={styles.card}>
-              {/* 미리보기 탭 = 문제 보기 (해설·다시 풀기가 있는 문제 페이지) */}
+              {/* 미리보기 탭 = 바로 다시 풀기 (2026-09-06 — 읽기 전용 "문제 보기" 단계 없앰) */}
               <button
                 type="button"
-                aria-label={`문제 ${i + 1} 보기`}
-                onClick={() => navigate(reviewPath(item.problemId))}
+                aria-label={`문제 ${i + 1} 다시 풀기`}
+                onClick={() => navigate(retryPath(item.problemId))}
                 className={styles.cardPreview}
               >
                 <div className={styles.cardProblem} aria-hidden>
@@ -181,7 +193,11 @@ export default function WrongNoteDetailPage() {
                 </div>
                 <div className={styles.cardTint} aria-hidden />
                 <div className={styles.cardFade} aria-hidden />
-                <span className={styles.wrongChip}>오답 {item.wrongCount}회</span>
+                {isResolved(item) ? (
+                  <span className={styles.resolvedChip}>해결</span>
+                ) : (
+                  <span className={styles.wrongChip}>오답 {item.wrongCount}회</span>
+                )}
               </button>
 
               <div className={styles.cardInfo}>
@@ -203,13 +219,13 @@ export default function WrongNoteDetailPage() {
                     {formatWrongAt(item.lastWrongAt)}
                   </p>
                 </div>
-                {/* 문제 보기 — 해설·다시 풀기가 있는 문제 페이지 (미리보기 탭과 같은 목적지) */}
+                {/* 다시 풀기 — 빈 문제로 바로 풀이 진입. 해설은 채점 뒤 결과 화면에서 (미리보기 탭과 같은 목적지) */}
                 <button
                   type="button"
-                  onClick={() => navigate(reviewPath(item.problemId))}
+                  onClick={() => navigate(retryPath(item.problemId))}
                   className={styles.retryButton}
                 >
-                  문제 보기
+                  다시 풀기
                 </button>
               </div>
             </div>
@@ -225,7 +241,11 @@ export default function WrongNoteDetailPage() {
       <div className={styles.footer}>
         <button
           type="button"
-          onClick={() => startRetry(sortedItems.filter((it) => !excluded.has(it.problemId)))}
+          onClick={() =>
+            startRetry(
+              sortedItems.filter((it) => !excluded.has(it.problemId) && !isResolved(it)),
+            )
+          }
           className={styles.solveAllButton}
         >
           오답 전체 풀기
