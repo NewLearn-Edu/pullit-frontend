@@ -4,10 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import { PageHeader } from '@/user/components/PageHeader'
 import { deleteWrongNote, fetchWrongNotes, restoreWrongNote, type WrongNoteItem } from '@/user/api/attemptApi'
-import { findWrongUnit, formatWrongAt, isResolved, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
+import { findWrongUnit, formatWrongAt, isResolved, type WrongUnitRow } from '@/user/services/wrongNotes'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { useUserStore } from '@/user/stores/userStore'
-import { useSolveStore } from '@/user/stores/solveStore'
 import { type Subject } from '@/user/stores/trialStore'
 import styles from './styles/WrongNoteDetailPage.module.scss'
 
@@ -17,14 +16,13 @@ import styles from './styles/WrongNoteDetailPage.module.scss'
  * 단원의 오답 문제 목록 — 문제 N · 마지막 오답 시각 · 본문 미리보기 · 풀기 버튼.
  * 다시 풀기 = 풀이 세션(RETRY)으로 /solve 진입.
  * 맞혀도 목록에서 사라지지 않고 "해결" 칩만 붙는다 (2026-09-06) — 복습할 길을 남긴다.
- * 상단 개수와 "오답 전체 풀기"는 아직 못 맞힌 문제 기준.
+ * 상단 개수는 아직 못 맞힌 문제 기준. 다시 풀기는 문제 단위(카드·버튼)로만 — "오답 전체 풀기"는 뺐다 (2026-09-06).
  */
 export default function WrongNoteDetailPage() {
   const { subject = 'math', unitId = '' } = useParams<{ subject: Subject; unitId: string }>()
   const navigate = useNavigate()
   const sessionStatus = useUserStore((s) => s.status)
 
-  const startSolveSession = useSolveStore((s) => s.startSession)
   const [row, setRow] = useState<WrongUnitRow | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [sort, setSort] = useState<SortOrder>('latest')
@@ -101,7 +99,7 @@ export default function WrongNoteDetailPage() {
     }
   }
 
-  // 해결(다시 풀어 맞힘)은 목록에 남기되 개수·전체 풀기 대상에서는 뺀다
+  // 해결(다시 풀어 맞힘)은 목록에 남기되 개수에서는 뺀다
   const unresolvedCount = useMemo(
     () => (row?.items ?? []).filter((it) => !isResolved(it)).length,
     [row],
@@ -121,16 +119,6 @@ export default function WrongNoteDetailPage() {
   /** 문제 하나 다시 풀기 — 이 주소가 RETRY 세션을 열고 /solve 로 넘긴다 (WrongNoteReviewPage) */
   const retryPath = (problemId: string) =>
     `/wrong-note/${subject}/units/${encodeURIComponent(unitId)}/review/${encodeURIComponent(problemId)}`
-
-  const startRetry = (items: WrongNoteItem[]) => {
-    if (items.length === 0) return
-    startSolveSession({
-      problems: items.map(toSolveProblem),
-      source: 'RETRY',
-      returnTo: `/wrong-note/${subject}/units/${encodeURIComponent(unitId)}`,
-    })
-    navigate(`/solve/${subject}/0`)
-  }
 
   if (!row) return null
 
@@ -233,24 +221,9 @@ export default function WrongNoteDetailPage() {
         </div>
       </main>
 
-      <Toast show={!!toast} fit bottom="calc(110px + env(safe-area-inset-bottom))" className={styles.toast}>
+      <Toast show={!!toast} fit bottom="calc(24px + env(safe-area-inset-bottom))" className={styles.toast}>
         {toast?.message}
       </Toast>
-
-      {/* 하단 고정 — 단원 오답 전체 다시 풀기 (이번 화면에서 제외한 문제는 빼고) */}
-      <div className={styles.footer}>
-        <button
-          type="button"
-          onClick={() =>
-            startRetry(
-              sortedItems.filter((it) => !excluded.has(it.problemId) && !isResolved(it)),
-            )
-          }
-          className={styles.solveAllButton}
-        >
-          오답 전체 풀기
-        </button>
-      </div>
     </div>
   )
 }

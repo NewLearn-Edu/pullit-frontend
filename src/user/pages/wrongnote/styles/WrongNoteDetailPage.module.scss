@@ -24,7 +24,7 @@ $sub: #80858b;
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 0 $space-lg calc(100px + env(safe-area-inset-bottom)); // 하단 고정 버튼 확보
+  padding: 0 $space-lg calc(#{$space-xl} + env(safe-area-inset-bottom)); // 하단 고정 버튼 없음 (전체 풀기 제거 · 2026-09-06)
 
   @include desktop-up {
     max-width: 660px;
@@ -141,7 +141,8 @@ $sub: #80858b;
 .cardProblem {
   position: absolute;
   inset: 0;
-  padding: 18px 16px 0;
+  // 위 여백 = 칩 높이(약 30px) + 12px 상단 + 10px 간격 — 발문 첫 줄이 칩 뒤로 들어가지 않게 (2026-09-06)
+  padding: 52px 16px 0;
   font-family: $font-batang;
   font-size: 15px;
   font-weight: $fw-medium;
@@ -202,7 +203,7 @@ $sub: #80858b;
 // 다시 풀어 맞힌 문제 — 목록에는 남기고 칩만 바꾼다 (2026-09-06)
 .resolvedChip {
   composes: wrongChip;
-  background: rgba(0, 176, 118, 0.12);
+  background: #e6f6ef; // 불투명 — 반투명이면 본문 글자가 비쳐 "해결" 이 안 읽혔다 (2026-09-06)
   color: #00875c;
 }
 
@@ -293,31 +294,3 @@ $sub: #80858b;
 
 // ── 하단 고정 전체 풀기 ──────────────────────────────────────────────────────
 
-.footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30; // 카드 안 페이드·칩(z-index 1~2)이 위로 올라오지 않게
-  min-width: 350px; // 최소 지원 폭 — fixed 는 body min-width 를 안 따라감
-  display: flex;
-  justify-content: center;
-  padding: $space-md $space-lg calc(#{$space-lg} + env(safe-area-inset-bottom));
-  background: $bg;
-}
-
-.solveAllButton {
-  @include button-reset;
-  @include flex-center;
-  width: 100%;
-  max-width: 620px;
-  height: 56px;
-  border-radius: 12px;
-  background: #23272b;
-  color: #fff;
-  font-size: $fs-body;
-  font-weight: $fw-bold;
-  transition: opacity 150ms ease;
-
-  @include hover { opacity: 0.9; }
-}
