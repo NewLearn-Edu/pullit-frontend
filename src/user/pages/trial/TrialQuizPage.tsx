@@ -276,6 +276,11 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     setSelected(null)
     setInputValue('')
     setSkipConfirmOpen(false)
+    // 문항이 바뀌면 문제 칼럼 스크롤을 맨 위로 — 라우트만 바뀌고 <main> 은 그대로 남아
+    // 이전 문항의 스크롤 위치가 다음 문항에 그대로 이어졌다 (폰·패드·웹 공통 · 2026-09-06).
+    // 스크롤 컨테이너는 window 가 아니라 .main(overflow-y:auto)이라 여기서 직접 되돌린다
+    mainRef.current?.scrollTo({ top: 0, left: 0 })
+    window.scrollTo(0, 0) // 웹은 페이지 자체가 스크롤될 수 있어 함께 (해설 패널 분할 화면 등)
     // 필기는 지우지 않는다 — 문제별로 저장·복원된다 (ProblemNoteCanvas 가 문제 코드 기준으로 교체)
     // 새로고침 내성 — 문항별 시작 시각을 sessionStorage 에 박아 경과 시간이 이어진다.
     // 삭제는 명시적 진행 지점(다음 문항 이동·이탈·완료)에서만 — 언마운트 cleanup 으로

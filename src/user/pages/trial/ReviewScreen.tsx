@@ -115,6 +115,11 @@ export function ReviewScreen({
   const mainRef = useRef<HTMLElement>(null)
   const pinch = usePinchZoom(mainRef, problemCardRef, { maxBaseWidth: 500 }) // 카드 max-width 와 동일
   useBlockNativePinch() // 카드 밖(헤더·필기 도구·배경)에서는 브라우저 확대도 안 되게
+  // 다른 문항으로 넘어가면 문제 칼럼을 맨 위로 — 화면이 유지된 채 문항만 바뀌어 이전 스크롤이 이어졌다 (2026-09-06)
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0 })
+    window.scrollTo(0, 0)
+  }, [problem.id])
   const matchedRef = useRef(false)
   useLayoutEffect(() => {
     if (!explainOpen) {
