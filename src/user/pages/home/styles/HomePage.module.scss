@@ -40,19 +40,6 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 
 
-.iconCircle {
-  @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  color: #a6abb1; // 디자인 헤더 아이콘 톤 (black/400, 2626-3051)
-  transition: opacity 150ms ease;
-
-  @include hover { opacity: 0.7; }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 콘텐츠
 // ─────────────────────────────────────────────────────────────────────────────
@@ -583,6 +570,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
   width: 100%;
   max-height: calc(100dvh - 140px); // 문항별 결과까지 길어지면 시트 내부 스크롤
   overflow-y: auto;
+  overscroll-behavior: contain; // 시트 끝에서 휠·스와이프가 배경 페이지로 새지 않게 (PC 우측 패널 포함)
   padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
   border-radius: 26px 26px 0 0;
   background: $color-canvas;
@@ -871,12 +859,17 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 // ── 단원 상세 시트 분할 (2026-09-01) — 학습 경로까지 보이고 최근 학습은 안쪽 스크롤,
 //    CTA 는 시트 하단 고정. 모바일은 폴드가 학습 경로 뒤에 오도록 높이를 못 박는다.
 .unitSheetSplit {
-  max-height: calc(100dvh - 120px);
+  // 폰·패드 — 화면 높이의 절반만 차지하고 올라온다 (2026-09-06). 예전엔 "학습 경로까지" 실측한
+  // 폴드 높이라 기기·단원마다 들쭉날쭉했고 폰에선 화면 대부분을 덮었다. 몸통(unitSheetScroll)이
+  // 남는 공간만큼 스크롤을 맡고 CTA 는 아래 고정
+  height: 50dvh;
+  max-height: 50dvh;
   padding-bottom: 0;
-  overflow: hidden; // 스크롤은 안쪽 몸통이 담당 (폴드 높이는 JS 실측 — 학습 경로까지)
+  overflow: hidden; // 스크롤은 안쪽 몸통이 담당
 
   @include desktop-up {
-    max-height: none; // 우측 패널은 기존 % 높이 유지
+    height: calc(100% - 40px); // 우측 패널은 기존 % 높이 유지
+    max-height: none;
     padding-bottom: 0;
     overflow: hidden;
   }

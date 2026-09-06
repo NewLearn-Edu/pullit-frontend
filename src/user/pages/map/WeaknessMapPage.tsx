@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { WrongNoteBadge } from '@/user/components/WrongNoteBadge/WrongNoteBadge'
 import { UserNav } from '@/user/components/UserNav'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
@@ -70,6 +71,7 @@ export default function WeaknessMapPage() {
   // ── 진행 상태 — 홈과 같은 진실원 (trial_diagnoses + unit_locks) ──────────
   const diagnosed = useTrialProgressStore((s) => s.diagnosed)
   const hydrateFromServer = useTrialProgressStore((s) => s.hydrateFromServer)
+  const [creditPopupOpen, setCreditPopupOpen] = useState(false) // 크레딧 배지 → 매일 04:00 충전 안내 (홈과 동일)
   const [locks, setLocks] = useState<Record<string, string>>({})
   const refreshLocks = useCallback(
     () =>
@@ -548,23 +550,18 @@ export default function WeaknessMapPage() {
             </>
         </div>
 
+        {creditPopupOpen && <CreditRefillPopup onClose={() => setCreditPopupOpen(false)} />}
+
         {/* 상단 플로팅 헤더 — 캔버스 팬/선택해제와 분리 */}
         <header
           className={styles.header}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          <CreditBadge credit={me?.creditBalance ?? 0} />
+          <CreditBadge credit={me?.creditBalance ?? 0} elevated onClick={() => setCreditPopupOpen(true)} />
           <SubjectTabs pill value={subject} onChange={setSubject} />
           <div className={styles.headerIcons}>
-            <button
-              type="button"
-              aria-label="오답노트"
-              onClick={() => navigate('/wrong-note')}
-              className={styles.iconCircle}
-            >
-              <WrongNoteIcon />
-            </button>
+            <WrongNoteBadge elevated />
           </div>
         </header>
 

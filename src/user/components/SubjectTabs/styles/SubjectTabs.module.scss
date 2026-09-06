@@ -51,7 +51,8 @@
     padding: 0 16px;
     border-radius: 28px;
     font-size: $fs-body;
-    font-weight: $fw-bold;
+    font-weight: $fw-semibold; // 시안 Body/L/Strong — 활성·비활성 동일
+    color: #5e6368; // black/600
     white-space: nowrap;
   }
 }

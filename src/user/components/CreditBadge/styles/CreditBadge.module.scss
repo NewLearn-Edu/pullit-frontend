@@ -32,7 +32,21 @@
   &:active { transform: scale(0.96); }
 }
 
-.badgeSm { padding: $space-xs $space-md; }
+// 헤더 필 (Figma 3368-8858) — 오답 배지(WrongNoteBadge)와 같은 규격 72×33 · r42
+.badgeSm {
+  justify-content: center;
+  width: 72px;
+  height: 33px;
+  padding: $space-xs 0;
+  border-radius: 42px;
+  font-size: $fs-body; // 16
+  font-weight: $fw-bold; // 오답 배지와 같은 무게 — 시안보다 한 단 굵게 (2026-09-06)
+  line-height: 1.4;
+  color: #121417; // black/900
+}
+
+// 약점지도처럼 캔버스 위에 떠 있는 헤더 — 흰 필이 배경에 묻혀 그림자로 띄운다
+.badgeElevated { box-shadow: $shadow-md; }
 
 .badgeMd {
   gap: $space-sm;
@@ -45,7 +59,15 @@
   flex-shrink: 0;
 }
 
+.badgeSm .coin,
 .badgeMd .coin {
   width: 18px;
   height: 18px;
+}
+
+// 우측 셰브런 — 시안 icon/blank 12px (#a6abb1). 색이 고정이라 내보낸 asset 을 그대로 쓴다
+.chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }

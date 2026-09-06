@@ -1,0 +1,51 @@
+@use 'styles/tokens' as *;
+@use 'styles/mixins' as *;
+
+// -----------------------------------------------------------------------------
+// WrongNoteBadge · 모바일 헤더 "오답" 배지 (Figma 3368-8857 / 2856-19940)
+// 크레딧 배지(credit-badge)와 같은 필 — 72×33 · r42 · 아이콘 18 · 라벨 14 Bold
+// -----------------------------------------------------------------------------
+
+.badge {
+  appearance: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  width: 72px;
+  height: 33px;
+  padding: $space-xs 0;
+  border-radius: 42px;
+  background: $color-canvas;
+  font: inherit;
+  font-size: $fs-body-sm;
+  font-weight: $fw-bold;
+  line-height: 1.4;
+  color: #121417; // black/900
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 150ms ease;
+
+  &:focus { outline: none; }
+  &:active { transform: scale(0.96); }
+  @include hover { opacity: 0.85; }
+}
+
+// 활성(오답노트 페이지) — 검정 필 · 흰 글자. 북마크는 그대로 메인 레드.
+// 다시 누르면 직전 하단 네비 탭으로 돌아가므로 눌림 피드백은 기본 배지와 동일하게 둔다
+.badgeActive {
+  background: #23272b; // black/800
+  color: #fff;
+}
+
+// 약점지도처럼 캔버스 위에 떠 있는 헤더 — 흰 필이 배경에 묻혀 그림자로 띄운다
+.badgeElevated { box-shadow: $shadow-md; }
+
+.icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: $color-primary; // 북마크는 기본·활성 모두 red/500
+}

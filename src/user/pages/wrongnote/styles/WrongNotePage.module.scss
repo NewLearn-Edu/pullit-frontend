@@ -34,25 +34,7 @@ $chip-dark: #23272b;   // black/800 · 활성 칩
 
 
 
-.iconCircle {
-  @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  color: #a6abb1; // 디자인 헤더 아이콘 톤 (black/400, 2626-3051)
-  transition: opacity 150ms ease;
-
-  @include hover { opacity: 0.7; }
-}
-
 // 현재 화면(오답노트) 아이콘 — 검정 채움으로 활성 표시
-.iconCircleActive {
-  background: $ink;
-  color: #fff;
-}
-
 // ── 콘텐츠 ───────────────────────────────────────────────────────────────────
 
 .content {

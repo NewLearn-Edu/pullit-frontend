@@ -313,17 +313,6 @@ $red-tint: #fff1f2;
   @include desktop-up { visibility: hidden; }
 }
 
-.iconCircle {
-  @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  color: #a6abb1; // 디자인 헤더 아이콘 톤 (black/400, 2626-3051)
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-}
-
 // ── 범례 · 줌 컨트롤 ─────────────────────────────────────────────────────────
 
 // 좌하단 — 우하단 줌 컨트롤과 같은 높이에 정렬

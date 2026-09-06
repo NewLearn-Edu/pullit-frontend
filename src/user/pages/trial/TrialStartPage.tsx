@@ -17,10 +17,11 @@ interface SubjectOption {
   sub: string
 }
 
-// 서브텍스트는 단원·유형 명칭 정책의 표시 명칭 — 맛보기 고정 영역 (수학 지수·로그 · 영어 주제)
+// 서브텍스트는 단원·유형 명칭 정책의 표시 명칭 — 맛보기 고정 영역 (영어 주제 · 수학 지수·로그)
+// 영어를 위에 두고 기본 선택으로 (2026-09-06)
 const SUBJECT_OPTIONS: SubjectOption[] = [
-  { value: 'math', title: '수학', sub: '지수·로그' },
   { value: 'english', title: '영어', sub: '주제' },
+  { value: 'math', title: '수학', sub: '지수·로그' },
 ]
 
 /**
@@ -31,7 +32,7 @@ export default function TrialStartPage() {
   const navigate = useNavigate()
   const reset = useTrialStore((s) => s.reset)
   const setLastSubject = useTrialStore((s) => s.setLastSubject)
-  const [selected, setSelected] = useState<Subject>('math')
+  const [selected, setSelected] = useState<Subject>('english') // 기본 선택 — 목록 첫 카드와 일치
 
   // 맛보기를 이미 완주한 회원만 홈으로 — 미완이면 방금 가입한 회원도 퍼널을 탄다
   useTrialFunnelGuard()

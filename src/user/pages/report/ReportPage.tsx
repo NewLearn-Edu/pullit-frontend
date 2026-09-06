@@ -4,8 +4,9 @@ import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
+import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { Skeleton } from '@/user/components/Skeleton'
-import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { WrongNoteBadge } from '@/user/components/WrongNoteBadge/WrongNoteBadge'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
 import { type Subject } from '@/user/stores/trialStore'
@@ -34,6 +35,7 @@ export default function ReportPage() {
       })
   }, [sessionStatus, navigate])
 
+  const [creditPopupOpen, setCreditPopupOpen] = useState(false) // 크레딧 배지 → 매일 04:00 충전 안내 (홈과 동일)
   const [subject, setSubject] = useState<Subject>('math')
 
   // 오늘 날짜는 한 번만 고정 — 렌더마다 새 Date 를 만들면 자식 useMemo 가 매번 무효화된다
@@ -67,23 +69,14 @@ export default function ReportPage() {
       <UserNav active="report" subject={subject} />
 
       <main className={styles.main}>
+        {creditPopupOpen && <CreditRefillPopup onClose={() => setCreditPopupOpen(false)} />}
+
         {/* 상단 헤더 — 홈·오답노트와 동일 문법 */}
         <PageHeader
-          left={<CreditBadge credit={me?.creditBalance ?? 0} />}
+          left={<CreditBadge credit={me?.creditBalance ?? 0} onClick={() => setCreditPopupOpen(true)} />}
           center={<SubjectTabs pill value={subject} onChange={setSubject} />}
           hideRightOnDesktop
-          right={
-            <>
-              <button
-                type="button"
-                aria-label="오답노트"
-                onClick={() => navigate('/wrong-note')}
-                className={styles.iconCircle}
-              >
-                <WrongNoteIcon size={18} />
-              </button>
-            </>
-          }
+          right={<WrongNoteBadge />}
         />
 
         <div className={styles.content}>

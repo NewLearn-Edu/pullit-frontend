@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { WrongNoteBadge } from '@/user/components/WrongNoteBadge/WrongNoteBadge'
 import { RecommendIcon } from '@/user/components/icons/RecommendIcon'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
@@ -282,18 +282,7 @@ export default function HomePage() {
           left={<CreditBadge credit={credit} onClick={() => setCreditPopupOpen(true)} />}
           center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
           hideRightOnDesktop
-          right={
-            <>
-              <button
-                type="button"
-                aria-label="오답노트"
-                onClick={() => navigate('/wrong-note')}
-                className={styles.iconCircle}
-              >
-                <WrongNoteIcon />
-              </button>
-            </>
-          }
+          right={<WrongNoteBadge />}
         />
 
         <div className={styles.content}>

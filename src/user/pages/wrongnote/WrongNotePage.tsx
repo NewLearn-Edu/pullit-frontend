@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
+import { WrongNoteBadge } from '@/user/components/WrongNoteBadge/WrongNoteBadge'
 import { UserNav } from '@/user/components/UserNav'
 import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
@@ -74,13 +74,7 @@ export default function WrongNotePage() {
           left={<CreditBadge credit={me?.creditBalance ?? 0} />}
           center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
           hideRightOnDesktop
-          right={
-            <>
-              <span className={clsx(styles.iconCircle, styles.iconCircleActive)} aria-hidden>
-                <WrongNoteIcon filled />
-              </span>
-            </>
-          }
+          right={<WrongNoteBadge active />}
         />
 
         <div className={styles.content}>

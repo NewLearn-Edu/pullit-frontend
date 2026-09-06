@@ -32,16 +32,6 @@ $ink: #160f0e; // text/dark · 페이지 타이틀
 
 
 
-.iconCircle {
-  @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-full;
-  background: $color-canvas;
-  color: #a6abb1; // 시안 헤더 아이콘 톤 (black/400)
-}
-
 // ── 본문 — 타이틀 + 카드 스택 ────────────────────────────────────────────────
 
 .content {
