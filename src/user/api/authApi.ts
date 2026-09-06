@@ -346,7 +346,7 @@ export async function updateMarketingConsent(agree: boolean): Promise<void> {
   await api.patch('/api/users/me/marketing-consent', { agree })
 }
 
-/** 닉네임 변경 (프로필 편집) — 형식·중복·90일 잠금 위반 시 4xx (message = UX 카피) */
+/** 닉네임 변경 (프로필 편집) — 형식·중복 위반 시 4xx (message = UX 카피) */
 export async function updateNickname(nickname: string): Promise<void> {
   await api.patch('/api/users/me/nickname', { nickname })
 }
@@ -389,7 +389,7 @@ export interface MeResult {
   profileImageUrl: string | null
   /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
   marketingConsentAt: string | null
-  /** 마지막 닉네임 변경 시각 — 90일 재변경 잠금 판정용 (한 번도 안 바꿨으면 null) */
+  /** 마지막 닉네임 변경 시각 — 이력 표시용 (한 번도 안 바꿨으면 null). 재변경 제한은 없다 */
   nicknameChangedAt: string | null
   /** 가입 소셜 — 애플 가입자는 이름 칸을 수정할 수 없다 (Apple 정책). 게스트/미연동이면 null */
   provider: 'NAVER' | 'KAKAO' | 'GOOGLE' | 'APPLE' | null

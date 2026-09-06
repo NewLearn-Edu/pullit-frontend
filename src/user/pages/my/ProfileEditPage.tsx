@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { clsx } from 'clsx'
@@ -12,14 +12,12 @@ import { useUserStore } from '@/user/stores/userStore'
 const NICKNAME_CHARS = /^[가-힣a-zA-Z0-9]*$/
 const NICKNAME_MIN = 2
 const NICKNAME_MAX = 10
-/** 재변경 잠금 기간 — 서버 UserService.NICKNAME_LOCK_DAYS 와 동일하게 유지 */
-const LOCK_DAYS = 90
 /** 업로드 전 축소 기준 (긴 변). 88px 아바타에 쓰기 충분하고 서버 상한(5MB)에 걸릴 일이 없다 */
 const IMAGE_MAX_EDGE = 512
 
 /**
  * 프로필 편집 (/my/profile · 토스 프로필 편집 참고 2026-08-25)
- * 아바타 + 닉네임 단일 폼. 닉네임은 90일에 한 번만 변경 가능 (서버 검증이 진실원).
+ * 아바타 + 닉네임 단일 폼. 닉네임 재변경 제한은 없다 (90일 잠금 폐지 · 2026-09-06).
  */
 export default function ProfileEditPage() {
   const navigate = useNavigate()
@@ -37,20 +35,9 @@ export default function ProfileEditPage() {
   const [value, setValue] = useState<string | null>(null) // null = 아직 미입력 (me 로드 전)
   const nickname = value ?? currentNickname
 
-  // 90일 잠금 — 마지막 변경 + 90일이 아직 안 지났으면 입력 자체를 잠근다
-  const lockedDaysLeft = useMemo(() => {
-    if (!me?.nicknameChangedAt) return 0
-    const unlockAt = new Date(me.nicknameChangedAt)
-    unlockAt.setDate(unlockAt.getDate() + LOCK_DAYS)
-    const msLeft = unlockAt.getTime() - Date.now()
-    return msLeft > 0 ? Math.ceil(msLeft / 86_400_000) : 0
-  }, [me?.nicknameChangedAt])
-  const locked = lockedDaysLeft > 0
-
   const hasInvalidChar = !NICKNAME_CHARS.test(nickname)
   const changed = nickname !== currentNickname
   const canSave =
-    !locked &&
     changed &&
     !hasInvalidChar &&
     nickname.length >= NICKNAME_MIN &&
@@ -104,7 +91,7 @@ export default function ProfileEditPage() {
     setServerError(null)
     try {
       await updateNickname(nickname)
-      await loadMe(true) // 새 닉네임·nicknameChangedAt 반영
+      await loadMe(true) // 새 닉네임 반영
       navigate('/my', { replace: true })
     } catch (e) {
       // 서버 메시지가 곧 UX 카피 (중복·잠금·형식) — 그대로 노출
@@ -116,11 +103,9 @@ export default function ProfileEditPage() {
     }
   }
 
-  // 표시 우선순위: 문자 오류(빨강) > 서버 오류(빨강) > 잠금 안내 > 기본 안내
+  // 표시 우선순위: 문자 오류(빨강) > 서버 오류(빨강) > 기본 안내
   const error = hasInvalidChar ? '사용할 수 없는 문자가 포함되어 있어요.' : serverError
-  const helper = locked
-    ? `닉네임은 ${lockedDaysLeft}일 뒤에 다시 바꿀 수 있어요.`
-    : '지금 바꾸면 90일 동안 다시 바꿀 수 없어요.'
+  const helper = '한글·영문·숫자 2~10자로 지어줘.'
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
@@ -174,14 +159,12 @@ export default function ProfileEditPage() {
             className={clsx(
               'flex h-[52px] items-center gap-[8px] rounded-[14px] px-[16px] transition-colors',
               error ? 'bg-[#fff1f2]' : 'bg-[#f2f4f6]',
-              locked && 'opacity-60',
             )}
           >
             <input
               id="nickname"
               value={nickname}
               maxLength={NICKNAME_MAX}
-              disabled={locked}
               placeholder="닉네임 입력 (2~10자)"
               onChange={(e) => {
                 setServerError(null)
@@ -192,7 +175,7 @@ export default function ProfileEditPage() {
                 error ? 'text-danger' : 'text-[#121417]',
               )}
             />
-            {!locked && nickname.length > 0 && (
+            {nickname.length > 0 && (
               <button
                 type="button"
                 aria-label="지우기"
@@ -217,7 +200,7 @@ export default function ProfileEditPage() {
           <ReadOnlyField label="이름" value={me?.name} />
           <ReadOnlyField label="이메일 주소" value={me?.email} />
           <ReadOnlyField label="휴대전화번호" value={me?.phoneNumber} />
-          <p className="text-[13px] text-[#80858b]">이름·이메일·휴대전화번호는 가입한 소셜 계정 정보라 여기서 바꿀 수 없어요.</p>
+          
         </div>
       </main>
 
