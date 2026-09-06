@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   finishAppleLogin,
   openAppleSignIn,
@@ -26,6 +26,8 @@ import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
 /**
  * PI-PAGE-RESULT_SIGNUP · 가입 유도 (맛보기 완주 후 기록 저장 유도 · Figma 2824-5679)
  *
+ * 진입은 둘 — 맛보기 결과의 "가입하기"(온보딩 퍼널) · 마이페이지 게스트의 "10초만에 가입하기".
+ *
  * 레이아웃은 헤더(로고 + 건너뛰기) / 레이더 카드 / 안내문 / 소셜 아이콘 4개 세로 배치.
  * 맛보기는 세션 없이 진행되므로 users 로우는 이 화면에서 처음 생긴다 —
  * 건너뛰기 = 게스트 생성 + 큐에 쌓인 풀이 기록 전송 후 홈, 소셜 로그인 = 회원 생성
@@ -36,6 +38,7 @@ import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
  */
 export default function SignupPromptPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const isMember = useUserStore(selectIsMember)
   const ensureSession = useUserStore((s) => s.ensureSession)
   const [error, setError] = useState<string | null>(null)
@@ -44,10 +47,17 @@ export default function SignupPromptPage() {
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
   const [skipping, setSkipping] = useState(false)
 
-  /** 건너뛰기 확정 — 게스트 생성 + 맛보기 풀이 기록 전송 후 홈 (여기서 users 로우가 처음 생긴다) */
+  /**
+   * 건너뛰기 확정 — 게스트 생성 + 맛보기 풀이 기록 전송 후 홈 (여기서 users 로우가 처음 생긴다).
+   *
+   * 결과 열람권도 여기서 소비한다 (2026-09-06) — 결과 화면은 /signup 으로 나갈 때만 열람권을
+   * 남겨두는데(로그인 왕복 대비), 건너뛰기는 그 왕복 없이 퍼널을 아주 떠나는 길이다.
+   * 안 지우면 열람권이 세션 내내 살아남아, 나중에 가입할 때 지난 진단 결과가 다시 열렸다.
+   */
   const confirmSkip = async () => {
     if (skipping) return
     setSkipping(true)
+    useTrialStore.getState().consumeResultPass()
     try {
       await ensureSession() // 게스트 발급 — 실패해도 홈 진입은 막지 않는다
       await flushAttemptQueue().catch(() => {})
@@ -85,11 +95,26 @@ export default function SignupPromptPage() {
     }
   }, [])
 
-  // 로그인 후 돌아갈 결과 화면 — 이 화면은 온보딩 퍼널에서만 뜨므로 /trial/{subject}/weakness
+  /**
+   * 로그인 후 복귀 경로 (2026-09-06).
+   *
+   * 이 화면은 두 곳에서 뜬다 — 맛보기 결과의 "가입하기"(온보딩 퍼널)와
+   * 마이페이지 게스트의 "10초만에 가입하기". 예전엔 무조건 결과 화면(/trial/{subject}/weakness)을
+   * 찍어서, 마이페이지에서 가입한 게스트가 가입을 마치자마자 지난 진단 결과로 떨어졌다.
+   *
+   * 판정은 결과 열람권(resultPass) — 결과 화면을 떠날 때 소비되지만 /signup 만 예외로
+   * 남겨 둔다 (소셜 로그인이 외부 도메인을 왕복한 뒤 결과로 돌아와야 하므로).
+   * 즉 열람권이 살아 있으면 "결과 화면에서 바로 온 것" 이 확실하다.
+   */
   const lastSubject = useTrialStore((s) => s.lastSubject)
-  /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 보던 결과 화면으로 복귀 */
+  const resultPass = useTrialStore((s) => s.resultPass)
+  const rawFrom = (location.state as { from?: string } | null)?.from
+  const backTo = rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/home'
+  const returnTo = resultPass ? weaknessResultPath(lastSubject, true) : backTo
+
+  /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 복귀 경로를 항상 덮어쓴다 (stale 값 소비 방지) */
   const withReturn = (startLogin: () => void) => () => {
-    setPostLoginRedirect(weaknessResultPath(lastSubject, true))
+    setPostLoginRedirect(returnTo)
     startLogin()
   }
 
@@ -97,7 +122,7 @@ export default function SignupPromptPage() {
   // ★ openAppleSignIn 앞에 await 를 두지 말 것 — 제스처가 끊기면 안드로이드에서 팝업이 막힌다
   const handleAppleLogin = () => {
     setError(null)
-    setPostLoginRedirect(weaknessResultPath(lastSubject, true))
+    setPostLoginRedirect(returnTo)
     openAppleSignIn()
       .then(async (res) => {
         // 팝업이 닫힌 뒤라 제스처와 무관 — 여기서부터는 await 로 이어도 된다

@@ -5,6 +5,7 @@ import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useMe } from '@/user/hooks/useMe'
 import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
+import { CURRICULUM } from '@/user/data/curriculum'
 import { loadTrialSessionProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue, waitForPendingAttempts } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
@@ -17,6 +18,22 @@ import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
 import { CreditCelebrationContent } from '@/user/components/CreditCelebration'
 import { setDiagnoseDoneFlash, setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import markStyles from './styles/WeaknessResultPage.module.scss'
+
+/**
+ * 맛보기 고정 유닛의 홈 커리큘럼 명칭 (2026-09-06).
+ *
+ * 화면 제목(unitName)은 서버 정식 명칭이라 홈 커리큘럼 표기와 다를 수 있다
+ * ("지수와 로그" vs 홈 "지수·로그"). 홈·지도는 유닛명을 문자 그대로 대조해 초점을 맞추므로
+ * 초점 플래시에는 반드시 커리큘럼 쪽 이름을 넣는다.
+ */
+function curriculumUnitName(subject: Subject, nodeId: string | null | undefined): string | null {
+  if (!nodeId) return null
+  for (const category of CURRICULUM[subject]) {
+    const unit = category.units.find((u) => u.nodeId === nodeId)
+    if (unit) return unit.name
+  }
+  return null
+}
 
 /** m:ss (풀이 시간 셀) — 재열람(UnitResultPage)에서도 사용 */
 export function formatShort(totalSec: number): string {
@@ -235,8 +252,16 @@ export default function WeaknessResultPage() {
    * 지난 세트 결과가 계속 열리던 문제를 막는다.
    * 열람권은 새로고침·해설 왕복·소셜 로그인 왕복에는 유지되고, 결과를 다 보고
    * 홈으로 나갈 때 소비된다.
+   *
+   * 열람권만으로는 "언제 것인지" 를 모른다 (2026-09-06) — 소비되지 않고 남은 열람권이
+   * 뒤늦게 이 주소로 들어올 때 지난 결과를 다시 열었다. 발급 시점 세트(resultPassSetId)와
+   * 지금 세트(activeSetId)를 대조해 같은 세트일 때만 연다.
+   * 온보딩 맛보기는 서버 세트가 없어 둘 다 null 이라 그대로 통과한다.
    */
   const resultPass = useTrialStore((s) => s.resultPass)
+  const resultPassSetId = useTrialStore((s) => s.resultPassSetId)
+  const activeSetId = useTrialStore((s) => s.activeSetId)
+  const passValid = resultPass && resultPassSetId === activeSetId
   useEffect(() => {
     if (!hydrated) return
     if (routeSubject !== undefined && !isTrialSubject(routeSubject)) {
@@ -248,8 +273,8 @@ export default function WeaknessResultPage() {
       return
     }
     // 회원을 /trial 로 보내면 온보딩 퍼널로 새므로 홈으로 되돌린다
-    if (!resultPass) navigate(isMember ? '/home' : '/trial', { replace: true })
-  }, [hydrated, routeSubject, hasCompletedSession, resultPass, isMember, navigate])
+    if (!passValid) navigate(isMember ? '/home' : '/trial', { replace: true })
+  }, [hydrated, routeSubject, hasCompletedSession, passValid, isMember, navigate])
 
   /**
    * 결과 화면에서 나간다 — 열람권을 소비하고 이동.
@@ -258,15 +283,23 @@ export default function WeaknessResultPage() {
    */
   const leaveResult = (to: string) => {
     if (to !== '/signup') useTrialStore.getState().consumeResultPass()
-    // 소단원 시트에서 시작한 진단이면 복귀한 홈·지도에 완료 토스트 예약 (3575-7884).
-    // 단원명은 pendingUnit(확정 시 비워짐) → 세트 시작 때 저장한 activeUnitName — 해설 왕복 뒤(재마운트)에도
-    // 홈이 방금 푼 단원으로 초점을 맞추게 (2026-09-06, 예전엔 pendingUnit 이 없으면 플래시 없이 홈으로 갔다)
-    const solvedName = pendingNameRef.current ?? activeUnitName
-    if (to !== '/signup' && solvedName) {
-      setDiagnoseDoneFlash(solvedName, subject)
-      setLastSolvedFlash(solvedName, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
+    // 복귀한 홈·지도에 완료 토스트 + 방금 푼 단원 초점을 예약 (3575-7884).
+    // 단원명은 화면 제목과 같은 값(unitName) — pendingUnit → activeUnitName → 맛보기 고정 영역 순.
+    // 온보딩 퍼널(맛보기)은 앞의 둘이 없어 예전엔 플래시가 아예 안 걸렸고, 그래서 진단을 끝내고
+    // 홈에 와도 기본 탭이 열렸다. 고정 영역명(영어 "주제" · 수학 "지수와 로그")으로 걸어 준다 (2026-09-06).
+    //
+    // /signup 으로 나가는 비회원도 플래시는 남긴다 — 가입·건너뛰기를 거쳐 홈에 닿을 때 소비된다.
+    // (열람권과 달리 플래시는 한 번 읽히면 사라지므로 남겨 둬도 새지 않는다)
+    // 홈·지도는 유닛명을 문자 그대로 대조한다 — 표시용 unitName 이 아니라 커리큘럼 명칭으로 건다
+    const flashName =
+      pendingNameRef.current ??
+      activeUnitName ??
+      curriculumUnitName(subject, subject === 'english' ? englishTypeId : mathSkillNodeId)
+    if (flashName) {
+      setDiagnoseDoneFlash(flashName, subject)
+      setLastSolvedFlash(flashName, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
       // 약점 지도에서 시작한 진단이면 돌아가서 그 단원을 선택(active) + 상세 시트 오픈 — 자유 풀이(SolveResultPage)와 같은 규칙
-      if (to.startsWith('/weakness-map')) setUnitReopenFlash(solvedName, subject)
+      if (to.startsWith('/weakness-map')) setUnitReopenFlash(flashName, subject)
     }
     navigate(to)
   }

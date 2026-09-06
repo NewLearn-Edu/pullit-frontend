@@ -149,7 +149,8 @@ export default function MyPage() {
           {isGuest ? (
             <button
               type="button"
-              onClick={() => navigate('/signup')}
+              // 가입을 마치면 결과 화면이 아니라 여기로 돌아온다 (퍼널 진입과 구분 · 2026-09-06)
+              onClick={() => navigate('/signup', { state: { from: '/my' } })}
               className={clsx(styles.editButton, styles.signupButton)}
             >
               10초만에 가입하기

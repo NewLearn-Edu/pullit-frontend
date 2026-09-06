@@ -49,6 +49,11 @@ interface TrialState {
    */
   resultPass: boolean
   /**
+   * 열람권이 발급된 세트 (2026-09-06) — 결과 화면이 "이 열람권이 지금 결과의 것인가" 를 대조한다.
+   * 온보딩 맛보기는 서버 세트가 없어 null 이고, 그때는 세트 id 대조 없이 열람권만 본다.
+   */
+  resultPassSetId: number | null
+  /**
    * 진행 중 발급 세트 id — 홈에서 시작한 진단 세트의 제출에 첨부돼
    * 서버 세트 완료 판정·이어풀기의 연결고리가 된다.
    * 온보딩 맛보기(가입 전)는 발급이 없어 null.
@@ -102,6 +107,7 @@ export const useTrialStore = create<TrialState>()(
       firstRewardGranted: false,
       firstCreditCelebrated: false,
       resultPass: false,
+      resultPassSetId: null,
       activeSetId: null,
       activeUnitName: null,
       activeReturnTo: null,
@@ -135,8 +141,9 @@ export const useTrialStore = create<TrialState>()(
       markFirstRewardGranted: () => set({ firstRewardGranted: true }),
       markFirstCreditCelebrated: () => set({ firstCreditCelebrated: true }),
 
-      grantResultPass: () => set({ resultPass: true }),
-      consumeResultPass: () => set({ resultPass: false }),
+      // 발급 시점의 세트를 함께 새긴다 — 다른 세트의 결과가 이 열람권으로 열리지 않게
+      grantResultPass: () => set((state) => ({ resultPass: true, resultPassSetId: state.activeSetId })),
+      consumeResultPass: () => set({ resultPass: false, resultPassSetId: null }),
 
       setActiveSetId: (id) => set({ activeSetId: id }),
       setActiveUnitName: (name) => set({ activeUnitName: name }),
@@ -152,6 +159,7 @@ export const useTrialStore = create<TrialState>()(
           englishResults: [],
           lastSubject: null,
           resultPass: false,
+          resultPassSetId: null,
           activeSetId: null,
           activeUnitName: null,
           activeReturnTo: null,
@@ -197,6 +205,7 @@ export const useTrialStore = create<TrialState>()(
         firstRewardGranted: state.firstRewardGranted,
         firstCreditCelebrated: state.firstCreditCelebrated,
         resultPass: state.resultPass,
+        resultPassSetId: state.resultPassSetId,
         activeSetId: state.activeSetId,
         activeUnitName: state.activeUnitName,
         activeReturnTo: state.activeReturnTo,
