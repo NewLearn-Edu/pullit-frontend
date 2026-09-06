@@ -3,10 +3,14 @@ import logoNav from '@/assets/landing/logo-nav.svg'
 import { openEarlybirdForm } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
 
-/** 시안 3158-4457 — 반투명 검정 + 블러 20, 버튼 p12 r12, 로그인 회색 40% · CTA 흰색 40% */
+/**
+ * 시안 3158-4457 — 반투명 검정 + 블러 20, 버튼 p12 r12, 로그인 회색 40%.
+ * CTA 는 시안의 흰색 40% 대신 메인컬러(primary) 불투명 — 재종 고객 테스트(2026-09-06)에서
+ * "오른쪽 위 진단하기 버튼이 색깔 때문에 눈에 안 들어온다" 피드백. 히어로 배경 위에서 반투명 흰색은 묻힌다.
+ */
 const BTN = 'flex items-center justify-center whitespace-nowrap rounded-[12px] p-[12px] text-[16px] font-semibold text-white transition-colors max-md:text-[14px]'
 const BTN_GHOST = `${BTN} bg-[rgba(64,70,76,0.4)] hover:bg-[rgba(64,70,76,0.65)]`
-const BTN_CTA = `${BTN} bg-white/40 hover:bg-white/55`
+const BTN_CTA = `${BTN} bg-primary hover:bg-primary-hover`
 
 export default function LandingNav() {
   // 얼리버드 UI 는 /earlybird 경로에서만 — 플래그가 아니라 URL 로 판정해
