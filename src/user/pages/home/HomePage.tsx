@@ -12,7 +12,7 @@ import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { Skeleton } from '@/user/components/Skeleton'
 import { type Subject } from '@/user/stores/trialStore'
 import { fetchUnitLocks } from '@/user/api/recommendApi'
-import { fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
+import { fetchResumableSet, fetchResumableSets, indexResumableByUnit, type ResumableSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
 import { useUserStore } from '@/user/stores/userStore'
@@ -234,6 +234,9 @@ export default function HomePage() {
   // 데이터(resumableSet)와 팝업 노출(resumePromptOpen)을 분리 — 팝업을 취소해도
   // 소단원 카드의 "이어풀기" 라벨(2919-8829)은 계속 보여야 한다
   const [resumableSet, setResumableSet] = useState<ResumableSet | null>(null)
+  // 단원별 이어풀기 표식 — 진행 중 세트 전부 (2026-09-06). 팝업(resumableSet)은 최근 1건이지만
+  // 카드 라벨은 풀다 만 단원마다 붙어야 한다 (예전엔 최근 1건으로 라벨을 그려 하나만 이어풀기로 보였다)
+  const [resumableByUnit, setResumableByUnit] = useState<Record<string, ResumableSet>>({})
   const [resumePromptOpen, setResumePromptOpen] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null) // 이어풀기 실패 안내 팝업
   useEffect(() => {
@@ -247,6 +250,11 @@ export default function HomePage() {
           localStorage.setItem(RESUME_PROMPT_SHOWN_AT_KEY, String(Date.now()))
           setResumePromptOpen(true)
         }
+      })
+      .catch(() => {})
+    fetchResumableSets()
+      .then((list) => {
+        if (alive) setResumableByUnit(indexResumableByUnit(list))
       })
       .catch(() => {})
     return () => {
@@ -403,7 +411,7 @@ export default function HomePage() {
                             <span className={styles.unitCardName}>{row.name}</span>
                             {/* 약점 필 없음 — 점수 색(빨강)이 약점 표시를 맡는다 (마스터 카드 2246-6010) */}
                             {/* 풀다 만 세트(자유 풀이 등)가 있는 단원 — 이어풀기 안내 (시안 3681) */}
-                            {resumableSet?.unitCode === row.unitCode && (
+                            {resumableByUnit[row.unitCode] && (
                               <span className={styles.unitResumeLabel}>풀다 만 문제가 있어</span>
                             )}
                           </span>
@@ -442,10 +450,7 @@ export default function HomePage() {
                       >
                         <span className={styles.unitCardName}>{row.name}</span>
                         <span className={styles.unitDiagnoseBtn}>
-                          {resumableSet?.source === 'TRIAL' &&
-                          resumableSet.unitCode === row.unitCode
-                            ? '이어풀기'
-                            : '진단하기'}
+                          {resumableByUnit[row.unitCode]?.source === 'TRIAL' ? '이어풀기' : '진단하기'}
                         </span>
                       </button>
                     </li>

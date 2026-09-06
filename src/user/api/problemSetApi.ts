@@ -95,6 +95,22 @@ export async function fetchResumableSet(): Promise<ResumableSet | null> {
   return data.data
 }
 
+/**
+ * 진행 중 세트 전부 (최근 순, 잠근 단원 제외) — 홈 카드·지도 노드·추천 캔버스의 단원별 "이어풀기" 표식 (2026-09-06).
+ * 팝업은 fetchResumableSet(최근 1건)을 쓰고, 라벨은 이 목록을 unitCode 로 찾는다 — 풀다 만 단원이 여럿이어도 전부 표시
+ */
+export async function fetchResumableSets(): Promise<ResumableSet[]> {
+  const { data } = await api.get<BaseResponse<ResumableSet[]>>('/api/problem-sets/resumable/all')
+  return data.data ?? []
+}
+
+/** unitCode → 진행 중 세트. 같은 단원에 여러 종류가 있으면 최근 것 */
+export function indexResumableByUnit(list: ResumableSet[]): Record<string, ResumableSet> {
+  const map: Record<string, ResumableSet> = {}
+  for (const set of list) if (!map[set.unitCode]) map[set.unitCode] = set
+  return map
+}
+
 /** 단원 학습 이력 — 완료한 세트 하나의 문항 결과 (GET /api/problem-sets/history) */
 export interface UnitSetHistoryItem {
   sequence: number

@@ -23,7 +23,12 @@ import { SkipConfirmContent, extractApiMessage, isCreditShortage } from '@/user/
 import { startTrialSetSession } from '@/user/services/trialSetStart'
 import { homePath } from '@/user/services/homeRoutes'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
-import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
+import {
+  fetchActiveProblemSet,
+  fetchResumableSet,
+  fetchResumableSets,
+  type ResumableSet,
+} from '@/user/api/problemSetApi'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { useSolveStore } from '@/user/stores/solveStore'
 import { useUserStore } from '@/user/stores/userStore'
@@ -201,6 +206,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const backHome = homePath(subject, searchParams.get('cat'))
 
   const [resume, setResume] = useState<ResumeInfo | null | undefined>(undefined)
+  /** 캔버스 카드 "이어풀기" 표식용 — 진행 중 세트 전부의 unitCode (2026-09-06, 예전엔 최근 1건만 표시) */
+  const [resumeUnitCodes, setResumeUnitCodes] = useState<Set<string>>(() => new Set())
   const [failed, setFailed] = useState(false)
   const [phase, setPhase] = useState<Phase>('scan')
   /** 건너뛰기·모션 최소화 — 트랜지션 없이 최종 상태로 */
@@ -233,6 +240,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         }
       })
       .then(setResume, () => setResume(null))
+    fetchResumableSets()
+      .then((list) => setResumeUnitCodes(new Set(list.map((s) => s.unitCode))))
+      .catch(() => {})
     // 진단 기록·잠금은 캔버스를 그리는 재료, 추천은 어느 카드를 집을지 결정한다
     hydrateFromServer().catch(() => {})
     fetchUnitLocks(subject)
@@ -667,7 +677,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const badge = resumeHere ? { text: '이어 풀기', weak: true } : unitBadge(rec, target?.row)
   const reason = resumeHere ? '풀다 만 문제' : defaultReason(target?.row)
   // 캔버스 카드의 "이어풀기" 표식 — 추천 대상이 아니어도 풀다 만 세트가 있는 칸은 그대로 표시한다
-  const resumeUnitCode = resume?.set.unitCode ?? null
+  const isResuming = (unitCode: string) =>
+    resumeUnitCodes.has(unitCode) || resume?.set.unitCode === unitCode
   // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
 
@@ -783,7 +794,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
                             key={slot.row!.unitCode}
                             row={slot.row!}
                             marked={isTarget && phase !== 'scan'}
-                            resuming={slot.row!.unitCode === resumeUnitCode}
+                            resuming={isResuming(slot.row!.unitCode)}
                             scan={state}
                             mute={mute}
                           />
@@ -802,7 +813,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
             {/* 확대가 끝난 뒤의 카드 — 그리드의 대상 카드와 픽셀이 겹치는 자리에서 이어받는다 */}
             {target && solo && (
               <div className={clsx(styles.solo, revealed && styles.soloOut)} aria-hidden>
-                <UnitCard row={target.row} marked bare resuming={target.row.unitCode === resumeUnitCode} />
+                <UnitCard row={target.row} marked bare resuming={isResuming(target.row.unitCode)} />
               </div>
             )}
 
