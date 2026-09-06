@@ -246,29 +246,56 @@ function composeAppleName(name?: { firstName?: string; lastName?: string }): str
   return isHangul ? `${lastName}${firstName}` : `${firstName} ${lastName}`.trim()
 }
 
+/** 팝업에서 받아 백엔드로 넘길 인가 결과 — redirectUri 는 교환 요청에 같은 값이 필요하다 */
+export interface AppleAuthResult extends AppleSignInResponse {
+  redirectUri: string
+}
+
 /**
- * 애플 로그인 전체 흐름 (로그인 버튼에서 호출)
- * 팝업 → code 수신 → 백엔드 교환·검증·쿠키 발급까지 완료.
- * 사용자가 팝업을 닫으면 { error: 'popup_closed_by_user' } 형태로 reject된다.
+ * Apple JS SDK 미리 로드 — 로그인·가입 화면 진입 시 호출한다.
+ * 클릭 시점에 스크립트가 이미 있어야 팝업이 사용자 제스처 안에서 열린다.
  */
-export async function loginWithApple(): Promise<void> {
-  await loadAppleScript()
-  const appleRedirectUri = `${window.location.origin}/auth/apple/callback`
+export function prepareAppleLogin(): Promise<void> {
+  return loadAppleScript().catch(() => {})
+}
+
+/**
+ * 애플 로그인 팝업 열기 — ★ 반드시 클릭 핸들러에서 앞에 await 없이 곧바로 호출한다 (2026-09-06).
+ *
+ * SDK 내부가 window.open 을 부르는데, 앞에 await 가 하나라도 있으면(세션 warm-up·스크립트 로드 등)
+ * 사용자 제스처가 끊겨 안드로이드 크롬이 팝업을 막는다. 팝업이 막히면 SDK 는 전체 페이지
+ * 리다이렉트로 넘어가고, 애플은 scope 때문에 form_post 로 POST 를 보내 SPA 가 받을 수 없다
+ * (아이패드 사파리에서만 되고 안드로이드에선 빈 화면으로 떨어지던 원인).
+ *
+ * 사용자가 팝업을 닫으면 { error: 'popup_closed_by_user' } 형태로 reject 된다.
+ */
+export function openAppleSignIn(): Promise<AppleAuthResult> {
+  if (!window.AppleID) {
+    void loadAppleScript() // 다음 시도를 위해 받아 둔다
+    return Promise.reject(new Error('Apple JS 미로드'))
+  }
+  const redirectUri = `${window.location.origin}/auth/apple/callback`
   const state = randomOauthState()
-  window.AppleID!.auth.init({
+  window.AppleID.auth.init({
     clientId: APPLE_CLIENT_ID,
     scope: 'name email',
-    redirectURI: appleRedirectUri,
+    redirectURI: redirectUri,
     state,
     usePopup: true,
   })
-  const res = await window.AppleID!.auth.signIn()
-  if (res.authorization.state !== state) {
-    throw new Error('Apple 로그인 state 불일치')
-  }
+  return window.AppleID.auth.signIn().then((res) => {
+    if (res.authorization.state !== state) {
+      throw new Error('Apple 로그인 state 불일치')
+    }
+    return { ...res, redirectUri }
+  })
+}
+
+/** 팝업으로 받은 code 를 백엔드에 넘겨 교환·검증·쿠키 발급 (네트워크는 팝업이 닫힌 뒤라 제스처와 무관) */
+export async function finishAppleLogin(res: AppleAuthResult): Promise<void> {
   await api.post('/api/auth/oauth/apple/code', {
     code: res.authorization.code,
-    redirectUri: appleRedirectUri,
+    redirectUri: res.redirectUri,
     name: composeAppleName(res.user?.name),
   })
 }

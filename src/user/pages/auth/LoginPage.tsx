@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  loginWithApple,
+  finishAppleLogin,
+  openAppleSignIn,
+  prepareAppleLogin,
   startGoogleLogin,
   startKakaoLogin,
   startNaverLogin,
@@ -37,6 +39,12 @@ export default function LoginPage() {
   // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
   // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
   // 얼리버드 테스트 모드 — 로그인·가입 경로 차단 (진단·사전예약만)
+  // Apple JS SDK 미리 로드 — 클릭 시점에 스크립트를 받으면 그 대기 동안 제스처가 끊겨
+  // 팝업이 막힌다 (안드로이드). 화면 진입 때 받아 둔다 (2026-09-06)
+  useEffect(() => {
+    void prepareAppleLogin()
+  }, [])
+
   useEffect(() => {
     if (isEarlybird()) navigate('/earlybird', { replace: true })
   }, [navigate])
@@ -78,22 +86,26 @@ export default function LoginPage() {
     startLogin()
   }
 
-  // 애플은 팝업 방식이라 콜백 페이지 없이 여기서 완료·이동까지 처리
-  const handleAppleLogin = async () => {
+  // 애플은 팝업 방식이라 콜백 페이지 없이 여기서 완료·이동까지 처리.
+  // ★ openAppleSignIn 앞에 await 를 두지 말 것 — 제스처가 끊기면 안드로이드에서 팝업이 막힌다
+  const handleAppleLogin = () => {
     setError(null)
     setPostLoginRedirect(returnTo)
-    try {
-      await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
-      await loginWithApple()
-      const to = await finishLogin()
-      navigate(to, { replace: true })
-    } catch (e) {
-      if ((e as { error?: string })?.error === 'popup_closed_by_user') return
-      // 이미 다른 소셜로 가입된 이메일 — 사유·기존 소셜을 팝업으로 안내
-      const dup = extractDuplicateAccount(e)
-      if (dup) setDuplicate(dup)
-      else setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')
-    }
+    openAppleSignIn()
+      .then(async (res) => {
+        // 팝업이 닫힌 뒤라 제스처와 무관 — 여기서부터는 await 로 이어도 된다
+        await warmUpSessionBeforeLogin() // 만료된 게스트 access 복구 — 승격 유실 방지
+        await finishAppleLogin(res)
+        const to = await finishLogin()
+        navigate(to, { replace: true })
+      })
+      .catch((e) => {
+        if ((e as { error?: string })?.error === 'popup_closed_by_user') return
+        // 이미 다른 소셜로 가입된 이메일 — 사유·기존 소셜을 팝업으로 안내
+        const dup = extractDuplicateAccount(e)
+        if (dup) setDuplicate(dup)
+        else setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')
+      })
   }
 
   return (

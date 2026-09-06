@@ -4,8 +4,9 @@ import { isAxiosError } from 'axios'
 import {
   completeProfile,
   confirmPhoneCode,
-  loginWithApple,
+  finishAppleLogin,
   logout,
+  openAppleSignIn,
   requestPhoneCode,
   startGoogleLogin,
   startKakaoLogin,
@@ -340,20 +341,23 @@ export default function SignupInfoPage() {
   }
 
   /** 기존 가입 소셜로 바로 로그인 — OAuth 는 소셜 식별자 기준이라 자동으로 그 계정에 로그인된다 */
-  const continueWithExisting = async () => {
+  const continueWithExisting = () => {
     if (!dupProvider) return
     if (dupProvider.provider === 'KAKAO') startKakaoLogin()
     else if (dupProvider.provider === 'NAVER') startNaverLogin()
     else if (dupProvider.provider === 'GOOGLE') startGoogleLogin()
     else if (dupProvider.provider === 'APPLE') {
-      try {
-        await loginWithApple()
-        const to = await finishLogin()
-        navigate(to, { replace: true })
-      } catch (e) {
-        if ((e as { error?: string })?.error === 'popup_closed_by_user') return
-        setPhoneMsg({ text: 'Apple 로그인에 실패했어요. 다시 시도해주세요.', tone: 'error', field: 'phone' })
-      }
+      // ★ openAppleSignIn 앞에 await 를 두지 말 것 (제스처가 끊기면 안드로이드에서 팝업이 막힌다)
+      openAppleSignIn()
+        .then(async (res) => {
+          await finishAppleLogin(res)
+          const to = await finishLogin()
+          navigate(to, { replace: true })
+        })
+        .catch((e) => {
+          if ((e as { error?: string })?.error === 'popup_closed_by_user') return
+          setPhoneMsg({ text: 'Apple 로그인에 실패했어요. 다시 시도해주세요.', tone: 'error', field: 'phone' })
+        })
     } else navigate('/login', { replace: true })
   }
 
