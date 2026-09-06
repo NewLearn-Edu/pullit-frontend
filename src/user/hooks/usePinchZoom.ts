@@ -30,7 +30,9 @@ import { flushSync } from 'react-dom'
  * - 두 손가락 벌리기/오므리기 = 확대·축소 (1 ~ MAX), 두 손가락 끌기 = 이동
  * - 두 손가락이 모두 카드 위에서 시작해야 한다 — 카드 옆 배경(아이패드에서 카드 밖 회색 영역)에서 시작한 핀치는 무시.
  *   페이지 나머지(헤더·필기 도구·배경)의 브라우저 확대는 useBlockNativePinch 가 막는다
- * - 한 손가락·펜은 건드리지 않는다 (필기·손가락 스크롤은 DrawingCanvas 가 처리)
+ * - 확대 중 한 손가락 = 좌우 이동 (아래 onePointerPan). 세로는 네이티브 스크롤·DrawingCanvas 가 이미 처리하므로
+ *   가로만 맡는다 — 확대하면 컨테이너 가로 스크롤을 닫아(overflowX:hidden) 네이티브로는 좌우로 갈 방법이 없다
+ * - 펜은 건드리지 않는다 (필기는 DrawingCanvas 가 처리)
  * - 1 배 아래로는 못 내려간다 — 원래 폭(맞춤)이 최소. 1 배로 돌아오면 기본 레이아웃으로 복귀
  * - 요소는 ref 가 아니라 state 로 추적한다 — 페이지가 문제 로딩 전엔 null 을 반환해 첫 effect 때 컨테이너가 없고,
  *   ref 객체만 deps 에 있으면 요소가 생겨도 effect 가 다시 돌지 않아 리스너가 영영 붙지 않았다
@@ -40,6 +42,8 @@ import { flushSync } from 'react-dom'
 const MAX_ZOOM = 3
 /** 두 손가락 끌기만 했을 때 거리 떨림으로 배율이 미세하게 바뀌어 폭 재계산·재래스터가 도는 것을 막는 여유 */
 const SCALE_DEADZONE = 0.01
+/** 한 손가락 가로 이동을 시작하는 문턱(px) — 손 떨림으로 카드가 흔들리지 않게 */
+const PAN_DEADZONE = 6
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
@@ -65,6 +69,8 @@ export function usePinchZoom(
 ) {
   const [layout, setLayout] = useState<Layout>(INITIAL)
   const zoomRef = useRef(1)
+  // 리스너를 다시 붙이지 않고 최신 확정 레이아웃을 읽기 위한 거울 (한 손가락 이동의 시작 위치)
+  const layoutRef = useRef<Layout>(INITIAL)
   // 실제 DOM 요소 — 매 렌더 후 ref 를 읽어 동기화 (같은 요소면 setState 는 no-op)
   const [scroller, setScroller] = useState<HTMLElement | null>(null)
   const [card, setCard] = useState<HTMLElement | null>(null)
@@ -103,6 +109,7 @@ export function usePinchZoom(
 
   useLayoutEffect(() => {
     zoomRef.current = layout.zoom
+    layoutRef.current = layout
     const el = scroller
     const pending = pendingScrollRef.current
     if (!el || !pending) return
@@ -147,6 +154,109 @@ export function usePinchZoom(
     } | null = null
     let live = { s: 1, tx: 0, ty: 0, midX: 0, midY: 0 }
 
+    /**
+     * 확대 중 한 손가락 좌우 이동.
+     *
+     * 확대하면 컨테이너의 가로 스크롤을 닫고(overflowX:hidden) 가로 위치를 카드 margin-left 로 잡는다 —
+     * 그래서 세로는 한 손가락 네이티브 스크롤로 되는데 가로는 두 손가락 끌기 말고는 방법이 없었다 (2026-09-06 제보).
+     * 여기서 한 손가락 가로 드래그를 margin-left 로 직접 옮겨 좌우도 한 손가락으로 되게 한다.
+     *
+     * - 세로는 건드리지 않는다 — 네이티브 스크롤(카드 밖)·DrawingCanvas 의 손가락 스크롤(캔버스 위)이 이미 맡는다.
+     *   그래서 preventDefault 를 하지 않는다: 가로는 어차피 네이티브로 움직일 것이 없고(overflowX:hidden),
+     *   막아 버리면 같은 손가락의 세로 스크롤까지 죽어 대각선 이동이 안 된다 (2026-09-06 제보)
+     * - 방향을 하나로 잠그지 않는다 — 가로는 여기서, 세로는 기존 경로에서 동시에 흘러 대각선이 자연스럽게 나온다.
+     *   손 떨림으로 카드가 흔들리지 않게 가로는 PAN_DEADZONE 을 넘긴 뒤부터, 그 문턱만큼 뺀 값으로 따라간다
+     * - 손필기 켜짐(캔버스가 손가락을 그림에 쓰는 상태)이면 캔버스 위에서 시작한 이동은 무시 — 그리기가 우선
+     * - 드래그 중엔 두 손가락 제스처와 같이 transform 으로만 보여준다. margin-left 를 직접 만지면 풀이 화면의
+     *   1초 타이머 같은 리렌더가 cardStyle 의 옛 marginLeft 로 되돌려 카드가 튄다 (transform 은 cardStyle 밖이라 안전)
+     */
+    let pan: {
+      id: number
+      x0: number
+      left0: number
+      min: number
+      max: number
+      /** 데드존을 넘겨 실제로 따라가기 시작했나 */
+      active: boolean
+      /** 데드존 보정 — 문턱을 넘는 순간 카드가 그만큼 튀지 않게 뺀다 */
+      offset: number
+      /** 현재 확정 위치(left0)로부터의 이동량 — 손을 뗄 때 left0 + shift 로 확정 */
+      shift: number
+    } | null = null
+    const isStylusTouch = (t: Touch) => (t as Touch & { touchType?: string }).touchType === 'stylus'
+    /** 손가락으로 그리는 중인 캔버스 위에서 시작했나 — 그리기와 이동이 겹치지 않게 */
+    const onFingerDrawSurface = (t: Touch) =>
+      t.target instanceof Element && !!t.target.closest('[data-finger-draw="true"]')
+
+    /**
+     * 진행 중인 한 손가락 이동을 margin-left 로 확정하고 transform 을 지운다.
+     * 손을 뗄 때뿐 아니라 두 번째 손가락이 닿을 때도 부른다 — transform 이 남은 채로 두면
+     * 곧바로 시작되는 확대 제스처가 어긋난 getBoundingClientRect 를 재 버린다
+     */
+    const settlePan = () => {
+      if (!pan) return
+      const settled = pan
+      pan = null
+      if (!settled.active) return
+      const left = Math.round(settled.left0 + settled.shift)
+      const pad = paddingRef.current
+      // 확정(margin-left)을 동기로 반영한 뒤 transform 을 지운다 — 순서가 바뀌면 옛 위치로 한 프레임 튕긴다
+      flushSync(() => {
+        setLayout((prev) =>
+          prev.left === left ? prev : { ...prev, left, barOffset: pad.l + Math.max(0, left) },
+        )
+      })
+      card.style.transform = ''
+      card.style.willChange = ''
+    }
+
+    const onPanStart = (e: TouchEvent) => {
+      settlePan()
+      if (e.touches.length !== 1 || zoomRef.current <= 1.001) return
+      const t = e.touches[0]
+      if (isStylusTouch(t) || onFingerDrawSurface(t)) return
+      const pad = paddingRef.current
+      const innerW = el.clientWidth - pad.l - pad.r
+      const width = card.offsetWidth
+      pan = {
+        id: t.identifier,
+        x0: t.clientX,
+        left0: layoutRef.current.left,
+        min: Math.min(0, innerW - width),
+        max: Math.max(0, innerW - width),
+        active: false,
+        offset: 0,
+        shift: 0,
+      }
+    }
+
+    const onPanMove = (e: TouchEvent) => {
+      if (!pan) return
+      if (e.touches.length !== 1) {
+        settlePan() // 두 번째 손가락 = 확대 제스처 몫
+        return
+      }
+      const t = e.touches[0]
+      if (t.identifier !== pan.id) return
+      const dx = t.clientX - pan.x0
+      if (!pan.active) {
+        if (Math.abs(dx) < PAN_DEADZONE) return
+        pan.active = true
+        pan.offset = Math.sign(dx) * PAN_DEADZONE
+        card.style.transformOrigin = '0 0'
+        card.style.willChange = 'transform'
+      }
+      // preventDefault 안 함 — 같은 손가락의 세로 스크롤(네이티브·캔버스)을 살려 대각선이 되게
+      pan.shift = clamp(pan.left0 + dx - pan.offset, pan.min, pan.max) - pan.left0
+      card.style.transform = `translateX(${pan.shift}px)`
+    }
+
+    const onPanEnd = (e: TouchEvent) => {
+      if (!pan) return
+      if (Array.from(e.touches).some((t) => t.identifier === pan!.id)) return
+      settlePan()
+    }
+
     const gesture = (e: TouchEvent) => {
       const [a, b] = [e.touches[0], e.touches[1]]
       return {
@@ -158,6 +268,7 @@ export function usePinchZoom(
 
     const inCard = (t: Touch) => t.target instanceof Node && card.contains(t.target)
     const onStart = (e: TouchEvent) => {
+      onPanStart(e)
       if (e.touches.length !== 2 || !inCard(e.touches[0]) || !inCard(e.touches[1])) {
         start = null
         return
@@ -200,7 +311,11 @@ export function usePinchZoom(
     }
 
     const onMove = (e: TouchEvent) => {
-      if (!start || e.touches.length !== 2) return
+      if (!start) {
+        onPanMove(e)
+        return
+      }
+      if (e.touches.length !== 2) return
       e.preventDefault()
       const g = gesture(e)
       const committed = zoomRef.current
@@ -214,6 +329,7 @@ export function usePinchZoom(
     }
 
     const onEnd = (e: TouchEvent) => {
+      onPanEnd(e)
       if (!start || e.touches.length >= 2) return
       const st = start
       start = null

@@ -847,6 +847,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         <canvas
           ref={liveCanvasRef}
           className={styles.canvas}
+          // 손가락이 그림에 쓰이는 상태 표식 — 확대 중 한 손가락 좌우 이동(usePinchZoom)이
+          // 이 위에서 시작한 터치를 그리기에 양보한다
+          data-finger-draw={!disabled && allowFinger ? 'true' : undefined}
           // 비활성(모바일 등) — 터치를 아래 본문으로 통과시켜 페이지 스크롤이 살아있게 한다.
           // touch-action:none 이 남아 있으면 캔버스가 덮은 영역 전체에서 스크롤이 죽는다
           style={{
