@@ -201,21 +201,11 @@ export function useUnitSheets({
     wasOpenRef.current = anySheetOpen
   }, [anySheetOpen, onAllClosed])
 
-  // 상세 시트 폴드 — 처음 열면 학습 경로까지만 보이고 최근 학습은 스크롤 뒤에 (2026-09-01).
-  // 콘텐츠 높이가 기기·단원마다 달라 CSS 고정값 대신 구분 띠 위치를 실측해 몸통 높이를 자른다
+  // 상세 시트 높이 — 폰·패드는 화면의 절반(CSS 50dvh · unitSheetSplit)으로 고정하고 몸통이 스크롤한다 (2026-09-06).
+  // 예전(2026-09-01)엔 "학습 경로까지" 구분 띠 위치를 실측해 몸통을 잘랐는데, 기기·단원마다 높이가 달라
+  // 폰에선 화면 대부분을 덮었다. 구분 띠(foldRef)는 시각 구분선으로만 남긴다
   const sheetScrollRef = useRef<HTMLDivElement | null>(null)
   const foldRef = useRef<HTMLDivElement | null>(null)
-  useLayoutEffect(() => {
-    const body = sheetScrollRef.current
-    const fold = foldRef.current
-    if (!unitSheet || !body || !fold) return
-    // 웹 우측 패널은 높이가 고정(%)이라 자르면 아래가 비어 보인다 — 모바일·패드만
-    if (window.matchMedia('(min-width: 1281px)').matches) {
-      body.style.maxHeight = ''
-      return
-    }
-    body.style.maxHeight = `${fold.offsetTop - body.offsetTop}px`
-  }, [unitSheet])
 
   // 건너뛰기 확정 토스트 (3715-9240) — 시트가 닫힌 뒤 "{소단원명}부터 건너뛰었어"
   const [skipToast, setSkipToast] = useState<string | null>(null)
@@ -546,6 +536,7 @@ export function useUnitSheets({
       {/* 진단 완료 유닛 상세 (2857-22101) — 웹 우측 패널 · 모바일 바텀시트 */}
       {unitSheet && sheetDiag && (
         <div
+          data-sheet-layer // 지도의 휠 팬이 시트 위 스크롤을 삼키지 않게 — WeaknessMapPage 휠 핸들러가 이 표식을 보고 건너뛴다 (2026-09-06)
           className={clsx(styles.unitDim, unitDrag.closing && styles.unitDimOut)}
           style={{ '--sheet-exit-ms': `${unitDrag.exitMs}ms` } as CSSProperties}
           onClick={unitDrag.close}
@@ -772,6 +763,7 @@ export function useUnitSheets({
       {/* ── 진단 시작 시트 (2842-10194) ↔ 건너뛰기 화면 (2842-10966) ─────────── */}
       {startSheet && (
         <div
+          data-sheet-layer // 지도의 휠 팬이 시트 위 스크롤을 삼키지 않게 — WeaknessMapPage 휠 핸들러가 이 표식을 보고 건너뛴다 (2026-09-06)
           className={clsx(styles.unitDim, startDrag.closing && styles.unitDimOut)}
           style={{ '--sheet-exit-ms': `${startDrag.exitMs}ms` } as CSSProperties}
           onClick={startDrag.close}
@@ -920,6 +912,7 @@ export function useUnitSheets({
       {/* ── 선행 단원 안내 시트 (3082-5687) — 잠긴 단원 클릭 ─────────────────── */}
       {lockedSheet && (
         <div
+          data-sheet-layer // 지도의 휠 팬이 시트 위 스크롤을 삼키지 않게 — WeaknessMapPage 휠 핸들러가 이 표식을 보고 건너뛴다 (2026-09-06)
           className={clsx(styles.unitDim, lockedDrag.closing && styles.unitDimOut)}
           style={{ '--sheet-exit-ms': `${lockedDrag.exitMs}ms` } as CSSProperties}
           onClick={lockedDrag.close}

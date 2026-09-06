@@ -347,6 +347,9 @@ export default function WeaknessMapPage() {
     const el = containerRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
+      // 시트(딤·패널) 위에서 굴린 휠은 시트 몫 — 지도 팬으로 삼키면 PC 에서 시트 뒤 배경이 움직인다 (2026-09-06).
+      // preventDefault 도 하지 않아 시트 안 스크롤은 그대로 동작하고, 시트 끝에선 지도(overflow hidden)라 새지 않는다
+      if ((e.target as Element | null)?.closest?.('[data-sheet-layer]')) return
       e.preventDefault()
       setAnimated(false)
       if (e.ctrlKey || e.metaKey) {
