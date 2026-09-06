@@ -541,6 +541,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           setId: set.setId,
           unitName: target.row.name,
           scoreBefore,
+          subject,
+          unitCode: target.row.unitCode,
+          nodeId,
         })
         navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
         return

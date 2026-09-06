@@ -49,6 +49,6 @@ export async function startTrialSetSession(
       elapsedMs: 0,
     })
   })
-  useTrialProgressStore.getState().startUnit({ unitName: row.name, returnTo })
+  useTrialProgressStore.getState().startUnit({ unitName: row.name, returnTo, unitCode: row.unitCode, nodeId })
   return `/trial/quiz/${subject}/${firstUnsolvedIdx}`
 }

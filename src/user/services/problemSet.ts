@@ -4,7 +4,7 @@ import {
   type ProblemSetItem,
   type TrialProblemSetItem,
 } from '@/user/api/problemApi'
-import { issueProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
+import { fetchActiveProblemSet, issueProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -181,6 +181,28 @@ export async function loadIssuedSet(
   source: 'TRIAL' | 'FREE' | 'DAILY',
 ): Promise<{ set: IssuedProblemSet; problems: Problem[]; firstUnsolvedIdx: number }> {
   const set = await issueProblemSet(subject, unitCode, source)
+  const problems = set.items.map((item, i) => toQuizProblem(item, i, subject, nodeId))
+  cache.set(`${subject}:${nodeId}`, problems)
+  const firstUnsolvedIdx = Math.max(0, set.items.findIndex((item) => !item.submitted))
+  return { set, problems, firstUnsolvedIdx }
+}
+
+/**
+ * 진행 중 세트 복원 (2026-09-06) — 재로드로 메모리 세션·캐시가 날아간 풀이 화면이 세트를 되찾는 경로.
+ *
+ * 발급 API 가 아니라 조회 API(GET /api/problem-sets/active)를 쓴다 — 발급은 ACTIVE 세트가 없으면
+ * 새 세트를 만들며 크레딧을 차감하므로, 만료된 게스트(7일 정리)가 옛 setId 를 들고 있는 경우 등에서
+ * 의도치 않은 차감이 난다. 진행 중 세트가 없거나 다른 세트(setId 불일치)면 null — 호출부는 진입처로 돌려보낸다.
+ */
+export async function restoreActiveSet(
+  subject: Subject,
+  nodeId: string,
+  unitCode: string,
+  source: 'TRIAL' | 'FREE' | 'DAILY',
+  expectedSetId: number,
+): Promise<{ set: IssuedProblemSet; problems: Problem[]; firstUnsolvedIdx: number } | null> {
+  const set = await fetchActiveProblemSet(subject, unitCode, source)
+  if (!set || set.status !== 'ACTIVE' || set.setId !== expectedSetId) return null
   const problems = set.items.map((item, i) => toQuizProblem(item, i, subject, nodeId))
   cache.set(`${subject}:${nodeId}`, problems)
   const firstUnsolvedIdx = Math.max(0, set.items.findIndex((item) => !item.submitted))

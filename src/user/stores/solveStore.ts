@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { type Problem } from '@/user/data/mockProblems'
 import { type AttemptSource } from '@/user/api/attemptApi'
 import type { UnitScoreSnapshot } from '@/user/services/unitScoreSnapshot'
+import type { Subject } from '@/user/stores/trialStore'
 
 /**
  * 일반 문제풀이(/solve) 세션 — 진입처(오답노트 다시 풀기 등)가 문제 목록을
@@ -24,6 +25,72 @@ export interface SolveSession {
   unitName?: string
   /** 세트 시작 시점의 소단원 누적 점수 — 결과 화면의 "이전 평균" (조회 실패 시 null) */
   scoreBefore?: UnitScoreSnapshot | null
+  /** 세트 복원 키 (2026-09-06) — 재로드 시 진행 중 세트를 서버에서 다시 찾는 데 필요. 세트 풀이(setId 있음)만 */
+  subject?: Subject
+  unitCode?: string
+  nodeId?: string
+}
+
+/**
+ * 재로드 복원용 세션 메타 (2026-09-06) — 문제 배열은 메모리에만 두고, 세트를 다시 찾는 데 필요한 키만
+ * sessionStorage 에 남긴다. 풀이 도중 브라우저가 페이지를 다시 로드하면(앱 전환 복귀·웹뷰 재시작) 세션이
+ * 사라져 남은 문항이 세트 없이 제출되고, 서버 세트가 영원히 ACTIVE(이어풀기)로 남던 문제의 근거.
+ * 세트 풀이(setId 있음)만 기록 — 오답 다시 풀기(RETRY)는 복원할 세트가 없다.
+ */
+/** 세트가 있는 소스 — 오답 다시 풀기(RETRY)는 세트가 없어 복원 대상이 아니다 */
+export type SetSource = Exclude<AttemptSource, 'RETRY'>
+
+export interface SolveSessionMeta {
+  subject: Subject
+  setId: number
+  source: SetSource
+  unitCode: string
+  nodeId: string
+  unitName?: string
+  returnTo: string
+}
+
+const META_KEY = 'pullit_solve_session_meta'
+
+export function readSolveSessionMeta(): SolveSessionMeta | null {
+  try {
+    const raw = sessionStorage.getItem(META_KEY)
+    if (!raw) return null
+    const meta = JSON.parse(raw) as Partial<SolveSessionMeta>
+    if (!meta.setId || !meta.subject || !meta.unitCode || !meta.nodeId || !meta.source) return null
+    return meta as SolveSessionMeta
+  } catch {
+    return null
+  }
+}
+
+function writeSolveSessionMeta(session: SolveSession) {
+  try {
+    if (session.setId && session.subject && session.unitCode && session.nodeId && session.source !== 'RETRY') {
+      const meta: SolveSessionMeta = {
+        subject: session.subject,
+        setId: session.setId,
+        source: session.source,
+        unitCode: session.unitCode,
+        nodeId: session.nodeId,
+        unitName: session.unitName,
+        returnTo: session.returnTo,
+      }
+      sessionStorage.setItem(META_KEY, JSON.stringify(meta))
+    } else {
+      sessionStorage.removeItem(META_KEY)
+    }
+  } catch {
+    /* 저장 불가 환경 — 복원 없이 진행 */
+  }
+}
+
+export function clearSolveSessionMeta() {
+  try {
+    sessionStorage.removeItem(META_KEY)
+  } catch {
+    /* noop */
+  }
 }
 
 /**
@@ -58,7 +125,10 @@ interface SolveState {
 export const useSolveStore = create<SolveState>((set) => ({
   session: null,
   results: {},
-  startSession: (session) => set({ session, results: {} }),
+  startSession: (session) => {
+    writeSolveSessionMeta(session)
+    set({ session, results: {} })
+  },
   recordResult: (problemId, patch) =>
     set((s) => {
       const base: SolveItemResult = s.results[problemId] ?? {
@@ -69,5 +139,8 @@ export const useSolveStore = create<SolveState>((set) => ({
       }
       return { results: { ...s.results, [problemId]: { ...base, ...patch } } }
     }),
-  clear: () => set({ session: null, results: {} }),
+  clear: () => {
+    clearSolveSessionMeta()
+    set({ session: null, results: {} })
+  },
 }))

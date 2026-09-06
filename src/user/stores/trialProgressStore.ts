@@ -144,6 +144,10 @@ export interface PendingUnit {
   unitName: string
   /** 결과 화면 완료 후 돌아갈 경로 (진행 페이지) */
   returnTo: string
+  /** 서버 unit_code — 재로드 시 진행 중 세트를 서버에서 다시 찾는 키 (2026-09-06, 구버전 저장분엔 없음) */
+  unitCode?: string
+  /** 문제 세트 캐시 키(nodeId) — 결과·해설 화면이 같은 캐시를 보게 복원 시 같은 키로 심는다 */
+  nodeId?: string
 }
 
 export interface TrialProgressState {

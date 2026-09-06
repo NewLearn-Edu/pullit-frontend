@@ -478,6 +478,9 @@ export function useUnitSheets({
         setId: set.setId,
         unitName: row.name,
         scoreBefore,
+        subject: subj,
+        unitCode: row.unitCode,
+        nodeId,
       })
       navigate(`/solve/${subj}/${firstUnsolvedIdx}`)
     } catch (error) {

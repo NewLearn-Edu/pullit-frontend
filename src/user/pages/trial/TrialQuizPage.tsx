@@ -13,13 +13,14 @@ import { EnglishProblemRender, MathProblemRender } from '@/shared/components/Exa
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import { getCachedQuizProblems, loadQuizProblems, restoreActiveSet } from '@/user/services/problemSet'
+import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { CreditUsedToast } from '@/user/components/CreditUsedToast'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
-import { useSolveStore } from '@/user/stores/solveStore'
+import { clearSolveSessionMeta, readSolveSessionMeta, useSolveStore } from '@/user/stores/solveStore'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError, trackAttempt } from '@/user/services/attemptQueue'
@@ -94,6 +95,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const { mathSkillNodeId, englishTypeId, addResult, updateResult } = useTrialStore()
   const solveSession = useSolveStore((s) => s.session) // 오답 다시 풀기 등 진입처가 준비한 세션
   const recordSolveResult = useSolveStore((s) => s.recordResult)
+  const startSolveSession = useSolveStore((s) => s.startSession)
 
   // 맛보기를 이미 완주한 회원의 딥링크 진입 방어 — 미완 유저(게스트·신규 회원)는 통과.
   // solve 모드(오답 재풀이)는 완주 회원의 정상 경로라 가드 제외.
@@ -110,31 +112,117 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [problems, setProblems] = useState<Problem[]>(() =>
     !isTrial && solveSession ? solveSession.problems : [],
   )
+  const idxRef = useRef(idx)
+  idxRef.current = idx
   useEffect(() => {
     if (!isTrial && solveSession) {
       setProblems(solveSession.problems)
       return
     }
+    let alive = true
+
+    if (!isTrial) {
+      /**
+       * solve 모드인데 세션이 없다 = 풀이 도중 페이지가 다시 로드됨 (새로고침·앱 전환 복귀·웹뷰 재시작).
+       * 예전엔 진단 세션의 노드로 문제를 다시 불러와 그냥 계속 풀게 했는데, 그 제출은 setId 없이 나가
+       * 서버 세트가 영원히 ACTIVE(홈 "이어풀기")로 남고 결과 화면도 건너뛰었다 (2026-09-06).
+       * 세션 메타로 진행 중 세트를 서버에서 되찾아 첫 미제출 문항부터 잇고, 못 찾으면 진입처로 돌려보낸다.
+       * 세트 밖 제출이 생기는 길은 여기서 막는다.
+       */
+      const meta = readSolveSessionMeta()
+      if (!meta) {
+        navigate('/home', { replace: true })
+        return
+      }
+      const returnTo = meta.returnTo || '/home'
+      ;(async () => {
+        try {
+          const restored = await restoreActiveSet(meta.subject, meta.nodeId, meta.unitCode, meta.source, meta.setId)
+          if (!alive) return
+          if (!restored) {
+            clearSolveSessionMeta() // 이미 완료됐거나 사라진 세트 — 다음 재로드에서 또 찾지 않게
+            navigate(returnTo, { replace: true })
+            return
+          }
+          // 이전 평균은 세트 시작 때 setId 별로 저장한 스냅샷을 그대로 (resumed=true)
+          const scoreBefore = meta.unitName
+            ? await snapshotUnitScoreForSet(meta.subject, meta.unitName, meta.setId, true)
+            : null
+          if (!alive) return
+          startSolveSession({
+            problems: restored.problems,
+            source: meta.source,
+            returnTo,
+            setId: meta.setId,
+            unitName: meta.unitName,
+            scoreBefore,
+            subject: meta.subject,
+            unitCode: meta.unitCode,
+            nodeId: meta.nodeId,
+          })
+          // 재시작으로 비워진 문항 결과 — 이미 제출한 문항은 서버 채점 결과로 채워 세트 결과 화면 집계가 맞게
+          // (내 답·풀이 시간은 서버 응답에 없어 비움 · 획득 점수는 배점 기준 근사)
+          const { recordResult } = useSolveStore.getState()
+          restored.set.items.forEach((item, i) => {
+            if (!item.submitted) return
+            const problem = restored.problems[i]
+            recordResult(problem.id, {
+              pending: false,
+              correct: item.correct ?? false,
+              selectedChoice: null,
+              elapsedMs: 0,
+              earnedPoints: item.correct ? problem.points : 0,
+            })
+          })
+          const current = idxRef.current
+          if (current < restored.firstUnsolvedIdx || current >= restored.problems.length) {
+            navigate(`/solve/${meta.subject}/${restored.firstUnsolvedIdx}`, { replace: true })
+          }
+        } catch {
+          if (alive) navigate(returnTo, { replace: true })
+        }
+      })()
+      return () => {
+        alive = false
+      }
+    }
+
     const nodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
     if (!subject || !nodeId) return
-    let alive = true
+    const activeSetId = useTrialStore.getState().activeSetId
+    if (pendingUnit?.unitCode && activeSetId && !getCachedQuizProblems(subject, nodeId)) {
+      // 홈·지도에서 시작한 진단 세트가 재로드로 캐시를 잃음 — 노드 기준 재조회는 nodeId 없는 단원(함수의 극한 등)에서
+      // 폴백 노드(지수와 로그)의 다른 문제를 불러와 제출이 전부 세트 불일치로 버려졌다. 진행 중 세트를 서버에서 복원 (2026-09-06)
+      const back = pendingUnit.returnTo || '/home'
+      restoreActiveSet(subject, nodeId, pendingUnit.unitCode, 'TRIAL', activeSetId)
+        .then((restored) => {
+          if (!alive) return
+          if (restored) setProblems(restored.problems)
+          else navigate(back, { replace: true })
+        })
+        .catch(() => {
+          if (alive) navigate(back, { replace: true })
+        })
+      return () => {
+        alive = false
+      }
+    }
     loadQuizProblems(subject, nodeId).then((list) => {
       if (alive) setProblems(list)
     })
     return () => {
       alive = false
     }
-  }, [isTrial, solveSession, subject, mathSkillNodeId, englishTypeId])
+  }, [isTrial, solveSession, subject, mathSkillNodeId, englishTypeId, pendingUnit, navigate, startSolveSession])
 
   useEffect(() => {
-    if (!isTrial && solveSession) return // 진입처가 준비한 문제로 진행 — 목 선택 불필요
-    const fallback = isTrial ? '/trial' : '/home'
+    if (!isTrial) return // solve 모드는 위 효과가 세션 복원 실패 시 진입처로 보낸다
     if (subject === 'math' && !mathSkillNodeId) {
-      navigate(fallback, { replace: true })
+      navigate('/trial', { replace: true })
     } else if (subject === 'english' && !englishTypeId) {
-      navigate(fallback, { replace: true })
+      navigate('/trial', { replace: true })
     }
-  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTrial, solveSession])
+  }, [subject, mathSkillNodeId, englishTypeId, navigate, isTrial])
 
   const problem = problems[idx]
 
