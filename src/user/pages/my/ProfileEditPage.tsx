@@ -106,6 +106,8 @@ export default function ProfileEditPage() {
   // 표시 우선순위: 문자 오류(빨강) > 서버 오류(빨강) > 기본 안내
   const error = hasInvalidChar ? '사용할 수 없는 문자가 포함되어 있어요.' : serverError
   const helper = '한글·영문·숫자 2~10자로 지어줘.'
+  // 테두리 상태용 — 올바른 값(길이·문자 규칙 충족)일 때만 회색 stroke
+  const valid = !hasInvalidChar && nickname.length >= NICKNAME_MIN && nickname.length <= NICKNAME_MAX
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
@@ -155,10 +157,16 @@ export default function ProfileEditPage() {
           >
             닉네임
           </label>
+          {/* 회원가입 인풋과 같은 규격 (2026-09-06): 흰 배경 + 테두리. 빈 값 #ebedf0 · 유효값 #a6abb1 ·
+              포커스 #23272b · 오류 danger. 예전 회색 필은 읽기 전용 필드와 구분이 안 됐다 */}
           <div
             className={clsx(
-              'flex h-[52px] items-center gap-[8px] rounded-[14px] px-[16px] transition-colors',
-              error ? 'bg-[#fff1f2]' : 'bg-[#f2f4f6]',
+              'flex h-[56px] items-center gap-[8px] rounded-[12px] border bg-white px-[16px] transition-colors duration-150',
+              error
+                ? 'border-danger'
+                : valid
+                  ? 'border-[#a6abb1] focus-within:border-[#23272b]'
+                  : 'border-[#ebedf0] focus-within:border-[#23272b]',
             )}
           >
             <input
@@ -198,7 +206,7 @@ export default function ProfileEditPage() {
             수정할 수 없다 (네이버 로그인 검수 "제공 정보 활용처" 캡처 대상 · 2026-09-04) */}
         <div className="mt-[28px] flex w-full flex-col gap-[20px]">
           <ReadOnlyField label="이름" value={me?.name} />
-          <ReadOnlyField label="이메일 주소" value={me?.email} />
+          <ReadOnlyField label="이메일" value={me?.email} />
           <ReadOnlyField label="휴대전화번호" value={me?.phoneNumber} />
           
         </div>
@@ -264,22 +272,19 @@ function ClearIcon() {
 }
 
 /**
- * 읽기 전용 계정 필드 — 닉네임 입력과 같은 규격(라벨 13px · 52px 회색 필). 값이 없으면 대시.
- * 잠금 아이콘·투명도 없이 글자색만 한 단계 밝게(#5e6368) — disabled 티가 덜 나게 (2026-09-04)
+ * 읽기 전용 계정 필드 — 회원가입의 disabled 인풋과 같은 규격(56px · r12 · 회색 필 #f7f8f9). 값이 없으면 대시.
+ * 글자는 밝은 회색(#a6abb1)으로 — 편집 가능한 닉네임(흰 배경·검정 글자)과 한눈에 구분되게 (2026-09-06)
  */
 function ReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="flex w-full flex-col gap-[8px]">
       <span className="text-[13px] font-semibold text-[#5e6368]">{label}</span>
-      <div className="flex h-[52px] items-center rounded-[14px] bg-[#f2f4f6] px-[16px]">
-        <input
-          value={value || '—'}
-          readOnly
-          tabIndex={-1}
-          aria-label={label}
-          className="min-w-0 flex-1 bg-transparent text-[17px] font-medium text-[#5e6368] outline-none"
-        />
-      </div>
+      <input
+        value={value || '—'}
+        disabled
+        aria-label={label}
+        className="h-[56px] w-full rounded-[12px] border border-[#ebedf0] bg-[#f7f8f9] px-[16px] text-[17px] font-medium text-[#a6abb1] outline-none"
+      />
     </div>
   )
 }
