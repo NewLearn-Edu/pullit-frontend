@@ -64,7 +64,9 @@ export default function ProfileEditPage() {
       // 서버 메시지가 곧 UX 카피 (형식·용량) — 그대로 노출
       const message = isAxiosError(e)
         ? (e.response?.data as { message?: string } | undefined)?.message
-        : null
+        : e instanceof Error && e.message
+          ? e.message // 변환·디코드 실패 — 원인이 보여야 재현·문의가 된다
+          : null
       setImageError(message ?? '이미지를 바꾸지 못했어요. 다시 시도해주세요')
     } finally {
       setImageBusy(false)
@@ -232,24 +234,53 @@ export default function ProfileEditPage() {
  * webp 인코딩을 못 하는 구형 브라우저는 png 로 폴백되는데, 서버가 둘 다 허용하므로 그대로 통과한다.
  */
 async function resizeProfileImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height))
-  const width = Math.round(bitmap.width * scale)
-  const height = Math.round(bitmap.height * scale)
+  const source = await decodeImage(file)
+  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(source.width, source.height))
+  const width = Math.round(source.width * scale)
+  const height = Math.round(source.height * scale)
 
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close()
+  canvas.getContext('2d')?.drawImage(source.el, 0, 0, width, height)
+  source.release()
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('이미지를 변환하지 못했어요'))),
-      'image/webp',
-      0.9,
-    )
-  })
+  // webp → 실패하면 jpeg (구형 웹뷰는 webp 인코딩이 안 돼 toBlob 이 null 을 준다 · 2026-09-06)
+  const encode = (type: string) =>
+    new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.9))
+  const blob = (await encode('image/webp')) ?? (await encode('image/jpeg'))
+  if (!blob) throw new Error('이미지를 변환하지 못했어요')
+  return blob
+}
+
+/**
+ * 디코드 — createImageBitmap 우선, 실패하면 <img> 로 폴백 (2026-09-06).
+ * 일부 웹뷰·구형 사파리는 createImageBitmap 이 없거나 특정 포맷에서 예외를 던져 업로드 자체가 막혔다
+ */
+async function decodeImage(
+  file: File,
+): Promise<{ el: CanvasImageSource; width: number; height: number; release: () => void }> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file)
+      return { el: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() }
+    } catch {
+      /* 아래 <img> 폴백 */
+    }
+  }
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('이미지를 읽지 못했어요'))
+      el.src = url
+    })
+    return { el: img, width: img.naturalWidth, height: img.naturalHeight, release: () => URL.revokeObjectURL(url) }
+  } catch (e) {
+    URL.revokeObjectURL(url)
+    throw e
+  }
 }
 
 function PencilIcon() {

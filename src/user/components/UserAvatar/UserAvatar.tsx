@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import defaultAvatar from '@/assets/avatar-default.png'
 
 interface UserAvatarProps {
@@ -12,12 +13,16 @@ interface UserAvatarProps {
  * profile_image_url 이 생기면(업로드 기능) 그 URL 을 우선 표시한다.
  */
 export function UserAvatar({ src, size = 72, alt = '프로필 이미지' }: UserAvatarProps) {
+  // 업로드는 됐는데 URL 을 못 읽는 경우(버킷 비공개·CloudFront 미설정 등) 깨진 이미지 아이콘 대신 기본 아바타 (2026-09-06)
+  const [broken, setBroken] = useState(false)
+  useEffect(() => setBroken(false), [src])
   return (
     <img
-      src={src || defaultAvatar}
+      src={!broken && src ? src : defaultAvatar}
       alt={alt}
       width={size}
       height={size}
+      onError={() => setBroken(true)}
       className="shrink-0 rounded-full object-cover"
     />
   )
