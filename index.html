@@ -32,8 +32,15 @@
       content="매일 3문제로 수능 수학·영어 약점을 찾아주는 데일리 학습 서비스"
     />
     <meta property="og:url" content="https://pullit.co.kr/" />
-    <meta property="og:image" content="https://pullit.co.kr/logo_pullit_favicon.png" />
-    <meta name="twitter:card" content="summary" />
+    <!-- 링크 공유 썸네일 — 모든 페이지 공통(SPA 라 index.html 하나가 전 경로에 서빙된다).
+         카카오 "초대하기" 는 여기를 안 쓴다 — Kakao.Share.sendDefault 로 og-invite.png 를 직접 넘김.
+         서빙 도메인(www) 절대경로 필수: apex(pullit.co.kr) 는 301 이라 스크래퍼가 놓칠 수 있다. -->
+    <meta property="og:image" content="https://www.pullit.co.kr/og-default.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="쉬는 시간에, 지하철에서 15분 — 하루 약점 3문제 풀면 끝" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://www.pullit.co.kr/og-default.png" />
     <link rel="icon" type="image/png" href="/logo_pullit_favicon.png" />
     <link rel="apple-touch-icon" href="/logo_pullit_favicon.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
