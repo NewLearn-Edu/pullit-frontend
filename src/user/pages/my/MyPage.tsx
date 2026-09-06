@@ -9,7 +9,6 @@ import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { isStandaloneApp } from '@/user/utils/standalone'
 import { GRADE_LABEL, logout, updateMarketingConsent } from '@/user/api/authApi'
 import { clearLocalTraces } from '@/user/utils/localTraces'
-import { fetchStudyStats, type StudyStats } from '@/user/api/attemptApi'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
 import { useUserStore } from '@/user/stores/userStore'
@@ -39,7 +38,7 @@ function gradeLabel(birthDate: string | null | undefined): string | null {
 
 /**
  * 마이페이지 (/my · Figma 2627-2336)
- * 프로필 카드 + 학습 통계 + 메뉴 리스트(학습 관리·계정) + 로그아웃.
+ * 프로필 카드 + 메뉴 리스트(계정·약관) + 로그아웃.
  * 리포트·설정은 페이지 준비 전 (POC 시각만).
  */
 export default function MyPage() {
@@ -60,15 +59,6 @@ export default function MyPage() {
 
   const isGuest = me?.type === 'GUEST'
   const loadMe = useUserStore((s) => s.loadMe)
-
-  // 학습 통계 — 실데이터 (로딩 전엔 "—")
-  const [stats, setStats] = useState<StudyStats | null>(null)
-  useEffect(() => {
-    if (sessionStatus !== 'ready') return
-    fetchStudyStats()
-      .then(setStats)
-      .catch(() => setStats(null))
-  }, [sessionStatus])
 
   // 준비 전 메뉴 안내용 미니 토스트
   const [toast, setToast] = useState<string | null>(null)
@@ -175,41 +165,8 @@ export default function MyPage() {
           )}
         </section>
 
-        {/* 학습 통계 — GET /api/attempts/me/stats 실데이터 (풀이 없으면 0 · —) */}
-        <section className={styles.statsCard}>
-          <div className={styles.stat}>
-            <span className={styles.statLabel}>푼 문제</span>
-            <span className={styles.statValue}>
-              {stats ? `${stats.solvedCount.toLocaleString()}개` : '—'}
-            </span>
-          </div>
-          <span className={styles.statDivider} />
-          <div className={styles.stat}>
-            {/* 구분 — 가입 프로필에서 고른 값. 학부모·선생님·일반인이 섞여 "학년"이 아니다.
-                정답률은 자리를 빼고 학습 리포트에서 다룬다 (2026-09-03) */}
-            <span className={styles.statLabel}>구분</span>
-            <span className={styles.statValue}>
-              {me?.grade ? GRADE_LABEL[me.grade] : gradeLabel(me?.birthDate) ?? '—'}
-            </span>
-          </div>
-          <span className={styles.statDivider} />
-          <div className={styles.stat}>
-            <span className={styles.statLabel}>연속 학습</span>
-            <span className={clsx(styles.statValue, styles.statValueRed)}>
-              {stats ? `${stats.streakDays}일` : '—'}
-            </span>
-          </div>
-        </section>
-
-        {/* 학습 관리 */}
-        <section className={styles.menuSection}>
-          <p className={styles.menuLabel}>학습 관리</p>
-          <div className={styles.menuCard}>
-            <MenuItem label="오답 노트" onClick={() => navigate('/wrong-note')} />
-            {/* 하단 네비 "학습 기록"(/report)과 같은 화면·같은 이름 — 눌러 가면 네비도 학습 기록이 켜진다 */}
-            <MenuItem label="학습 기록" onClick={() => navigate('/report')} last />
-          </div>
-        </section>
+        {/* 학습 통계(푼 문제·구분·연속 학습)와 학습 관리(오답 노트·학습 기록) 영역 제거 (2026-09-06).
+            풀이 수치는 학습 리포트가, 진입은 하단 네비·헤더 오답 배지가 이미 맡는다 */}
 
         {/* 계정 */}
         <section className={styles.menuSection}>
