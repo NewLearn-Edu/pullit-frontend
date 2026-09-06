@@ -333,22 +333,31 @@ function useTabletUp(): boolean {
   return tabletUp
 }
 
+/**
+ * 해설 화면 문제 본문 — 풀이 화면(TrialQuizPage.ProblemBody)과 **같은 조판**이어야 한다.
+ *
+ * 필기는 기준 폭 500 조판의 좌표로 저장하고 본문과 같은 배율을 곱해 그린다. 두 화면의 본문 조판이
+ * 다르면 글이 위아래로 밀리는데 필기는 저장된 자리에 그대로 그려져 어긋나 보인다 —
+ * 예전엔 여기만 16px·flex gap 을 쓰는 옛 스타일(problemBody)이라 풀이 때 한 필기가 해설에서 밀렸다
+ * (2026-09-06 제보). 공용 exam.css 조판(pv-question)으로 통일해 두 화면을 같은 지면으로 맞춘다.
+ * 한쪽만 고치지 말 것 — 바꿔야 하면 풀이 화면 ProblemBody 와 함께.
+ */
 function ReviewProblemBody({ problem }: { problem: Problem }) {
-  const pointsBadge = <span className={styles.pointsBadge}>[{problem.points}점]</span>
+  // 배점은 스타일 없는 [N점] 그대로 발문 끝에 (풀이 화면·어드민 미리보기와 동일)
+  const pointsBadge = <>[{problem.points}점]</>
   const hasConditions = !!problem.conditions && problem.conditions.length > 0
   const hasQuestion = !!problem.question
+  const glossary = problem.glossary ?? []
 
   return (
-    <div className={styles.problemBody}>
-      <div>
-        {/* 신규 규격 문항은 bodyText 가 question 블록 직렬화 — 블록 렌더러가 판별해 조판.
-            배점은 발문 끝 인라인 (수능 지면 규칙) */}
-        <QuestionRender
-          question={problem.bodyText}
-          subject={problem.subject}
-          scoreBadge={!hasConditions && !hasQuestion ? pointsBadge : undefined}
-        />
-      </div>
+    // 수능 지면 순서: 발문 [N점] → 지문(통합 question) → 단어 주석
+    <div className="pv-question">
+      {/* 신규 규격 문항은 bodyText 가 question 블록 직렬화 — 블록 렌더러가 판별해 조판 */}
+      <QuestionRender
+        question={problem.bodyText}
+        subject={problem.subject}
+        scoreBadge={!hasConditions && !hasQuestion ? pointsBadge : undefined}
+      />
       {hasConditions && (
         <div className={styles.conditionsBox}>
           {problem.conditions!.map((c, i) => (
@@ -360,8 +369,13 @@ function ReviewProblemBody({ problem }: { problem: Problem }) {
       )}
       {hasQuestion && (
         <div>
-          <MathProblemRender text={problem.question!} />
-          {pointsBadge}
+          <MathProblemRender text={problem.question!} /> {pointsBadge}
+        </div>
+      )}
+      {/* 단어 주석 — 풀이 화면엔 있고 해설엔 없어 그 아래(보기)가 위로 올라가던 자리 */}
+      {glossary.length > 0 && (
+        <div className="pv-glossary">
+          {glossary.map((g, i) => `${'*'.repeat(i + 1)} ${g.term}: ${g.meaning}`).join('   ')}
         </div>
       )}
     </div>
