@@ -273,7 +273,9 @@ function ClearIcon() {
 
 /**
  * 읽기 전용 계정 필드 — 회원가입의 disabled 인풋과 같은 규격(56px · r12 · 회색 필 #f7f8f9). 값이 없으면 대시.
- * 글자는 밝은 회색(#a6abb1)으로 — 편집 가능한 닉네임(흰 배경·검정 글자)과 한눈에 구분되게 (2026-09-06)
+ * 글자는 #80858b — 편집 가능한 닉네임(흰 배경·검정 글자)과 구분되되 읽히는 밝기.
+ * disabled 속성 대신 readOnly: 사파리·크롬이 disabled 인풋에 투명도·-webkit-text-fill-color 를 덧씌워
+ * 지정한 회색보다 훨씬 흐려져 안 보였다 (2026-09-06)
  */
 function ReadOnlyField({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -281,9 +283,11 @@ function ReadOnlyField({ label, value }: { label: string; value: string | null |
       <span className="text-[13px] font-semibold text-[#5e6368]">{label}</span>
       <input
         value={value || '—'}
-        disabled
+        readOnly
+        tabIndex={-1}
+        aria-disabled
         aria-label={label}
-        className="h-[56px] w-full rounded-[12px] border border-[#ebedf0] bg-[#f7f8f9] px-[16px] text-[17px] font-medium text-[#a6abb1] outline-none"
+        className="h-[56px] w-full cursor-default rounded-[12px] border border-[#ebedf0] bg-[#f7f8f9] px-[16px] text-[17px] font-medium text-[#80858b] outline-none"
       />
     </div>
   )
