@@ -184,6 +184,12 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
 
   const [serverLocks, setServerLocks] = useState<Record<string, string>>({})
+  /**
+   * 잠금 조회 완료 여부 (2026-09-06). 잠금이 도착하기 전에 대상을 고르면 잠긴 구간의 첫 단원이
+   * "다음 진단"으로 잡혀 — 서버 추천이 NONE 이라 로컬 폴백을 탈 때 — 유저가 그 단원을 진단하고
+   * 잠금이 풀려 버린다 ("건너뛴 단원이 저절로 열림"). 조회가 끝난 뒤에만 대상을 고른다 (실패도 끝으로 본다)
+   */
+  const [locksLoaded, setLocksLoaded] = useState(false)
   const [serverRec, setServerRec] = useState<Recommendation | null>(null)
   /**
    * 풀다 만 세트(이어풀기 · 3631-13956) — 있으면 추천보다 우선해 그 단원을 집고, 남은 문항·시간·크레딧 없음으로 보여준다.
@@ -203,8 +209,10 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     setFailed(false)
     setServerRec(null)
     setResume(undefined)
+    setLocksLoaded(false)
     if (isRecommendDemo()) {
       setResume(null)
+      setLocksLoaded(true)
       return
     }
     fetchResumableSet()
@@ -229,6 +237,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         setServerLocks(map)
       })
       .catch(() => {})
+      .finally(() => setLocksLoaded(true))
     fetchRecommendation(subject).then(setServerRec, () => setFailed(true))
   }, [subject, hydrateFromServer])
 
@@ -278,23 +287,35 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       }
       return null
     }
-    if (resume === undefined) return null // 풀다 만 세트 조회 전 — 먼저 결정하지 않는다
-    if (resume) {
-      const hit = pick((r) => r.unitCode === resume.set.unitCode)
-      if (hit) return hit
-    }
+    // 풀다 만 세트 조회 전에는 보류 — 대상 자체는 이어풀기와 무관하지만,
+    // 배지·남은 문제 수가 뒤늦게 뒤집혀 보이지 않게 함께 기다린다
+    if (resume === undefined) return null
+    if (!locksLoaded) return null // 잠금 조회 전 — 잠긴 구간 첫 단원이 '다음'으로 잡히는 경합 방지
     if (rec && rec.type !== 'NONE' && rec.unitCode) {
       const hit = pick((r) => r.unitCode === rec.unitCode)
       if (hit) return hit
     }
     if (!rec) return null
     return pick((r) => r.state === 'next')
-  }, [rec, resume, columns])
+  }, [rec, resume, columns, locksLoaded])
+
+  /**
+   * 이어풀기는 추천 "순서" 에 관여하지 않는다 (2026-09-06).
+   *
+   * 추천 순서는 서버 규칙 하나뿐이다 — ① 교육과정 순서로 첫 미진단 소단원,
+   * ② 전부 소진되면 최약점 보완. 예전엔 풀다 만 세트가 있으면 그 단원을 무조건 먼저 집어서,
+   * 대수에 미진단이 남아 있어도 미적분 I 의 풀다 만 세트가 추천으로 올라왔다.
+   *
+   * 풀다 만 세트는 "마침 추천 단원과 같을 때만" 이어서 푼다. 다른 단원의 풀다 만 세트는
+   * 홈 진입 팝업(PI-POPUP-RESUME)이 안내한다 — 백엔드 RecommendationService 주석과 같은 정책.
+   */
+  const resumeHere =
+    resume && target && resume.set.unitCode === target.row.unitCode ? resume : null
 
   /** 추천이 끝났는데 집을 카드가 없다 = 전 대단원 진단 완료. 홈으로 돌려보낸다 */
   useEffect(() => {
-    if (rec && resume !== undefined && !target) navigate('/home', { replace: true })
-  }, [rec, resume, target, navigate])
+    if (rec && resume !== undefined && locksLoaded && !target) navigate('/home', { replace: true })
+  }, [rec, resume, locksLoaded, target, navigate])
 
   // ── 단계 진행 ─────────────────────────────────────────────────────────────
   const reduceMotion = useMemo(
@@ -532,8 +553,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       // 세트 종류 (2026-09-06): 풀다 만 세트가 있으면 그 종류 그대로. 없으면 이미 진단한 단원(REVIEW · 최약점 보완)은
       // 자유 풀이(FREE · 문제 은행 사다리)로, 미진단 단원(DIAGNOSIS)만 진단(TRIAL · 맛보기 고정 세트)으로.
       // 예전엔 무조건 TRIAL 이라 진단을 마친 최약점 단원을 추천받아도 맛보기 3문제가 그대로 다시 나왔다.
-      const source: 'TRIAL' | 'FREE' | 'DAILY' = resume
-        ? resume.set.source
+      const source: 'TRIAL' | 'FREE' | 'DAILY' = resumeHere
+        ? resumeHere.set.source
         : rec?.type === 'REVIEW' || target.row.diagnosis
           ? 'FREE'
           : 'TRIAL'
@@ -637,8 +658,9 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   /** 확대가 끝난 시점 — 여기서 그리드를 끄고 무대가 카드를 직접 들기 시작한다 */
   const solo = phase === 'lift' || phase === 'expand' || phase === 'ready'
   const revealed = phase === 'expand' || phase === 'ready'
-  const badge = resume ? { text: '이어 풀기', weak: true } : unitBadge(rec, target?.row)
-  const reason = resume ? '풀다 만 문제' : defaultReason(target?.row)
+  const badge = resumeHere ? { text: '이어 풀기', weak: true } : unitBadge(rec, target?.row)
+  const reason = resumeHere ? '풀다 만 문제' : defaultReason(target?.row)
+  // 캔버스 카드의 "이어풀기" 표식 — 추천 대상이 아니어도 풀다 만 세트가 있는 칸은 그대로 표시한다
   const resumeUnitCode = resume?.set.unitCode ?? null
   // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
@@ -674,7 +696,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           <div className={clsx(styles.titleLayer, !revealed && styles.titleLayerOut)}>
             <h1 className={styles.title}>지금 필요한 추천문제</h1>
             <p className={styles.subtitle}>
-              {resume ? '풀다 만 문제가 있어' : '현재 학습 상태에 맞춰 문제를 골랐어'}
+              {resumeHere ? '풀다 만 문제가 있어' : '현재 학습 상태에 맞춰 문제를 골랐어'}
             </p>
           </div>
         </div>
@@ -808,15 +830,15 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           <div className={clsx(styles.stats, revealed && styles.statsIn)}>
             {/* 이어풀기(3631-13956): 남은 문항 수 · 남은 문항 권장 시간 합 · 크레딧 없음 */}
             <div className={styles.stat}>
-              <span className={styles.statLabel}>{resume ? '남은 문제' : '문제 수'}</span>
-              <span className={styles.statValue}>{resume ? resume.remaining : SET_SIZE}문제</span>
+              <span className={styles.statLabel}>{resumeHere ? '남은 문제' : '문제 수'}</span>
+              <span className={styles.statValue}>{resumeHere ? resumeHere.remaining : SET_SIZE}문제</span>
             </div>
             <span className={styles.statDivider} aria-hidden />
             <div className={styles.stat}>
               <span className={styles.statLabel}>예상 시간</span>
               <span className={styles.statValue}>
                 {(() => {
-                  const sec = resume ? (resume.remainingSec ?? estimatedSec) : estimatedSec
+                  const sec = resumeHere ? (resumeHere.remainingSec ?? estimatedSec) : estimatedSec
                   return sec != null ? `약 ${Math.max(1, Math.round(sec / 60))}분` : '약 —분'
                 })()}
               </span>
@@ -824,7 +846,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
             <span className={styles.statDivider} aria-hidden />
             <div className={styles.stat}>
               <span className={styles.statLabel}>필요 크레딧</span>
-              <span className={styles.statValue}>{resume ? '없음' : `${SET_CREDIT_COST}개`}</span>
+              <span className={styles.statValue}>{resumeHere ? '없음' : `${SET_CREDIT_COST}개`}</span>
             </div>
           </div>
         </div>
@@ -851,13 +873,13 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
           >
             {starting
               ? '시작 중…'
-              : resume
+              : resumeHere
                 ? '이어 풀기'
                 : target?.row.diagnosis
                   ? '추천 문제 풀기'
                   : `${target?.row.name ?? ''} 진단하기`.trim()}
           </button>
-          {!resume && !target?.row.diagnosis && (
+          {!resumeHere && !target?.row.diagnosis && (
             <button
               type="button"
               onClick={() => setSkipMode(true)}
