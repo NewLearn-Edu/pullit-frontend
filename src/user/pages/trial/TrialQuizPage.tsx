@@ -9,7 +9,7 @@ import { DrawingCanvasHandle, EraserMode, StrokeTool } from '@/user/components/q
 import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
-import { choiceMark, EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
+import { choiceMark, hasChoiceContent, EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
@@ -610,7 +610,9 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
                   {/* 보기 — 시험지처럼 읽기 전용 (선택은 하단 고정 바에서 · 주관식은 보기 없음).
                       bodyWrap 안에 두어 본문과 같은 좌우 패딩을 공유한다 */}
-                  {!isShortAnswer && (
+                  {/* 문장 삽입·무관한 문장·도표는 선지가 원기호 껍데기뿐 — 지문 안 위치 표시와 중복이라 안 그린다.
+                      답은 하단 고정 답안 바(OMR)로 고르므로 푸는 데 지장 없다 (2026-09-06) */}
+                  {!isShortAnswer && hasChoiceContent(problem.choices) && (
                     <div className="pv-choices">
                       {problem.choices.map((choice, i) => {
                         const answerText = choice.replace(/^[①②③④⑤]\s*/, '')

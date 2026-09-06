@@ -4,6 +4,7 @@ import axios from 'axios'
 import clsx from 'clsx'
 import {
   choiceMark,
+  hasChoiceContent,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -607,7 +608,7 @@ export default function ProblemUploadPage() {
                         <div className="pv-question">
                           <QuestionRender question={dupItem.question} subject={subject} />
                         </div>
-                        {(dupItem.choices?.length ?? 0) > 0 && (
+                        {hasChoiceContent(dupItem.choices ?? []) && (
                           <div className="pv-choices">
                             {(dupItem.choices ?? []).map((c, i) => {
                               const correct = dupItem.answer_index === i + 1
@@ -724,7 +725,7 @@ export default function ProblemUploadPage() {
                           .join('   ')}
                       </div>
                     )}
-                    {(item?.choices?.length ?? 0) > 0 && (
+                    {hasChoiceContent(item?.choices ?? []) && (
                       <div className="pv-choices">
                         {(item?.choices ?? []).map((c, i) => {
                           const correct = item?.answer_index === i + 1

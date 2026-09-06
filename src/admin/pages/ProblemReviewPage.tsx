@@ -2,6 +2,7 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import clsx from 'clsx'
 import {
   choiceMark,
+  hasChoiceContent,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -229,7 +230,7 @@ function ReviewPreview({
                 scoreBadge={problem.score != null ? <>[{problem.score}점]</> : undefined}
               />
             </div>
-            {(problem.choices?.length ?? 0) > 0 && (
+            {hasChoiceContent(problem.choices ?? []) && (
               <div className="pv-choices">
                 {(problem.choices ?? []).map((c, i) => {
                   const correct = problem.answer_index === i + 1

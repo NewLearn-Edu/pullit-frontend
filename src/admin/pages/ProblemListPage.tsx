@@ -8,6 +8,7 @@ import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import {
   choiceMark,
+  hasChoiceContent,
   EnglishExplainRender,
   EnglishProblemRender,
   MathExplainRender,
@@ -579,7 +580,7 @@ export default function ProblemListPage() {
                           .join('   ')}
                       </div>
                     )}
-                    {detail.choices.length > 0 && (
+                    {hasChoiceContent(detail.choices) && (
                       <div className="pv-choices">
                         {detail.choices.map((c, i) => {
                           const correct = detail.answerIndex === i + 1

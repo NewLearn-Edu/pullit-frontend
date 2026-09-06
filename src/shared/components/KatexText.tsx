@@ -371,6 +371,14 @@ function parse(text: string): Part[] {
   let buffer = ''
   let i = 0
   while (i < text.length) {
+    // 이스케이프한 달러(\$) — 수식 구분자가 아니라 글자 그대로의 $ (2026-09-06).
+    // 도표 헤더의 통화 단위("Pre-Tsunami (\$M)")가 생성기에서 이렇게 온다.
+    // 안 풀면 백슬래시가 그대로 찍히고, 짝 없는 $ 가 수식 시작으로 잡혀 뒤가 통째로 깨진다
+    if (text[i] === '\\' && text[i + 1] === '$') {
+      buffer += '$'
+      i += 2
+      continue
+    }
     if (text[i] === '$' && text[i + 1] === '$') {
       if (buffer) {
         parts.push({ type: 'text', value: buffer })

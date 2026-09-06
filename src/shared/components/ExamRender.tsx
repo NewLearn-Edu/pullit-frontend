@@ -44,6 +44,20 @@ export function EnglishExplainRender({ text }: { text: string }) {
  * 유니코드 글리프를 그대로 쓴다 — 문제와 해설의 원기호 모양을 일치시키기 위함.
  * filled=true 는 학생 리뷰 화면의 "내가 고른 보기"(채운 원 ❶~❺).
  */
+/**
+ * 보기 목록을 그릴 필요가 있는가 (2026-09-06).
+ *
+ * 문장 삽입·무관한 문장·도표 유형은 ①~⑤ 가 지문·도표 안의 위치 표시로 이미 들어가 있고
+ * choices 는 원기호만 담은 껍데기다 (english_2015_2_0_2 184건 · 2_0_4 51건 · 4_0_4 88건 —
+ * 세 유형 모두 100%). 아래에 또 나열하면 같은 정보가 두 번 나온다 — 수능 지면도 이 유형들은
+ * 선지를 따로 싣지 않는다.
+ *
+ * 채점 뒤 리뷰 화면은 예외 — 원기호에 "내 답 · 정답" 표시가 얹혀 정보가 되므로 그대로 그린다.
+ */
+export function hasChoiceContent(choices: string[]): boolean {
+  return choices.some((c) => c.replace(/^[①②③④⑤]\s*/, '').trim().length > 0)
+}
+
 export function choiceMark(no: number, filled = false): string {
   const marks = filled
     ? ['❶', '❷', '❸', '❹', '❺']
