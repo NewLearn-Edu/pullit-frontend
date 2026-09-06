@@ -183,7 +183,21 @@ export function usePinchZoom(
       /** 현재 확정 위치(left0)로부터의 이동량 — 손을 뗄 때 left0 + shift 로 확정 */
       shift: number
     } | null = null
-    const isStylusTouch = (t: Touch) => (t as Touch & { touchType?: string }).touchType === 'stylus'
+    /**
+     * 펜 판별 — iOS 는 Touch.touchType('stylus'), 안드로이드는 그 속성이 없어 직전 pointerdown 의 종류를 쓴다.
+     * pointerdown 은 touchstart 보다 먼저 오므로 값이 준비돼 있다 (갤럭시 S펜으로 그으면 필기와 함께
+     * 화면이 밀리던 원인 · 2026-09-06 제보). 펜은 필기 전용이라 이동을 걸지 않는다.
+     */
+    let lastPointerType = ''
+    const onPointerDownProbe = (e: PointerEvent) => {
+      lastPointerType = e.pointerType
+    }
+    // 손을 떼면 비운다 — 지난 펜 자국이 남으면 다음 손가락 이동이 펜으로 오인돼 막힌다
+    const onPointerUpProbe = () => {
+      lastPointerType = ''
+    }
+    const isStylusTouch = (t: Touch) =>
+      (t as Touch & { touchType?: string }).touchType === 'stylus' || lastPointerType === 'pen'
     /** 손가락으로 그리는 중인 캔버스 위에서 시작했나 — 그리기와 이동이 겹치지 않게 */
     const onFingerDrawSurface = (t: Touch) =>
       t.target instanceof Element && !!t.target.closest('[data-finger-draw="true"]')
@@ -238,6 +252,11 @@ export function usePinchZoom(
       }
       const t = e.touches[0]
       if (t.identifier !== pan.id) return
+      // 이벤트 순서가 뒤집힌 기기 대비 — 펜으로 판명되면 이동을 놓는다
+      if (lastPointerType === 'pen') {
+        pan = null
+        return
+      }
       const dx = t.clientX - pan.x0
       if (!pan.active) {
         if (Math.abs(dx) < PAN_DEADZONE) return
@@ -392,11 +411,17 @@ export function usePinchZoom(
       card.style.willChange = ''
     }
 
+    el.addEventListener('pointerdown', onPointerDownProbe, { passive: true, capture: true })
+    el.addEventListener('pointerup', onPointerUpProbe, { passive: true, capture: true })
+    el.addEventListener('pointercancel', onPointerUpProbe, { passive: true, capture: true })
     el.addEventListener('touchstart', onStart, { passive: false })
     el.addEventListener('touchmove', onMove, { passive: false })
     el.addEventListener('touchend', onEnd)
     el.addEventListener('touchcancel', onEnd)
     return () => {
+      el.removeEventListener('pointerdown', onPointerDownProbe, { capture: true })
+      el.removeEventListener('pointerup', onPointerUpProbe, { capture: true })
+      el.removeEventListener('pointercancel', onPointerUpProbe, { capture: true })
       el.removeEventListener('touchstart', onStart)
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)

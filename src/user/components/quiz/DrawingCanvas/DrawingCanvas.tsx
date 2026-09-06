@@ -134,6 +134,15 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const pointFilterRef = useRef<OneEuroPointFilter | null>(null)
     /** 진행 중 획을 연 포인터 종류 — 두 손가락 제스처가 시작될 때 손가락 획만 버리기 위해 */
     const currentPointerTypeRef = useRef<string>('')
+    /**
+     * 마지막으로 눌린 포인터 종류 — 펜 판별용.
+     * Touch.touchType('stylus')은 WebKit 전용이라 안드로이드에선 S펜이 손가락과 구분되지 않는다.
+     * pointerdown 은 touchstart 보다 먼저 오므로 여기에 담아 두고 터치 처리에서 참고한다
+     * (갤럭시 웹앱에서 펜으로 그으면 필기와 스크롤이 같이 되던 원인 · 2026-09-06 제보).
+     * 허용 여부(shouldAcceptPointer)와 무관하게 기록해야 펜 hover·거부된 입력도 걸러진다.
+     * 손을 떼면 비운다 — 지난 펜 자국이 남으면 다음 손가락 스크롤이 펜으로 오인돼 막힌다.
+     */
+    const lastPointerTypeRef = useRef<string>('')
     /** 이번 획에서 마지막으로 받아들인 원 입력(화면 좌표·시각) — 병합 이벤트 중복·역순 제거용 */
     const lastRawRef = useRef<{ x: number; y: number; t: number } | null>(null)
     // 레이저 stroke · 그린 후 자동 fade out 되는 임시 stroke (base 저장 안 함)
@@ -591,7 +600,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         if (finger?.target) finger.target.scrollTop += dy
         else window.scrollBy(0, dy)
       }
-      const isStylus = (t: Touch) => (t as Touch & { touchType?: string }).touchType === 'stylus'
+      // 펜이면 스크롤하지 않는다 — iOS 는 Touch.touchType, 안드로이드는 직전 pointerdown 의 종류로 판별
+      const isStylus = (t: Touch) =>
+        (t as Touch & { touchType?: string }).touchType === 'stylus' ||
+        lastPointerTypeRef.current === 'pen'
 
       const onStart = (e: TouchEvent) => {
         // 두 번째 손가락이 닿으면 스크롤을 놓는다 — 두 손가락은 확대·이동 제스처(usePinchZoom · main) 몫
@@ -612,6 +624,11 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         }
         const t = Array.from(e.touches).find((x) => x.identifier === finger!.id)
         if (!t) return
+        // 펜 획이 시작됐으면 스크롤을 놓는다 — 이벤트 순서가 뒤집힌 기기에서 touchstart 가 먼저 와도 안전하게
+        if (lastPointerTypeRef.current === 'pen' || drawingRef.current) {
+          finger = null
+          return
+        }
         e.preventDefault() // 네이티브 스크롤·확대 제스처 차단 — 우리가 움직인다
         pending += finger.lastY - t.clientY
         finger.lastY = t.clientY
@@ -664,6 +681,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     }
 
     const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+      lastPointerTypeRef.current = e.pointerType
       notePen(e)
       updateEraserCursor(e)
       if (!shouldAcceptPointer(e)) return
@@ -821,6 +839,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       }
       currentRef.current = null
       drawingRef.current = false
+      lastPointerTypeRef.current = '' // 다음 제스처가 이 값을 물려받지 않게
       // live 를 동기로 비운다 — 커밋(base)과 다음 rAF 사이에 한 프레임이라도 양쪽에
       // 같은 획이 보이면 형광펜(알파 0.32)이 겹쳐 진해 보인다. 레이저 페이드가 남아
       // 있으면 renderLive 가 이어서 스케줄한다.
