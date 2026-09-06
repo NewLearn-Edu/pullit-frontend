@@ -273,7 +273,7 @@ export default function HomePage() {
 
   return (
     <div className={styles.page}>
-      <UserNav active="recommend" subject={subject} />
+      <UserNav active="recommend" subject={subject} cat={category.slug} />
       {creditPopupOpen && <CreditRefillPopup onClose={() => setCreditPopupOpen(false)} />}
 
       <main className={styles.main}>

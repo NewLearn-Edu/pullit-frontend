@@ -4,6 +4,7 @@ import OnboardingHeader from '@/user/components/OnboardingHeader'
 import RecommendReveal from './RecommendReveal'
 import { SET_CREDIT_COST } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
+import { homePath } from '@/user/services/homeRoutes'
 import type { Subject } from '@/user/stores/trialStore'
 import styles from './styles/RecommendPage.module.scss'
 
@@ -46,7 +47,9 @@ export default function RecommendPage() {
       })
   }, [sessionStatus, navigate])
 
-  const closeToHome = () => navigate('/home', { replace: true })
+  // X — 왔던 과목·대단원으로 돌아간다 (2026-09-06). 예전엔 '/home' 고정이라 영어에서
+  // 들어와도 수학 첫 대단원으로 떨어졌다
+  const closeToHome = () => navigate(homePath(subject, searchParams.get('cat')), { replace: true })
 
   // ── 추천 리빌 ──────────────────────────────────────────────────────────────
   // 세션이 준비돼야 진단 기록·크레딧을 함께 읽을 수 있다.

@@ -13,6 +13,8 @@ interface UserNavProps {
   active: UserNavKey
   /** 지금 화면의 과목 탭 — 추천 문제 버튼이 이 과목으로 간다. 없으면(마이 등) 마지막 학습 과목 (2026-09-04) */
   subject?: Subject
+  /** 지금 보고 있는 대단원 슬러그 — 추천 화면에서 X 로 나오면 이 대단원으로 돌아온다 (2026-09-06) */
+  cat?: string
 }
 
 /**
@@ -21,13 +23,15 @@ interface UserNavProps {
  * - iPad · 모바일: 하단 네비 바 (홈 · 약점 지도 · 학습 기록)
  * 자유 문제 · 리포트 · 마이페이지는 아직 페이지 없음 (POC 시각만).
  */
-export function UserNav({ active, subject }: UserNavProps) {
+export function UserNav({ active, subject, cat }: UserNavProps) {
   // 실제 세션 권한 — 이전 authStore 스텁(role:'admin' 하드코딩)은 모든 방문자에게 어드민 버튼을 노출했다
   const isAdmin = useUserStore((s) => s.me?.role === 'ADMIN')
   // 나브 추천 버튼은 과목 선택 뷰를 건너뛴다 (2026-08-26 정책) — 보고 있던 화면의 과목 탭 우선.
   // (예전엔 마지막으로 "푼" 과목만 봐서 영어 탭에서 눌러도 수학이 추천됐다 · 2026-09-04)
   const lastSubject = useTrialStore((s) => s.lastSubject)
-  const recommendLink = `/recommend?subject=${subject ?? lastSubject ?? 'math'}`
+  // 대단원(cat)도 함께 실어 보낸다 — 추천 화면의 X 가 이 값으로 홈을 복원한다 (2026-09-06)
+  const recommendLink =
+    `/recommend?subject=${subject ?? lastSubject ?? 'math'}` + (cat ? `&cat=${encodeURIComponent(cat)}` : '')
   // 오답노트도 보고 있던 과목으로 연다 (2026-09-06) — 기본값 수학은 쿼리 생략
   const wrongNoteLink =
     (subject ?? lastSubject) === 'english' ? '/wrong-note?subject=english' : '/wrong-note'

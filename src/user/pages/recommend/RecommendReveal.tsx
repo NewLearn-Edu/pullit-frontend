@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { CreditShortagePopup } from '@/user/components/CreditShortagePopup'
@@ -21,6 +21,7 @@ import { Toast } from '@/user/components/Toast'
 import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
 import { SkipConfirmContent, extractApiMessage, isCreditShortage } from '@/user/pages/home/UnitSheets'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
+import { homePath } from '@/user/services/homeRoutes'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
@@ -195,6 +196,10 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
    * 풀다 만 세트(이어풀기 · 3631-13956) — 있으면 추천보다 우선해 그 단원을 집고, 남은 문항·시간·크레딧 없음으로 보여준다.
    * undefined = 조회 중(대상 선정 보류) · null = 없음
    */
+  /** 돌아갈 홈 — 들어올 때 실려 온 과목·대단원 그대로 (2026-09-06) */
+  const [searchParams] = useSearchParams()
+  const backHome = homePath(subject, searchParams.get('cat'))
+
   const [resume, setResume] = useState<ResumeInfo | null | undefined>(undefined)
   const [failed, setFailed] = useState(false)
   const [phase, setPhase] = useState<Phase>('scan')
@@ -314,7 +319,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
 
   /** 추천이 끝났는데 집을 카드가 없다 = 전 대단원 진단 완료. 홈으로 돌려보낸다 */
   useEffect(() => {
-    if (rec && resume !== undefined && locksLoaded && !target) navigate('/home', { replace: true })
+    if (rec && resume !== undefined && locksLoaded && !target) navigate(backHome, { replace: true })
   }, [rec, resume, locksLoaded, target, navigate])
 
   // ── 단계 진행 ─────────────────────────────────────────────────────────────
@@ -570,7 +575,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         useSolveStore.getState().startSession({
           problems,
           source,
-          returnTo: '/home',
+          returnTo: backHome,
           setId: set.setId,
           unitName: target.row.name,
           scoreBefore,
@@ -587,7 +592,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       const path = await startTrialSetSession(
         subject,
         { name: target.row.name, unitCode: target.row.unitCode, nodeId: target.row.nodeId },
-        '/home',
+        backHome,
         credit,
       )
       navigate(path)
@@ -631,7 +636,8 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     }
   }
 
-  const closeToHome = () => navigate('/home', { replace: true })
+  // X — 왔던 과목·대단원으로 (2026-09-06). 세트 진입의 returnTo 도 같은 주소를 쓴다
+  const closeToHome = () => navigate(backHome, { replace: true })
 
   // ── 실패 ──────────────────────────────────────────────────────────────────
   if (failed) {
