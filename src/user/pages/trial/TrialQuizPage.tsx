@@ -17,6 +17,7 @@ import { loadTrialSessionProblems, restoreActiveSet } from '@/user/services/prob
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { CreditUsedToast } from '@/user/components/CreditUsedToast'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
+import { isStandaloneApp } from '@/user/utils/standalone'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
@@ -507,6 +508,14 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   }
 
   /**
+   * 홈 화면 웹앱·네이티브 래퍼의 맛보기 온보딩은 X 자체를 없앤다 (2026-09-06).
+   * 돌아갈 랜딩이 없고 맛보기 완주 전에는 회원 영역에도 못 들어가서, 나가는 길을 두면
+   * 갈 곳 없는 화면으로 떨어진다 (/login 뒤로가기·가입 유도 건너뛰기와 같은 규칙).
+   * 홈·지도에서 시작한 단원 진단(pendingUnit)은 돌아갈 화면이 있으므로 X 를 유지한다.
+   */
+  const hideExit = isTrial && !pendingUnit && isStandaloneApp()
+
+  /**
    * X — 세트 풀이(진단·자유·추천)는 "조금만 더 풀면 끝나!" 팝업(3631-13339)으로 한 번 붙잡는다.
    * 오답 다시 풀기(RETRY)는 세트도 결과 화면도 없어 붙잡을 이유가 없다 — 바로 나간다
    */
@@ -550,7 +559,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
             ? `${subject === 'math' ? '수학' : '영어'} · ${startedUnitName}`
             : SUBJECT_LABEL[subject as Subject]
         }
-        onClose={handleClose}
+        onClose={hideExit ? undefined : handleClose}
         progressRatio={isTrial ? (idx + 1) / problems.length : undefined}
         rightExtra={
           <button

@@ -4,7 +4,11 @@ interface QuizTopBarProps {
   /** 미전달 시 진행 문구("성적 상승까지 N문제") 없이 과목명만 표시 — 일반 문제풀이 모드 */
   progress?: { current: number; total: number }
   subjectLabel: string
-  onClose: () => void
+  /**
+   * 좌측 닫기 X. 생략하면 X 없이 좌측 칸만 비워 둔다 (가운데 정렬 유지) —
+   * 홈 화면 웹앱의 맛보기 온보딩처럼 나갈 곳이 없는 화면에서 쓴다 (2026-09-06)
+   */
+  onClose?: () => void
   /** 우측 액션 — 풀이 중에는 정답·해설 접근 금지라 미전달 (2026-08-07 플로우 변경) */
   onPeekExplanation?: () => void
   onPeekAnswer?: () => void
@@ -19,7 +23,7 @@ interface QuizTopBarProps {
 
 /**
  * 문제풀이 화면 최상단 네비게이션 바 (1행).
- * 왼쪽: 닫기. 가운데: 과목명 + 진행바. 우측 액션은 전달된 것만 렌더.
+ * 왼쪽: 닫기(onClose 를 준 화면만). 가운데: 과목명 + 진행바. 우측 액션은 전달된 것만 렌더.
  * 타이머는 문제 카드 헤더로 이동됨 (2026-07-23 기획 변경).
  */
 export function QuizTopBar({
@@ -40,16 +44,18 @@ export function QuizTopBar({
   return (
     <header className={styles.header}>
       <div className={styles.row}>
-        {/* 좌측: 닫기 */}
+        {/* 좌측: 닫기 (없으면 빈 칸 — 3-column grid 라 가운데 정렬은 그대로) */}
         <div className={styles.left}>
-          <button
-            type="button"
-            onClick={onClose}
-            className={styles.closeButton}
-            aria-label="닫기"
-          >
-            ×
-          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className={styles.closeButton}
+              aria-label="닫기"
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {/* 중앙: 과목명 | 성적 상승까지 N문제 (진행 바는 문제 카드 상단으로 이동) */}

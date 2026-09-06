@@ -6,6 +6,7 @@ import { useTrialStore, type Subject } from '@/user/stores/trialStore'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
+import { isStandaloneApp } from '@/user/utils/standalone'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import { clearAllQuizStarts } from '@/user/pages/trial/TrialQuizPage'
 import styles from './styles/TrialStartPage.module.scss'
@@ -53,9 +54,15 @@ export default function TrialStartPage() {
 
   return (
     <div className={styles.page}>
-      {/* 시안 2824-4756 헤더 — 우측 닫기 X 만 (로고 없음) */}
-      {/* 얼리버드 테스터의 X 는 얼리버드 랜딩으로, 일반은 랜딩(/) */}
-      <OnboardingHeader onClose={() => navigate(isEarlybird() ? '/earlybird' : '/')} />
+      {/* 시안 2824-4756 헤더 — 우측 닫기 X 만 (로고 없음).
+          얼리버드 테스터의 X 는 얼리버드 랜딩으로, 일반은 랜딩(/).
+          홈 화면 웹앱·네이티브 래퍼는 X 자체를 없앤다 (2026-09-06) — 돌아갈 랜딩이 없고
+          맛보기는 반드시 거쳐야 하는 온보딩이라 나가는 길을 두지 않는다 (/login 뒤로가기와 같은 규칙) */}
+      <OnboardingHeader
+        onClose={
+          isStandaloneApp() ? undefined : () => navigate(isEarlybird() ? '/earlybird' : '/')
+        }
+      />
 
       <main className={styles.main}>
         <h1 className={styles.title}>어떤 과목의 약점을 볼래?</h1>
