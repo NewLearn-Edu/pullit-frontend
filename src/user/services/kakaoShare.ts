@@ -50,8 +50,9 @@ function loadSdk(): Promise<void> {
 
 /**
  * 공유 카드 썸네일 — 카카오 서버가 직접 가져가므로 반드시 공개 https 절대경로.
- * public/og-invite.png (1200×630 초대 배너). 카카오 feed 는 2:1 로 가운데를 크롭하므로
- * 상하 약간 잘려도 되게 콘텐츠를 중앙에 둔 이미지. prod 배포 후에야 실제로 노출된다.
+ * public/og-invite.png (1000×1000 초대 배너). 카카오 feed 는 2:1 로 가운데를 크롭하므로
+ * 정사각 원본에서 상단 헤드라인·하단 문구는 카드에서 잘리고 가운데 띠만 노출된다.
+ * prod 배포 후에야 실제로 노출된다.
  */
 const DEFAULT_THUMBNAIL = 'https://www.pullit.co.kr/og-invite.png' // 서빙 도메인(www) 직접 — apex 는 301
 
