@@ -263,7 +263,7 @@ export default function HomePage() {
     if (!unit) return
     try {
       if (info.source === 'TRIAL') await sheets.startTrialSet(unit, subj)
-      else await sheets.startFreeSolve(unit, subj)
+      else await sheets.startFreeSolve(unit, subj, info.source === 'DAILY' ? 'DAILY' : 'FREE') // 풀다 만 세트 종류 그대로 재개
     } catch (error) {
       setResumeError(extractApiMessage(error) ?? '이어풀기에 실패했어. 다시 시도해줘')
     }

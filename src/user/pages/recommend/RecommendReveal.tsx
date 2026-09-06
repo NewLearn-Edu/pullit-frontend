@@ -21,6 +21,7 @@ import { Toast } from '@/user/components/Toast'
 import { CURRICULUM, UNIT_LABEL, type CurriculumCategory } from '@/user/data/curriculum'
 import { SkipConfirmContent, extractApiMessage, isCreditShortage } from '@/user/pages/home/UnitSheets'
 import { startTrialSetSession } from '@/user/services/trialSetStart'
+import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import { fetchActiveProblemSet, fetchResumableSet, type ResumableSet } from '@/user/api/problemSetApi'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { useSolveStore } from '@/user/stores/solveStore'
@@ -524,19 +525,30 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     setStarting(true)
     setActionError(null)
     try {
-      // 홈 시트와 같은 진단 세트 발급 경로 — 서버가 차감·문항 구성·세트 박제·완료 판정을 맡는다.
+      // 홈 시트와 같은 세트 발급 경로 — 서버가 차감·문항 구성·세트 박제·완료 판정을 맡는다.
       // (이전: 크레딧만 따로 차감하고 세트 없이 고정 서빙 문항으로 들어가 진단이 박제되지 않고
       //  같은 문제가 반복됐다 · 2026-09-03)
-      if (resume && resume.set.source !== 'TRIAL') {
-        // 풀다 만 추천(FREE)·데일리 세트 — 홈 시작 시트(startFreeSolve)와 같은 재개 경로. 진행 중 세트라 재차감 없음
+      //
+      // 세트 종류 (2026-09-06): 풀다 만 세트가 있으면 그 종류 그대로. 없으면 이미 진단한 단원(REVIEW · 최약점 보완)은
+      // 자유 풀이(FREE · 문제 은행 사다리)로, 미진단 단원(DIAGNOSIS)만 진단(TRIAL · 맛보기 고정 세트)으로.
+      // 예전엔 무조건 TRIAL 이라 진단을 마친 최약점 단원을 추천받아도 맛보기 3문제가 그대로 다시 나왔다.
+      const source: 'TRIAL' | 'FREE' | 'DAILY' = resume
+        ? resume.set.source
+        : rec?.type === 'REVIEW' || target.row.diagnosis
+          ? 'FREE'
+          : 'TRIAL'
+      if (source !== 'TRIAL') {
+        // 자유·추천(FREE)·데일리 세트 — 홈 시작 시트(startFreeSolve)와 같은 경로. 진행 중 세트면 재차감 없이 재개
         const nodeId = target.row.nodeId ?? (subject === 'math' ? 'sn-exp-log-01' : 'en-blank')
         const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
-          subject, nodeId, target.row.unitCode, resume.set.source)
-        await useUserStore.getState().loadMe(true)
+          subject, nodeId, target.row.unitCode, source)
+        const fresh = await useUserStore.getState().loadMe(true)
+        // 새 발급 = 차감 발생 → 문제 첫 화면 토스트 (홈 시트와 동일)
+        if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, fresh?.creditBalance ?? credit - SET_CREDIT_COST)
         const scoreBefore = await snapshotUnitScoreForSet(subject, target.row.name, set.setId, set.resumed)
         useSolveStore.getState().startSession({
           problems,
-          source: resume.set.source,
+          source,
           returnTo: '/home',
           setId: set.setId,
           unitName: target.row.name,
@@ -550,7 +562,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
         navigate(`/solve/${subject}/${firstUnsolvedIdx}`)
         return
       }
-      // 진단(TRIAL) 세트 — 풀다 만 세트가 있으면 서버가 그대로 돌려줘(재차감 없음) 첫 미제출 문항부터 재개된다
+      // 진단(TRIAL) 세트 — 미진단 단원. 풀다 만 세트가 있으면 서버가 그대로 돌려줘(재차감 없음) 첫 미제출 문항부터 재개된다
       const path = await startTrialSetSession(
         subject,
         { name: target.row.name, unitCode: target.row.unitCode, nodeId: target.row.nodeId },

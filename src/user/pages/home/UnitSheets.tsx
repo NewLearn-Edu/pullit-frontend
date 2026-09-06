@@ -322,32 +322,60 @@ export function useUnitSheets({
     }
   }, [estimateTarget, subject])
 
-  // 진행 중(ACTIVE) 추천(FREE) 세트 감지 — 확인 시트가 이어풀기 변형으로 바뀐다
-  const [activeFreeSet, setActiveFreeSet] = useState<IssuedProblemSet | null>(null)
+  /**
+   * 진행 중(ACTIVE) 세트 감지 — 확인 시트가 이어풀기 변형(남은 문항·시간 · 크레딧 없음)으로 바뀐다.
+   * undefined = 조회 중 · null = 없음.
+   *
+   * 2026-09-06: 상세 시트가 열리는 순간부터 미리 조회한다 (예전엔 "추천 문제 보기"를 누른 뒤 조회해서
+   * 확인 시트가 "추천 3문제"로 떴다가 뒤늦게 이어풀기로 바뀌었다). FREE 뿐 아니라 풀다 만 진단(TRIAL)·
+   * 데일리(DAILY) 세트도 잡는다 — 종류가 다르면 이어풀기 경로도 그 종류를 따라야 재차감이 없다.
+   * 남은 문항 수는 서버 items[].submitted(세트에 붙은 제출 기준)로 센다 — 3문제 중 1문제 풀고 나갔으면 2문제
+   */
+  const [activeFreeSet, setActiveFreeSet] = useState<IssuedProblemSet | null | undefined>(undefined)
   const freeResumable = !!activeFreeSet
+  const activeLoading = activeFreeSet === undefined
   useEffect(() => {
-    setActiveFreeSet(null)
-    if (!confirmTarget) return
+    setActiveFreeSet(undefined)
+    if (!unitSheet) return
     let alive = true
-    fetchActiveProblemSet(subject, confirmTarget.unitCode, 'FREE')
-      .then((active) => {
-        if (alive) setActiveFreeSet(active)
-      })
-      .catch(() => {})
+    const code = unitSheet.unitCode
+    ;(async () => {
+      for (const source of ['FREE', 'DAILY', 'TRIAL'] as const) {
+        const active = await fetchActiveProblemSet(subject, code, source).catch(() => null)
+        if (!alive) return
+        if (active && active.status === 'ACTIVE') {
+          setActiveFreeSet(active)
+          return
+        }
+      }
+      if (alive) setActiveFreeSet(null)
+    })()
     return () => {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmTarget?.unitCode, subject])
+  }, [unitSheet?.unitCode, subject])
 
-  /** 추천 확인 시트 CTA — 크레딧 확인 후 FREE 세트 시작 (이어풀기는 재차감 없음) */
+  /** 추천 확인 시트 CTA — 진행 중 세트가 있으면 그 종류로 재개(재차감 없음), 없으면 FREE 세트 새로 발급 */
   const [freeStarting, setFreeStarting] = useState(false)
   const confirmStartFree = async () => {
-    if (!confirmTarget || freeStarting) return
+    if (!confirmTarget || freeStarting || activeLoading) return
     // 잔액 사전 판정 없음 — 서버가 발급 때 실제 잔액으로 판정하고, 부족(CR001)이면 startFreeSolve 가 팝업을 띄운다
     setFreeStarting(true)
     try {
-      await startFreeSolve(confirmTarget)
+      if (activeFreeSet?.source === 'TRIAL') {
+        // 풀다 만 진단 세트 — FREE 로 발급하면 별도 세트가 새로 생기며 크레딧이 빠진다. 진단 경로로 재개
+        await startTrialSet({ name: confirmTarget.name, unitCode: confirmTarget.unitCode, nodeId: confirmTarget.nodeId }, subject)
+        return
+      }
+      await startFreeSolve(confirmTarget, subject, activeFreeSet?.source === 'DAILY' ? 'DAILY' : 'FREE')
+    } catch (error) {
+      if (isCreditShortage(error)) {
+        setShortageOpen(true)
+        loadMe(true)
+      } else {
+        setAlertMsg(extractApiMessage(error) ?? '세트 시작에 실패했어. 잔액을 확인해줘')
+      }
     } finally {
       setFreeStarting(false)
     }
@@ -449,11 +477,12 @@ export function useUnitSheets({
   const startFreeSolve = async (
     row: { name?: string; unitCode: string; nodeId?: string },
     subj: Subject = subject,
+    source: 'FREE' | 'DAILY' = 'FREE',
   ) => {
     try {
       const nodeId = row.nodeId ?? (subj === 'math' ? 'sn-exp-log-01' : 'en-blank')
       const { set, problems, firstUnsolvedIdx } = await loadIssuedSet(
-        subj, nodeId, row.unitCode, 'FREE')
+        subj, nodeId, row.unitCode, source)
       // 잔액은 서버 재조회 값으로 — 캐시(credit)는 낡았을 수 있다
       const fresh = await loadMe(true)
       if (!set.resumed) setCreditUsedFlash(SET_CREDIT_COST, fresh?.creditBalance ?? credit - SET_CREDIT_COST)
@@ -463,7 +492,7 @@ export function useUnitSheets({
         : null
       startSolveSession({
         problems,
-        source: 'FREE',
+        source,
         returnTo: returnTo(),
         setId: set.setId,
         unitName: row.name,
@@ -693,14 +722,18 @@ export function useUnitSheets({
                 <style>{`@keyframes sheet-morph-in { from { opacity: 0 } }`}</style>
                 <div className="flex w-full flex-col gap-[8px] xl:pt-[36px]">
                   <h2 className="text-[20px] font-semibold leading-[1.4] text-[#121417]">
-                    {activeFreeSet
-                      ? `${unitSheet.name} 이어풀기`
-                      : `${unitSheet.name} 추천 ${SET_SIZE}문제`}
+                    {activeLoading
+                      ? unitSheet.name
+                      : activeFreeSet
+                        ? `${unitSheet.name} 이어풀기`
+                        : `${unitSheet.name} 추천 ${SET_SIZE}문제`}
                   </h2>
                   <p className="text-[14px] font-medium leading-[1.4] text-[#80858b]">
-                    {activeFreeSet
-                      ? '풀다 만 문제가 있어. 크레딧 차감 없이 이어서 풀 수 있어'
-                      : '최근 풀이 기록으로 너에게 딱 맞는 문제로 준비했어'}
+                    {activeLoading
+                      ? '풀다 만 문제가 있는지 확인하는 중…'
+                      : activeFreeSet
+                        ? '풀다 만 문제가 있어. 크레딧 차감 없이 이어서 풀 수 있어'
+                        : '최근 풀이 기록으로 너에게 딱 맞는 문제로 준비했어'}
                   </p>
                 </div>
 
@@ -712,25 +745,27 @@ export function useUnitSheets({
                       {activeFreeSet ? '남은 문제' : '문제'}
                     </span>
                     <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
-                      {activeFreeSet ? remainingOfSet(activeFreeSet).count : SET_SIZE}문제
+                      {activeLoading ? '—' : activeFreeSet ? remainingOfSet(activeFreeSet).count : SET_SIZE}문제
                     </span>
                   </div>
                   <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
                   <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
                     <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">예상 시간</span>
                     <span className="whitespace-nowrap text-[18px] font-bold leading-[1.4] text-[#121417]">
-                      {activeFreeSet
-                        ? `약 ${Math.max(1, Math.round(remainingOfSet(activeFreeSet).sec / 60))}분`
-                        : estimatedSec != null
-                          ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
-                          : '약 —분'}
+                      {activeLoading
+                        ? '약 —분'
+                        : activeFreeSet
+                          ? `약 ${Math.max(1, Math.round(remainingOfSet(activeFreeSet).sec / 60))}분`
+                          : estimatedSec != null
+                            ? `약 ${Math.max(1, Math.round(estimatedSec / 60))}분`
+                            : '약 —분'}
                     </span>
                   </div>
                   <span className="h-[26px] w-px shrink-0 bg-[#e5e7ea]" aria-hidden />
                   <div className="flex min-w-0 flex-1 flex-col items-center gap-[4px]">
                     <span className="text-[12px] font-semibold leading-[1.4] text-[#80858b]">필요 크레딧</span>
                     <span className="text-[18px] font-bold leading-[1.4] text-[#121417]">
-                      {activeFreeSet ? '없음' : `${SET_CREDIT_COST}개`}
+                      {activeLoading ? '—' : activeFreeSet ? '없음' : `${SET_CREDIT_COST}개`}
                     </span>
                   </div>
                 </div>
@@ -744,7 +779,7 @@ export function useUnitSheets({
                   <button
                     type="button"
                     onClick={confirmStartFree}
-                    disabled={freeStarting}
+                    disabled={freeStarting || activeLoading}
                     className="flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
                     {freeStarting
