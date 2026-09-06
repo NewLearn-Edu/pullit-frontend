@@ -1,5 +1,11 @@
 import { isAxiosError } from 'axios'
-import { fetchProblemNote, gzipBytes, uploadProblemNote, type NoteTarget } from '@/user/api/problemNoteApi'
+import {
+  fetchProblemNote,
+  gzipBytes,
+  NOTE_TARGETS,
+  uploadProblemNote,
+  type NoteTarget,
+} from '@/user/api/problemNoteApi'
 import { deleteJournal, putJournal, readJournal } from '@/user/services/noteJournal'
 import { useUserStore } from '@/user/stores/userStore'
 import { decodePnk1, encodePnk1, Pnk1Error, type Pnk1Note } from '@/user/utils/pnk1'
@@ -203,6 +209,38 @@ export function flushAllProblemNotes(): Promise<void> {
   const owner = currentOwner()
   const mine = [...entries.values()].filter((entry) => entry.owner === owner)
   return Promise.all(mine.map((entry) => flushEntry(entry))).then(() => undefined)
+}
+
+/**
+ * 필기 지우기 — 저장본을 빈 파일로 덮어쓴다. 오답노트 "다시 풀기"처럼 처음부터 다시 푸는 진입에서 부른다.
+ *
+ * "덮어쓰기 금지"(서버본을 확인하기 전엔 올리지 않는다) 규칙의 유일한 예외다 —
+ * 지우기는 서버에 뭐가 있든 결과가 같아서 확인할 게 없다.
+ * 진행 중이던 조회가 뒤늦게 서버본을 되살리지 않도록 캐시 항목을 새로 만들어 갈아끼운다
+ * (그 조회는 지도에서 빠진 옛 항목에 쓰고 끝난다).
+ * 삭제 API 는 없어 빈 PNK1 을 PUT 한다 — noteId 는 이어받아 같은 파일을 덮어쓴다.
+ */
+export function clearProblemNote(problemCode: string, target: NoteTarget): Promise<void> {
+  const owner = currentOwner()
+  const key = keyOf(owner, problemCode, target)
+  const stale = entries.get(key)
+  if (stale) {
+    cancelJournalWrite(stale)
+    entries.delete(key)
+  }
+  const entry = entryOf(problemCode, target, owner)
+  if (stale) entry.noteId = stale.noteId
+  entry.loaded = true // 서버본을 다시 이어 붙이지 않는다
+  entry.dirty = true
+  void deleteJournal(key) // 못 올린 옛 변경분이 다음 앱 시작 때 되살아나지 않게
+  return flushEntry(entry)
+}
+
+/** 이 문제의 필기 전부(문제·해설·번역) 지우기 */
+export function clearProblemNotes(problemCode: string): Promise<void> {
+  return Promise.all(NOTE_TARGETS.map((target) => clearProblemNote(problemCode, target))).then(
+    () => undefined,
+  )
 }
 
 async function flushEntry(entry: NoteEntry): Promise<void> {

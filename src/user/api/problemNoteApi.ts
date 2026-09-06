@@ -7,7 +7,8 @@ import { api } from '@/user/api/authApi'
  * - explanation: 해설 위
  * - translation: 번역 위 — 영어는 해설/번역 탭이 둘 다 필기 대상 (탭 UI 는 기획 대기 · 2026-09-02)
  */
-export type NoteTarget = 'problem' | 'explanation' | 'translation'
+export const NOTE_TARGETS = ['problem', 'explanation', 'translation'] as const
+export type NoteTarget = (typeof NOTE_TARGETS)[number]
 
 /**
  * 문제 필기(PNK1) 저장·조회 API — 백엔드 경유 (presigned 직접 업로드 안 함 · 플랜 2026-09-02).

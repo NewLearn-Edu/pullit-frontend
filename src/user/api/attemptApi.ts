@@ -74,6 +74,10 @@ export interface WrongNoteItem {
   vocabulary: { term: string; meaning: string }[]
   wrongCount: number
   lastWrongAt: string
+  /** 내가 마지막으로 고른 선지 1~5 — 단답형·무응답("모르겠어요")·기록 없음은 null */
+  lastSubmittedNo: number | null
+  /** 내가 마지막으로 낸 단답 — 객관식·기록 없음은 null */
+  lastSubmittedText: string | null
 }
 
 /** 오답노트 조회 (과목별 · 맛보기 오답 포함) */

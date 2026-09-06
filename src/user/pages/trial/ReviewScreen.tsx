@@ -6,7 +6,7 @@ import { ProblemNoteCanvas } from '@/user/components/quiz/ProblemNoteCanvas'
 import { DrawingToolbar } from '@/user/components/quiz/DrawingToolbar'
 import { ExplainPanel } from '@/user/components/quiz/ExplainPanel'
 import { ResizeDivider } from '@/user/components/quiz/ResizeDivider'
-import { EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
+import { choiceMark, EnglishProblemRender, MathProblemRender } from '@/shared/components/ExamRender'
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
@@ -37,10 +37,17 @@ interface ReviewScreenProps {
    * false 면 문제만 먼저 보이고, footer 의 "해설 보기"로 열었다 닫을 수 있다 (오답노트)
    */
   initialExplainOpen?: boolean
-  /** 필기 기능 자체의 유무 (기본 있음). 오답노트 문제 보기·다시 풀기 결과처럼 "보기" 화면은 false — 펜 토글·툴바가 아예 없고 캔버스도 입력을 받지 않는다 */
+  /**
+   * 필기 기능 자체의 유무 (기본 있음 · 켜진 채로 시작한다). false 면 펜 토글·툴바가 아예 없고
+   * 캔버스도 입력을 받지 않는다 — 저장된 획은 그대로 보이되 고칠 수 없는 "읽기 전용" 화면
+   * (다시 풀기 결과: 방금 푼 필기를 보여주기만 한다). 오답노트 문제 보기는 2026-09-06 부터 켠다.
+   */
   drawingTools?: boolean
-  /** 문제 카드 아래 액션 영역 — 풀이 화면의 답안 바 자리 (다시 풀기 등). openExplain 으로 해설을 연다 */
-  footer?: (ctx: { openExplain: () => void; explainOpen: boolean }) => ReactNode
+  /**
+   * 문제 카드 아래 액션 영역 — 풀이 화면의 답안 바 자리 (다시 풀기 등).
+   * toggleExplain 으로 해설을 열고 닫는다 (explainOpen 으로 버튼 라벨을 "해설 보기"/"해설 닫기" 로)
+   */
+  footer?: (ctx: { toggleExplain: () => void; explainOpen: boolean }) => ReactNode
   onClose: () => void
 }
 
@@ -203,7 +210,7 @@ export function ReviewScreen({
                               key={choiceNo}
                               className={clsx('choice', isMine && 'mine', missedAnswer && 'missed')}
                             >
-                              <span className="choice-num">{choiceNo}</span>
+                              <span className="choice-num">{choiceMark(choiceNo, isMine)}</span>
                               <span>
                                 <ChoiceRender text={answerText} />
                               </span>
@@ -248,7 +255,7 @@ export function ReviewScreen({
             <div className={styles.reviewFooterBar} style={{ left: 0, ...pinch.stickyBarStyle }}>
               <div className={styles.reviewFooterRow}>
                 {footer ? (
-                  footer({ openExplain: () => setExplainOpen(true), explainOpen })
+                  footer({ toggleExplain: () => setExplainOpen((open) => !open), explainOpen })
                 ) : (
                   /* footer 없는 화면(맛보기·세트 리뷰)에서 해설을 접었을 때 다시 여는 길 */
                   <button

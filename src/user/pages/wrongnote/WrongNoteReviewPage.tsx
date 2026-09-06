@@ -4,6 +4,7 @@ import { fetchWrongNotes, type WrongNoteItem } from '@/user/api/attemptApi'
 import { findWrongUnit, toSolveProblem, type WrongUnitRow } from '@/user/services/wrongNotes'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
+import { clearProblemNotes } from '@/user/services/problemNotes'
 import { type Subject } from '@/user/stores/trialStore'
 import { ReviewScreen } from '@/user/pages/trial/ReviewScreen'
 import styles from '@/user/pages/trial/styles/TrialQuizPage.module.scss'
@@ -13,7 +14,11 @@ import styles from '@/user/pages/trial/styles/TrialQuizPage.module.scss'
  * 오답노트 카드를 누르면 오는 "문제 페이지" — 풀이 화면 골격(ReviewScreen)이지만 선택지·모르겠어요 대신
  * 아래에 [해설 보기] [다시 풀기] 가 있다. 해설은 오답노트 API 가 내려주는 정답·해설
  * (이미 틀린 문제라 "풀이 중 차단" 정책과 충돌 없음). 다시 풀기 = RETRY 풀이 세션으로 /solve 진입.
- * 내 선택은 오답노트에 남지 않아 오답 선지 강조는 없고, 정답 선지만 채운 원문자로 표시.
+ * 마지막으로 고른 선지(lastSubmittedNo)는 채운 원문자, 못 맞힌 정답은 빨강 — 다시 풀기 결과 화면과 같은 표기.
+ * "모르겠어요"로 넘긴 제출은 고른 선지가 없어 정답만 빨갛게 나온다.
+ *
+ * 필기는 들어오자마자 켜져 있다 (2026-09-06) — 해설을 보며 손으로 다시 풀어보는 화면이라
+ * 풀이 화면과 같은 필기구를 띄운다. 다시 풀기로 넘어갈 때는 그 필기를 지우고 빈 문제로 시작한다.
  */
 export default function WrongNoteReviewPage() {
   const { subject = 'math', unitId = '', problemId = '' } = useParams<{
@@ -72,6 +77,8 @@ export default function WrongNoteReviewPage() {
    * X 로 나가면 단원 오답 목록으로 (맞히면 서버가 오답노트에서 해소)
    */
   const retry = () => {
+    // 처음 푸는 것처럼 — 문제 보기에서 한 필기도, 예전 풀이 때 남긴 필기도 지우고 빈 문제로 넘긴다
+    void clearProblemNotes(item.problemId)
     startSolveSession({
       problems: [toSolveProblem(item, 0)],
       source: 'RETRY',
@@ -90,20 +97,19 @@ export default function WrongNoteReviewPage() {
       serverExplanation={item.explanation ?? null}
       serverTranslation={item.translation ?? null}
       serverVocabulary={item.vocabulary ?? null}
-      myChoice={null}
+      myChoice={item.lastSubmittedNo}
       initialExplainOpen={false}
-      drawingTools={false} // 문제 "보기" 화면 — 필기 기능 없음(토글도 없음). 필기는 다시 풀기(/solve)에서 (2026-09-04)
       onClose={() => navigate(listPath)}
       headerMeta={<div className={styles.problemTime}>오답 {item.wrongCount}회</div>}
-      footer={({ openExplain, explainOpen }) => (
+      footer={({ toggleExplain, explainOpen }) => (
         <>
           <button
             type="button"
-            onClick={openExplain}
+            onClick={toggleExplain}
             aria-expanded={explainOpen}
             className={styles.reviewSecondary}
           >
-            해설 보기
+            {explainOpen ? '해설 닫기' : '해설 보기'}
           </button>
           <button type="button" onClick={retry} className={styles.reviewPrimary}>
             다시 풀기

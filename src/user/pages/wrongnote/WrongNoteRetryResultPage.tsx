@@ -5,6 +5,7 @@ import { fetchWrongNotes, type WrongNoteItem } from '@/user/api/attemptApi'
 import { findWrongUnit } from '@/user/services/wrongNotes'
 import { useUserStore } from '@/user/stores/userStore'
 import { useSolveStore } from '@/user/stores/solveStore'
+import { clearProblemNotes } from '@/user/services/problemNotes'
 import { type Subject } from '@/user/stores/trialStore'
 import { ReviewScreen } from '@/user/pages/trial/ReviewScreen'
 import styles from '@/user/pages/trial/styles/TrialQuizPage.module.scss'
@@ -76,8 +77,9 @@ export default function WrongNoteRetryResultPage() {
 
   if (!problem || !result) return null
 
-  /** 다시 풀기 — 같은 문제로 RETRY 세션을 다시 열고, 끝나면 이 결과 화면으로 */
+  /** 다시 풀기 — 같은 문제로 RETRY 세션을 다시 열고, 끝나면 이 결과 화면으로 (필기는 지우고 빈 문제로) */
   const retryAgain = () => {
+    if (problem.serverId) void clearProblemNotes(problem.serverId)
     startSolveSession({ problems: [problem], source: 'RETRY', returnTo: listPath, resultTo: resultPath })
     navigate(`/solve/${subject}/0`, { replace: true })
   }
@@ -98,15 +100,15 @@ export default function WrongNoteRetryResultPage() {
       drawingTools={false}
       onClose={() => navigate(listPath)}
       headerMeta={<div className={clsx(styles.resultBadge, badge.className)}>{badge.text}</div>}
-      footer={({ openExplain, explainOpen }) => (
+      footer={({ toggleExplain, explainOpen }) => (
         <>
           <button
             type="button"
-            onClick={openExplain}
+            onClick={toggleExplain}
             aria-expanded={explainOpen}
             className={styles.reviewSecondary}
           >
-            해설 보기
+            {explainOpen ? '해설 닫기' : '해설 보기'}
           </button>
           {result.pending || result.correct ? (
             <button type="button" onClick={() => navigate(listPath)} className={styles.reviewPrimary}>
