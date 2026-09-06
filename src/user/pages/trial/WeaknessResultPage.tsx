@@ -306,11 +306,20 @@ export default function WeaknessResultPage() {
     [mathResults, englishResults, mathProblems, englishProblems],
   )
 
-  /** 이번에 푼 단원 표기명 */
+  /**
+   * 이번에 푼 단원 — 홈·지도에서 시작한 진단은 진행 중 유닛(pendingUnit)이 진실원 (2026-09-06).
+   * 예전엔 영어를 무조건 '주제', 수학은 nodeId 없는 단원을 폴백 노드(지수와 로그)로 표기해
+   * "제목"을 풀고도 제목·점수가 "주제" 단원 것으로 나왔다. 확정(finishPendingUnit) 뒤엔 null 이 되므로
+   * 첫 렌더 값을 ref 로 고정한다. 온보딩 퍼널(pendingUnit 없음)만 고정 영역명으로 폴백.
+   */
+  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  const pendingNameRef = useRef<string | null>(null)
+  if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
   const unitName =
-    subject === 'english'
+    pendingNameRef.current ??
+    (subject === 'english'
       ? '주제' // 맛보기 고정 영역 (en-topic)
-      : MOCK_SKILL_NODES.find((n) => n.id === mathSkillNodeId)?.name ?? '수학'
+      : MOCK_SKILL_NODES.find((n) => n.id === mathSkillNodeId)?.name ?? '수학')
 
   // 누적 단원 점수 (서버) — 맞춘 배점/푼 배점 ×100 · RETRY 제외 (2026-08-10 정책)
   const [skillScore, setSkillScore] = useState<SkillScore | null>(null)
@@ -375,7 +384,6 @@ export default function WeaknessResultPage() {
     leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
   }
 
-  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   /**
    * 약점 도장은 "이 단원을 처음 진단한" 결과에만 (2026-09-04).
    * - 온보딩 퍼널(pendingUnit 없음): 항상 첫 진단
@@ -411,9 +419,7 @@ export default function WeaknessResultPage() {
   const finishPendingUnit = useTrialProgressStore((s) => s.finishPendingUnit)
   // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로·단원명은 미리 잡아둔다
   const returnToRef = useRef<string | null>(null)
-  const pendingNameRef = useRef<string | null>(null)
   if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
-  if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
 
 
   // 재열람용 문항별 결과 — 목 문제 데이터 없이도 표를 다시 그릴 수 있게 표시값을 박제
