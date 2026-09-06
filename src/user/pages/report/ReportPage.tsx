@@ -40,16 +40,25 @@ export default function ReportPage() {
   const today = useMemo(() => new Date(), [])
 
   // 일별 학습량 — 잔디(1년)와 이번 주 차트가 같은 데이터를 나눠 쓴다.
+  // 과목 탭별로 나뉜다 (2026-09-06) — 수학·영어를 한 번에 받아 두고 탭 전환은 즉시 (재조회·스켈레톤 없음).
   // 도착 전에는 두 카드 자리에 스켈레톤 (빈 잔디 → 채움 깜빡임 방지).
   // 실패해도 게이트는 열어 빈 상태로나마 그린다 (스켈레톤에 갇히지 않게)
-  const [activity, setActivity] = useState<DailyActivity[]>([])
+  const [activityBySubject, setActivityBySubject] = useState<Record<Subject, DailyActivity[]>>({
+    math: [],
+    english: [],
+  })
   const [activityLoaded, setActivityLoaded] = useState(false)
   useEffect(() => {
-    fetchDailyActivity()
-      .then(setActivity)
-      .catch(() => {})
+    Promise.allSettled([fetchDailyActivity('math'), fetchDailyActivity('english')])
+      .then(([math, english]) =>
+        setActivityBySubject({
+          math: math.status === 'fulfilled' ? math.value : [],
+          english: english.status === 'fulfilled' ? english.value : [],
+        }),
+      )
       .finally(() => setActivityLoaded(true))
   }, [])
+  const activity = activityBySubject[subject]
   // joinedAt(잔디 시작 기준)까지 확정된 뒤에 그린다 — 53주 → 가입 월 판 재계산 점프 방지
   const cardsReady = activityLoaded && sessionStatus === 'ready'
 

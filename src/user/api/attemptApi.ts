@@ -235,7 +235,10 @@ export interface DailyActivity {
   timeSpentMs: number
 }
 
-export async function fetchDailyActivity(): Promise<DailyActivity[]> {
-  const { data } = await api.get<BaseResponse<DailyActivity[]>>('/api/attempts/daily-activity')
+/** subject 를 주면 그 과목 풀이만 (리포트 탭별 연속일·이번 주 학습), 없으면 계정 전체 */
+export async function fetchDailyActivity(subject?: 'math' | 'english'): Promise<DailyActivity[]> {
+  const { data } = await api.get<BaseResponse<DailyActivity[]>>('/api/attempts/daily-activity', {
+    params: subject ? { subject: subject.toUpperCase() } : undefined,
+  })
   return data.data
 }
