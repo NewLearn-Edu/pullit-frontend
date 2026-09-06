@@ -40,15 +40,18 @@ const STEP_TITLES = [
 ] as const
 
 /**
- * 학년 선택 2단계 — 그룹(중학생·고등학생·기타) 탭을 누르면 탭이 왼쪽으로
+ * 학년 선택 2단계 — 그룹(중학생·고등학생·N수생·기타) 탭을 누르면 탭이 왼쪽으로
  * 작아지며 오른쪽에 세부 칩이 슬라이드 인 (2026-08-30 UX).
  * 중1 은 뺀다: 사실상 전원 만 14세 미만이라 연령 게이트에서 가입이 차단되는
  * 선택지. 보호자 동의 플로우가 생기면 되살린다 (enum 은 유지).
+ * N수생은 기타에서 분리해 1급 탭으로 (2026-09-06 재종 고객 테스트 — "기타 말고 아예 선택할 수 있으면").
+ * 하위 선택지가 하나뿐인 그룹은 탭을 누르는 순간 선택 완료로 처리한다.
  */
 const GRADE_GROUPS = [
   { key: 'middle', label: '중학생', options: ['MIDDLE_2', 'MIDDLE_3'] },
   { key: 'high', label: '고등학생', options: ['HIGH_1', 'HIGH_2', 'HIGH_3'] },
-  { key: 'etc', label: '기타', options: ['RETAKE', 'PARENT', 'TEACHER', 'GENERAL'] },
+  { key: 'retake', label: 'N수생', options: ['RETAKE'] },
+  { key: 'etc', label: '기타', options: ['PARENT', 'TEACHER', 'GENERAL'] },
 ] as const satisfies readonly { key: string; label: string; options: readonly Grade[] }[]
 
 type GradeGroupKey = (typeof GRADE_GROUPS)[number]['key']
@@ -369,11 +372,12 @@ export default function SignupInfoPage() {
 
   /**
    * 생년(4자리) 기준 추천 학년 — 한국 학제: 그 해에 (출생연도+13)살이면 중1.
-   * 13~18 → 중1~고3, 19 → 재수 후보. 그 밖(성인·학부모 등)은 추천 없음.
+   * 13~18 → 중1~고3, 19~21 → N수생 후보(재종 타깃은 삼수까지 흔하다). 그 밖(성인·학부모 등)은 추천 없음.
    */
   const gradeByAge: Record<number, Grade> = {
     14: 'MIDDLE_2', 15: 'MIDDLE_3',
-    16: 'HIGH_1', 17: 'HIGH_2', 18: 'HIGH_3', 19: 'RETAKE',
+    16: 'HIGH_1', 17: 'HIGH_2', 18: 'HIGH_3',
+    19: 'RETAKE', 20: 'RETAKE', 21: 'RETAKE',
   }
   const recommendedGrade =
     birthY.length === 4 ? (gradeByAge[new Date().getFullYear() - Number(birthY)] ?? null) : null
@@ -538,13 +542,13 @@ export default function SignupInfoPage() {
             backface-visibility: hidden;
             animation: su-step-in 480ms cubic-bezier(0.33, 1, 0.68, 1) both;
           }
-          /* 학년 그룹 탭 — 한 줄 3등분. 하나를 고르면 그 탭이 왼쪽으로 작아지고
-             나머지 둘은 폭 0 으로 접혀 사라지며, 오른쪽에 세부 칩이 순서대로 슬라이드 인 */
+          /* 학년 그룹 탭 — 한 줄 4등분(간격 8px × 3). 하나를 고르면 그 탭이 왼쪽으로 작아지고
+             나머지는 폭 0 으로 접혀 사라지며, 오른쪽에 세부 칩이 순서대로 슬라이드 인 */
           /* flex 전환은 남는 공간 재계산이 프레임마다 얽혀 덜컥거린다 —
              명시적 width(calc↔px 보간)로 단일 속성만 움직여 곡선을 예측 가능하게 */
           .su-cat {
             flex: none;
-            width: calc((100% - 16px) / 3);
+            width: calc((100% - 24px) / 4);
             min-width: 0;
             margin-right: 8px;
             overflow: hidden;
@@ -727,11 +731,19 @@ export default function SignupInfoPage() {
                           return
                         }
                         setGradeGroup(group.key)
+                        if (group.options.length === 1) {
+                          // 단일 선택지 그룹(N수생) — 칩을 한 번 더 누르게 하지 않고 탭 자체가 선택
+                          setGrade(group.options[0])
+                          reveal(4)
+                          return
+                        }
                         if (grade && !(group.options as readonly Grade[]).includes(grade)) setGrade(null)
                       }}
                       className={`su-cat flex h-[52px] items-center justify-center rounded-[14px] border text-[15px] font-semibold ${
                         open
-                          ? 'su-cat-open border-[#a6abb1] text-[#121417]'
+                          ? group.options.length === 1
+                            ? 'su-cat-open border-[#23272b] bg-[#23272b] text-white' // 단일 선택지 — 탭이 곧 선택 (칩과 같은 선택 스타일)
+                            : 'su-cat-open border-[#a6abb1] text-[#121417]'
                           : hidden
                             ? 'su-cat-hidden border-[#ebedf0] text-[#23272b]'
                             : 'border-[#ebedf0] text-[#23272b] hover:bg-[#f7f8f9]'
@@ -741,7 +753,8 @@ export default function SignupInfoPage() {
                     </button>
                   )
                 })}
-                {gradeGroup != null && chipsShown && (
+                {/* 세부 칩 — 단일 선택지 그룹(N수생)은 탭 자체가 선택이라 같은 이름의 칩을 중복으로 띄우지 않는다 */}
+                {gradeGroup != null && chipsShown && GRADE_GROUPS.find((gr) => gr.key === gradeGroup)!.options.length > 1 && (
                   <div className="flex min-w-0 flex-1 flex-wrap gap-[8px]">
                     {GRADE_GROUPS.find((gr) => gr.key === gradeGroup)!.options.map((g, i) => {
                       const on = grade === g

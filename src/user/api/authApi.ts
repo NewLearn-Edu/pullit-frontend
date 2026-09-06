@@ -388,7 +388,7 @@ export type Grade =
 export const GRADE_LABEL: Record<Grade, string> = {
   MIDDLE_1: '중1', MIDDLE_2: '중2', MIDDLE_3: '중3',
   HIGH_1: '고1', HIGH_2: '고2', HIGH_3: '고3',
-  RETAKE: '재수', PARENT: '학부모', TEACHER: '선생님', GENERAL: '일반인',
+  RETAKE: 'N수생', PARENT: '학부모', TEACHER: '선생님', GENERAL: '일반인',
 }
 
 export interface ProfileCompleteRequest {
