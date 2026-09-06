@@ -258,12 +258,15 @@ export default function WeaknessResultPage() {
    */
   const leaveResult = (to: string) => {
     if (to !== '/signup') useTrialStore.getState().consumeResultPass()
-    // 소단원 시트에서 시작한 진단(pendingUnit)이면 복귀한 홈·지도에 완료 토스트 예약 (3575-7884)
-    if (to !== '/signup' && pendingNameRef.current) {
-      setDiagnoseDoneFlash(pendingNameRef.current, subject)
-      setLastSolvedFlash(pendingNameRef.current, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
+    // 소단원 시트에서 시작한 진단이면 복귀한 홈·지도에 완료 토스트 예약 (3575-7884).
+    // 단원명은 pendingUnit(확정 시 비워짐) → 세트 시작 때 저장한 activeUnitName — 해설 왕복 뒤(재마운트)에도
+    // 홈이 방금 푼 단원으로 초점을 맞추게 (2026-09-06, 예전엔 pendingUnit 이 없으면 플래시 없이 홈으로 갔다)
+    const solvedName = pendingNameRef.current ?? activeUnitName
+    if (to !== '/signup' && solvedName) {
+      setDiagnoseDoneFlash(solvedName, subject)
+      setLastSolvedFlash(solvedName, subject) // 홈 복귀 시 이 단원 탭·카드로 초점
       // 약점 지도에서 시작한 진단이면 돌아가서 그 단원을 선택(active) + 상세 시트 오픈 — 자유 풀이(SolveResultPage)와 같은 규칙
-      if (to.startsWith('/weakness-map')) setUnitReopenFlash(pendingNameRef.current, subject)
+      if (to.startsWith('/weakness-map')) setUnitReopenFlash(solvedName, subject)
     }
     navigate(to)
   }
@@ -315,6 +318,7 @@ export default function WeaknessResultPage() {
    */
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   const activeUnitName = useTrialStore((s) => s.activeUnitName)
+  const activeReturnTo = useTrialStore((s) => s.activeReturnTo)
   const pendingNameRef = useRef<string | null>(null)
   if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
   const unitName =
@@ -384,7 +388,7 @@ export default function WeaknessResultPage() {
   const confirmCreditSheet = () => {
     useTrialStore.getState().markFirstCreditCelebrated()
     setCreditOpen(false)
-    leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+    leaveResult(exitPath())
   }
 
   /**
@@ -423,6 +427,8 @@ export default function WeaknessResultPage() {
   // pendingUnit 은 확정 직후 null 이 되므로, 돌아갈 경로·단원명은 미리 잡아둔다
   const returnToRef = useRef<string | null>(null)
   if (pendingUnit && !returnToRef.current) returnToRef.current = pendingUnit.returnTo
+  // 복귀 경로 — pendingUnit(첫 렌더 ref) → 세트 시작 때 저장한 activeReturnTo(해설 왕복 뒤) → 회원 홈 / 비회원 가입
+  const exitPath = () => returnToRef.current ?? activeReturnTo ?? (isMember ? '/home' : '/signup')
 
 
   // 재열람용 문항별 결과 — 목 문제 데이터 없이도 표를 다시 그릴 수 있게 표시값을 박제
@@ -716,7 +722,7 @@ export default function WeaknessResultPage() {
           onClick={() => {
             if (isEarlybird()) return setReserveOpen(true)
             if (shouldCelebrateFirstCredit()) return setCreditOpen(true)
-            leaveResult(returnToRef.current ?? (isMember ? '/home' : '/signup'))
+            leaveResult(exitPath())
           }}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
         >

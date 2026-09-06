@@ -4,7 +4,13 @@ import {
   type ProblemSetItem,
   type TrialProblemSetItem,
 } from '@/user/api/problemApi'
-import { fetchActiveProblemSet, issueProblemSet, type IssuedProblemSet } from '@/user/api/problemSetApi'
+import {
+  fetchActiveProblemSet,
+  fetchProblemSetById,
+  issueProblemSet,
+  type IssuedProblemSet,
+} from '@/user/api/problemSetApi'
+import { useTrialStore } from '@/user/stores/trialStore'
 import {
   getProblemsByEnglishType,
   getProblemsBySkillNode,
@@ -207,6 +213,31 @@ export async function restoreActiveSet(
   cache.set(`${subject}:${nodeId}`, problems)
   const firstUnsolvedIdx = Math.max(0, set.items.findIndex((item) => !item.submitted))
   return { set, problems, firstUnsolvedIdx }
+}
+
+/**
+ * 진단 세션(풀이·결과·해설 화면)의 문제 세트 (2026-09-06) — 캐시 → 발급 세트(id) → 노드 기준 조회 순.
+ *
+ * 홈·지도에서 시작한 진단은 발급 세트(trialStore.activeSetId)가 정본이다. 새로고침으로 캐시가 날아가면
+ * 세트 id 로 되찾는다 — 노드 기준 재조회는 nodeId 없는 단원(제목·요지·함수의 극한 등)이 폴백 노드
+ * (주제·지수와 로그)로 잡혀 다른 단원의 문제를 보여줬다. 완료(DONE)된 세트도 되찾을 수 있어
+ * 결과·해설 화면에서도 쓴다. 온보딩 맛보기(세트 없음)는 예전처럼 노드 기준.
+ */
+export async function loadTrialSessionProblems(subject: Subject, nodeId: string): Promise<Problem[]> {
+  const cached = cache.get(`${subject}:${nodeId}`)
+  if (cached) return cached
+  const setId = useTrialStore.getState().activeSetId
+  if (setId) {
+    try {
+      const set = await fetchProblemSetById(setId)
+      const problems = set.items.map((item, i) => toQuizProblem(item, i, subject, nodeId))
+      cache.set(`${subject}:${nodeId}`, problems)
+      return problems
+    } catch {
+      // 세트가 사라졌거나(게스트 정리 등) 네트워크 오류 — 노드 기준으로 폴백
+    }
+  }
+  return loadQuizProblems(subject, nodeId)
 }
 
 /** 이미 로드된 세트 동기 조회 — 캐시가 없으면(새로고침 직행 등) null */

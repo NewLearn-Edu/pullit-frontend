@@ -4,7 +4,7 @@ import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
 import { type Problem } from '@/user/data/mockProblems'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import { loadTrialSessionProblems } from '@/user/services/problemSet'
 import { useTrialStore } from '@/user/stores/trialStore'
 import { CURRICULUM } from '@/user/data/curriculum'
 import { formatKoreanDuration } from '@/user/pages/trial/TrialQuizPage'
@@ -27,7 +27,10 @@ const SUBJECT_LABEL: Record<Subject, string> = {
 export default function TrialReviewPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
   // 결과 화면 주소 — 온보딩 퍼널(pendingUnit 없음)만 /trial/{subject}/weakness (TrialQuizPage 와 같은 기준)
-  const funnel = !useTrialProgressStore((s) => s.pendingUnit)
+  const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  const funnel = !pendingUnit
+  // 세트 시작 때 찍어 둔 단원명 — pendingUnit 은 결과 확정 시 비워지므로 리뷰에선 이쪽이 정본 (2026-09-06)
+  const activeUnitName = useTrialStore((s) => s.activeUnitName)
   const navigate = useNavigate()
   const idx = Number(index ?? 0)
 
@@ -42,7 +45,7 @@ export default function TrialReviewPage() {
       return
     }
     let alive = true
-    loadQuizProblems(subject, nodeId).then((list) => {
+    loadTrialSessionProblems(subject, nodeId).then((list) => {
       if (alive) setProblems(list)
     })
     return () => {
@@ -57,16 +60,21 @@ export default function TrialReviewPage() {
     return results.find((r) => r.problemId === problem?.id) ?? null
   }, [subject, mathResults, englishResults, problem])
 
-  // 내가 푼 단원명 — 세트의 nodeId 를 커리큘럼에서 역조회 (하드코딩 라벨은 폴백)
+  // 내가 푼 단원명 — 홈·지도에서 시작한 세트는 진행 중 유닛 → 세트 시작 때 저장한 단원명 순.
+  // nodeId 역조회는 온보딩 맛보기(고정 영역)용 폴백 — nodeId 없는 단원(제목·요지·함수의 극한 등)은
+  // 폴백 노드(주제·지수와 로그)로 잡혀 엉뚱한 단원명이 나왔다 (2026-09-06)
   const solvedNodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
   const unitLabel = useMemo(() => {
     if (!subject) return ''
+    const subjectLabel = subject === 'math' ? '수학' : '영어'
+    const started = pendingUnit?.unitName ?? activeUnitName
+    if (started) return `${subjectLabel} · ${started}`
     for (const category of CURRICULUM[subject]) {
       const unit = category.units.find((u) => u.nodeId === solvedNodeId)
-      if (unit) return `${subject === 'math' ? '수학' : '영어'} · ${unit.name}`
+      if (unit) return `${subjectLabel} · ${unit.name}`
     }
     return SUBJECT_LABEL[subject]
-  }, [subject, solvedNodeId])
+  }, [subject, solvedNodeId, pendingUnit, activeUnitName])
 
   // 풀이 기록 없이 접근하면 결과 페이지로 (세트 로드가 끝난 뒤에만 판정)
   useEffect(() => {

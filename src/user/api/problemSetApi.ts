@@ -63,6 +63,12 @@ export async function fetchActiveProblemSet(
   return data.data
 }
 
+/** 세트 단건 조회 — 내 세트면 상태(ACTIVE·DONE) 무관. 결과·해설 화면이 새로고침 뒤 세트 id 로 문제를 되찾는 용도 */
+export async function fetchProblemSetById(setId: number): Promise<IssuedProblemSet> {
+  const { data } = await api.get<BaseResponse<IssuedProblemSet>>(`/api/problem-sets/${setId}`)
+  return data.data
+}
+
 /**
  * 앱 진입 이어풀기 팝업(PI-POPUP-RESUME · Figma 2931-11007)용 —
  * 가장 최근에 풀다 만 세트 요약. 없으면 null.

@@ -13,7 +13,7 @@ import { choiceMark, EnglishProblemRender, MathProblemRender } from '@/shared/co
 import { QuestionRender } from '@/shared/components/QuestionBlocks'
 import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { type Problem } from '@/user/data/mockProblems'
-import { getCachedQuizProblems, loadQuizProblems, restoreActiveSet } from '@/user/services/problemSet'
+import { loadTrialSessionProblems, restoreActiveSet } from '@/user/services/problemSet'
 import { snapshotUnitScoreForSet } from '@/user/services/unitScoreSnapshot'
 import { CreditUsedToast } from '@/user/components/CreditUsedToast'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
@@ -107,6 +107,9 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   // 건너뛰기(게스트) 또는 소셜 가입 시점에만 생성된다 (2026-08-19 확정)
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   useTrialFunnelGuard(isTrial && !pendingUnit)
+  // 상단 단원명 — 진단은 pendingUnit → 세트 시작 때 저장한 activeUnitName, 자유 풀이는 세션의 unitName (2026-09-06)
+  const activeUnitName = useTrialStore((s) => s.activeUnitName)
+  const startedUnitName = isTrial ? (pendingUnit?.unitName ?? activeUnitName) : solveSession?.unitName ?? null
 
   // 문제 세트 — 서버(GET /api/problems) 우선, 실패·부족 시 목 폴백 (problemSet 캐시 공유)
   const [problems, setProblems] = useState<Problem[]>(() =>
@@ -189,25 +192,9 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
 
     const nodeId = subject === 'math' ? mathSkillNodeId : englishTypeId
     if (!subject || !nodeId) return
-    const activeSetId = useTrialStore.getState().activeSetId
-    if (pendingUnit?.unitCode && activeSetId && !getCachedQuizProblems(subject, nodeId)) {
-      // 홈·지도에서 시작한 진단 세트가 재로드로 캐시를 잃음 — 노드 기준 재조회는 nodeId 없는 단원(함수의 극한 등)에서
-      // 폴백 노드(지수와 로그)의 다른 문제를 불러와 제출이 전부 세트 불일치로 버려졌다. 진행 중 세트를 서버에서 복원 (2026-09-06)
-      const back = pendingUnit.returnTo || '/home'
-      restoreActiveSet(subject, nodeId, pendingUnit.unitCode, 'TRIAL', activeSetId)
-        .then((restored) => {
-          if (!alive) return
-          if (restored) setProblems(restored.problems)
-          else navigate(back, { replace: true })
-        })
-        .catch(() => {
-          if (alive) navigate(back, { replace: true })
-        })
-      return () => {
-        alive = false
-      }
-    }
-    loadQuizProblems(subject, nodeId).then((list) => {
+    // 진단 세트 — 캐시 → 발급 세트 id → 노드 기준. 재로드로 캐시를 잃어도 세트 id 로 같은 문항을 되찾는다
+    // (노드 기준 재조회는 nodeId 없는 단원에서 폴백 노드의 다른 문제를 불러와 제출이 세트 불일치로 버려졌다 · 2026-09-06)
+    loadTrialSessionProblems(subject, nodeId).then((list) => {
       if (alive) setProblems(list)
     })
     return () => {
@@ -559,8 +546,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
       <QuizTopBar
         progress={isTrial ? { current: idx + 1, total: problems.length } : undefined}
         subjectLabel={
-          pendingUnit
-            ? `${subject === 'math' ? '수학' : '영어'} · ${pendingUnit.unitName}`
+          startedUnitName
+            ? `${subject === 'math' ? '수학' : '영어'} · ${startedUnitName}`
             : SUBJECT_LABEL[subject as Subject]
         }
         onClose={handleClose}

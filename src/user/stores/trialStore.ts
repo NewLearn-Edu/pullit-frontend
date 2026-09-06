@@ -61,6 +61,8 @@ interface TrialState {
    * 세트 시작 시 찍어 두고 reset 때만 지운다 — sessionStorage 라 리뷰 왕복·새로고침에 살아남는다.
    */
   activeUnitName: string | null
+  /** 진행 중 진단 세트의 복귀 경로 (홈·지도 + 과목 쿼리) — 결과 화면 "진단 완료"가 돌아갈 곳. activeUnitName 과 같은 수명 */
+  activeReturnTo: string | null
 
   setMathSkillNode: (id: string) => void
   setEnglishType: (id: string) => void
@@ -73,6 +75,7 @@ interface TrialState {
   consumeResultPass: () => void
   setActiveSetId: (id: number | null) => void
   setActiveUnitName: (name: string | null) => void
+  setActiveReturnTo: (to: string | null) => void
   reset: () => void
 
   isMathComplete: () => boolean
@@ -101,6 +104,7 @@ export const useTrialStore = create<TrialState>()(
       resultPass: false,
       activeSetId: null,
       activeUnitName: null,
+      activeReturnTo: null,
 
       setMathSkillNode: (id) =>
         set({ mathSkillNodeId: id, mathResults: [] }),
@@ -136,6 +140,7 @@ export const useTrialStore = create<TrialState>()(
 
       setActiveSetId: (id) => set({ activeSetId: id }),
       setActiveUnitName: (name) => set({ activeUnitName: name }),
+      setActiveReturnTo: (to) => set({ activeReturnTo: to }),
 
       // 보상 플래그 2종은 reset 대상이 아니다 — 세트 재시작마다 초기화되면
       // 같은 세션에서 축하 시트가 다시 뜰 수 있다 (탭 닫으면 자연 소멸)
@@ -149,6 +154,7 @@ export const useTrialStore = create<TrialState>()(
           resultPass: false,
           activeSetId: null,
           activeUnitName: null,
+          activeReturnTo: null,
         }),
 
       // 맛보기 세트 = 3문항 (정책 · mockProblems TRIAL_PROBLEM_COUNT 와 동일)
@@ -193,6 +199,7 @@ export const useTrialStore = create<TrialState>()(
         resultPass: state.resultPass,
         activeSetId: state.activeSetId,
         activeUnitName: state.activeUnitName,
+        activeReturnTo: state.activeReturnTo,
       }),
     },
   ),
