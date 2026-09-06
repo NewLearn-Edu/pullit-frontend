@@ -71,6 +71,11 @@
     font-size: 17px;
     line-height: 1.5;
   }
+
+  // 호출부가 줄마다 <p> 로 나눠 넣은 경우 — 문단 기본 여백 제거, 줄 간격은 line-height 로만
+  > p {
+    margin: 0;
+  }
 }
 
 .actions {

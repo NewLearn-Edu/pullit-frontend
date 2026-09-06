@@ -273,6 +273,28 @@ export async function loginWithApple(): Promise<void> {
   })
 }
 
+/**
+ * 이메일 중복 가입 차단(409 U002) 응답의 detail — 서버 DuplicateEmailDetail 과 동일 (2026-09-06).
+ * 한 이메일 = 한 계정 정책: 카카오로 가입한 이메일로 네이버 가입을 시도하면 서버가 거절한다.
+ */
+export interface DuplicateAccountInfo {
+  email: string
+  provider: 'KAKAO' | 'NAVER' | 'GOOGLE' | 'APPLE' | null
+  providerName: string | null
+}
+
+/** 소셜 로그인 실패가 "이미 다른 소셜로 가입된 이메일" 때문이면 그 정보를, 아니면 null */
+export function extractDuplicateAccount(error: unknown): DuplicateAccountInfo | null {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null
+  const data = error.response.data as { errorCode?: string; detail?: Partial<DuplicateAccountInfo> } | undefined
+  if (data?.errorCode !== 'U002' || !data.detail?.email) return null
+  return {
+    email: data.detail.email,
+    provider: data.detail.provider ?? null,
+    providerName: data.detail.providerName ?? null,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 세션 재발급 · 로그아웃
 // ---------------------------------------------------------------------------

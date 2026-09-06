@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { consumeOauthState, loginWithGoogleCode } from '@/user/api/authApi'
+import { consumeOauthState, extractDuplicateAccount, loginWithGoogleCode, type DuplicateAccountInfo } from '@/user/api/authApi'
+import { DuplicateAccountDialog } from '@/user/components/DuplicateAccountDialog'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
 
 /**
@@ -11,6 +12,7 @@ export default function GoogleCallbackPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [duplicate, setDuplicate] = useState<DuplicateAccountInfo | null>(null) // 다른 소셜로 가입된 이메일 — 안내 팝업
   const requested = useRef(false) // StrictMode 이중 실행 방지 (인가코드는 1회용)
 
   useEffect(() => {
@@ -33,8 +35,17 @@ export default function GoogleCallbackPage() {
       .then(() => loginWithGoogleCode(code))
       .then(finishLogin)
       .then((to) => navigate(to, { replace: true }))
-      .catch(() => setError('구글 로그인에 실패했어요. 다시 시도해주세요.'))
+      .catch((e) => {
+        // 이미 다른 소셜로 가입된 이메일 — 사유·기존 소셜을 팝업으로 안내하고 그 로그인으로 보낸다
+        const dup = extractDuplicateAccount(e)
+        if (dup) setDuplicate(dup)
+        else setError('구글 로그인에 실패했어요. 다시 시도해주세요.')
+      })
   }, [params, navigate])
+
+  if (duplicate) {
+    return <DuplicateAccountDialog info={duplicate} onClose={() => navigate('/login', { replace: true })} />
+  }
 
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', gap: 12 }}>

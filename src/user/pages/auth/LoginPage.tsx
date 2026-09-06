@@ -7,6 +7,8 @@ import {
   startNaverLogin,
 } from '@/user/api/authApi'
 import { finishLogin, warmUpSessionBeforeLogin } from '@/user/services/finishLogin'
+import { extractDuplicateAccount, type DuplicateAccountInfo } from '@/user/api/authApi'
+import { DuplicateAccountDialog } from '@/user/components/DuplicateAccountDialog'
 import { hasCompletedTrial } from '@/user/services/trialGate'
 import { isEarlybird } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
@@ -30,6 +32,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState<string | null>(null)
+  const [duplicate, setDuplicate] = useState<DuplicateAccountInfo | null>(null) // 다른 소셜로 가입된 이메일 — 안내 팝업
 
   // 이미 로그인한 회원에게 로그인 화면은 무의미 — 홈으로.
   // 게스트는 가입(승격)하러 올 수 있으므로 통과 (조회 전용 useMe — 게스트 생성 없음)
@@ -86,7 +89,10 @@ export default function LoginPage() {
       navigate(to, { replace: true })
     } catch (e) {
       if ((e as { error?: string })?.error === 'popup_closed_by_user') return
-      setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')
+      // 이미 다른 소셜로 가입된 이메일 — 사유·기존 소셜을 팝업으로 안내
+      const dup = extractDuplicateAccount(e)
+      if (dup) setDuplicate(dup)
+      else setError('Apple 로그인에 실패했어요. 다시 시도해주세요.')
     }
   }
 
@@ -132,6 +138,7 @@ export default function LoginPage() {
           </button>
         )}
       </div>
+      {duplicate && <DuplicateAccountDialog info={duplicate} onClose={() => setDuplicate(null)} />}
     </div>
   )
 }

@@ -48,7 +48,8 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <p className={styles.title}>{title}</p>
-        {desc && <p className={styles.desc}>{desc}</p>}
+        {/* div — 문자열이면 그대로 한 문단, 호출부가 줄마다 <p> 로 나눠 넣어도 유효한 마크업이 되게 (2026-09-06) */}
+        {desc && <div className={styles.desc}>{desc}</div>}
         <div className={styles.actions}>
           {onCancel && (
             <button type="button" onClick={onCancel} className={styles.cancel}>
