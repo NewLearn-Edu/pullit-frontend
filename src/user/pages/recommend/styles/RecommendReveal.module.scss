@@ -31,6 +31,7 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
 .page {
   display: flex;
   flex-direction: column;
+  position: relative; // 숨김 상태 도크(.dock)의 absolute 기준
   min-height: 100dvh;
   min-width: 350px;
   background: $color-canvas;
@@ -692,6 +693,16 @@ $ease-settle: cubic-bezier(0.33, 1, 0.68, 1);
   transform: translateY(14px);
   transition: opacity d(320ms) ease, transform d(460ms) $ease-settle;
   pointer-events: none;
+
+  // 연출 중(투명)에는 흐름에서 뺀다 (2026-09-06). 안 보이는 도크가 자리를 차지하면
+  // 폰에서 본문(.body)이 150px 넘게 줄어 캔버스가 세로에 먼저 걸리고, 폭은 절반밖에 못 쓴다.
+  // 드러나는 순간 흐름으로 돌아오지만 그때 무대는 top:0 · 상세 카드 높이라 본문 축소에 영향이 없다
+  &:not(.dockIn) {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
 }
 
 .dockIn {
