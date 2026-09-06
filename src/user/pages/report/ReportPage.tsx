@@ -76,7 +76,7 @@ export default function ReportPage() {
           left={<CreditBadge credit={me?.creditBalance ?? 0} onClick={() => setCreditPopupOpen(true)} />}
           center={<SubjectTabs pill value={subject} onChange={setSubject} />}
           hideRightOnDesktop
-          right={<WrongNoteBadge />}
+          right={<WrongNoteBadge subject={subject} />}
         />
 
         <div className={styles.content}>

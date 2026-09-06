@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { readNavTab, rememberNavTab } from '@/user/utils/lastNavTab'
+import { type Subject } from '@/user/stores/trialStore'
 import { WrongNoteIcon } from '@/user/components/icons/WrongNoteIcon'
 import styles from './styles/WrongNoteBadge.module.scss'
 
@@ -16,10 +17,13 @@ import styles from './styles/WrongNoteBadge.module.scss'
 export function WrongNoteBadge({
   active = false,
   elevated,
+  subject,
 }: {
   active?: boolean
   /** 캔버스 위에 떠 있는 헤더(약점지도)용 그림자 — 흰 필이 배경에 묻히지 않게 (2026-09-06) */
   elevated?: boolean
+  /** 지금 보고 있는 과목 탭 — 오답노트도 같은 과목으로 연다 (2026-09-06). 없으면 수학 */
+  subject?: Subject
 }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -50,7 +54,8 @@ export function WrongNoteBadge({
       aria-label="오답노트"
       onClick={() => {
         rememberNavTab(location.pathname, location.search) // 돌아올 자리 — 배지를 다시 누르면 여기로
-        navigate('/wrong-note')
+        // 영어 탭에서 눌렀으면 영어 오답부터 (기본값 수학은 쿼리 생략 — 홈·지도와 같은 규칙)
+        navigate(subject === 'english' ? '/wrong-note?subject=english' : '/wrong-note')
       }}
       className={clsx(styles.badge, elevated && styles.badgeElevated)}
     >

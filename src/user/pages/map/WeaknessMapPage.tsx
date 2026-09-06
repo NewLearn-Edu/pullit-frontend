@@ -564,7 +564,7 @@ export default function WeaknessMapPage() {
           <CreditBadge credit={me?.creditBalance ?? 0} elevated onClick={() => setCreditPopupOpen(true)} />
           <SubjectTabs pill value={subject} onChange={setSubject} />
           <div className={styles.headerIcons}>
-            <WrongNoteBadge elevated />
+            <WrongNoteBadge elevated subject={subject} />
           </div>
         </header>
 

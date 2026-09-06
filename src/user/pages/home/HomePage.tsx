@@ -282,7 +282,7 @@ export default function HomePage() {
           left={<CreditBadge credit={credit} onClick={() => setCreditPopupOpen(true)} />}
           center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
           hideRightOnDesktop
-          right={<WrongNoteBadge />}
+          right={<WrongNoteBadge subject={subject} />}
         />
 
         <div className={styles.content}>

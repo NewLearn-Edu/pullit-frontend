@@ -28,6 +28,9 @@ export function UserNav({ active, subject }: UserNavProps) {
   // (예전엔 마지막으로 "푼" 과목만 봐서 영어 탭에서 눌러도 수학이 추천됐다 · 2026-09-04)
   const lastSubject = useTrialStore((s) => s.lastSubject)
   const recommendLink = `/recommend?subject=${subject ?? lastSubject ?? 'math'}`
+  // 오답노트도 보고 있던 과목으로 연다 (2026-09-06) — 기본값 수학은 쿼리 생략
+  const wrongNoteLink =
+    (subject ?? lastSubject) === 'english' ? '/wrong-note?subject=english' : '/wrong-note'
 
   return (
     <>
@@ -40,7 +43,7 @@ export function UserNav({ active, subject }: UserNavProps) {
           {/* 오늘의 추천은 홈의 추천 문제 CTA 가 담당 — 사이드바에서는 뺀다 (2026-08-27) */}
           <NavItem to="/home" icon={<HomeIcon filled={active === 'recommend'} />} label="홈" active={active === 'recommend'} />
           <NavItem to="/weakness-map" icon={<MapIcon filled={active === 'map'} />} label="약점 지도" active={active === 'map'} />
-          <NavItem to="/wrong-note" icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
+          <NavItem to={wrongNoteLink} icon={<WrongNoteIcon size={20} filled={active === 'wrongNote'} />} label="오답노트" active={active === 'wrongNote'} />
           <NavItem to="/report" icon={<ReportIcon filled={active === 'report'} />} label="학습 기록" active={active === 'report'} />
           <NavItem to="/my" icon={<ProfileIcon filled={active === 'my'} />} label="마이페이지" active={active === 'my'} />
         </nav>

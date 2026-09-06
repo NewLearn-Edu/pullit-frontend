@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WrongNoteBadge } from '@/user/components/WrongNoteBadge/WrongNoteBadge'
 import { UserNav } from '@/user/components/UserNav'
@@ -27,7 +27,10 @@ export default function WrongNotePage() {
   const { me } = useMe()
   const sessionStatus = useUserStore((s) => s.status)
 
-  const [subject, setSubject] = useState<Subject>('math')
+  // 과목 탭은 URL 쿼리가 진실원 — 홈·약점지도에서 보던 과목이 그대로 이어지고,
+  // 새로고침·뒤로가기에도 유지된다 (2026-09-06). 기본값 수학은 쿼리 생략
+  const [searchParams, setSearchParams] = useSearchParams()
+  const subject: Subject = searchParams.get('subject') === 'english' ? 'english' : 'math'
   const [items, setItems] = useState<WrongNoteItem[]>([])
 
   // 세션(게스트·회원) 필요 — 오답 원장이 계정 단위
@@ -54,7 +57,8 @@ export default function WrongNotePage() {
   const [cat, setCat] = useState(cats[0])
 
   const changeSubject = (s: Subject) => {
-    setSubject(s)
+    // replace — 탭 전환이 히스토리에 쌓이지 않게 (뒤로가기 한 번에 오답노트 이탈)
+    setSearchParams(s === 'math' ? {} : { subject: s }, { replace: true })
     const nextNodes = s === 'math' ? MATH_MAP_NODES : ENGLISH_MAP_NODES
     setCat(nextNodes[0].cat)
   }
@@ -74,7 +78,7 @@ export default function WrongNotePage() {
           left={<CreditBadge credit={me?.creditBalance ?? 0} />}
           center={<SubjectTabs pill value={subject} onChange={changeSubject} />}
           hideRightOnDesktop
-          right={<WrongNoteBadge active />}
+          right={<WrongNoteBadge active subject={subject} />}
         />
 
         <div className={styles.content}>
