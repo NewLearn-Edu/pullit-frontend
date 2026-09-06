@@ -205,7 +205,7 @@ export default function SignupInfoPage() {
   const [agreeAge, setAgreeAge] = useState(saved.agreeAge ?? false) // [필수] 만 14세 이상 — 명시적 확인 (서버는 생년월일로 재검증)
   const [agreeTerms, setAgreeTerms] = useState(saved.agreeTerms ?? false)
   const [agreePrivacy, setAgreePrivacy] = useState(saved.agreePrivacy ?? false)
-  // [선택] 마케팅 수신 동의 — 기본 해제. "동의하고 시작하기"가 자동으로 켜지 않는다 (명시적 체크만 유효)
+  // [선택] 마케팅 수신 동의 — 기본 해제. 명시적 체크만 유효하며 시작 조건에 넣지 않는다
   const [agreeMarketing, setAgreeMarketing] = useState(saved.agreeMarketing ?? false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -496,18 +496,20 @@ export default function SignupInfoPage() {
   const phoneValid = /^(01[0-9]|999)-\d{3,4}-\d{4}$/.test(phone)
   const birthValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate)
   const under14 = birthValid && koreanAge(birthDate) < 14
-  /** 필수 동의 3종 체크 여부 — 버튼 라벨(시작하기 vs 동의하고 시작하기) 분기용 */
+  /** 필수 동의 3종 — 하나라도 빠지면 시작할 수 없다 (2026-09-06) */
   const requiredAgreed = agreeAge && agreeTerms && agreePrivacy
-  /** 동의 단계까지 왔고 제출 가능한 상태 — 동의 자체는 버튼 클릭이 의사표시 (토스 패턴) */
+  /** 입력이 다 찼는가 — 동의 시트를 열 수 있는 조건 */
   const readyForConsent =
     nameValid && nicknameValid && birthValid && !under14 && grade != null && phoneVerified && !pending
+  /**
+   * 실제 제출 가능 여부 — 입력 완료 + 필수 동의 3종.
+   * 예전엔 버튼 클릭 자체를 동의 의사표시로 보고(토스 패턴) 눌리는 순간 체크를 채웠는데,
+   * 무엇에 동의했는지 모른 채 넘어갈 수 있어 명시적 체크를 받도록 바꿨다.
+   */
+  const canSubmit = readyForConsent && requiredAgreed
 
   const submit = async () => {
-    if (!readyForConsent) return
-    // "동의하고 시작하기" 클릭 자체가 필수 동의 의사표시 — UI 체크도 함께 채운다
-    setAgreeAge(true)
-    setAgreeTerms(true)
-    setAgreePrivacy(true)
+    if (!canSubmit) return
     setPending(true)
     setError(null)
     try {
@@ -517,9 +519,10 @@ export default function SignupInfoPage() {
         birthDate,
         grade: grade!, // readyForConsent 가 null 을 걸러준다
         phoneNumber: phone,
-        agreeTerms: true,
-        agreePrivacy: true,
-        agreeMarketing, // 선택 — 유저가 직접 체크한 값 그대로 (버튼이 자동으로 켜지 않음)
+        // 유저가 직접 체크한 값 그대로 — 필수 3종은 canSubmit 이 이미 보장한다
+        agreeTerms,
+        agreePrivacy,
+        agreeMarketing, // 선택 — 명시적 체크만 유효 (정보통신망법 §50)
         inviteCode: readInviteCode(), // 초대 링크로 들어온 가입이면 초대자에게 +5 (없으면 null)
       })
       await loadMe(true) // phoneNumber 채워진 상태 반영
@@ -1053,8 +1056,8 @@ export default function SignupInfoPage() {
               </span>
             </button>
 
-            {/* 동의 리스트 — 개별 토글 가능. "동의하고 시작하기"는 필수만 자동 간주,
-                선택(마케팅)은 명시적 체크만 유효 (정보통신망법 §50) */}
+            {/* 동의 리스트 — 개별 토글. 필수 3종을 모두 켜야 아래 "시작하기"가 열린다.
+                선택(마케팅)은 안 켜도 시작할 수 있다 (정보통신망법 §50 — 명시적 체크만 유효) */}
             <div className="mt-[6px] flex flex-col">
               {(
                 [
@@ -1105,10 +1108,10 @@ export default function SignupInfoPage() {
             <button
               type="button"
               onClick={submit}
-              disabled={!readyForConsent}
+              disabled={!canSubmit}
               className="mt-[20px] flex h-[56px] w-full items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-30"
             >
-              {pending ? '저장 중…' : requiredAgreed ? '시작하기' : '동의하고 시작하기'}
+              {pending ? '저장 중…' : '시작하기'}
             </button>
           </div>
         </div>
