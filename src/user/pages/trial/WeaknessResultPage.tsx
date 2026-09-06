@@ -5,7 +5,7 @@ import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useMe } from '@/user/hooks/useMe'
 import { type Problem } from '@/user/data/mockProblems'
 import { MOCK_SKILL_NODES } from '@/user/data/mockSkillNodes'
-import { loadQuizProblems } from '@/user/services/problemSet'
+import { loadTrialSessionProblems } from '@/user/services/problemSet'
 import { flushAttemptQueue, waitForPendingAttempts } from '@/user/services/attemptQueue'
 import { fetchSkillScores, type SkillScore } from '@/user/api/attemptApi'
 import { findSkillScore } from '@/user/services/unitScoreSnapshot'
@@ -274,7 +274,7 @@ export default function WeaknessResultPage() {
   useEffect(() => {
     if (!mathSkillNodeId) return
     let alive = true
-    loadQuizProblems('math', mathSkillNodeId).then((list) => alive && setMathProblems(list))
+    loadTrialSessionProblems('math', mathSkillNodeId).then((list) => alive && setMathProblems(list))
     return () => {
       alive = false
     }
@@ -282,7 +282,7 @@ export default function WeaknessResultPage() {
   useEffect(() => {
     if (!englishTypeId) return
     let alive = true
-    loadQuizProblems('english', englishTypeId).then((list) => alive && setEnglishProblems(list))
+    loadTrialSessionProblems('english', englishTypeId).then((list) => alive && setEnglishProblems(list))
     return () => {
       alive = false
     }
@@ -310,13 +310,16 @@ export default function WeaknessResultPage() {
    * 이번에 푼 단원 — 홈·지도에서 시작한 진단은 진행 중 유닛(pendingUnit)이 진실원 (2026-09-06).
    * 예전엔 영어를 무조건 '주제', 수학은 nodeId 없는 단원을 폴백 노드(지수와 로그)로 표기해
    * "제목"을 풀고도 제목·점수가 "주제" 단원 것으로 나왔다. 확정(finishPendingUnit) 뒤엔 null 이 되므로
-   * 첫 렌더 값을 ref 로 고정한다. 온보딩 퍼널(pendingUnit 없음)만 고정 영역명으로 폴백.
+   * 첫 렌더 값을 ref 로 고정하고, 해설 리뷰 왕복(재마운트) 뒤엔 세트 시작 때 찍어 둔
+   * trialStore.activeUnitName(sessionStorage)으로 되찾는다. 온보딩 퍼널(둘 다 없음)만 고정 영역명으로 폴백.
    */
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  const activeUnitName = useTrialStore((s) => s.activeUnitName)
   const pendingNameRef = useRef<string | null>(null)
   if (pendingUnit && !pendingNameRef.current) pendingNameRef.current = pendingUnit.unitName
   const unitName =
     pendingNameRef.current ??
+    activeUnitName ??
     (subject === 'english'
       ? '주제' // 맛보기 고정 영역 (en-topic)
       : MOCK_SKILL_NODES.find((n) => n.id === mathSkillNodeId)?.name ?? '수학')
@@ -866,6 +869,7 @@ function FirstCreditSheet({ onClose }: { onClose: () => void }) {
         <CreditCelebrationContent
           title="첫 진단 완료 선물 도착!"
           titleId="first-credit-title"
+          amount="5크레딧"
           onConfirm={onClose}
         />
       </div>

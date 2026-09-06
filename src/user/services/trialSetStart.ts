@@ -34,6 +34,7 @@ export async function startTrialSetSession(
   if (subject === 'math') trial.setMathSkillNode(nodeId)
   else trial.setEnglishType(nodeId)
   trial.setActiveSetId(set.setId)
+  trial.setActiveUnitName(row.name) // 결과 화면 제목·점수 키 — 리뷰 왕복 뒤에도 유지 (pendingUnit 은 확정 시 비워짐)
   // 이어풀기 — 이미 제출한 문항의 결과를 복원해 결과 화면 집계가 어긋나지 않게
   set.items.forEach((item, i) => {
     if (!item.submitted) return

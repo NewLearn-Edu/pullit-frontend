@@ -54,6 +54,13 @@ interface TrialState {
    * 온보딩 맛보기(가입 전)는 발급이 없어 null.
    */
   activeSetId: number | null
+  /**
+   * 진행 중 진단 세트의 단원 표시명 (2026-09-06) — 결과 화면 제목·누적 점수 매칭 키.
+   * pendingUnit(trialProgressStore)은 결과 확정(finishPendingUnit) 시 비워지는데, 해설 리뷰를
+   * 보고 결과 화면으로 돌아오면(재마운트) 그 값이 없어 영어가 전부 '주제'로 표시됐다.
+   * 세트 시작 시 찍어 두고 reset 때만 지운다 — sessionStorage 라 리뷰 왕복·새로고침에 살아남는다.
+   */
+  activeUnitName: string | null
 
   setMathSkillNode: (id: string) => void
   setEnglishType: (id: string) => void
@@ -65,6 +72,7 @@ interface TrialState {
   grantResultPass: () => void
   consumeResultPass: () => void
   setActiveSetId: (id: number | null) => void
+  setActiveUnitName: (name: string | null) => void
   reset: () => void
 
   isMathComplete: () => boolean
@@ -92,6 +100,7 @@ export const useTrialStore = create<TrialState>()(
       firstCreditCelebrated: false,
       resultPass: false,
       activeSetId: null,
+      activeUnitName: null,
 
       setMathSkillNode: (id) =>
         set({ mathSkillNodeId: id, mathResults: [] }),
@@ -126,6 +135,7 @@ export const useTrialStore = create<TrialState>()(
       consumeResultPass: () => set({ resultPass: false }),
 
       setActiveSetId: (id) => set({ activeSetId: id }),
+      setActiveUnitName: (name) => set({ activeUnitName: name }),
 
       // 보상 플래그 2종은 reset 대상이 아니다 — 세트 재시작마다 초기화되면
       // 같은 세션에서 축하 시트가 다시 뜰 수 있다 (탭 닫으면 자연 소멸)
@@ -138,6 +148,7 @@ export const useTrialStore = create<TrialState>()(
           lastSubject: null,
           resultPass: false,
           activeSetId: null,
+          activeUnitName: null,
         }),
 
       // 맛보기 세트 = 3문항 (정책 · mockProblems TRIAL_PROBLEM_COUNT 와 동일)
@@ -181,6 +192,7 @@ export const useTrialStore = create<TrialState>()(
         firstCreditCelebrated: state.firstCreditCelebrated,
         resultPass: state.resultPass,
         activeSetId: state.activeSetId,
+        activeUnitName: state.activeUnitName,
       }),
     },
   ),
