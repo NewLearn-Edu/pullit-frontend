@@ -129,7 +129,8 @@ export default function MyPage() {
       <UserNav active="my" />
 
       <main className={styles.main}>
-        <PageHeader backTo="history" />
+        {/* 뒤로가기 없음 (2026-09-06) — 마이는 하단 탭·사이드바의 최상위 진입점이라 돌아갈 "직전"이 없다 */}
+        <PageHeader />
 
         <div className={styles.content}>
         {/* 프로필 헤더 — 토스 프로필형 세로 중앙 배치 (아바타 · 이름 · 학년|코인 메타) */}
