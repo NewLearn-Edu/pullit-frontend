@@ -18,9 +18,13 @@
   background: rgba(0, 0, 0, 0.2);
   animation: confirm-fade 180ms ease;
 
-  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (토스트·팝업 규칙)
+  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (토스트·팝업 규칙).
+  // 네비(UserNav, data-side-nav)가 실제로 있는 화면에서만 — 로그인·문제 화면처럼 네비 없는 곳에서
+  // 무조건 비우면 뷰포트 가운데보다 오른쪽으로 밀린다 (2026-09-06)
   @include desktop-up {
-    padding-left: calc(224px + #{$space-lg});
+    :global(body:has([data-side-nav])) & {
+      padding-left: calc(224px + #{$space-lg});
+    }
   }
 }
 

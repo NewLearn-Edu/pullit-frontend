@@ -19,9 +19,11 @@
   z-index: 80;
   animation: shortage-dim-in 200ms ease;
 
-  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (ConfirmDialog 와 동일)
+  // 웹 — 좌측 네비(224px)를 뺀 콘텐츠 영역의 가운데 (ConfirmDialog 와 동일 · 네비가 실제로 있을 때만)
   @include desktop-up {
-    padding-left: calc(224px + 20px);
+    :global(body:has([data-side-nav])) & {
+      padding-left: calc(224px + 20px);
+    }
   }
 }
 
