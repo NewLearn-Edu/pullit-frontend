@@ -55,6 +55,7 @@ export default function SignupCompletePage() {
           {/* 안내 문구 없음 — 가입 완료 뷰는 타이틀·금액만 (message="" 로 줄 제거) */}
           <CreditCelebrationContent
             title="회원가입 선물 도착!"
+            amount="10크레딧"
             message=""
             withButton={false}
             onConfirm={confirm}

@@ -50,7 +50,7 @@ export function CreditCelebrationButton({
 export function CreditCelebrationContent({
   title,
   titleId,
-  amount = '5크레딧',
+  amount,
   message = '다음 단원도 약점 진단해봐',
   buttonLabel = '확인',
   withButton = true,
@@ -59,7 +59,11 @@ export function CreditCelebrationContent({
   title: string
   /** aria-labelledby 연결용 — 시트(dialog)에서 쓰면 전달 */
   titleId?: string
-  amount?: string
+  /**
+   * 지급 금액 표기 — 보상마다 다르므로 호출부가 반드시 넘긴다 (기본값 금지).
+   * 공용 기본값을 두면 한쪽 보상 금액만 바꿔도 다른 쪽 문구가 같이 틀어진다
+   */
+  amount: string
   /** 빈 문자열("")이면 안내 문구 줄 자체를 그리지 않는다 (가입 완료 뷰) */
   message?: string
   buttonLabel?: string
