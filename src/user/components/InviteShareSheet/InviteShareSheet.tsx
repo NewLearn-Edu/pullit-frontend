@@ -9,7 +9,7 @@ interface InviteShareSheetProps {
   onClose: () => void
 }
 
-const SHARE_TITLE = '풀잇 · 매일 4문제로 수능 약점 찾기'
+const SHARE_TITLE = '풀잇 · 매일 3문제로 수능 약점 찾기'
 const SHARE_DESC = '내 약점만 콕 집어 추천. 지금 시작하고 크레딧 받아가!'
 
 /**
