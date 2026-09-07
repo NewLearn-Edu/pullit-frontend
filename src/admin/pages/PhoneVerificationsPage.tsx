@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
-import { fetchPhoneVerifications, type PhoneVerification } from '../api/adminApi'
+import {
+  fetchPhoneVerifications,
+  fetchPhoneVerificationStats,
+  type PhoneVerification,
+  type PhoneVerificationStats,
+} from '../api/adminApi'
 import { formatPhoneSearch } from '../searchFormat'
+import { StatCard } from '../components/StatCard'
 
 const PAGE_SIZE = 20
 /** 검증 실패 허용 횟수 — 백엔드 PhoneVerification.MAX_ATTEMPTS 와 동일 */
@@ -50,6 +56,17 @@ export default function PhoneVerificationsPage() {
   const [q, setQ] = useState('')
   const [keyword, setKeyword] = useState('')
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
+  // KPI — 검색·페이지와 무관한 전체 집계 (2026-09-07). 진입 시 1회, 실패해도 목록은 그대로 보여준다
+  const [stats, setStats] = useState<PhoneVerificationStats | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetchPhoneVerificationStats()
+      .then((s) => alive && setStats(s))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -76,6 +93,9 @@ export default function PhoneVerificationsPage() {
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1
   const rangeEnd = Math.min((page + 1) * PAGE_SIZE, total)
 
+  const pct = (n: number) => (stats && stats.issued > 0 ? `${Math.round((n / stats.issued) * 100)}%` : '—')
+  const failed = stats ? stats.blocked + stats.expired : 0
+
   return (
     <section className="view">
       <div className="page-head">
@@ -83,6 +103,32 @@ export default function PhoneVerificationsPage() {
           <h2 className="section-title" style={{ marginBottom: 4 }}>인증번호</h2>
           <p className="page-sub">전화번호 SMS 인증 발급 이력 · 발송이 꺼진 환경에선 여기서 코드를 확인해요</p>
         </div>
+      </div>
+
+      {/* KPI — 발급 전체 · 통과 · 실패(실패초과 + 만료). 대기중은 발급 카드의 보조 문구로 */}
+      <div className="kpi-problems" style={{ marginBottom: 24 }}>
+        <StatCard
+          label="총 발급"
+          value={stats ? stats.issued.toLocaleString() : '—'}
+          delta={stats ? `대기중 ${stats.waiting.toLocaleString()}건` : '—'}
+          tone="flat"
+        />
+        <StatCard
+          label="인증 통과"
+          value={stats ? stats.verified.toLocaleString() : '—'}
+          delta={stats ? `발급 대비 ${pct(stats.verified)}` : '—'}
+          tone="good"
+        />
+        <StatCard
+          label="실패"
+          value={stats ? failed.toLocaleString() : '—'}
+          delta={
+            stats
+              ? `실패초과 ${stats.blocked.toLocaleString()} · 만료 ${stats.expired.toLocaleString()} (${pct(failed)})`
+              : '—'
+          }
+          tone="up"
+        />
       </div>
 
       <div className="card" style={{ padding: 18 }}>

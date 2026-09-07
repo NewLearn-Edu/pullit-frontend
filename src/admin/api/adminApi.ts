@@ -578,6 +578,22 @@ export interface PhoneVerification {
 
 export type PhoneVerificationPage = Paged<PhoneVerification>
 
+/** 인증번호 KPI — 발급 전체와 상태별 건수 (검색어 무관 전체 집계). 네 상태의 합 = issued */
+export interface PhoneVerificationStats {
+  issued: number
+  verified: number
+  blocked: number
+  expired: number
+  waiting: number
+}
+
+export async function fetchPhoneVerificationStats(): Promise<PhoneVerificationStats> {
+  const { data } = await adminApi.get<BaseResponse<PhoneVerificationStats>>(
+    '/api/admin/phone-verifications/stats',
+  )
+  return data.data
+}
+
 /** 인증번호 발급 이력 최신순 — q 는 전화번호 부분 일치 */
 export async function fetchPhoneVerifications(params: {
   q?: string
