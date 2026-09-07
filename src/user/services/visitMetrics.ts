@@ -22,6 +22,24 @@ const PENDING_KEY = 'pullit_utm_pending'
 const VISIT_ID_KEY = 'pullit_visit_id'
 /** 인수를 마친 userId — 같은 유저면 다시 안 보낸다 */
 const CLAIMED_KEY = 'pullit_visit_claimed'
+/** 서버에 보낸 퍼널 최대 단계(인덱스) — 같거나 낮은 단계는 다시 안 보낸다 */
+const PATH_RANK_KEY = 'pullit_visit_path_rank'
+
+/**
+ * 맛보기 퍼널 화면 순서 — 서버(FunnelPath.java)와 같은 목록. 이 화면들 중 가장 멀리 간 경로를
+ * visit_events.furthest_path 에 남긴다 ("시작하기는 눌렀는데 어디서 빠졌나").
+ */
+const FUNNEL_STEPS: RegExp[] = [
+  /^\/start$/,
+  /^\/trial$/,
+  /^\/trial\/quiz\/(math|english)\/0$/,
+  /^\/trial\/quiz\/(math|english)\/1$/,
+  /^\/trial\/quiz\/(math|english)\/2$/,
+  /^\/trial\/(math|english)\/weakness$/,
+  /^\/signup$/,
+  /^\/signup\/info$/,
+]
+const funnelRank = (path: string) => FUNNEL_STEPS.findIndex((re) => re.test(path))
 
 interface VisitPayload {
   utmSource: string
@@ -48,7 +66,10 @@ function send(payload: VisitPayload): void {
       const id = data.data?.visitId
       if (id == null) return
       try {
-        if (!localStorage.getItem(VISIT_ID_KEY)) localStorage.setItem(VISIT_ID_KEY, String(id))
+        if (!localStorage.getItem(VISIT_ID_KEY)) {
+          localStorage.setItem(VISIT_ID_KEY, String(id))
+          localStorage.setItem(PATH_RANK_KEY, '0') // 행 자체가 /start [시작하기] 에서 생기므로 /start 는 이미 지난 단계
+        }
       } catch {
         /* 보관 실패 — 카운트만 남는다 */
       }
@@ -102,6 +123,25 @@ export function reportUtmVisit(): void {
   } catch {
     /* 무시 */
   }
+}
+
+/**
+ * 화면(pathname)이 바뀔 때마다 호출 — 퍼널 목록에 있는 화면이고 지금까지 보낸 것보다 앞선 단계면
+ * 보관된 방문 id 의 furthest_path 를 올린다. 방문 id 가 없으면(광고로 안 온 사람) 아무것도 안 한다.
+ */
+export function trackFunnelPath(pathname: string): void {
+  const rank = funnelRank(pathname)
+  if (rank < 0) return
+  let visitId: string | null = null
+  try {
+    visitId = localStorage.getItem(VISIT_ID_KEY)
+    if (!visitId) return
+    if (rank <= Number(localStorage.getItem(PATH_RANK_KEY) ?? -1)) return
+    localStorage.setItem(PATH_RANK_KEY, String(rank))
+  } catch {
+    return
+  }
+  api.patch(`/api/metrics/visit/${encodeURIComponent(visitId)}/path`, { path: pathname }).catch(() => {})
 }
 
 /**

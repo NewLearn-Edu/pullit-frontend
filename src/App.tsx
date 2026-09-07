@@ -36,7 +36,7 @@ import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 import RecommendPage from './user/pages/recommend/RecommendPage'
-import { captureUtm } from '@/user/services/visitMetrics'
+import { captureUtm, trackFunnelPath } from '@/user/services/visitMetrics'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
@@ -102,6 +102,7 @@ function MetaPixelPageView() {
   const { pathname } = useLocation()
   useEffect(() => {
     trackPageView(pathname)
+    trackFunnelPath(pathname) // 광고로 온 방문의 퍼널 최대 도달 화면 (visit_events.furthest_path)
   }, [pathname])
   return null
 }
