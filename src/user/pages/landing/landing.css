@@ -130,19 +130,26 @@
   will-change: transform;
 }
 
-/* 약점 단원 노드 — 시안의 배경 깜빡임(#fff1f2 ↔ #ff385c) 을 은은한 글로우로 */
+/* 약점 단원 노드 — 깜빡임 (2026-09-07 · 은은한 글로우만으론 눈에 안 띄어 시안(#fff1f2 ↔ 진한 핑크)에 가깝게).
+   배경·테두리·바깥 링이 함께 차오르고, 글자가 있는 카드라 배경은 흰 글자가 필요 없는 연핑크까지만 */
 @keyframes landing-node-pulse {
   0%,
   100% {
+    background-color: #fff1f2;
+    border-color: #ff385c;
     box-shadow: 0 0 0 0 rgba(255, 56, 92, 0);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(255, 56, 92, 0.22);
+    background-color: #ffc9d1;
+    border-color: #ff385c;
+    box-shadow: 0 0 0 10px rgba(255, 56, 92, 0.28), 0 0 24px rgba(255, 56, 92, 0.45);
   }
 }
 
 .landing-node--weak {
-  animation: landing-node-pulse 2.4s ease-in-out infinite;
+  animation: landing-node-pulse 1.4s ease-in-out infinite;
+  /* 노드마다 위상을 어긋나게 — LandingUnitMap 이 약점 노드 순서대로 --pulse-delay 를 준다 */
+  animation-delay: var(--pulse-delay, 0s);
 }
 
 /* 추천 캡션·이미지 슬라이드 공용 트랙 */

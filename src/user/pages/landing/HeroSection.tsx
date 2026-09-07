@@ -29,10 +29,14 @@ export default function HeroSection() {
 /**
  * "12,483문제를 바로 풀어볼 수 있어" — 검정 pill + 빨간 점 + 아래 꼬리 (시안 3116-16268)
  *
- * 수치는 서버 실집계(ACTIVE 문항 수)다 — 시안의 하드코딩 값을 쓰면 사실과 다른 소셜프루프가 된다.
+ * 수치는 서버 실집계(ACTIVE 문항 수) + 오프셋 10,000 (2026-09-07 결정). 시안의 하드코딩 값 대신
+ * DB 집계를 바탕으로 하되, 아직 업로드 전인 문항 풀을 더해 보여준다.
  * 집계 전·실패 시엔 invisible 로 자리만 잡아 둔다: 안 그리면 아래 CTA 가 위로 튀고,
  * 0 을 그리면 잘못된 수치가 한 프레임 노출된다.
  */
+/** 히어로 문항 수에 더하는 오프셋 — 서버 집계(ACTIVE) + 이 값이 표시 수치 */
+const PROBLEM_COUNT_OFFSET = 10_000
+
 function SocialProof() {
   const [problemCount, setProblemCount] = useState<number | null>(null)
 
@@ -40,7 +44,7 @@ function SocialProof() {
     let alive = true
     fetchLandingStats()
       .then((stats) => {
-        if (alive) setProblemCount(stats.problemCount)
+        if (alive) setProblemCount(stats.problemCount + PROBLEM_COUNT_OFFSET)
       })
       // 지표 하나 때문에 히어로가 깨지지는 않게 — 조용히 숨긴 채 둔다
       .catch(() => {})

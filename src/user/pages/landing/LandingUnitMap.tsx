@@ -152,14 +152,21 @@ export default function LandingUnitMap({ className }: { className?: string }) {
           })}
         </svg>
 
-        {NODES.map((n) => (
+        {NODES.map((n, i) => (
           <div
             key={n.name}
             className={clsx(
               'absolute flex flex-col justify-center rounded-[18px] border p-[11.7px]',
               n.weak ? 'landing-node--weak border-primary bg-[#fff1f2]' : 'border-[#23272b] bg-white',
             )}
-            style={{ left: left(n), top: top(n), width: NODE_W * K, height: (n.weak ? 47.6 : NODE_H) * K }}
+            style={{
+              left: left(n),
+              top: top(n),
+              width: NODE_W * K,
+              height: (n.weak ? 47.6 : NODE_H) * K,
+              // 약점 노드 깜빡임 위상 — 전부 같은 박자면 화면이 통째로 점멸하는 느낌이라 노드마다 어긋나게
+              ...(n.weak ? ({ '--pulse-delay': `${(i % 5) * 0.28}s` } as React.CSSProperties) : {}),
+            }}
           >
             <div className="flex items-center justify-between">
               <span className="text-[11.7px] font-semibold leading-[1.4] text-[#80858b]">{n.cat}</span>
