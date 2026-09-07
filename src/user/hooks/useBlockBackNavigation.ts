@@ -17,6 +17,13 @@ import { useNavStackStore } from '@/user/stores/navStackStore'
  * 스와이프마다 이전 문항·홈 스냅샷이 차례로 보이고 뒤 히스토리가 하나씩 파괴된다.
  * (iOS 18.6 시뮬레이터로 확인 — 동기: /weak → /q2 → /q1 → /home 순으로 팝, 지연: 항상 /weak)
  *
+ * ★ 가드 push 도 한 틱 늦춘다 (2026-09-07). 결과 화면처럼 navigate(replace) 직후 같은 틱에 pushState 하면
+ * WebKit 의 제스처용 back-forward 목록에 쌍둥이가 바로 안 실려, 엣지 스와이프가 쌍둥이를 건너뛰고 그 앞
+ * 엔트리(마지막 문항)를 스냅샷으로 보여주며 팝한다. 그러면 문항 화면이 마운트돼 "세션 없음 → 홈" 으로
+ * replace 하고, 그 주소가 잠근 주소로 잡혀 재장전이 홈으로 가 버렸다 (결과 화면에서 스와이프 → 홈으로 날아감).
+ * 그래서 ① 가드는 다음 틱에 쌓고 ② popstate 부터 재장전까지는 잠근 주소를 갱신하지 않는다 —
+ * 팝된 화면이 마운트되며 어디로 replace 하든 재장전은 스와이프 전 화면으로 돌아간다.
+ *
  * 뒤로가기로 풀이 화면에 다시 들어가 같은 문항을 재제출하면 원장이 두 번 적히는 사고를 여기서 1차로 막고,
  * 서버는 같은 세트·같은 문항 재제출을 멱등 처리해 2차로 막는다.
  */
@@ -30,8 +37,10 @@ export function useBlockBackNavigation(enabled = true) {
   // 현재가 되는데, 그걸 현재로 삼으면 그대로 빠져나간다. 타이머는 항상 잠근 주소로 되돌린다.
   const currentRef = useRef(pathname + search)
   const navigateRef = useRef(navigate)
+  // popstate ~ 재장전 사이 — 팝된 화면이 마운트되며 스스로 replace 해도 잠근 주소를 바꾸지 않는다
+  const restoringRef = useRef(false)
   useEffect(() => {
-    if (navigationType !== 'POP') currentRef.current = pathname + search
+    if (navigationType !== 'POP' && !restoringRef.current) currentRef.current = pathname + search
     navigateRef.current = navigate
   }, [navigationType, pathname, search, navigate])
 
@@ -40,25 +49,36 @@ export function useBlockBackNavigation(enabled = true) {
     record(navigationType, pathname + search)
   }, [record, navigationType, pathname, search])
 
-  // 진입 · 화면 안 주소 변경마다 현재 주소의 쌍둥이 가드를 쌓는다 (재장전은 같은 주소라 여기 안 걸린다)
+  // 진입 · 화면 안 주소 변경마다 현재 주소의 쌍둥이 가드를 쌓는다 (재장전은 같은 주소라 여기 안 걸린다).
+  // 다음 틱에 — navigate(replace) 와 같은 틱에 push 하면 WebKit 제스처 목록에 안 실린다 (위 주석)
   useEffect(() => {
     if (!enabled) return
-    window.history.pushState(null, '', window.location.href)
+    if (restoringRef.current) return // 재장전 중이면 onPop 이 직접 다시 쌓는다
+    const timer = window.setTimeout(() => {
+      window.history.pushState(null, '', window.location.href)
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [enabled, pathname, search])
 
   useEffect(() => {
     if (!enabled) return
     let timer: number | undefined
     const onPop = () => {
+      restoringRef.current = true
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
-        navigateRef.current(currentRef.current, { replace: true }) // 팝된 엔트리를 현재 주소로 교체
+        navigateRef.current(currentRef.current, { replace: true }) // 팝된 엔트리를 스와이프 전 주소로 교체
         window.history.pushState(null, '', currentRef.current) // 가드 재적재
+        // 라우터가 위 replace 를 반영한 뒤에 잠금을 푼다 — 같은 틱에 풀면 팝된 화면의 replace 가 잠긴다
+        window.setTimeout(() => {
+          restoringRef.current = false
+        }, 0)
       }, 0)
     }
     window.addEventListener('popstate', onPop)
     return () => {
       window.clearTimeout(timer)
+      restoringRef.current = false
       window.removeEventListener('popstate', onPop)
     }
   }, [enabled])
