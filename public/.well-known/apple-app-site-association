@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["2J7UR5AN36.com.newlearn.pullit"],
+        "components": [
+          { "/": "/*" }
+        ]
+      }
+    ]
+  }
+}
