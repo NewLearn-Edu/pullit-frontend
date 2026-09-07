@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { clsx } from 'clsx'
 import { PageHeader } from '@/user/components/PageHeader'
-import { deleteProfileImage, updateNickname, updateProfileImage } from '@/user/api/authApi'
+import {
+  deleteProfileImage,
+  GRADE_GROUPS,
+  GRADE_LABEL,
+  updateGrade,
+  updateNickname,
+  updateProfileImage,
+  type Grade,
+} from '@/user/api/authApi'
 import { useMe } from '@/user/hooks/useMe'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
@@ -17,7 +25,8 @@ const IMAGE_MAX_EDGE = 512
 
 /**
  * 프로필 편집 (/my/profile · 토스 프로필 편집 참고 2026-08-25)
- * 아바타 + 닉네임 단일 폼. 닉네임 재변경 제한은 없다 (90일 잠금 폐지 · 2026-09-06).
+ * 아바타 + 닉네임 + 학년/신분. 닉네임 재변경 제한은 없다 (90일 잠금 폐지 · 2026-09-06).
+ * 학년은 회원가입과 같은 그룹(중학생·고등학생·기타) → 세부 칩 2단계 (2026-09-07).
  */
 export default function ProfileEditPage() {
   const navigate = useNavigate()
@@ -37,11 +46,32 @@ export default function ProfileEditPage() {
 
   const hasInvalidChar = !NICKNAME_CHARS.test(nickname)
   const changed = nickname !== currentNickname
-  const canSave =
-    changed &&
-    !hasInvalidChar &&
-    nickname.length >= NICKNAME_MIN &&
-    nickname.length <= NICKNAME_MAX
+  const nicknameOk = !hasInvalidChar && nickname.length >= NICKNAME_MIN && nickname.length <= NICKNAME_MAX
+
+  // 학년/신분 — null = 아직 안 건드림 (me 값 그대로). 드롭다운으로 고른다 (2026-09-07)
+  const currentGrade = me?.grade ?? null
+  const [gradeValue, setGradeValue] = useState<Grade | null>(null)
+  const grade = gradeValue ?? currentGrade
+  const gradeChanged = grade != null && grade !== currentGrade
+  const [gradeOpen, setGradeOpen] = useState(false)
+  const gradeFieldRef = useRef<HTMLDivElement>(null)
+  // 바깥 클릭 · Esc 로 닫기
+  useEffect(() => {
+    if (!gradeOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (!gradeFieldRef.current?.contains(e.target as Node)) setGradeOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setGradeOpen(false)
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [gradeOpen])
+
+  // 저장 가능 — 닉네임이 바뀌었으면 규칙을 지켜야 하고, 학년만 바뀐 경우도 저장
+  const canSave = changed ? nicknameOk : gradeChanged
 
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -92,8 +122,9 @@ export default function ProfileEditPage() {
     setSaving(true)
     setServerError(null)
     try {
-      await updateNickname(nickname)
-      await loadMe(true) // 새 닉네임 반영
+      if (changed) await updateNickname(nickname)
+      if (gradeChanged && grade) await updateGrade(grade)
+      await loadMe(true) // 새 닉네임·학년 반영
       navigate('/my', { replace: true })
     } catch (e) {
       // 서버 메시지가 곧 UX 카피 (중복·잠금·형식) — 그대로 노출
@@ -109,7 +140,7 @@ export default function ProfileEditPage() {
   const error = hasInvalidChar ? '사용할 수 없는 문자가 포함되어 있어요.' : serverError
   const helper = '한글·영문·숫자 2~10자로 지어줘.'
   // 테두리 상태용 — 올바른 값(길이·문자 규칙 충족)일 때만 회색 stroke
-  const valid = !hasInvalidChar && nickname.length >= NICKNAME_MIN && nickname.length <= NICKNAME_MAX
+  const valid = nicknameOk
 
   return (
     <div className="flex min-h-dvh flex-col bg-white">
@@ -204,6 +235,64 @@ export default function ProfileEditPage() {
           </p>
         </div>
 
+        {/* 학년/신분 — 닉네임 인풋과 같은 규격의 셀렉트. 누르면 아래로 그룹(중학생·고등학생·기타)별 목록이 열린다 */}
+        <div ref={gradeFieldRef} className="relative mt-[28px] flex w-full flex-col gap-[8px]">
+          <span className="text-[13px] font-semibold text-[#5e6368]">학년</span>
+          <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={gradeOpen}
+            onClick={() => setGradeOpen((o) => !o)}
+            className={clsx(
+              'flex h-[56px] w-full items-center justify-between rounded-[12px] border bg-white px-[16px] text-left text-[17px] font-medium transition-colors duration-150',
+              gradeOpen ? 'border-[#23272b]' : grade ? 'border-[#a6abb1]' : 'border-[#ebedf0]',
+              grade ? 'text-[#121417]' : 'text-[#a6abb1]',
+            )}
+          >
+            {grade ? GRADE_LABEL[grade] : '학년을 선택해주세요'}
+            <ChevronDownIcon open={gradeOpen} />
+          </button>
+
+          {gradeOpen && (
+            <ul
+              role="listbox"
+              aria-label="학년"
+              className="absolute left-0 right-0 top-full z-20 mt-[6px] max-h-[320px] overflow-y-auto rounded-[12px] border border-[#e5e7ea] bg-white py-[6px] shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+            >
+              {GRADE_GROUPS.map((group) => (
+                <li key={group.key} role="presentation" className="pb-[8px] [&+li]:mt-[4px] [&+li]:border-t [&+li]:border-[#f0f1f3] [&+li]:pt-[4px]">
+                  {/* 그룹 라벨 — 선택 불가, 구분용. 그룹 사이는 아래 여백 + 얇은 구분선으로 나눈다 */}
+                  <p className="px-[16px] pb-[4px] pt-[10px] text-[12px] font-semibold text-[#80858b]">{group.label}</p>
+                  <ul role="group" aria-label={group.label}>
+                    {group.options.map((g) => {
+                      const on = grade === g
+                      return (
+                        <li
+                          key={g}
+                          role="option"
+                          aria-selected={on}
+                          onClick={() => {
+                            setServerError(null)
+                            setGradeValue(g)
+                            setGradeOpen(false)
+                          }}
+                          className={clsx(
+                            'flex h-[44px] cursor-pointer items-center justify-between px-[16px] text-[16px] font-medium',
+                            on ? 'bg-[#f7f8f9] text-[#121417]' : 'text-[#23272b] hover:bg-[#f7f8f9]',
+                          )}
+                        >
+                          {GRADE_LABEL[g]}
+                          {on && <CheckIcon />}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {/* 계정 정보 — 이름 · 이메일 · 휴대전화번호. 소셜 로그인(네이버 등)으로 받은 값이라 여기서는 보기만 하고
             수정할 수 없다 (네이버 로그인 검수 "제공 정보 활용처" 캡처 대상 · 2026-09-04) */}
         <div className="mt-[28px] flex w-full flex-col gap-[20px]">
@@ -290,6 +379,29 @@ function PencilIcon() {
         d="M9.9 2.6a1.5 1.5 0 0 1 2.1 0l1.4 1.4a1.5 1.5 0 0 1 0 2.1L6.3 13.2l-3.6.9.9-3.6 6.3-7.9z"
         fill="#5e6368"
       />
+    </svg>
+  )
+}
+
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+      className={clsx('shrink-0 transition-transform duration-150', open && 'rotate-180')}
+    >
+      <path d="M3.5 6 8 10.5 12.5 6" stroke="#5e6368" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M3 8.5 6.5 12 13 4.5" stroke="#121417" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

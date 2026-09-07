@@ -449,6 +449,11 @@ export async function updateNickname(nickname: string): Promise<void> {
   await api.patch('/api/users/me/nickname', { nickname })
 }
 
+/** 학년/신분 변경 — 프로필 편집 (2026-09-07). 가입 때와 같은 자기신고 값 */
+export async function updateGrade(grade: Grade): Promise<void> {
+  await api.patch('/api/users/me/grade', { grade })
+}
+
 /**
  * 프로필 이미지 변경 (POST /api/users/me/profile-image).
  * 원본을 그대로 보내지 말고 resizeProfileImage 로 줄인 Blob 을 넘긴다 —
@@ -510,6 +515,16 @@ export const GRADE_LABEL: Record<Grade, string> = {
   HIGH_1: '고1', HIGH_2: '고2', HIGH_3: '고3',
   RETAKE: 'N수생', PARENT: '학부모', TEACHER: '선생님', GENERAL: '일반인',
 }
+
+/**
+ * 학년 선택 그룹 — 회원가입(SignupInfoPage)과 프로필 편집이 같은 묶음을 쓴다.
+ * 중1 은 뺀다: 만 14세 연령 게이트로 사실상 가입 불가 (enum 은 유지 · 2026-08-30).
+ */
+export const GRADE_GROUPS = [
+  { key: 'middle', label: '중학생', options: ['MIDDLE_2', 'MIDDLE_3'] },
+  { key: 'high', label: '고등학생', options: ['HIGH_1', 'HIGH_2', 'HIGH_3'] },
+  { key: 'etc', label: '기타', options: ['RETAKE', 'PARENT', 'TEACHER', 'GENERAL'] },
+] as const satisfies readonly { key: string; label: string; options: readonly Grade[] }[]
 
 export interface ProfileCompleteRequest {
   /** 이름 — 구글(프로필명)·애플(최초 1회)은 SSO 값이 부정확할 수 있어 직접 입력 */
