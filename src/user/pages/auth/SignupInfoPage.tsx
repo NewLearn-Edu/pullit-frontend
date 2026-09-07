@@ -740,7 +740,7 @@ export default function SignupInfoPage() {
                   onKeyDown={(e) => e.key === 'Enter' && nameValid && nicknameValid && reveal(2)}
                   className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${
                     nameLocked
-                      ? 'cursor-not-allowed border-[#ebedf0] bg-[#f7f8f9] text-[#80858b]'
+                      ? 'cursor-not-allowed border-[#ebedf0] bg-[#f7f8f9] text-[#80858b] opacity-100 [-webkit-text-fill-color:#80858b]'
                       : `text-[#121417] ${borderOf(name.trim().length > 0)}`
                   }`}
                 />
@@ -913,7 +913,7 @@ export default function SignupInfoPage() {
                   value={phone}
                   onChange={(e) => handlePhone(e.target.value)}
                   disabled={phoneVerified}
-                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#80858b] ${borderOf(phone.length > 0, phoneHasError)}`}
+                  className={`h-[56px] min-w-0 flex-1 rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#80858b] disabled:opacity-100 disabled:[-webkit-text-fill-color:#80858b] ${borderOf(phone.length > 0, phoneHasError)}`}
                 />
                 <button
                   type="button"
@@ -951,7 +951,7 @@ export default function SignupInfoPage() {
                         if (codeHasError) setPhoneMsg(null) // 다시 입력하기 시작하면 오류 표시 해제
                       }}
                       disabled={expired}
-                      className={`h-[56px] w-full rounded-[12px] border px-[16px] pr-[64px] transition-colors duration-150 text-[16px] tracking-[4px] text-[#121417] outline-none placeholder:tracking-normal placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#a6abb1] ${borderOf(code.length > 0, codeHasError)}`}
+                      className={`h-[56px] w-full rounded-[12px] border px-[16px] pr-[64px] transition-colors duration-150 text-[16px] tracking-[4px] text-[#121417] outline-none placeholder:tracking-normal placeholder:text-[#a6abb1] disabled:bg-[#f7f8f9] disabled:text-[#a6abb1] disabled:opacity-100 disabled:[-webkit-text-fill-color:#a6abb1] ${borderOf(code.length > 0, codeHasError)}`}
                     />
                     <span
                       className={`absolute right-[16px] top-1/2 -translate-y-1/2 text-[14px] font-semibold tabular-nums ${expired ? 'text-[#a6abb1]' : 'text-danger'}`}
