@@ -2,6 +2,8 @@ import { useState } from 'react'
 import coinSvg from '@/assets/coin-reward.svg'
 import { useInviteUrl } from '@/user/hooks/useInviteUrl'
 import { InviteShareSheet } from '@/user/components/InviteShareSheet/InviteShareSheet'
+import { GuestSignupPopup } from '@/user/components/GuestSignupPopup'
+import { useUserStore } from '@/user/stores/userStore'
 import styles from './styles/CreditShortagePopup.module.scss'
 
 interface CreditShortagePopupProps {
@@ -16,14 +18,19 @@ interface CreditShortagePopupProps {
  * 진입점(홈 시작 시트 · 추천 리빌 · 잠금해제 시트)이 버튼을 비활성하는 대신
  * 눌리게 두고 이 팝업으로 안내한다 — 왜 못 가는지와 얻는 방법을 함께 말해준다.
  *
- * 초대하기 — 공유 시트(카카오톡 / 링크복사)를 띄워 유저가 채널을 직접 고른다.
+ * 회원 — 초대하기: 공유 시트(카카오톡 / 링크복사)를 띄워 유저가 채널을 직접 고른다.
  * 링크엔 내 초대 코드(?invite=)가 실려, 친구가 그 링크로 가입하면 크레딧 +5.
+ *
+ * 게스트 — 초대 대신 가입 유도 한 장(GuestSignupPopup)으로 대체한다 (2026-09-07). 초대 코드도 조회하지 않는다
  */
 export function CreditShortagePopup({ required, onClose }: CreditShortagePopupProps) {
+  const isGuest = useUserStore((s) => s.me?.type === 'GUEST')
   // 내 초대 코드가 실린 공유 링크 — 팝업이 뜨면 조회(없으면 서버가 이때 발급). 코드 없는 링크는 절대 안 보낸다
-  const invite = useInviteUrl()
+  const invite = useInviteUrl(!isGuest)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [inviteError, setInviteError] = useState(false)
+
+  if (isGuest) return <GuestSignupPopup required={required} onClose={onClose} />
 
   const openShare = async () => {
     setInviteError(false)

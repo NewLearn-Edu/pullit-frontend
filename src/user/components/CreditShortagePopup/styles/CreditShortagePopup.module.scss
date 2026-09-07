@@ -117,6 +117,102 @@
   @include hover { opacity: 0.9; }
 }
 
+// ── 게스트 전용 (2026-09-07) — 초대 대신 "가입하면 이어서 풀 수 있다"를 파는 레이아웃 ──
+// 코인 위 +10 배지
+.coinBadge {
+  position: absolute;
+  top: 10px;
+  right: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: $color-primary;
+  color: #fff;
+  font-size: 13px;
+  font-weight: $fw-bold;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 6px rgba(255, 56, 92, 0.35);
+}
+
+.coinAreaGuest {
+  position: relative;
+}
+
+.subtitle {
+  margin: -8px 0 0; // 제목과 붙여 한 덩어리로
+  font-size: 14px;
+  font-weight: $fw-medium;
+  line-height: 1.5;
+  color: $color-body;
+  text-align: center;
+}
+
+// 혜택 3줄 — 좌측 정렬 체크리스트, 회색 무대 위
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: $color-surface;
+  list-style: none;
+}
+
+.benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: $fw-medium;
+  line-height: 1.45;
+  color: $color-foreground;
+}
+
+.benefitStrong {
+  font-weight: $fw-bold;
+}
+
+.benefitNote {
+  font-weight: $fw-medium;
+  color: $color-body;
+}
+
+.check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: $color-weak-bg;
+  color: $color-primary;
+  @include flex-center;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+// 가입 CTA — 브랜드 컬러 (회원용 초대하기는 검정 유지)
+.signup {
+  @include button-reset;
+  @include flex-center;
+  flex: 1.4;
+  min-width: 0;
+  height: 56px;
+  border-radius: 12px;
+  background: $color-primary;
+  font-size: 16px;
+  font-weight: $fw-bold;
+  color: #fff;
+  white-space: nowrap;
+  transition: background 150ms ease;
+
+  @include hover { background: $color-primary-hover; }
+}
+
 @keyframes shortage-dim-in {
   from { opacity: 0; }
 }
