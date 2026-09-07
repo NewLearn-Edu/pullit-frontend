@@ -3,10 +3,12 @@ import { api } from '@/user/api/authApi'
 /**
  * UTM 유입 카운트 + 최초 유입 귀속 (2026-09-07 개편).
  *
- * 두 단계로 나눈다:
- * 1) captureUtm — 마케팅 링크(?utm_source=...)로 어느 화면에 도착하든 UTM 을 브라우저(localStorage)에 메모만 한다.
- *    서버엔 안 보낸다 — 페이지가 열리기만 해도 세면 Meta 링크 미리보기 크롤러·봇까지 방문으로 잡힌다.
- * 2) reportUtmVisit — /start 의 [시작하기](사람의 클릭)에서 메모를 꺼내 방문 1건을 적재한다.
+ * 흐름 (2026-09-07 확정 — 도착 즉시 적재):
+ * 1) captureUtm — 마케팅 링크(?utm_source=...)로 어느 화면에 도착하든 UTM 을 브라우저(localStorage)에 메모.
+ * 2) reportUtmVisit — 도착 직후(App 첫 마운트) 메모를 꺼내 방문 1건을 적재한다. landing_path 가 도착 화면,
+ *    이후 화면을 옮길 때마다 furthest_path 가 앞으로 나간다 (/start → /trial → …).
+ *    (열리기만 해도 세므로 링크 미리보기 크롤러·봇도 방문에 들어간다 — 그 대신 /start 만 보고 나간 사람까지
+ *     퍼널 첫 칸에 잡힌다. [시작하기] 클릭에서 적재하던 방식은 화면 전환과 적재 응답의 경합으로 /trial 이 안 남았다)
  *    적재 시점엔 누구인지 모르므로 서버가 돌려준 방문 id 를 보관해 두고, 이 브라우저에서 users 행이 생기는 순간
  *    (맛보기 결과의 [건너뛰기] = 게스트 · 소셜 로그인 = 회원) 그 id 로 방문을 "인수"해 user_id 를 채운다.
  *    처음 보관한 id 는 덮지 않는다(최초 유입). 서버도 유저당 1건만 인수한다.
@@ -68,11 +70,13 @@ function send(payload: VisitPayload): void {
       try {
         if (!localStorage.getItem(VISIT_ID_KEY)) {
           localStorage.setItem(VISIT_ID_KEY, String(id))
-          localStorage.setItem(PATH_RANK_KEY, '0') // 행 자체가 /start [시작하기] 에서 생기므로 /start 는 이미 지난 단계
+          localStorage.setItem(PATH_RANK_KEY, String(funnelRank(payload.landingPath)))
         }
       } catch {
         /* 보관 실패 — 카운트만 남는다 */
       }
+      // 응답이 오기 전에 이미 다음 화면으로 넘어갔을 수 있다 (/start → /trial) — 지금 화면으로 따라잡는다
+      trackFunnelPath(window.location.pathname)
     })
     .catch(() => {})
 }
@@ -106,7 +110,7 @@ export function captureUtm(search: string = window.location.search, path: string
   }
 }
 
-/** 2) [시작하기] — 메모해 둔 UTM(없으면 지금 URL 의 utm)으로 방문 1건 적재 후 메모 비움 */
+/** 2) 도착 직후 — 메모해 둔 UTM(없으면 지금 URL 의 utm)으로 방문 1건 적재 후 메모 비움 */
 export function reportUtmVisit(): void {
   let payload: VisitPayload | null = null
   try {
