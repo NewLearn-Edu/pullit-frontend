@@ -26,6 +26,7 @@ import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError, trackAttempt } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
+import { useDrawingPrefsStore } from '@/user/stores/drawingPrefsStore'
 import styles from './styles/TrialQuizPage.module.scss'
 
 type Subject = 'math' | 'english'
@@ -206,10 +207,12 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [inputValue, setInputValue] = useState('') // 주관식(단답형) 입력값
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [tool, setTool] = useState<StrokeTool>('mono')
-  const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.15) // 0.05 ~ 1.0 슬라이더 값(펜 기본 프리셋 가운데) · 도구별 굵기 매핑은 DrawingCanvas
-  const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
+  // 도구·색·두께·지우개 — 브라우저에 남는 설정 (drawingPrefsStore)
+  const { tool, color, size, eraserMode, allowFinger, set: setDrawingPrefs } = useDrawingPrefsStore()
+  const setTool = (tool: StrokeTool) => setDrawingPrefs({ tool })
+  const setColor = (color: string) => setDrawingPrefs({ color })
+  const setSize = (size: number) => setDrawingPrefs({ size })
+  const setEraserMode = (eraserMode: EraserMode) => setDrawingPrefs({ eraserMode })
   // 복원한 필기의 세로 끝(px)만큼 캔버스 영역을 확보해 아래쪽 필기가 안 잘리게 (폰 저장 → 태블릿).
   // state 가 아니라 style 직접 — 획마다 문제 본문(KaTeX)까지 다시 그리지 않는다
   const canvasAreaRef = useRef<HTMLDivElement>(null)
@@ -217,7 +220,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     const el = canvasAreaRef.current
     if (el) el.style.minHeight = px > 0 ? `${px}px` : ''
   }
-  const [allowFinger, setAllowFinger] = useState(false) // 아이패드 손바닥 걸침 방지 · 기본 펜만
+  const setAllowFinger = (allowFinger: boolean) => setDrawingPrefs({ allowFinger }) // 손필기 허용 — 설정에 남는다
   // 필기 도구 활성화 여부. 모바일 진입 시 DrawingToolbar 가 자동 false 로 세팅 (툴바 접힘 + canvas disabled)
   const [drawingEnabled, setDrawingEnabled] = useState(true)
   // 두 손가락 확대·이동 — 문제 칼럼(main) 기준

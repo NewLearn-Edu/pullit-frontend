@@ -22,6 +22,7 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('qa-r
   localStorage.removeItem('pullit_trial_progress') // 단원 진단 캐시·오늘 세트 카운터·pendingUnit
   localStorage.removeItem('pullit_resume_prompt_shown_at') // 이어풀기 팝업 24시간 쿨다운
   localStorage.removeItem('pullit_app') // 앱 판정 기억 — 브라우저에서 ?app= 으로 테스트한 뒤 되돌릴 때
+  localStorage.removeItem('pullit_drawing_prefs') // 필기 도구 설정 (도구·색·두께·지우개·손필기)
   sessionStorage.clear() // 맛보기 결과·풀이 큐·문항 타이머 스냅샷
 }
 

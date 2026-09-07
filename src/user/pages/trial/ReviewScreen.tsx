@@ -12,6 +12,7 @@ import { ExamScaleFrame } from '@/shared/components/ExamScaleFrame'
 import { useBlockNativePinch, usePinchZoom } from '@/user/hooks/usePinchZoom'
 import { type Problem } from '@/user/data/mockProblems'
 import { PenToggleIcon } from '@/user/pages/trial/TrialQuizPage'
+import { useDrawingPrefsStore } from '@/user/stores/drawingPrefsStore'
 import styles from './styles/TrialQuizPage.module.scss'
 
 interface ReviewScreenProps {
@@ -79,11 +80,13 @@ export function ReviewScreen({
   const closeExplain = () => setExplainOpen(false)
 
   // 필기 — 캔버스는 문제·해설 두 장. 툴바는 공유하고 undo/clear 는 마지막으로 쓴 쪽에 간다
-  const [tool, setTool] = useState<StrokeTool>('mono')
-  const [color, setColor] = useState('#120C0B')
-  const [size, setSize] = useState(0.15) // 펜 기본 프리셋(가운데) — DrawingToolbar DEFAULT_PRESETS 와 맞춘다
-  const [eraserMode, setEraserMode] = useState<EraserMode>('stroke') // 지우개 종류 — 기본 전체 (2026-09-04, 이전 기본은 일부)
-  const [allowFinger, setAllowFinger] = useState(false)
+  // 도구·색·두께·지우개·손필기 — 브라우저에 남는 설정 (drawingPrefsStore). 필기 도구 on/off 만 화면마다 켜진 채 시작
+  const { tool, color, size, eraserMode, allowFinger, set: setPrefs } = useDrawingPrefsStore()
+  const setTool = (tool: StrokeTool) => setPrefs({ tool })
+  const setColor = (color: string) => setPrefs({ color })
+  const setSize = (size: number) => setPrefs({ size })
+  const setEraserMode = (eraserMode: EraserMode) => setPrefs({ eraserMode })
+  const setAllowFinger = (allowFinger: boolean) => setPrefs({ allowFinger })
   const [drawingEnabledState, setDrawingEnabled] = useState(true)
   const drawingEnabled = drawingTools && drawingEnabledState
   const canvasRef = useRef<DrawingCanvasHandle>(null)

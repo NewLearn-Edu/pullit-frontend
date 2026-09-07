@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import type { EraserMode, StrokeTool } from '../DrawingCanvas'
 import { useIsCompact, useIsTouchDevice } from '@/user/hooks/useMediaQuery'
+import { useDrawingPrefsStore, type PresetTool, type Presets } from '@/user/stores/drawingPrefsStore'
 import styles from './styles/DrawingToolbar.module.scss'
 
 const COLORS = ['#120C0B', '#2563EB', '#DC2626', '#059669']
@@ -21,12 +22,7 @@ const withAlpha = (hex: string, a: number) =>
  * 펜 0.05 · 0.15 · 0.3 (기본 0.15) · 형광펜 0.2 · 0.35 · 0.55 (기본 0.35).
  * 사용자가 팝오버 슬라이더로 조정하면 해당 도구의 그 자리를 대체한다
  */
-type Presets = [number, number, number]
-type PresetTool = 'mono' | 'marker'
-const DEFAULT_PRESETS: Record<PresetTool, Presets> = {
-  mono: [0.05, 0.15, 0.3],
-  marker: [0.2, 0.35, 0.55],
-}
+// 프리셋 값·타입은 drawingPrefsStore 가 진실원 (브라우저에 남는 설정)
 const presetToolOf = (t: StrokeTool): PresetTool => (t === 'marker' ? 'marker' : 'mono')
 /**
  * 프리셋 dot 지름(px) — 도구별. 실제 두께 비례(펜 ×14 · 형광펜 ×32)로 그리면 펜 0.05 가 0.7px 라 안 보여
@@ -103,20 +99,22 @@ export function DrawingToolbar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 도구별 색 — 펜은 검정, 형광펜은 노랑에서 시작하고 각자 마지막 색을 기억한다
-  const colorByToolRef = useRef<Record<PresetTool, string>>({ mono: COLORS[0], marker: MARKER_COLORS[0] })
+  // 도구별 색·프리셋·선택 자리·지우개 크기 — 브라우저에 남는 설정 (drawingPrefsStore)
+  const prefs = useDrawingPrefsStore()
+  const colorByToolRef = useRef<Record<PresetTool, string>>(prefs.colorByTool)
+  colorByToolRef.current = prefs.colorByTool
   const palette = tool === 'marker' ? MARKER_COLORS : COLORS
   const isMarker = tool === 'marker'
 
-  // 도구별 프리셋·선택 자리 — 펜과 형광펜이 각자 두께를 기억한다
-  const [presetsByTool, setPresetsByTool] = useState<Record<PresetTool, Presets>>(DEFAULT_PRESETS)
-  const [activeIdxByTool, setActiveIdxByTool] = useState<Record<PresetTool, number>>({ mono: 1, marker: 1 })
+  const { presetsByTool, activeIdxByTool, eraserSizeIdx } = prefs
   const presetTool = presetToolOf(tool)
   const presets = presetsByTool[presetTool]
   const activeIdx = activeIdxByTool[presetTool]
-  const setActiveIdx = (idx: number) => setActiveIdxByTool((prev) => ({ ...prev, [presetTool]: idx }))
-  const setPresets = (next: Presets) => setPresetsByTool((prev) => ({ ...prev, [presetTool]: next }))
-  const [eraserSizeIdx, setEraserSizeIdx] = useState(1)
+  const setActiveIdx = (idx: number) =>
+    prefs.set({ activeIdxByTool: { ...useDrawingPrefsStore.getState().activeIdxByTool, [presetTool]: idx } })
+  const setPresets = (next: Presets) =>
+    prefs.set({ presetsByTool: { ...useDrawingPrefsStore.getState().presetsByTool, [presetTool]: next } })
+  const setEraserSizeIdx = (eraserSizeIdx: number) => prefs.set({ eraserSizeIdx })
   const [popMounted, setPopMounted] = useState(false)
   const [popVisible, setPopVisible] = useState(false)
   const closeTimerRef = useRef<number | null>(null)
@@ -197,11 +195,17 @@ export function DrawingToolbar({
   }, [])
 
   // 부모 size·color 가 현재 도구의 프리셋·팔레트와 일치하도록 초기 동기화
+  // (설정이 브라우저에 남으므로 지우개로 시작할 수도 있다 — 그땐 지우개 크기 기준)
   useEffect(() => {
+    if (tool === 'eraser') {
+      if (size !== ERASER_SIZES[eraserSizeIdx]) onSizeChange(ERASER_SIZES[eraserSizeIdx])
+      return
+    }
+    if (tool === 'laser') return
     if (size !== presets[activeIdx]) {
       onSizeChange(presets[activeIdx])
     }
-    if (tool !== 'eraser' && tool !== 'laser' && !palette.includes(color)) {
+    if (!palette.includes(color)) {
       onColorChange(colorByToolRef.current[presetTool])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,7 +284,7 @@ export function DrawingToolbar({
 
   // 색 팔레트 — 펜/형광펜 각자. 고른 색은 그 도구의 기억으로 남는다
   const pickColor = (c: string) => {
-    colorByToolRef.current[presetTool] = c
+    prefs.set({ colorByTool: { ...useDrawingPrefsStore.getState().colorByTool, [presetTool]: c } })
     onColorChange(c)
   }
   const colorsGroup = (
