@@ -218,6 +218,12 @@ export default function SignupInfoPage() {
    */
   const [revealed, setRevealed] = useState(saved.revealed ?? 1)
   const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
+  /**
+   * 닉네임 칸을 떠났는가 (2026-09-07). 폰·패드에서 닉네임을 치고 배경을 눌러 키패드를 내리면 blur 는
+   * 오지만, 그 순간 중복 조회(400ms 디바운스 + 왕복)가 아직 'checking' 이라 onBlur 의 reveal 이 막히고
+   * 조회가 끝나도 다시 열어 줄 계기가 없었다 — 엔터로만 넘어갔다. 떠난 뒤 판정이 'ok' 로 바뀌면 그때 연다.
+   */
+  const [nickBlurred, setNickBlurred] = useState(false)
 
   /**
    * 닉네임 중복 조회 — 타이핑이 멎고 400ms 뒤 1회 (2026-09-06).
@@ -481,6 +487,9 @@ export default function SignupInfoPage() {
   const nicknameFormatOk = /^[가-힣a-zA-Z0-9]{2,10}$/.test(nickname.trim())
   const nicknameTouched = nickname.trim().length > 0
   const nicknameValid = nicknameFormatOk && nickState === 'ok'
+  useEffect(() => {
+    if (nickBlurred && nicknameValid && nameValid) reveal(2)
+  }, [nickBlurred, nicknameValid, nameValid])
   const nicknameError = !nicknameTouched
     ? null
     : !nicknameFormatOk
@@ -711,7 +720,11 @@ export default function SignupInfoPage() {
                   placeholder="닉네임을 입력해주세요"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  onBlur={() => nicknameValid && nameValid && reveal(2)}
+                  onFocus={() => setNickBlurred(false)}
+                  onBlur={() => {
+                    setNickBlurred(true)
+                    if (nicknameValid && nameValid) reveal(2)
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && nicknameValid && nameValid && reveal(2)}
                   className={`h-[56px] rounded-[12px] border px-[16px] text-[16px] text-[#121417] outline-none transition-colors duration-150 placeholder:text-[#a6abb1] ${borderOf(
                     nickname.trim().length > 0,
@@ -753,7 +766,7 @@ export default function SignupInfoPage() {
               <div className="flex gap-sm">
                 <input
                   ref={birthYRef}
-                  type="text"
+                  type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   autoFocus={!consentOpen}
@@ -770,7 +783,7 @@ export default function SignupInfoPage() {
                 />
                 <input
                   ref={birthMRef}
-                  type="text"
+                  type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={2}
@@ -797,7 +810,7 @@ export default function SignupInfoPage() {
                 />
                 <input
                   ref={birthDRef}
-                  type="text"
+                  type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={2}
@@ -938,7 +951,7 @@ export default function SignupInfoPage() {
                 <Step className="flex gap-sm">
                   <div className="relative min-w-0 flex-1">
                     <input
-                      type="text"
+                      type="tel"
                       autoFocus={!consentOpen}
                       inputMode="numeric"
                       pattern="[0-9]*"
