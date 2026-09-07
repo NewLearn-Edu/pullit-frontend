@@ -25,7 +25,6 @@ import { homePath } from '@/user/services/homeRoutes'
 import { setCreditUsedFlash } from '@/user/components/CreditUsedToast'
 import {
   fetchActiveProblemSet,
-  fetchResumableSet,
   fetchResumableSets,
   type ResumableSet,
 } from '@/user/api/problemSetApi'
@@ -197,17 +196,22 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
    */
   const [locksLoaded, setLocksLoaded] = useState(false)
   const [serverRec, setServerRec] = useState<Recommendation | null>(null)
-  /**
-   * 풀다 만 세트(이어풀기 · 3631-13956) — 있으면 추천보다 우선해 그 단원을 집고, 남은 문항·시간·크레딧 없음으로 보여준다.
-   * undefined = 조회 중(대상 선정 보류) · null = 없음
-   */
   /** 돌아갈 홈 — 들어올 때 실려 온 과목·대단원 그대로 (2026-09-06) */
   const [searchParams] = useSearchParams()
   const backHome = homePath(subject, searchParams.get('cat'))
 
-  const [resume, setResume] = useState<ResumeInfo | null | undefined>(undefined)
-  /** 캔버스 카드 "이어풀기" 표식용 — 진행 중 세트 전부의 unitCode (2026-09-06, 예전엔 최근 1건만 표시) */
-  const [resumeUnitCodes, setResumeUnitCodes] = useState<Set<string>>(() => new Set())
+  /**
+   * 이 과목의 풀다 만 세트 전부 (이어풀기 · 3631-13956). undefined = 조회 중(대상 선정 보류).
+   * "최근 1건"(fetchResumableSet)만 보던 예전엔 대수·미적분·확통에 풀다 만 세트가 하나씩 있으면
+   * 최근 것(확통)만 손에 있어서, 추천으로 집힌 대수 단원이 이어풀기인데도 진단 전(건너뛰기 링크)으로
+   * 그려졌다 (2026-09-07). 추천 단원과 같은 세트는 목록에서 찾는다.
+   */
+  const [resumeSets, setResumeSets] = useState<ResumableSet[] | undefined>(undefined)
+  /** 캔버스 카드 "이어풀기" 표식용 — 진행 중 세트 전부의 unitCode */
+  const resumeUnitCodes = useMemo(
+    () => new Set((resumeSets ?? []).map((s) => s.unitCode)),
+    [resumeSets],
+  )
   const [failed, setFailed] = useState(false)
   const [phase, setPhase] = useState<Phase>('scan')
   /** 건너뛰기·모션 최소화 — 트랜지션 없이 최종 상태로 */
@@ -220,29 +224,16 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const load = useCallback(() => {
     setFailed(false)
     setServerRec(null)
-    setResume(undefined)
+    setResumeSets(undefined)
     setLocksLoaded(false)
     if (isRecommendDemo()) {
-      setResume(null)
+      setResumeSets([])
       setLocksLoaded(true)
       return
     }
-    fetchResumableSet()
-      .then(async (found) => {
-        if (!found || found.subject.toLowerCase() !== subject) return null
-        // 남은 문항·예상 시간은 세트 문항 단위로 — 이어풀기 팝업(홈)과 같은 계산 (권장 시간 합)
-        const active = await fetchActiveProblemSet(subject, found.unitCode, found.source).catch(() => null)
-        const left = active?.items.filter((item) => !item.submitted) ?? null
-        return {
-          set: found,
-          remaining: left ? left.length : Math.max(0, found.totalCount - found.submittedCount),
-          remainingSec: left ? left.reduce((sum, item) => sum + item.recommendedTimeSec, 0) : null,
-        }
-      })
-      .then(setResume, () => setResume(null))
     fetchResumableSets()
-      .then((list) => setResumeUnitCodes(new Set(list.map((s) => s.unitCode))))
-      .catch(() => {})
+      .then((list) => setResumeSets(list.filter((s) => s.subject.toLowerCase() === subject)))
+      .catch(() => setResumeSets([]))
     // 진단 기록·잠금은 캔버스를 그리는 재료, 추천은 어느 카드를 집을지 결정한다
     hydrateFromServer().catch(() => {})
     fetchUnitLocks(subject)
@@ -304,7 +295,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     }
     // 풀다 만 세트 조회 전에는 보류 — 대상 자체는 이어풀기와 무관하지만,
     // 배지·남은 문제 수가 뒤늦게 뒤집혀 보이지 않게 함께 기다린다
-    if (resume === undefined) return null
+    if (resumeSets === undefined) return null
     if (!locksLoaded) return null // 잠금 조회 전 — 잠긴 구간 첫 단원이 '다음'으로 잡히는 경합 방지
     if (rec && rec.type !== 'NONE' && rec.unitCode) {
       const hit = pick((r) => r.unitCode === rec.unitCode)
@@ -312,7 +303,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
     }
     if (!rec) return null
     return pick((r) => r.state === 'next')
-  }, [rec, resume, columns, locksLoaded])
+  }, [rec, resumeSets, columns, locksLoaded])
 
   /**
    * 이어풀기는 추천 "순서" 에 관여하지 않는다 (2026-09-06).
@@ -324,13 +315,50 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
    * 풀다 만 세트는 "마침 추천 단원과 같을 때만" 이어서 푼다. 다른 단원의 풀다 만 세트는
    * 홈 진입 팝업(PI-POPUP-RESUME)이 안내한다 — 백엔드 RecommendationService 주석과 같은 정책.
    */
-  const resumeHere =
-    resume && target && resume.set.unitCode === target.row.unitCode ? resume : null
+  const resumeSet =
+    target && resumeSets ? (resumeSets.find((s) => s.unitCode === target.row.unitCode) ?? null) : null
+
+  // 남은 문항·예상 시간은 세트 문항 단위로 — 이어풀기 팝업(홈)과 같은 계산 (권장 시간 합).
+  // 도착 전에는 목록의 제출 수로 남은 문항만 먼저 보여준다 (이어풀기 표시 자체는 기다리지 않는다)
+  const [resumeDetail, setResumeDetail] = useState<{
+    setId: number
+    remaining: number
+    remainingSec: number
+  } | null>(null)
+  useEffect(() => {
+    if (!resumeSet) return
+    let alive = true
+    fetchActiveProblemSet(subject, resumeSet.unitCode, resumeSet.source)
+      .then((active) => {
+        if (!alive || !active) return
+        const left = active.items.filter((item) => !item.submitted)
+        setResumeDetail({
+          setId: resumeSet.setId,
+          remaining: left.length,
+          remainingSec: left.reduce((sum, item) => sum + item.recommendedTimeSec, 0),
+        })
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [resumeSet, subject])
+
+  const resumeHere: ResumeInfo | null = resumeSet
+    ? {
+        set: resumeSet,
+        remaining:
+          resumeDetail?.setId === resumeSet.setId
+            ? resumeDetail.remaining
+            : Math.max(0, resumeSet.totalCount - resumeSet.submittedCount),
+        remainingSec: resumeDetail?.setId === resumeSet.setId ? resumeDetail.remainingSec : null,
+      }
+    : null
 
   /** 추천이 끝났는데 집을 카드가 없다 = 전 대단원 진단 완료. 홈으로 돌려보낸다 */
   useEffect(() => {
-    if (rec && resume !== undefined && locksLoaded && !target) navigate(backHome, { replace: true })
-  }, [rec, resume, locksLoaded, target, navigate])
+    if (rec && resumeSets !== undefined && locksLoaded && !target) navigate(backHome, { replace: true })
+  }, [rec, resumeSets, locksLoaded, target, navigate])
 
   // ── 단계 진행 ─────────────────────────────────────────────────────────────
   const reduceMotion = useMemo(
@@ -678,7 +706,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
   const reason = resumeHere ? '풀다 만 문제' : defaultReason(target?.row)
   // 캔버스 카드의 "이어풀기" 표식 — 추천 대상이 아니어도 풀다 만 세트가 있는 칸은 그대로 표시한다
   const isResuming = (unitCode: string) =>
-    resumeUnitCodes.has(unitCode) || resume?.set.unitCode === unitCode
+    resumeUnitCodes.has(unitCode)
   // 시안(3591-10490) '추천 기준' 행은 짧은 기준 문구 — 서버 문장형 reason 대신 로컬 판정
   const targetCategory = target ? categories[target.col] : null
 

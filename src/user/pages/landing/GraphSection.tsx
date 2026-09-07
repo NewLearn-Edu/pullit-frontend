@@ -83,12 +83,6 @@ export default function GraphSection() {
             {/* 일반 학습 — 회색 점선 + 끝점 */}
             <line x1={X[0]} y1={BOTTOM} x2={X[3]} y2={GENERAL_END_Y} stroke="#80858b" strokeWidth="1.5" strokeDasharray="6 6" />
             <circle cx={X[3]} cy={GENERAL_END_Y} r="6" fill="#80858b" />
-            <g className="landing-chart-badge landing-chart-badge--general">
-              <rect x={X[3] - 108} y={GENERAL_END_Y - 52} width="88" height="30" rx="8.75" fill="#40464c" />
-              <text x={X[3] - 64} y={GENERAL_END_Y - 32} textAnchor="middle" fontSize="14" fontWeight="600" fill="#e5e7ea">
-                일반 학습
-              </text>
-            </g>
 
             {/* 약점 추천 학습 — 레드 면 + 곡선 + 점 */}
             <path d={`${recPath} L${X[3]} ${BOTTOM} L${X[0]} ${BOTTOM} Z`} fill="url(#landing-grade-fill)" />
@@ -102,6 +96,15 @@ export default function GraphSection() {
               <rect x={X[3] - 86} y={RECOMMENDED_Y[3] - 56} width="104" height="34" rx="10.3" fill="#ff385c" />
               <text x={X[3] - 34} y={RECOMMENDED_Y[3] - 34} textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">
                 약점 추천 학습
+              </text>
+            </g>
+
+            {/* 일반 학습 배지 — 레드 면 뒤에 그려 위로 올린다 (SVG 는 그리는 순서가 z-order · 면 앞에 두면 가려져 흐려진다).
+                오른쪽 끝은 약점 추천 학습 배지(x = X[3] - 86 + 104 = X[3] + 18)와 나란히 */}
+            <g className="landing-chart-badge landing-chart-badge--general">
+              <rect x={X[3] + 18 - 88} y={GENERAL_END_Y - 52} width="88" height="30" rx="8.75" fill="#40464c" />
+              <text x={X[3] + 18 - 44} y={GENERAL_END_Y - 32} textAnchor="middle" fontSize="14" fontWeight="600" fill="#e5e7ea">
+                일반 학습
               </text>
             </g>
 

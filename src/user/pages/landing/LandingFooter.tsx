@@ -1,11 +1,10 @@
 import logoFooter from '@/assets/landing/logo-footer.svg'
-import badgeGooglePlay from '@/assets/landing/badge-google-play.svg'
-import badgeAppStore from '@/assets/landing/badge-app-store.svg'
 
 /**
- * 푸터 (ver.2 · 2801-5672) — 좌: 로고·태그라인·스토어 배지 / 우: 링크·사업자 정보·저작권.
+ * 푸터 (ver.2 · 2801-5672) — 좌: 로고·태그라인 / 우: 링크·사업자 정보·저작권.
  * 사업자 정보·법적 고지문 링크는 심사 요건이라 유지. 폰(3194-6840)은 한 열로 쌓인다.
  * 시안의 "고객센터" 링크는 연결 대상이 아직 없어 제외.
+ * 시안의 Google Play · App Store 배지는 스토어 출시 전이라 뺐다 (2026-09-07). 출시 후 다시 붙인다.
  */
 export default function LandingFooter() {
   return (
@@ -16,18 +15,6 @@ export default function LandingFooter() {
           <p className="break-keep text-[12.5px] font-medium text-[#80858b]">
             고등학생을 위한 수능 수학 영어 약점 진단 기반 문제 추천 서비스
           </p>
-          <div className="flex items-start gap-[8px]">
-            <img
-              src={badgeGooglePlay}
-              alt="Google Play에서 다운로드"
-              className="h-[31.2px] w-[108px] rounded-[5px] border-[0.6px] border-[#40464c] object-cover"
-            />
-            <img
-              src={badgeAppStore}
-              alt="App Store에서 다운로드"
-              className="h-[31.2px] w-[108px] rounded-[5px] border-[0.6px] border-[#40464c] object-cover"
-            />
-          </div>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-[24px]">
