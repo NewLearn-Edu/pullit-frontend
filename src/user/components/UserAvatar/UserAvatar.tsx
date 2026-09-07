@@ -22,6 +22,8 @@ export function UserAvatar({ src, size = 72, alt = '프로필 이미지' }: User
       alt={alt}
       width={size}
       height={size}
+      // Tailwind preflight 의 `img { height: auto }` 가 height 속성을 덮어써 세로 사진이 타원으로 늘어난다 → CSS 로 정사각 강제 (2026-09-07)
+      style={{ width: size, height: size }}
       onError={() => setBroken(true)}
       className="shrink-0 rounded-full object-cover"
     />
