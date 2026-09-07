@@ -8,6 +8,102 @@ const fmtDateTime = (iso: string) => iso.slice(0, 16).replace('T', ' ')
 
 type SortKey = 'recent' | 'total' | 'today'
 
+/** 사용법 카드 접힘 상태 — 한 번 접으면 다음 방문에도 접힌 채로 (관리자 개인 설정) */
+const GUIDE_KEY = 'pa-guide-visits'
+
+/**
+ * 페이지 사용법 — 표보다 먼저 읽히도록 상단에 둔다.
+ * "링크에 꼬리표를 붙여 뿌리면 여기 쌓인다" 한 줄이 이 페이지의 전부이고,
+ * 나머지는 집계 규칙(중복·오늘 기준)이라 헷갈릴 만한 것만 짧게 적는다.
+ */
+function UsageGuide() {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(GUIDE_KEY) !== 'closed'
+    } catch {
+      return true
+    }
+  })
+  const toggle = () => {
+    setOpen((v) => {
+      try {
+        localStorage.setItem(GUIDE_KEY, v ? 'closed' : 'open')
+      } catch {
+        /* storage 불가 환경 — 이번 세션만 적용 */
+      }
+      return !v
+    })
+  }
+
+  return (
+    <div className="card guide" style={{ marginBottom: 24 }}>
+      <div className="guide-head">
+        <div>
+          <p className="card-title">사용법</p>
+          <p className="card-sub">링크에 꼬리표를 붙여 뿌리면, 어디서 몇 명이 들어왔는지 여기에 쌓입니다</p>
+        </div>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={toggle} aria-expanded={open}>
+          {open ? '접기' : '펼치기'}
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <div className="guide-steps">
+            <div className="guide-step">
+              <p className="guide-step-title">
+                <span className="guide-num">1</span> 링크에 꼬리표 붙이기
+              </p>
+              <p>
+                주소 뒤에 <b>utm_source</b>(어디에 뿌리나)를 붙입니다. medium·campaign 은 선택이에요.
+              </p>
+              <div className="guide-code">
+                https://pullit.co.kr/?<b>utm_source</b>=instagram&amp;<b>utm_medium</b>=social&amp;
+                <b>utm_campaign</b>=launch1
+              </div>
+            </div>
+
+            <div className="guide-step">
+              <p className="guide-step-title">
+                <span className="guide-num">2</span> 그대로 배포하기
+              </p>
+              <p>
+                따로 <b>등록할 곳이 없습니다.</b> 그 링크로 첫 방문이 들어오는 순간 아래 표에 줄이 생겨요.
+                꼬리표를 새로 지으면 새 줄이 자동으로 늘어납니다.
+              </p>
+            </div>
+
+            <div className="guide-step">
+              <p className="guide-step-title">
+                <span className="guide-num">3</span> 표에서 확인하기
+              </p>
+              <p>
+                <b>소스 × 미디엄 × 캠페인</b> 조합 하나가 한 줄입니다. 줄을 누르면 그 링크의 방문 시각이
+                날짜별로 열려요.
+              </p>
+            </div>
+          </div>
+
+          <div className="guide-rules">
+            <span className="guide-rule">
+              <b>중복 방지</b> 같은 브라우저는 24시간에 1회만 집계
+            </span>
+            <span className="guide-rule">
+              <b>오늘 기준</b> 서버 자정(KST)부터
+            </span>
+            <span className="guide-rule">
+              <b>기기 구분</b> 폰·노트북은 각각 집계 · 시크릿 창은 매번 새로 집계
+            </span>
+            <span className="guide-rule">
+              <b>개인정보</b> IP·식별자는 저장하지 않음
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /**
  * 유입 링크 통계 — UTM 캠페인별 방문 집계 (visit_events).
  * 마케팅 링크(?utm_source=...&utm_campaign=...)와 얼리버드 직접 방문(earlybird·direct)이
@@ -55,6 +151,8 @@ export default function VisitStatsPage() {
           새로고침
         </button>
       </div>
+
+      <UsageGuide />
 
       <div className="kpi-problems" style={{ marginBottom: 24 }}>
         <StatCard
