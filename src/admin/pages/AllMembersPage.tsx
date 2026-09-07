@@ -6,7 +6,7 @@ import {
   type AdminUser,
   type UserRole,
 } from '../api/adminApi'
-import { StatCard } from '../components/StatCard'
+import { MemberKpi } from '../components/MemberKpi'
 import { useToast } from '../components/toast'
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -144,26 +144,10 @@ export default function AllMembersPage() {
   const memberCount = users.filter((u) => (u.type ?? 'USER') === 'USER').length
   const guestCount = users.length - memberCount
 
-  // KPI — 목록에서 집계 (문제 섹션 "전체 문제 현황"과 같은 카드 3장)
-  const todayKey = new Date().toISOString().slice(0, 10)
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const withdrawnCount = users.filter((u) => u.status === 'DELETED').length
-  const joinedToday = users.filter((u) => u.createdAt?.slice(0, 10) === todayKey).length
-  const joinedWeek = users.filter((u) => (u.createdAt?.slice(0, 10) ?? '') >= weekAgo).length
-  const activeWeek = users.filter((u) => (u.lastActiveAt?.slice(0, 10) ?? '') >= weekAgo).length
-  const n = (v: number) => (state === 'done' ? v.toLocaleString() : '—')
-
   return (
     <section className="view">
-      {/* 회원 현황 KPI — 문제 섹션과 같은 규격 (kpi-section · 표시 전용) */}
-      <div className="kpi-section">
-        <h2 className="section-title">전체 회원 현황</h2>
-        <div className="kpi-problems">
-          <StatCard label="전체 회원" value={n(memberCount)} delta={state === 'done' ? `탈퇴 유예 ${withdrawnCount}건` : '—'} tone="up" />
-          <StatCard label="게스트" value={n(guestCount)} delta="맛보기만 하고 미가입" tone="flat" />
-          <StatCard label="오늘 가입" value={n(joinedToday)} delta={state === 'done' ? `최근 7일 ${joinedWeek}명 · 7일 내 활동 ${activeWeek}명` : '—'} tone="good" />
-        </div>
-      </div>
+      {/* 회원 현황 KPI — 회원 섹션 공통 (MemberKpi). 목록을 넘겨 재조회하지 않는다 */}
+      <MemberKpi users={state === 'done' ? users : null} />
 
       <div className="page-head">
         <div>

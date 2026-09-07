@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchMe, type MeResult } from '@/user/api/authApi'
 import { fetchAdminUsers, type AdminUser } from '../api/adminApi'
+import { MemberKpi } from '../components/MemberKpi'
 
 /**
  * 관리자 계정 관리 (AI-211)
@@ -29,6 +30,9 @@ export default function MembersPage() {
 
   return (
     <section className="view">
+      {/* 회원 현황 KPI — 회원 섹션 공통 (전체 회원 페이지와 같은 카드) */}
+      <MemberKpi />
+
       <div className="page-head">
         <div>
           <h2 className="section-title" style={{ marginBottom: 4 }}>관리자 계정</h2>
