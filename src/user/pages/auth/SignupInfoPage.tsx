@@ -331,7 +331,12 @@ export default function SignupInfoPage() {
     setBirthDate(composed)
     // 만 14세 미만은 여기서 즉시 안내하고 진행을 멈춘다 — 학년·SMS 인증까지 다 마친 뒤
     // 제출에서야 차단당하는 흐름 방지 (서버 게이트는 제출 시 재검증하는 이중 방어)
-    if (valid && birthD.length === 2 && koreanAge(composed) >= 14) reveal(3) // 다음: 학년 선택
+    if (valid && birthD.length === 2) {
+      // 생년월일이 완성되면 다음은 학년 '선택'(버튼)이라 텍스트 입력이 없다 — 일 입력의 포커스를
+      // 풀어 모바일 키패드를 내린다. 안 풀면 키패드가 화면 절반을 가린 채 학년 버튼이 뒤에 숨는다
+      birthDRef.current?.blur()
+      if (koreanAge(composed) >= 14) reveal(3) // 다음: 학년 선택
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [birthY, birthM, birthD])
 
