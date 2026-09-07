@@ -428,6 +428,16 @@
   font-size: 1.02em;
 }
 
+/* 해설(wrap 모드) 인라인 수식은 식 안에서 줄을 끊지 않는다 — KaTeX 가 = · + 마다 base 를 나눠
+   "5θ =⏎(2n+1)π" 로 갈라지던 문제 (2026-09-07). 식 하나가 줄 폭을 넘는 경우만 KatexText 가
+   is-overflow 를 달아 식 안 줄바꿈을 되살린다 (잘림·가로 스크롤은 쓰지 않는다) */
+.katex-nobreak .katex {
+  white-space: nowrap;
+}
+.katex-nobreak.is-overflow .katex {
+  white-space: normal;
+}
+
 /* 블록 수식($$) — 수능 지면은 본문 한 줄 높이만큼 띄운다.
    overflow-x:auto 가 세로 스크롤바까지 만들지 않게 세로는 숨김 (패딩으로 글리프 여유).
    span 셀렉터는 tailwind 유틸(my-md)보다 우선순위 확보용 */
@@ -490,50 +500,31 @@ span.katex-block {
 }
 
 .exam-blocks .xb-steps {
-  display: grid;
-  grid-template-columns: auto auto;
-  /* ★ 좌변·우변의 baseline 을 맞춘다. 기본값(stretch)이면
-     ① 우변이 두 줄로 접힐 때 좌변이 첫 줄과 어긋나고
-     ② 좌변이 분수면 = 이 분수의 수학 축(axis)과 어긋난다.
-     KaTeX 가 분수를 축 기준으로 baseline 을 잡으므로 baseline 정렬이
-     한 수식으로 조판했을 때와 같은 위치를 만든다.
-     (아래 nowrap 으로 셀이 한 줄로 고정돼 접힘 시 어긋나는 문제는 없다) */
-  align-items: baseline;
-  row-gap: 8px; /* 기존 aligned 의 \\[0.5em] 행간과 동일 */
-  /* 좌우변을 별도 수식으로 쪼개면 KaTeX 가 관계연산자(=) 앞 여백을 잃는다
-     ("g(k)= 2k+1" 처럼 붙음) → 수학 조판의 thick space(5/18em) 만큼 복원 */
-  column-gap: 0.28em;
-  /* 컨테이너에 눌리면 셀이 좁아져 좌변이 접힌다 — 자연 폭을 유지하고
-     폭 맞추기는 StepsBlock 의 배율이 담당한다 */
+  /* 행마다 한 줄 수식 · 전체 폭 가운데 정렬 (2026-09-07). 이전의 등호 세로 정렬(2열 그리드)은
+     좌변이 길면 우변이 오른쪽으로 밀려 시험지와 달라 보여 폐기 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 20px; /* 2026-09-07 8px → 20px, 행이 붙어 보인다는 피드백 */
+  /* 컨테이너에 눌리면 행이 접힌다 — 자연 폭을 유지하고 폭 맞추기는
+     StepsBlock 이 (등호 분해 → 배율 축소) 담당한다 */
   width: max-content;
+  max-width: none;
   margin: 0 auto;
 }
 
-/* 유도 줄만 줄바꿈 금지 — 좌변이 접히면 우변(등호)이 좌변 첫 줄에 붙어
-   "304cos²(∠ABC) − = 0" 처럼 식이 뒤죽박죽으로 읽힌다 */
+/* 유도 줄만 줄바꿈 금지 — 접히면 "304cos²(∠ABC) − = 0" 처럼 식이 뒤죽박죽으로 읽힌다 */
 .exam-blocks .xb-steps .katex-block .katex,
 .exam-blocks .xb-steps .katex-block .katex-display > .katex {
   white-space: nowrap;
 }
-.exam-blocks .xb-steps .xb-step-l {
-  justify-self: end;
+.exam-blocks .xb-steps .xb-step {
   min-width: 0;
 }
-.exam-blocks .xb-steps .xb-step-r {
-  justify-self: start;
-  min-width: 0;
-}
-/* 각 셀 안의 display 수식은 셀 정렬을 따른다 — .katex-block 의 text-center 와
-   KaTeX 의 .katex-display{text-align:center} 를 모두 눌러야 먹는다 */
-.exam-blocks .xb-steps .xb-step-l .katex-block,
-.exam-blocks .xb-steps .xb-step-l .katex-display,
-.exam-blocks .xb-steps .xb-step-l .katex-display > .katex {
-  text-align: right;
-}
-.exam-blocks .xb-steps .xb-step-r .katex-block,
-.exam-blocks .xb-steps .xb-step-r .katex-display,
-.exam-blocks .xb-steps .xb-step-r .katex-display > .katex {
-  text-align: left;
+/* 분수·근호·큰 괄호 행 — 글리프가 위아래로 커서 기본 8px 간격이 답답하다. 행 자체에 여백을 더해
+   큰 행끼리는 20px, 큰 행·보통 행 사이는 14px 이 되게 한다 */
+.exam-blocks .xb-steps .xb-step.is-tall {
+  padding: 6px 0;
 }
 .exam-blocks .xb-steps .katex-block {
   margin: 0;
@@ -572,11 +563,9 @@ span.katex-block {
   padding-left: 14px;
 }
 
-/* 마무리(conclusion) — 얇은 구분선으로 답 도출부 구획 */
+/* 마무리(conclusion) — 구분선 없이 여백만으로 답 도출부 구획 (2026-09-07 선 제거) */
 .exam-blocks .xb-conclusion {
   margin-top: 18px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-line, #e8e4e2);
 }
 
 .exam-blocks .xb-note {
@@ -617,10 +606,12 @@ span.katex-block {
 }
 
 /* 선택지별 진단 — 번호 열 + 본문 열. 정답 항목은 채운 원문자(❶)로만 구분 (색은 currentColor 유지) */
+/* 항목 사이 간격·행간을 본문보다 넉넉하게 — 번호+긴 진단 문장이 붙어 보이던 것 완화 (2026-09-07) */
 .exam-blocks .xb-diag {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  line-height: 1.95; /* 본문 1.8 보다 한 단계 높게 */
 }
 
 .exam-blocks .xb-diag-item {

@@ -17,7 +17,20 @@ import './exam.css'
  * 뒤가 영문자면 TeX 명령(\neq·\nabla·\not 등)이므로 건드리지 않는다.
  */
 export function normalizeLiteralNewlines(text: string): string {
-  return text.replace(/\\n(?![a-zA-Z])/g, '\n')
+  return normalizeMathDelimiters(text.replace(/\\n(?![a-zA-Z])/g, '\n'))
+}
+
+/**
+ * LaTeX 표준 구분자 \[…\] · \(…\) 를 우리 파서가 아는 $$…$$ · $…$ 로 교정.
+ * 2026-09-07 수학 수능형 데이터의 확률분포 표(\[ \begin{array} … \]) 6건이
+ * 원문 그대로 노출되던 문제 — KatexText·ExamText 는 $ 구분자만 인식한다.
+ * 앞이 백슬래시인 \\[10pt](행간 지정)는 구분자가 아니므로 건드리지 않는다.
+ */
+function normalizeMathDelimiters(text: string): string {
+  if (!text.includes('\\[') && !text.includes('\\(')) return text
+  return text
+    .replace(/(?<!\\)\\\[([\s\S]*?)(?<!\\)\\\]/g, (_, inner: string) => `$$${inner.trim()}$$`)
+    .replace(/(?<!\\)\\\(([\s\S]*?)(?<!\\)\\\)/g, (_, inner: string) => `$${inner.trim()}$`)
 }
 
 /**

@@ -245,6 +245,27 @@ interface KatexTextProps {
 
 export function KatexText({ text, wrap = false }: KatexTextProps) {
   const parts = useMemo(() => parse(text), [text])
+  const rootRef = useRef<HTMLSpanElement>(null)
+
+  // wrap 모드 인라인 수식은 **한 덩어리로 유지**한다 (2026-09-07) — KaTeX 가 = · + 마다 base 를
+  // 끊어 두어 "5θ =⏎(2n+1)π" 처럼 식 한가운데서 줄이 갈라지던 문제. 줄바꿈은 수식 밖 문장에서만.
+  // 단, 식 하나가 줄 폭보다 넓으면 어쩔 수 없이 식 안 줄바꿈을 허용한다 (잘림·가로 스크롤 금지)
+  useLayoutEffect(() => {
+    const root = rootRef.current
+    if (!wrap || !root) return
+    const measure = () => {
+      const avail = root.parentElement?.clientWidth ?? 0
+      if (!avail) return
+      root.querySelectorAll<HTMLElement>('.katex-nobreak').forEach((el) => {
+        // 먼저 nowrap 상태로 되돌려 자연 폭을 잰다 (inline 요소는 scrollWidth 가 0 이라 bbox 로)
+        el.classList.remove('is-overflow')
+        // 6px 여유 — 줄 폭에 딱 걸친 식 뒤에 조사·쉼표가 붙으면 몇 px 가 잘리던 경계 케이스
+        if (el.getBoundingClientRect().width > avail - 6) el.classList.add('is-overflow')
+      })
+    }
+    measure()
+    document.fonts?.ready.then(measure).catch(() => {})
+  }, [parts, wrap])
 
   // 줄 전체가 수식 하나로 된 줄은 크기와 무관하게 위아래 간격 필요 — 개행/블록
   // 인접 여부로 판별. "$수식$이다." 처럼 짧은 한글 꼬리(≤8자)가 붙은 줄도 같은
@@ -265,7 +286,7 @@ export function KatexText({ text, wrap = false }: KatexTextProps) {
   }
 
   return (
-    <span>
+    <span ref={rootRef}>
       {parts.map((p, i) => {
         if (p.type === 'text') {
           return (
@@ -282,12 +303,12 @@ export function KatexText({ text, wrap = false }: KatexTextProps) {
           <span
             key={i}
             className={
-              TALL_MATH.test(p.value) || isOwnLine(i)
+              (TALL_MATH.test(p.value) || isOwnLine(i)
                 ? // 큰 수식이 든 줄·수식 단독 줄만 위아래 간격 확보 — tailwind
                   // .inline(display:inline)과 충돌하면 패딩이 줄 높이에 반영되지
                   // 않으므로 katex-tall 단독 사용
                   'katex-tall'
-                : 'inline'
+                : 'inline') + (wrap ? ' katex-nobreak' : '')
             }
             dangerouslySetInnerHTML={{ __html: html }}
           />

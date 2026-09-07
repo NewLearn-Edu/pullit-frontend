@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { KatexText } from './KatexText'
 import { normalizeLiteralNewlines } from './ExamText'
@@ -300,6 +300,54 @@ function splitAtAlign(tex: string): [string, string] {
 const MIN_STEPS_SCALE = 0.45
 
 /**
+ * 우변을 최상위 `=` 에서 등식 조각으로 나눈다 — "= B = C" → ["= B", "= C"].
+ * 폭이 모자란 줄을 축소하기 전에 "A = B / = C" 로 행을 늘리는 용도 (2026-09-07).
+ * 괄호·중괄호 안의 = 는 무시. 최상위 쉼표가 있으면(a = 4, b = 8 나열) 나누지 않는다.
+ */
+function splitRhsAtEquals(rhs: string): string[] | null {
+  const segs: string[] = []
+  let cur = ''
+  let depth = 0
+  for (let i = 0; i < rhs.length; i++) {
+    const ch = rhs[i]
+    if (ch === '\\') {
+      cur += ch + (rhs[i + 1] ?? '')
+      i++
+      continue
+    }
+    if (ch === '{' || ch === '(' || ch === '[') depth++
+    else if (ch === '}' || ch === ')' || ch === ']') depth--
+    if (depth === 0 && ch === ',') return null
+    if (depth === 0 && ch === '=' && cur.trim()) {
+      segs.push(cur.trim())
+      cur = '='
+      continue
+    }
+    cur += ch
+  }
+  if (cur.trim()) segs.push(cur.trim())
+  return segs.length >= 2 ? segs : null
+}
+
+/** 세로로 큰 글리프(분수·근호·합·적분·\left 괄호)가 든 행 — 행 간격을 더 준다 (2026-09-07) */
+const TALL_STEP = /\\[dct]?frac|\\sqrt|\\sum|\\int|\\lim|\\binom|\\left\s*[(\[{|]|\\begin\{/
+
+/** 줄들을 [좌변, 우변] 행으로 — split 이면 긴 우변을 등호 단위 행으로 늘린다 */
+function toStepRows(lines: string[], split: boolean): Array<[string, string]> {
+  const rows: Array<[string, string]> = []
+  for (const line of lines) {
+    const [lhs, rhs] = splitAtAlign(line)
+    const parts = split ? splitRhsAtEquals(rhs) : null
+    if (!parts) {
+      rows.push([lhs, rhs])
+      continue
+    }
+    parts.forEach((p, j) => rows.push([j === 0 ? lhs : '', p]))
+  }
+  return rows
+}
+
+/**
  * 유도 블록은 **접지 않고 블록 통째로 축소**해 폭을 맞춘다.
  *
  * 2열 그리드는 좌변(1열)·우변(2열)을 baseline 으로 붙여 등호를 세로로 맞추는데,
@@ -316,11 +364,16 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
   const gridRef = useRef<HTMLDivElement>(null)
   const scaleRef = useRef(1)
   const [scale, setScale] = useState(1)
+  // 폭이 모자랄 때 축소보다 먼저 시도하는 "등호 단위 행 분해" (2026-09-07) —
+  // "49 = A = B" 한 줄이 통째로 0.6배로 줄던 것을 "49 = A / = B" 두 행으로 편다
+  const [split, setSplit] = useState(false)
+  const splittable = lines.some((l) => splitRhsAtEquals(splitAtAlign(l)[1]) !== null)
 
   // 내용이 바뀌면 원래 크기에서 다시 측정 (이전 배율이 남으면 자연 폭을 못 구한다)
   useLayoutEffect(() => {
     scaleRef.current = 1
     setScale(1)
+    setSplit(false)
   }, [lines])
 
   useLayoutEffect(() => {
@@ -337,6 +390,11 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
       // 그리드는 width:max-content 라 실측값이 곧 자연 폭 (현재 배율로 나눠 환산)
       const natural = grid.getBoundingClientRect().width / scaleRef.current
       const needed = avail / natural
+      // 안 들어가면 먼저 등호 단위로 행을 늘려 본다 — 분해 후 다시 측정해 필요할 때만 축소
+      if (needed < 1 && !split && splittable) {
+        setSplit(true)
+        return
+      }
       const next = needed >= 1 ? 1 : Math.max(MIN_STEPS_SCALE, needed * 0.98)
       if (Math.abs(next - scaleRef.current) > 0.02) setScale(next)
     }
@@ -346,7 +404,7 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
     const ro = new ResizeObserver(measure)
     ro.observe(wrap)
     return () => ro.disconnect()
-  }, [lines, scale])
+  }, [lines, scale, split, splittable])
 
   return (
     <div ref={wrapRef} className={clsx('xb-math xb-steps-fit', refLabel && 'has-ref')}>
@@ -357,14 +415,15 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
         className="xb-steps"
         style={scale < 1 ? { fontSize: `${scale}em` } : undefined}
       >
-        {lines.map((line, j) => {
-          const [lhs, rhs] = splitAtAlign(line)
+        {toStepRows(lines, split).map(([lhs, rhs], j) => {
+          // 한 행 = 한 줄 수식, 전체 폭 가운데 정렬 (2026-09-07 — 등호 세로 정렬 대신).
+          // 등호 분해된 이어지는 행은 "= C" 만 남아 가운데에 놓인다
+          const tex = [lhs, rhs].filter(Boolean).join(' ')
+          if (!tex) return null
           return (
-            <Fragment key={j}>
-              {/* 빈 쪽은 수식을 렌더하지 않는다 — 빈 display 블록이 줄 높이를 늘린다 */}
-              <span className="xb-step-l">{lhs && <KatexText wrap text={`$$${lhs}$$`} />}</span>
-              <span className="xb-step-r">{rhs && <KatexText wrap text={`$$${rhs}$$`} />}</span>
-            </Fragment>
+            <div key={j} className={clsx('xb-step', TALL_STEP.test(tex) && 'is-tall')}>
+              <KatexText wrap text={`$$${tex}$$`} />
+            </div>
           )
         })}
       </div>
@@ -445,7 +504,9 @@ function renderBoxChild(b: ExplainBlock, key: number): React.ReactNode {
 function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
   switch (b.type) {
     case 'paragraph': {
-      const chunks = splitInlineDerivation(b.text ?? '')
+      // 빈 문단(text 없음·공백뿐) — 2026-09-07 수학 데이터에 3건. 빈 <p> 가 마진만 남기므로 건너뛴다
+      if (!b.text?.trim()) return null
+      const chunks = splitInlineDerivation(b.text)
       // 끊을 게 없으면 기존과 동일한 단일 문단
       if (chunks.length === 1 && chunks[0].steps === undefined) {
         return (
