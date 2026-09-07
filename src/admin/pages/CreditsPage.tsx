@@ -221,14 +221,15 @@ export default function CreditsPage() {
 
         {state === 'done' && users.length > 0 && (
           <div className="table-wrap">
-            <table>
+            {/* min-width: 창이 좁아도 컬럼을 쥐어짜지 않고 카드 안에서 가로 스크롤 (th 폭은 content-box · +28 패딩) */}
+            <table style={{ minWidth: 920 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 150 }}>이름</th>
+                  <th style={{ width: 140 }}>이름</th>
                   <th>이메일</th>
-                  <th style={{ width: 140 }}>전화번호</th>
-                  <th style={{ width: 110, textAlign: 'center' }}>크레딧</th>
-                  <th style={{ width: 190, textAlign: 'center' }}>관리</th>
+                  <th style={{ width: 130 }}>전화번호</th>
+                  <th style={{ width: 90, textAlign: 'center' }}>크레딧</th>
+                  <th style={{ width: 170, textAlign: 'center' }}>관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -288,16 +289,18 @@ export default function CreditsPage() {
           <p className="page-sub">이력이 없습니다.</p>
         ) : (
           <div className="table-wrap">
-            <table>
+            {/* min-width: 폭 합(≈810) + 사유 최소 220. 창이 좁으면 카드 안에서 가로 스크롤 — 컬럼이 쥐어짜여 말줄임 되지 않게 */}
+            <table style={{ minWidth: 1030 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 150 }}>일시</th>
-                  <th style={{ width: 130 }}>회원</th>
+                  {/* th 는 content-box — 지정 폭 + 셀 패딩 28 이 실제 폭. 일시 160→188 ("2026-09-07 18:00" 넉넉히) · 구분 80→108 (배지 80) */}
+                  <th style={{ width: 160 }}>일시</th>
+                  <th style={{ width: 120 }}>회원</th>
                   <th style={{ width: 80, textAlign: 'center' }}>구분</th>
-                  <th style={{ width: 90, textAlign: 'right' }}>증감</th>
-                  <th style={{ width: 90, textAlign: 'right' }}>잔액</th>
+                  <th style={{ width: 72, textAlign: 'right' }}>증감</th>
+                  <th style={{ width: 72, textAlign: 'right' }}>잔액</th>
                   <th>사유</th>
-                  <th style={{ width: 110 }}>처리자</th>
+                  <th style={{ width: 100 }}>처리자</th>
                 </tr>
               </thead>
               <tbody>
@@ -305,7 +308,7 @@ export default function CreditsPage() {
                   <tr key={t.id}>
                     <td className="num">{t.createdAt.slice(0, 16).replace('T', ' ')}</td>
                     <td className="strong">{t.userName ?? '회원'}</td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
                       <span className={clsx('badge', isIncrease(t.type) ? 'live' : 'neutral')}>
                         {TYPE_LABEL[t.type]}
                       </span>
@@ -317,8 +320,9 @@ export default function CreditsPage() {
                     <td className="num" style={{ textAlign: 'right' }}>
                       {t.balanceAfter.toLocaleString()}
                     </td>
-                    <td>{t.reason}</td>
-                    <td>{t.actorName ?? '—'}</td>
+                    <td title={t.reason}>{t.reason}</td>
+                    {/* 마지막 셀은 전역 규칙이 우측 정렬 — 헤더(좌)와 맞춘다 */}
+                    <td style={{ textAlign: 'left' }}>{t.actorName ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

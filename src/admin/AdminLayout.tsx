@@ -80,6 +80,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const isStats = pathname.includes('/stats')
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
+  const isMembersAll = pathname.includes('/members/all') // 전체 회원 — 필터·10컬럼 표라 넓게 (2026-09-07)
   // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
   const isUpload = pathname.includes('/upload') || pathname.includes('/review')
 
@@ -247,7 +248,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
       </aside>
 
       <main className="main">
-        <div className={clsx('main-inner', (isList || isTrial) && 'wide', isUpload && 'mid')}>
+        <div className={clsx('main-inner', (isList || isTrial || isMembersAll) && 'wide', isUpload && 'mid')}>
           {isProblem && <ProblemKpi />}
           <Outlet />
         </div>

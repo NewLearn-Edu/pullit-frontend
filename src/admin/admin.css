@@ -461,9 +461,10 @@
   /* 좁은 화면(닫힘 상태 포함) 단계적 컬럼 숨김 — 배지 컬럼이 108px 미만으로 압축되지 않게 */
   @media (max-width: 1600px) { .col-solves, .col-date { display: none; } }
   @media (max-width: 1420px) { .col-mid, .col-render { display: none; } }
+  /* 표가 카드보다 넓어지면 카드 밖으로 튀지 않고 안에서 가로 스크롤 (어느 폭에서든) */
+  .table-wrap { overflow-x: auto; }
   /* 모바일~좁은 폭: 컬럼 숨김 대신 가로 스크롤 폴백 */
   @media (max-width: 1150px) {
-    .table-wrap { overflow-x: auto; }
     .table-wrap table { min-width: 640px; }
   }
   /* 수능 지면 조판(.pv-body·.pv-question·.pv-choices·.choice 계열)은

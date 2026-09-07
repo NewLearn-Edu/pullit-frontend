@@ -293,6 +293,9 @@ export async function fetchTrialTestItems(
 
 export type UserRole = 'USER' | 'PAID_USER' | 'ADMIN'
 
+export type AdminUserType = 'GUEST' | 'USER'
+export type AdminUserStatus = 'GUEST_PENDING' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED'
+
 export interface AdminUser {
   id: number
   name: string | null
@@ -301,7 +304,13 @@ export interface AdminUser {
   phoneNumber: string | null
   creditBalance: number | null
   role: UserRole
+  /** GUEST · USER (구버전 서버엔 없음) */
+  type?: AdminUserType | null
+  status?: AdminUserStatus | null
+  /** 학년/신분 enum 값 — user authApi GRADE_LABEL 로 표기 */
+  grade?: string | null
   createdAt: string
+  lastActiveAt?: string | null
 }
 
 /** 회원 목록 — role 지정 시 해당 권한만 (예: 'ADMIN'), 미지정 시 전체 */
