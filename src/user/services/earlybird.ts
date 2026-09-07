@@ -6,6 +6,8 @@
  * 신청 데이터는 구글폼 → 구글 시트로 모인다 (백엔드 없음).
  * 표식은 localStorage — 같은 브라우저 재방문에도 유지된다.
  */
+import { openExternal } from '@/user/utils/openExternal'
+
 const MODE_KEY = 'pullit_earlybird'
 
 // TODO(배포 전 교체): 실제 구글폼 공유 링크로 바꿀 것 (forms.gle 단축 링크 권장)
@@ -36,7 +38,7 @@ export function isEarlybird(): boolean {
   }
 }
 
-/** 사전 신청 구글폼 — 새 탭으로 (인앱 브라우저 포함 가장 확실한 방식) */
+/** 사전 신청 구글폼 — 새 탭으로, 새 탭이 막히는 환경(앱 래퍼·팝업 차단)은 같은 창 이동 */
 export function openEarlybirdForm(): void {
-  window.open(EARLYBIRD_FORM_URL, '_blank', 'noopener')
+  openExternal(EARLYBIRD_FORM_URL)
 }

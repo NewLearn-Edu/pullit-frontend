@@ -7,6 +7,7 @@ import { UserAvatar } from '@/user/components/UserAvatar'
 import { PageHeader } from '@/user/components/PageHeader'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { isStandaloneApp } from '@/user/utils/standalone'
+import { openExternal } from '@/user/utils/openExternal'
 import { GRADE_LABEL, logout, updateMarketingConsent } from '@/user/api/authApi'
 import { clearLocalTraces } from '@/user/utils/localTraces'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
@@ -18,8 +19,9 @@ const APP_VERSION = 'v1.0.0'
 /**
  * 고객센터 카카오톡 채널 채팅 URL (풀잇 공식 채널 _NVnwX).
  * /chat 을 열면 채널 추가 + 1:1 채팅으로 이어진다 (모바일은 카카오톡 앱, PC 는 카카오톡 웹챗).
+ * https 고정 — 앱(WKWebView)은 ATS 때문에 http 로드가 막힐 수 있다 (2026-09-07)
  */
-const KAKAO_CHANNEL_CHAT_URL = 'http://pf.kakao.com/_NVnwX/chat'
+const KAKAO_CHANNEL_CHAT_URL = 'https://pf.kakao.com/_NVnwX/chat'
 
 /**
  * 생년월일 → 학년 라벨 (한국 나이 = 올해 − 출생년 + 1).
@@ -191,10 +193,8 @@ export default function MyPage() {
             )}
             <MenuItem
               label="고객센터"
-              onClick={() => {
-                // 카카오톡 채널 채팅으로 연결 (채널 추가 + 1:1 문의)
-                window.open(KAKAO_CHANNEL_CHAT_URL, '_blank', 'noopener,noreferrer')
-              }}
+              // 카카오톡 채널 채팅으로 연결 (채널 추가 + 1:1 문의) — 앱에선 새 창이 안 열려 같은 창 폴백
+              onClick={() => openExternal(KAKAO_CHANNEL_CHAT_URL)}
               last
             />
           </div>
