@@ -277,6 +277,13 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
    */
   const scanSteps = useMemo(() => columns.reduce((n, c) => n + c.slots.length, 0), [columns])
   const [scanned, setScanned] = useState(0)
+  /**
+   * 스윕 재시작 횟수 — 건너뛰기 뒤 "처음부터 다시 훑기" 용 (2026-09-07).
+   * 스윕은 칸 수(scanSteps)가 바뀔 때 도는데, 대단원의 마지막 소단원을 건너뛰면 unit 칸 하나가 off 칸 하나로
+   * 바뀌어 칸 수가 그대로다 → scanned 를 0 으로 되돌려도 스윕이 다시 안 돌아 scan 단계에서 멈췄다.
+   * (중간 소단원 건너뛰기는 뒤 소단원까지 한 칸으로 묶여 칸 수가 줄어 우연히 다시 돌았다)
+   */
+  const [sweepRun, setSweepRun] = useState(0)
   /** 열 c 의 슬롯 s 가 스캔 순서상 몇 번째인지 */
   const scanIndexOf = useCallback(
     (col: number, slot: number) =>
@@ -392,7 +399,7 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       if (n >= scanSteps) window.clearInterval(id)
     }, step)
     return () => window.clearInterval(id)
-  }, [scanSteps, reduceMotion])
+  }, [scanSteps, reduceMotion, sweepRun])
 
   useEffect(() => {
     // 훑기가 끝나고 추천도 도착해야 다음 단계로 — 둘 중 늦은 쪽을 기다린다
@@ -662,10 +669,11 @@ export default function RecommendReveal({ subject }: RecommendRevealProps) {
       await declareUnitLock(subject, target.row.unitCode)
       setSkipMode(false)
       setSkipToast(target.row.name)
-      // 잠근 구간이 캔버스에 반영되도록 처음부터 다시 훑는다
+      // 잠근 구간이 캔버스에 반영되도록 처음부터 다시 훑는다 — 칸 수가 그대로여도 스윕이 다시 돌게 run 을 올린다
       setPhase('scan')
       setInstant(false)
       setScanned(0)
+      setSweepRun((n) => n + 1)
       load()
     } catch {
       setActionError('잠금 저장에 실패했어. 다시 시도해줘')
