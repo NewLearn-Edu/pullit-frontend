@@ -39,8 +39,10 @@ export default function CreditHistoryPage() {
   const [failed, setFailed] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
-  // 친구 초대 — 크레딧 부족 팝업과 같은 공유 시트. 코드가 실린 링크가 준비됐을 때만 연다 (코드 없는 링크 금지)
-  const invite = useInviteUrl(sessionStatus === 'ready')
+  // 친구 초대 — 크레딧 부족 팝업과 같은 공유 시트. 코드가 실린 링크가 준비됐을 때만 연다 (코드 없는 링크 금지).
+  // 게스트에겐 초대가 아예 없다 (2026-09-07) — CTA 를 가입(+10)으로 바꾸고 초대 코드도 조회하지 않는다
+  const isGuest = useUserStore((s) => s.me?.type === 'GUEST')
+  const invite = useInviteUrl(sessionStatus === 'ready' && !isGuest)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [inviteError, setInviteError] = useState(false)
   useEffect(() => {
@@ -116,9 +118,19 @@ export default function CreditHistoryPage() {
               {credit ?? '—'}
               <span className={styles.heroUnit}>개</span>
             </p>
-            <button type="button" onClick={openShare} disabled={invite.loading} className={styles.inviteCta}>
-              친구 초대하고 +5 받기
-            </button>
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={() => navigate('/signup', { state: { from: window.location.pathname + window.location.search } })}
+                className={styles.inviteCta}
+              >
+                가입하고 +10 받기
+              </button>
+            ) : (
+              <button type="button" onClick={openShare} disabled={invite.loading} className={styles.inviteCta}>
+                친구 초대하고 +5 받기
+              </button>
+            )}
           </section>
 
           {/* 필터 */}
@@ -155,7 +167,11 @@ export default function CreditHistoryPage() {
                       : '사용 내역이 없어'}
               </p>
               <p className={styles.emptyDesc}>
-                {failed ? '잠시 후 다시 시도해줘' : '진단을 완료하거나 친구를 초대하면 크레딧이 쌓여'}
+                {failed
+                  ? '잠시 후 다시 시도해줘'
+                  : isGuest
+                    ? '가입하고 진단을 완료하면 크레딧이 쌓여'
+                    : '진단을 완료하거나 친구를 초대하면 크레딧이 쌓여'}
               </p>
             </div>
           ) : (
