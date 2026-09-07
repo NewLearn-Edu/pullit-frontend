@@ -92,7 +92,7 @@ export async function fetchWrongNotes(subject: 'math' | 'english'): Promise<Wron
   return data.data
 }
 
-/** 한 문제의 내 풀이 이력 1건 — 원장(problem_attempts) 행 그대로 */
+/** 한 문제의 내 풀이 이력 1건 — 원장(problem_attempts) 행 그대로 (WrongNoteItem.attempts 원소) */
 export interface AttemptHistoryItem {
   attemptId: number
   /** 제출 시각 (ISO) */
@@ -107,14 +107,6 @@ export interface AttemptHistoryItem {
   /** 낸 단답 (객관식·무응답은 null) */
   submittedText: string | null
   timeSpentMs: number | null
-}
-
-/** 한 문제의 내 풀이 이력 (오래된 순) — 오답노트 문제 보기의 "풀이 이력" */
-export async function fetchAttemptHistory(problemId: string): Promise<AttemptHistoryItem[]> {
-  const { data } = await api.get<BaseResponse<AttemptHistoryItem[]>>(
-    `/api/attempts/problems/${encodeURIComponent(problemId)}/history`,
-  )
-  return data.data
 }
 
 /** 오답노트에서 문제 제거 — wrong_notes 행 삭제 */
