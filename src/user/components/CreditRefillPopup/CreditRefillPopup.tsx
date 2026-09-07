@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { InviteShareSheet } from '@/user/components/InviteShareSheet/InviteShareSheet'
 import { Toast } from '@/user/components/Toast'
 import { useInviteUrl } from '@/user/hooks/useInviteUrl'
+import { GuestSignupPopup } from '@/user/components/GuestSignupPopup'
+import { SET_CREDIT_COST } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
 
 /** 한국은 서머타임이 없어 UTC+9 고정 — 클라이언트 폴백 계산용 */
@@ -37,13 +38,12 @@ function formatRemaining(ms: number): string {
  * 모바일 바텀시트 · 패드/웹 중앙 다이얼로그 (ScoreInfoSheet 와 같은 조판)
  *
  * 하단은 [닫기] [초대하기] — 초대하기는 마이페이지·크레딧 내역과 같은 초대 공유 시트(카카오톡 / 링크복사)를
- * 이 팝업 위에 띄운다 (2026-09-07). 게스트는 초대 코드가 없으니 가입 유도(/signup)로 보낸다.
+ * 이 팝업 위에 띄운다 (2026-09-07). 게스트는 매일 충전·초대 대상이 아니라 가입 유도 팝업(GuestSignupPopup)으로 대체.
  */
 export function CreditRefillPopup({ onClose }: { onClose: () => void }) {
   const me = useUserStore((s) => s.me)
   const loadMe = useUserStore((s) => s.loadMe)
   const amount = me?.dailyCreditAmount ?? DEFAULT_AMOUNT
-  const navigate = useNavigate()
 
   // 친구 초대 — 코드가 실린 링크가 준비됐을 때만 시트를 연다 (코드 없는 링크 금지 · useInviteUrl)
   const isMember = me?.type === 'USER'
@@ -56,12 +56,6 @@ export function CreditRefillPopup({ onClose }: { onClose: () => void }) {
     return () => window.clearTimeout(t)
   }, [inviteError])
   const openInvite = async () => {
-    if (!isMember) {
-      // 게스트 — 초대는 회원만. 가입 유도로 (마이페이지 "10초만에 가입하기"와 같은 목적지)
-      onClose()
-      navigate('/signup', { state: { from: window.location.pathname + window.location.search } })
-      return
-    }
     const url = await invite.ensure()
     if (url) setShareUrl(url)
     else setInviteError(true)
@@ -83,6 +77,9 @@ export function CreditRefillPopup({ onClose }: { onClose: () => void }) {
     setRefreshedFor(targetMs)
     void loadMe(true)
   }, [remaining, targetMs, refreshedFor, loadMe])
+
+  // 게스트 — 배지를 눌러도 크레딧 부족 팝업과 같은 가입 유도 한 장 (2026-09-07)
+  if (!isMember) return <GuestSignupPopup required={SET_CREDIT_COST} onClose={onClose} />
 
   return (
     <div
