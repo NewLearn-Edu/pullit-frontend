@@ -36,6 +36,7 @@ import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 import RecommendPage from './user/pages/recommend/RecommendPage'
+import { captureUtm } from '@/user/services/visitMetrics'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
@@ -117,6 +118,11 @@ function BlockBackNavigation() {
 }
 
 export default function App() {
+  // 마케팅 링크(?utm_…)는 /, /start, /earlybird, /login 어디로든 들어온다 — 첫 마운트의 쿼리로 브라우저에 메모만.
+  // 서버 적재는 /start 의 [시작하기] 클릭에서 (열리기만 한 건 봇·미리보기 크롤러일 수 있어 세지 않는다)
+  useEffect(() => {
+    captureUtm()
+  }, [])
   return (
     <>
     <MetaPixelPageView />

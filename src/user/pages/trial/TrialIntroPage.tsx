@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
+import { reportUtmVisit } from '@/user/services/visitMetrics'
 
 /**
  * 마케팅 진입용 시네마틱 인트로 (/start)
@@ -210,7 +211,11 @@ export default function TrialIntroPage() {
       <div className="relative mt-[44px] h-[56px] max-md:mt-[34px]">
         <button
           type="button"
-          onClick={() => navigate('/trial')}
+          onClick={() => {
+            // 사람의 클릭 = 방문 1건 (도착 때 메모한 utm 으로 · 24시간 중복 억제 · 서버가 준 방문 id 보관)
+            reportUtmVisit()
+            navigate('/trial')
+          }}
           style={{ animationDelay: '100ms' }}
           className="intro-anim h-[56px] w-[280px] animate-[intro-rise_460ms_cubic-bezier(0.22,0.9,0.3,1)_both] rounded-[14px] bg-[#ff385c] text-[17px] font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] max-md:w-[240px]"
         >

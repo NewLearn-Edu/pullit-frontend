@@ -469,6 +469,25 @@ export async function fetchVisitStats(): Promise<VisitCampaignStats[]> {
   return data.data
 }
 
+/** 캠페인 퍼널 1행 — 방문 → 체험 시작(귀속 유저) → 회원 → 첫 세트 완료 (소재 단위) */
+export interface AcquisitionFunnelRow {
+  utmSource: string
+  utmMedium: string | null
+  utmCampaign: string | null
+  utmContent: string | null
+  visits: number
+  users: number
+  members: number
+  completed: number
+}
+
+export async function fetchAcquisitionFunnel(): Promise<AcquisitionFunnelRow[]> {
+  const { data } = await adminApi.get<BaseResponse<AcquisitionFunnelRow[]>>(
+    '/api/admin/metrics/acquisition-funnel',
+  )
+  return data.data
+}
+
 /** 캠페인 1건의 개별 방문 시각 목록 (최신순 · 최대 500) — 상세 팝업 */
 export async function fetchVisitTimes(
   source: string,

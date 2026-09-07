@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useMe } from '@/user/hooks/useMe'
-import { reportUtmVisit } from '@/user/services/visitMetrics'
 import { clearEarlybird } from '@/user/services/earlybird'
 import LandingNav from './LandingNav'
 import HeroSection from './HeroSection'
@@ -22,11 +21,6 @@ export default function LandingPage() {
   // 조회 전용(loadMe) — 세션이 없어도 게스트를 만들지 않는다.
   // 로그인 상태여도 랜딩에 머문다 (2026-08-20) — 나브·CTA 가 프로필/"문제 풀러 가기"로 바뀔 뿐
   useMe()
-
-  // UTM 유입 카운트 — 리다이렉트 전에 1회 기록 (마운트 시점의 쿼리로)
-  useEffect(() => {
-    reportUtmVisit()
-  }, [])
 
   // 일반 랜딩(/)에 도착하면 얼리버드 모드 해제 — /earlybird 로 다시 들어가야만 켜진다.
   // (얼리버드 진입점은 이 컴포넌트를 /earlybird 경로에서 재사용하므로 경로로 구분)

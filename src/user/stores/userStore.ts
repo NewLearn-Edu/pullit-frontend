@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { createGuestSession, fetchMe, probeSession, type MeResult } from '@/user/api/authApi'
+import { claimUtmVisit } from '@/user/services/visitMetrics'
 
 export type SessionStatus =
   | 'idle' // 아직 조회하지 않음
@@ -105,6 +106,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       if (!me) {
         await createGuestSession()
         me = await fetchMe()
+        claimUtmVisit(me?.id) // 방금 생긴 users 행에 최초 유입 방문 귀속
       }
       if (me) setSessionHint()
       set({ me, status: me ? 'ready' : 'anonymous' })

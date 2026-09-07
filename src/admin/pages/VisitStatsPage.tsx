@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { fetchVisitStats, fetchVisitTimes, type VisitCampaignStats } from '../api/adminApi'
+import {
+  fetchAcquisitionFunnel,
+  fetchVisitStats,
+  fetchVisitTimes,
+  type AcquisitionFunnelRow,
+  type VisitCampaignStats,
+} from '../api/adminApi'
 import { StatCard } from '../components/StatCard'
 
 /** "2026-08-20T14:51:36" → "2026-08-20 14:51" */
@@ -234,8 +240,87 @@ export default function VisitStatsPage() {
         )}
       </div>
 
+      <AcquisitionFunnel />
+
       {detail && <VisitDetailModal target={detail} onClose={() => setDetail(null)} />}
     </section>
+  )
+}
+
+/**
+ * 캠페인 퍼널 (2026-09-07) — 방문 → 맛보기 완주 → 회원가입 → 첫 세트 완료.
+ * users 행은 맛보기 3문제를 끝내고 결과 화면에서 [건너뛰기](게스트) 또는 소셜 로그인(회원)을 할 때 처음 생기므로,
+ * 귀속 유저 수 = 맛보기를 완주한 사람 수다. /start·/trial·풀이 중 이탈은 방문 1 로만 남는다.
+ * 전부 visit_events 한 테이블 — 방문은 전체 행, 나머지 셋은 user_id 가 채워진 행(유저가 생길 때 인수).
+ * 광고 링크에 utm_content 를 붙이면 소재별로 갈라진다.
+ */
+function AcquisitionFunnel() {
+  const [rows, setRows] = useState<AcquisitionFunnelRow[]>([])
+  const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
+  useEffect(() => {
+    fetchAcquisitionFunnel()
+      .then((list) => {
+        setRows(list)
+        setState('done')
+      })
+      .catch(() => setState('error'))
+  }, [])
+  const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : '—')
+  return (
+    <div className="card" style={{ padding: 18, marginTop: 24 }}>
+      <div className="toolbar">
+        <div>
+          <strong>캠페인 퍼널</strong>
+          <p className="page-sub" style={{ margin: '4px 0 0' }}>
+            방문 → 맛보기 완주(결과 화면에서 건너뛰기 또는 가입) → 회원가입 → 첫 세트 완료.
+            유저에 최초 유입 UTM 을 붙여 세는 값이라 링크를 누른 브라우저에서 이어서 진행해야 잡힙니다.
+          </p>
+        </div>
+      </div>
+      {state === 'loading' && <p className="page-sub">불러오는 중…</p>}
+      {state === 'error' && <p className="page-sub">퍼널 데이터를 불러오지 못했습니다.</p>}
+      {state === 'done' && rows.length === 0 && (
+        <p className="page-sub">아직 귀속된 유저가 없습니다. utm 링크로 들어와 맛보기를 완주하면 여기에 쌓입니다.</p>
+      )}
+      {state === 'done' && rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 150 }}>소스</th>
+                <th style={{ width: 110 }}>미디엄</th>
+                <th>캠페인</th>
+                <th>소재 (content)</th>
+                <th style={{ width: 90, textAlign: 'right' }}>방문</th>
+                <th style={{ width: 110, textAlign: 'right' }}>맛보기 완주</th>
+                <th style={{ width: 110, textAlign: 'right' }}>회원가입</th>
+                <th style={{ width: 120, textAlign: 'right' }}>첫 세트 완료</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.utmSource}:${r.utmMedium ?? ''}:${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`}>
+                  <td className="strong">{r.utmSource}</td>
+                  <td>{r.utmMedium ?? '—'}</td>
+                  <td>{r.utmCampaign ?? '—'}</td>
+                  <td>{r.utmContent ?? '—'}</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{r.visits.toLocaleString()}</td>
+                  <td className="num" style={{ textAlign: 'right' }}>
+                    {r.users.toLocaleString()} <span className="page-sub">({pct(r.users, r.visits)})</span>
+                  </td>
+                  <td className="num" style={{ textAlign: 'right' }}>
+                    {r.members.toLocaleString()} <span className="page-sub">({pct(r.members, r.users)})</span>
+                  </td>
+                  <td className="num" style={{ textAlign: 'right' }}>
+                    {r.completed.toLocaleString()} <span className="page-sub">({pct(r.completed, r.users)})</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
 
