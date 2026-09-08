@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { trackPageView } from './user/services/metaPixel'
 import { useBlockBackNavigation } from './user/hooks/useBlockBackNavigation'
+import { useMe } from './user/hooks/useMe'
+import { useUserStore } from './user/stores/userStore'
 import { type Subject } from './user/stores/trialStore'
 import { CURRICULUM } from './user/data/curriculum'
 import LandingPage from './user/pages/landing/LandingPage'
@@ -119,6 +121,39 @@ function MetaPixelPageView() {
 }
 
 /**
+ * 앱 전용 로그인 관문 (2026-09-08) — 스토어 앱은 회원 전용이라, 세션이 없으면 어떤 주소로 들어와도
+ * /login 을 먼저 보여준다. 마케팅 링크(/start)·딥링크·공유 링크 전부 해당.
+ *
+ * 세션이 있으면 아무것도 하지 않는다 — 그때부터는 웹과 똑같이 굴러간다
+ * (LoginPage 가 맛보기 완주면 /home, 미완이면 /start 로 보낸다).
+ *
+ * 예외 경로는 로그인 자체를 할 수 없게 되는 화면들뿐이다 — 로그인·가입·소셜 콜백·약관·얼리버드.
+ * 어드민은 일반 웹 도구라 제외한다.
+ *
+ * 판정은 isStandaloneAppNow() — 기억된 플래그(pullit_app)를 쓰면 안드로이드가 TWA 와 크롬의
+ * localStorage 를 공유해, 앱을 한 번 연 사람이 브라우저에서도 막힌다 (마케팅 링크가 죽는다).
+ */
+const APP_PUBLIC_PATHS = [/^\/login$/, /^\/signup/, /^\/auth\//, /^\/policies\//, /^\/earlybird$/]
+
+function RequireAppLogin() {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  // 조회 전용(loadMe) — 세션 없는 방문자에게 게스트를 만들지 않는다
+  useMe()
+  const status = useUserStore((s) => s.status)
+
+  useEffect(() => {
+    if (status !== 'anonymous') return // 판정 전(idle·loading)·세션 있음(ready) — 건드리지 않는다
+    if (pathname.startsWith('/admin')) return
+    if (APP_PUBLIC_PATHS.some((re) => re.test(pathname))) return
+    if (!isStandaloneAppNow()) return
+    navigate('/login', { replace: true })
+  }, [status, pathname, navigate])
+
+  return null
+}
+
+/**
  * 브라우저 뒤로가기 전역 차단 (2026-09-04) — 버튼·엣지 스와이프·마우스 제스처 전부. 사용자 화면은 모두
  * 자체 뒤로가기(헤더 chevron · X · 완료)로만 이동한다. 어드민은 일반 웹 도구라 제외.
  * Routes 앞에 두어 가드 push 가 각 화면의 mount 리다이렉트(navigate replace)보다 먼저 실행되게 한다.
@@ -139,6 +174,7 @@ export default function App() {
   return (
     <>
     <MetaPixelPageView />
+    <RequireAppLogin />
     <BlockBackNavigation />
     <Routes>
       <Route path="/" element={<RootEntry />} />
