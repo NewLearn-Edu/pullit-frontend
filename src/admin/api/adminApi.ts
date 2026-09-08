@@ -294,7 +294,8 @@ export async function fetchTrialTestItems(
 export type UserRole = 'USER' | 'PAID_USER' | 'ADMIN'
 
 export type AdminUserType = 'GUEST' | 'USER'
-export type AdminUserStatus = 'GUEST_PENDING' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED'
+/** GUEST = 순수 게스트 · PENDING = 가입 중(소셜 로그인만) · ACTIVE = 가입 완료 · DELETED = 탈퇴 유예 */
+export type AdminUserStatus = 'GUEST' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED'
 
 export interface AdminUser {
   id: number
@@ -310,6 +311,8 @@ export interface AdminUser {
   /** 학년/신분 enum 값 — user authApi GRADE_LABEL 로 표기 */
   grade?: string | null
   createdAt: string
+  /** 정회원이 된 시각 — 직가입은 createdAt 과 동일, 게스트 출신은 승격 시점(createdAt 보다 늦음), 게스트는 null */
+  registeredAt?: string | null
   lastActiveAt?: string | null
 }
 

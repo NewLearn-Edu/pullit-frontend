@@ -26,8 +26,11 @@ export function MemberKpi({ users: given }: { users?: AdminUser[] | null }) {
 
   const todayKey = new Date().toISOString().slice(0, 10)
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const memberCount = list.filter((u) => (u.type ?? 'USER') === 'USER').length
-  const guestCount = list.length - memberCount
+  // 상태 모델(2026-09-08): 회원 = USER 이면서 PENDING 아님 · 가입 중 = PENDING(게스트 출신·직가입 합산) · 게스트 = GUEST·GUEST
+  // (status 를 안 주는 구서버는 type 으로만 — 그래서 status === 'GUEST' 대신 "GUEST 인데 PENDING 아님")
+  const pendingCount = list.filter((u) => u.status === 'PENDING').length
+  const memberCount = list.filter((u) => (u.type ?? 'USER') === 'USER' && u.status !== 'PENDING').length
+  const guestCount = list.filter((u) => u.type === 'GUEST' && u.status !== 'PENDING').length
   const withdrawnCount = list.filter((u) => u.status === 'DELETED').length
   const joinedToday = list.filter((u) => u.createdAt?.slice(0, 10) === todayKey).length
   const joinedWeek = list.filter((u) => (u.createdAt?.slice(0, 10) ?? '') >= weekAgo).length
@@ -38,7 +41,12 @@ export function MemberKpi({ users: given }: { users?: AdminUser[] | null }) {
     <div className="kpi-section">
       <h2 className="section-title">전체 회원 현황</h2>
       <div className="kpi-problems">
-        <StatCard label="전체 회원" value={n(memberCount)} delta={ready ? `탈퇴 유예 ${withdrawnCount}건` : '—'} tone="up" />
+        <StatCard
+          label="전체 회원"
+          value={n(memberCount)}
+          delta={ready ? `가입 중 ${pendingCount}명 · 탈퇴 유예 ${withdrawnCount}건` : '—'}
+          tone="up"
+        />
         <StatCard label="게스트" value={n(guestCount)} delta="맛보기만 하고 미가입" tone="flat" />
         <StatCard
           label="오늘 가입"

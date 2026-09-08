@@ -24,7 +24,30 @@ const ROLE_BADGE: Record<UserRole, string> = {
 
 const PAGE_SIZE = 30
 
-type TypeFilter = 'all' | 'USER' | 'GUEST'
+const KIND_LABEL: Record<MemberKind, string> = { USER: '회원', PENDING: '가입 중', GUEST: '게스트' }
+const KIND_BADGE: Record<MemberKind, string> = { USER: 'badge live', PENDING: 'badge pending', GUEST: 'badge neutral' }
+
+/**
+ * 유형 = type × status 합성 (2026-09-08 상태 모델):
+ *   회원 = USER·ACTIVE · 가입 중 = status PENDING (GUEST·PENDING 게스트 출신 / USER·PENDING 직가입) · 게스트 = GUEST·GUEST
+ */
+type MemberKind = 'USER' | 'PENDING' | 'GUEST'
+/** 유형 필터 — 게스트 출신(맛보기 게스트 → 소셜 로그인으로 승격) 은 회원/가입 중과 겹치는 별도 축 */
+type TypeFilter = 'all' | MemberKind | 'FROM_GUEST'
+
+/**
+ * 게스트 출신 — 가입 중이면 type 이 아직 GUEST 라 바로 드러나고,
+ * 가입을 마친 회원은 registered_at 이 created_at 보다 늦은 것으로 판별 (직가입은 둘이 같다)
+ */
+function isFromGuest(u: AdminUser): boolean {
+  if (u.type === 'GUEST') return u.status === 'PENDING'
+  return !!u.registeredAt && u.registeredAt > u.createdAt
+}
+
+function memberKind(u: AdminUser): MemberKind {
+  if (u.status === 'PENDING') return 'PENDING'
+  return (u.type ?? 'USER') === 'GUEST' ? 'GUEST' : 'USER'
+}
 type RoleFilter = 'all' | UserRole
 type StatusFilter = 'all' | 'ACTIVE' | 'DELETED'
 type SortKey = 'newest' | 'oldest' | 'active'
@@ -92,7 +115,9 @@ export default function AllMembersPage() {
     const q = query.trim().toLowerCase()
     const digits = q.replace(/\D/g, '')
     const list = users.filter((u) => {
-      if (typeFilter !== 'all' && (u.type ?? 'USER') !== typeFilter) return false
+      if (typeFilter === 'FROM_GUEST') {
+        if (!isFromGuest(u)) return false
+      } else if (typeFilter !== 'all' && memberKind(u) !== typeFilter) return false
       if (roleFilter !== 'all' && u.role !== roleFilter) return false
       if (gradeFilter !== 'all' && u.grade !== gradeFilter) return false
       if (statusFilter === 'ACTIVE' && u.status === 'DELETED') return false
@@ -176,7 +201,9 @@ export default function AllMembersPage() {
           <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)} aria-label="유형">
             <option value="all">전체 유형</option>
             <option value="USER">회원</option>
+            <option value="PENDING">가입 중</option>
             <option value="GUEST">게스트</option>
+            <option value="FROM_GUEST">게스트 출신 (회원+가입 중)</option>
           </select>
           <select className="select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as RoleFilter)} aria-label="권한">
             <option value="all">전체 권한</option>
@@ -251,7 +278,7 @@ export default function AllMembersPage() {
               <tbody>
                 {pageRows.map((u) => {
                   const withdrawn = u.status === 'DELETED'
-                  const guest = (u.type ?? 'USER') === 'GUEST'
+                  const kind = memberKind(u)
                   return (
                     <tr key={u.id} style={withdrawn ? { opacity: 0.55 } : undefined}>
                       <td className="strong" title={u.name ?? undefined}>
@@ -260,7 +287,8 @@ export default function AllMembersPage() {
                       </td>
                       <td title={u.nickname ?? undefined}>{u.nickname ?? '—'}</td>
                       <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
-                        <span className={guest ? 'badge neutral' : 'badge live'}>{guest ? '게스트' : '회원'}</span>
+                        <span className={KIND_BADGE[kind]}>{KIND_LABEL[kind]}</span>
+                        {isFromGuest(u) && <span className="sub">게스트 출신</span>}
                       </td>
                       <td>{gradeLabel(u.grade)}</td>
                       <td title={u.email ?? undefined}>{u.email ?? '—'}</td>

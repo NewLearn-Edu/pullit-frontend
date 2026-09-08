@@ -2,7 +2,7 @@ import { refreshSession } from '@/user/api/authApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { hasCompletedTrial } from '@/user/services/trialGate'
 import { claimUtmVisit } from '@/user/services/visitMetrics'
-import { useUserStore } from '@/user/stores/userStore'
+import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import { consumePostLoginRedirect } from '@/user/utils/postLoginRedirect'
 
 /**
@@ -16,9 +16,9 @@ export async function finishLogin(): Promise<string> {
   await flushAttemptQueue().catch(() => {})
   claimUtmVisit(me?.id) // 게스트를 안 거친 신규 가입 — 여기서 처음 users 행이 생긴다 (이미 귀속됐으면 서버가 무시)
 
-  // 프로필 미완성 회원(신규 가입·게스트 승격 직후)은 추가 정보 화면부터.
+  // 가입 진행 중(GUEST·PENDING 게스트 출신 / USER·PENDING 직가입)은 추가 정보 화면부터.
   // 복귀 경로는 소비하지 않고 남겨둬 프로필 완료 후 이어서 사용한다
-  if (me?.type === 'USER' && (!me.phoneNumber || !me.birthDate)) {
+  if (isSignupPending(me)) {
     return '/signup/info'
   }
 

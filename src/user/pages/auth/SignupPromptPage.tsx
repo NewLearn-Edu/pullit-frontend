@@ -15,7 +15,7 @@ import { extractDuplicateAccount, type DuplicateAccountInfo } from '@/user/api/a
 import { DuplicateAccountDialog } from '@/user/components/DuplicateAccountDialog'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
-import { selectIsMember, useUserStore } from '@/user/stores/userStore'
+import { isSignupPending, selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useTrialStore } from '@/user/stores/trialStore'
@@ -83,6 +83,11 @@ export default function SignupPromptPage() {
   useEffect(() => {
     if (isMember) navigate('/home', { replace: true })
   }, [isMember, navigate])
+  // 가입 진행 중(GUEST·PENDING — 게스트가 소셜 로그인만 누른 상태)은 소셜을 다시 고르게 하지 않고 이어서 프로필 입력으로
+  const pending = useUserStore((s) => isSignupPending(s.me))
+  useEffect(() => {
+    if (pending) navigate('/signup/info', { replace: true })
+  }, [pending, navigate])
 
   // 스크롤 없는 화면 — 드래그 시 러버밴드(밀렸다 튕겨 돌아옴) 차단
   useEffect(() => {

@@ -16,7 +16,7 @@ import { DuplicateAccountDialog } from '@/user/components/DuplicateAccountDialog
 import { hasCompletedTrial } from '@/user/services/trialGate'
 import { isEarlybird } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
-import { isCompleteMember, useUserStore } from '@/user/stores/userStore'
+import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { isStandaloneApp } from '@/user/utils/standalone'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
@@ -55,12 +55,12 @@ export default function LoginPage() {
   // 세션 보유자(게스트·프로필 완료 회원)는 랜딩과 동일하게 완주 여부로 분기 —
   // 완주면 홈, 미완(최초 유저)이면 퍼널(/start). 웹앱(start_url=/login)의 관문 역할.
   // 게스트의 가입 전환은 마이페이지 "10초만에 가입하기" → /signup 이 담당한다.
-  // 프로필 미완성 회원만 이 화면에 남는다 — 소셜 버튼을 다시 누르면
+  // 가입 진행 중(소셜 로그인만 하고 프로필 미완)만 이 화면에 남는다 — 소셜 버튼을 다시 누르면
   // finishLogin 이 /signup/info(추가 정보)로 안내
   const me = useUserStore((s) => s.me)
   useEffect(() => {
     if (!me) return
-    if (me.type !== 'GUEST' && !isCompleteMember(me)) return
+    if (isSignupPending(me)) return
     let alive = true
     hasCompletedTrial()
       .then((done) => {

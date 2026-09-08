@@ -21,7 +21,7 @@ import {
 import { clearInviteCode, readInviteCode } from '@/user/services/referral'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { finishLogin, resolvePostAuthDestination } from '@/user/services/finishLogin'
-import { useUserStore } from '@/user/stores/userStore'
+import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { isStandaloneApp } from '@/user/utils/standalone'
 
@@ -270,11 +270,12 @@ export default function SignupInfoPage() {
     }
   }, [name, nickname, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
 
-  // 회원이 아니면 올 수 없는 화면 (게스트·비로그인은 로그인으로)
+  // 소셜 로그인을 거친 계정만 올 수 있는 화면 — 가입 중(GUEST·PENDING / USER·PENDING) 또는 회원.
+  // 순수 게스트(GUEST·GUEST)·비로그인은 로그인으로
   useEffect(() => {
     loadMe().then((loaded) => {
-      if (!loaded || loaded.type !== 'USER') { navigate('/login', { replace: true }); return }
-      if (loaded.phoneNumber && loaded.birthDate) { navigate('/home', { replace: true }); return }
+      if (!loaded || (loaded.type !== 'USER' && loaded.status !== 'PENDING')) { navigate('/login', { replace: true }); return }
+      if (!isSignupPending(loaded)) { navigate('/home', { replace: true }); return }
       const ssoName = loaded.name?.trim() ?? ''
       if (ssoName) {
         // 소셜이 이름을 준 경우 — 그 값을 그대로 쓰고 칸을 잠근다 (2026-09-06: 애플만 잠그던 것을 전 소셜로 확대).

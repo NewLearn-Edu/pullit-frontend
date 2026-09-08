@@ -142,5 +142,13 @@ export const selectCredit = (s: UserState) => s.me?.creditBalance ?? null
  * 소셜 로그인을 직접 눌렀을 때만 finishLogin 이 /signup/info 로 보낸다 (2026-08-19 확정).
  */
 export const isCompleteMember = (me: MeResult | null) =>
-  me?.type === 'USER' && !!me.phoneNumber && !!me.birthDate
+  me?.type === 'USER' && me.status !== 'PENDING' && !!me.phoneNumber && !!me.birthDate
 export const selectIsCompleteMember = (s: UserState) => isCompleteMember(s.me)
+
+/**
+ * 가입 진행 중 — 소셜 로그인은 했는데 프로필(닉네임·학년·전화·동의)을 안 끝낸 상태.
+ * 게스트 출신(GUEST·PENDING)과 직가입(USER·PENDING) 모두 → /signup/info 로 보낸다.
+ * status 를 안 주는 구버전 서버는 "USER 인데 전화·생년월일 없음" 으로 판정 (2026-09-08)
+ */
+export const isSignupPending = (me: MeResult | null) =>
+  !!me && (me.status === 'PENDING' || (me.type === 'USER' && (!me.phoneNumber || !me.birthDate)))

@@ -480,8 +480,15 @@ export interface MeResult {
   nickname: string | null
   email: string | null
   role: 'USER' | 'ADMIN'
-  /** GUEST = 미가입 게스트 — 맛보기 저장 시 비로그인이면 게스트 계정이 생성된다 */
+  /**
+   * 가입 상태 = type × status (2026-09-08):
+   *   GUEST·GUEST 맛보기/건너뛰기 게스트 · GUEST·PENDING 게스트가 소셜 로그인만 누름 ·
+   *   USER·PENDING 바로 소셜 로그인(프로필 미완) · USER·ACTIVE 가입 완료.
+   * 회원(USER)이 되는 건 프로필 완성 시점 — 소셜 로그인만으론 게스트 그대로다
+   */
   type: 'GUEST' | 'USER'
+  /** GUEST = 순수 게스트 · PENDING = 소셜 로그인은 했고 프로필(닉네임·학년·전화·동의) 미완 → /signup/info (구버전 서버엔 없음) */
+  status?: 'GUEST' | 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'DELETED'
   creditBalance: number
   /** 회원인데 null 이면 추가 정보 입력(/signup/info)이 필요하다 */
   phoneNumber: string | null

@@ -15,7 +15,7 @@ import { useUnitLocks } from '@/user/hooks/useUnitLocks'
 import { fetchResumableSet, fetchResumableSets, indexResumableByUnit, type ResumableSet } from '@/user/api/problemSetApi'
 import { useMe } from '@/user/hooks/useMe'
 import { useSheetDrag } from '@/user/hooks/useSheetDrag'
-import { useUserStore } from '@/user/stores/userStore'
+import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import { computeCategoryProgress, useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { CURRICULUM, UNIT_LABEL } from '@/user/data/curriculum'
 import ProgressRadar from '@/user/components/WeaknessRadar/ProgressRadar'
@@ -90,9 +90,9 @@ export default function HomePage() {
       })
   }, [sessionStatus, navigate])
 
-  // 프로필 미완성 회원은 추가 정보 입력부터 (연령 게이트 — 생년월일·전화번호·약관)
+  // 가입 진행 중(소셜 로그인만 하고 프로필 미완)은 추가 정보 입력부터 (연령 게이트 — 생년월일·전화번호·약관)
   useEffect(() => {
-    if (me?.type === 'USER' && (!me.phoneNumber || !me.birthDate)) {
+    if (isSignupPending(me)) {
       navigate('/signup/info', { replace: true })
     }
   }, [me, navigate])
