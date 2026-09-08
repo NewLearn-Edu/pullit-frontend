@@ -823,6 +823,11 @@
     animation: pa-view-in .18s ease both;
   }
   .cr-modal { width: min(420px, calc(100vw - 32px)); padding: 24px; }   /* 카드 패딩 24px */
+  /* 회원별 이력 모달 — 표가 들어가므로 넓게. 세로는 뷰포트 안에서 표만 스크롤 */
+  .cr-modal.cr-modal-wide { width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+  .cr-modal-wide .card-head { flex-shrink: 0; }
+  .cr-history-wrap { flex: 1; min-height: 0; overflow: auto; }
+  .cr-modal-wide .toolbar-pg { flex-shrink: 0; }
   .cr-field { display: block; margin-bottom: 14px; }
   .cr-field span { display: block; font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 8px; }
   /* 인풋 규격 — 검색박스·셀렉트와 동일하게 44px / r12 / 좌우 패딩 14px (2026-07-24) */

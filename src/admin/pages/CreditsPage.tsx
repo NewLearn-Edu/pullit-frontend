@@ -63,8 +63,8 @@ export default function CreditsPage() {
 
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
   const [txTotal, setTxTotal] = useState(0)
-  // 이력 필터 — null 이면 전체, 지정되면 해당 회원 것만
-  const [txUser, setTxUser] = useState<CreditUser | null>(null)
+  // 회원별 이력 모달 대상 (null = 닫힘) — 행 클릭·이력 버튼 (2026-09-08). 하단 표는 항상 전체 최근 이력
+  const [historyUser, setHistoryUser] = useState<CreditUser | null>(null)
 
   // 조정 모달 대상 (null = 닫힘)
   const [target, setTarget] = useState<CreditUser | null>(null)
@@ -88,13 +88,13 @@ export default function CreditsPage() {
   }, [keyword, page])
 
   const loadTransactions = useCallback(() => {
-    fetchCreditTransactions({ userId: txUser?.userId, page: 0, size: TX_PAGE_SIZE })
+    fetchCreditTransactions({ page: 0, size: TX_PAGE_SIZE })
       .then((res) => {
         setTransactions(res.content)
         setTxTotal(res.totalElements)
       })
       .catch(() => setTransactions([]))
-  }, [txUser])
+  }, [])
 
   useEffect(loadStats, [loadStats])
   useEffect(loadUsers, [loadUsers])
@@ -234,7 +234,12 @@ export default function CreditsPage() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.userId}>
+                  <tr
+                    key={u.userId}
+                    style={{ cursor: 'pointer' }}
+                    title="클릭해서 크레딧 이력 보기"
+                    onClick={() => setHistoryUser(u)}
+                  >
                     <td className="strong">{displayName(u)}</td>
                     <td>{u.email ?? '—'}</td>
                     <td className="num">{formatPhone(u.phoneNumber)}</td>
@@ -247,14 +252,14 @@ export default function CreditsPage() {
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
-                          onClick={() => setTarget(u)}
+                          onClick={(e) => { e.stopPropagation(); setTarget(u) }}
                         >
                           조정
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
-                          onClick={() => setTxUser(u)}
+                          onClick={(e) => { e.stopPropagation(); setHistoryUser(u) }}
                         >
                           이력
                         </button>
@@ -271,18 +276,11 @@ export default function CreditsPage() {
       <div className="card" style={{ padding: 18 }}>
         <div className="card-head" style={{ marginBottom: 10 }}>
           <div>
-            <div className="card-title">
-              {txUser ? `${displayName(txUser)} 크레딧 이력` : '최근 크레딧 이력'}
-            </div>
+            <div className="card-title">최근 크레딧 이력</div>
             <div className="card-sub">
-              총 {txTotal.toLocaleString()}건 · 최신 {TX_PAGE_SIZE}건 표시
+              총 {txTotal.toLocaleString()}건 · 최신 {TX_PAGE_SIZE}건 표시 · 회원별 전체 이력은 위 목록에서 행을 클릭
             </div>
           </div>
-          {txUser && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTxUser(null)}>
-              전체 보기
-            </button>
-          )}
         </div>
 
         {transactions.length === 0 ? (
@@ -338,7 +336,145 @@ export default function CreditsPage() {
           onDone={(tx) => handleAdjusted(target, tx)}
         />
       )}
+      {historyUser && (
+        <HistoryModal
+          user={historyUser}
+          onClose={() => setHistoryUser(null)}
+          onAdjust={() => { setHistoryUser(null); setTarget(historyUser) }}
+        />
+      )}
     </section>
+  )
+}
+
+const HISTORY_PAGE_SIZE = 20
+
+/**
+ * 회원별 크레딧 이력 모달 — 목록 행 클릭·이력 버튼으로 연다 (2026-09-08).
+ * 원장(credit_transactions)을 최신순 20건씩 페이지네이션. 회원 컬럼은 한 사람 것이라 뺀다.
+ */
+function HistoryModal({
+  user,
+  onClose,
+  onAdjust,
+}: {
+  user: CreditUser
+  onClose: () => void
+  onAdjust: () => void
+}) {
+  const [rows, setRows] = useState<CreditTransaction[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [page, setPage] = useState(0)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    setRows(null)
+    setFailed(false)
+    fetchCreditTransactions({ userId: user.userId, page, size: HISTORY_PAGE_SIZE })
+      .then((res) => {
+        if (!alive) return
+        setRows(res.content)
+        setTotal(res.totalElements)
+        setTotalPages(res.totalPages)
+      })
+      .catch(() => alive && setFailed(true))
+    return () => {
+      alive = false
+    }
+  }, [user.userId, page])
+
+  // Esc 로 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const rangeStart = total === 0 ? 0 : page * HISTORY_PAGE_SIZE + 1
+  const rangeEnd = Math.min((page + 1) * HISTORY_PAGE_SIZE, total)
+  const pageButtons: number[] = []
+  const windowStart = Math.max(0, Math.min(page - 2, totalPages - 5))
+  for (let i = windowStart; i < Math.min(windowStart + 5, totalPages); i++) pageButtons.push(i)
+
+  return createPortal(
+    <div className="cr-overlay" onClick={onClose}>
+      <div className="card cr-modal cr-modal-wide" role="dialog" aria-label={`${displayName(user)} 크레딧 이력`} onClick={(e) => e.stopPropagation()}>
+        <div className="card-head">
+          <div>
+            <div className="card-title">{displayName(user)} 크레딧 이력</div>
+            <div className="card-sub">
+              {user.email ?? '—'} · 현재 잔액 <CreditMark />
+              {user.creditBalance.toLocaleString()} · 총 {total.toLocaleString()}건
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={onAdjust}>조정</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>닫기</button>
+          </div>
+        </div>
+
+        {failed && <p className="page-sub">이력을 불러오지 못했어요. 다시 열어주세요.</p>}
+        {!failed && rows == null && <p className="page-sub">불러오는 중…</p>}
+        {!failed && rows != null && rows.length === 0 && <p className="page-sub">이력이 없습니다.</p>}
+        {!failed && rows != null && rows.length > 0 && (
+          <div className="table-wrap cr-history-wrap">
+            <table style={{ minWidth: 640 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 150 }}>일시</th>
+                  <th style={{ width: 80, textAlign: 'center' }}>구분</th>
+                  <th style={{ width: 64, textAlign: 'right' }}>증감</th>
+                  <th style={{ width: 64, textAlign: 'right' }}>잔액</th>
+                  <th>사유</th>
+                  <th style={{ width: 90 }}>처리자</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((t) => (
+                  <tr key={t.id}>
+                    <td className="num">{t.createdAt.slice(0, 16).replace('T', ' ')}</td>
+                    <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
+                      <span className={clsx('badge', isIncrease(t.type) ? 'live' : 'neutral')}>
+                        {TYPE_LABEL[t.type]}
+                      </span>
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {isIncrease(t.type) ? '+' : '−'}
+                      {t.amount.toLocaleString()}
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>{t.balanceAfter.toLocaleString()}</td>
+                    <td title={t.reason}>{t.reason}</td>
+                    <td style={{ textAlign: 'left' }}>{t.actorName ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="toolbar-pg" style={{ marginTop: 14 }}>
+            <span className="info num">
+              {rangeStart}–{rangeEnd} / {total.toLocaleString()}건
+            </span>
+            <div className="pages">
+              <button disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+              {pageButtons.map((p) => (
+                <button key={p} className={clsx('num', p === page && 'on')} onClick={() => setPage(p)}>
+                  {p + 1}
+                </button>
+              ))}
+              <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>›</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.querySelector('.admin-root') ?? document.body,
   )
 }
 
