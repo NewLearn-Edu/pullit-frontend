@@ -380,6 +380,26 @@
     background-repeat: no-repeat; background-position: right 11px center;
   }
   .toolbar .spacer { flex: 1; }
+  /* 툴바 체크박스 — 셀렉트와 같은 44px / r12 규격. 체크 = primary (선택 상태 규칙) */
+  .check-box {
+    display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0;
+    height: 44px; padding: 0 14px;
+    background: var(--color-canvas); border: 1px solid var(--color-line);
+    border-radius: 12px; font-size: 14px; font-weight: 400; color: var(--color-body);
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .check-box:has(input:checked) { font-weight: 600; color: var(--color-fg); border-color: var(--line-strong); }
+  .check-box:has(input:disabled) { opacity: .5; cursor: default; }
+  .check-box input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .check-box .box {
+    width: 18px; height: 18px; border-radius: 6px; flex-shrink: 0;
+    border: 1.5px solid var(--line-strong); background: var(--color-canvas);
+    display: grid; place-items: center; transition: background .12s, border-color .12s;
+  }
+  .check-box .box svg { width: 11px; height: 9px; opacity: 0; transition: opacity .12s; }
+  .check-box:has(input:checked) .box { background: var(--color-primary); border-color: var(--color-primary); }
+  .check-box:has(input:checked) .box svg { opacity: 1; }
+  .check-box:has(input:focus-visible) .box { box-shadow: 0 0 0 3px rgba(255,56,92,.12); }
 
   table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
   thead th {

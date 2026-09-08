@@ -22,7 +22,9 @@ export function MemberKpi({ users: given }: { users?: AdminUser[] | null }) {
 
   const users = given !== undefined ? given : fetched
   const ready = users != null
-  const list = users ?? []
+  // 풀잇 관계자(is_staff) 는 모든 집계에서 제외 — 팀원·테스트 계정이 회원 수를 부풀리지 않게 (2026-09-08)
+  const staffCount = (users ?? []).filter((u) => u.staff).length
+  const list = (users ?? []).filter((u) => !u.staff)
 
   const todayKey = new Date().toISOString().slice(0, 10)
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -44,7 +46,7 @@ export function MemberKpi({ users: given }: { users?: AdminUser[] | null }) {
         <StatCard
           label="전체 회원"
           value={n(memberCount)}
-          delta={ready ? `가입 중 ${pendingCount}명 · 탈퇴 유예 ${withdrawnCount}건` : '—'}
+          delta={ready ? `가입 중 ${pendingCount}명 · 탈퇴 유예 ${withdrawnCount}건 · 관계자 ${staffCount}명 제외` : '—'}
           tone="up"
         />
         <StatCard label="게스트" value={n(guestCount)} delta="맛보기만 하고 미가입" tone="flat" />

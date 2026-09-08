@@ -314,6 +314,8 @@ export interface AdminUser {
   /** 정회원이 된 시각 — 직가입은 createdAt 과 동일, 게스트 출신은 승격 시점(createdAt 보다 늦음), 게스트는 null */
   registeredAt?: string | null
   lastActiveAt?: string | null
+  /** 풀잇 관계자(팀원·테스트 계정) — 회원·게스트 집계에서 제외. 어드민에서 지정 (구서버엔 없음) */
+  staff?: boolean
 }
 
 /** 회원 목록 — role 지정 시 해당 권한만 (예: 'ADMIN'), 미지정 시 전체 */
@@ -329,6 +331,15 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<Ad
   const { data } = await adminApi.patch<BaseResponse<AdminUser>>(
     `/api/admin/users/${userId}/role`,
     { role },
+  )
+  return data.data
+}
+
+/** 풀잇 관계자 지정/해제 — PATCH /api/admin/users/{id}/staff */
+export async function updateUserStaff(userId: number, staff: boolean): Promise<AdminUser> {
+  const { data } = await adminApi.patch<BaseResponse<AdminUser>>(
+    `/api/admin/users/${userId}/staff`,
+    { staff },
   )
   return data.data
 }

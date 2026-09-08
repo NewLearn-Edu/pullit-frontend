@@ -3,7 +3,10 @@ import { GRADE_LABEL, type Grade } from '@/user/api/authApi'
 import {
   fetchAdminUsers,
   updateUserRole,
+  updateUserStaff,
   type AdminUser,
+  type AdminUserStatus,
+  type AdminUserType,
   type UserRole,
 } from '../api/adminApi'
 import { MemberKpi } from '../components/MemberKpi'
@@ -24,16 +27,25 @@ const ROLE_BADGE: Record<UserRole, string> = {
 
 const PAGE_SIZE = 30
 
-const KIND_LABEL: Record<MemberKind, string> = { USER: '회원', PENDING: '가입 중', GUEST: '게스트' }
-const KIND_BADGE: Record<MemberKind, string> = { USER: 'badge live', PENDING: 'badge pending', GUEST: 'badge neutral' }
+/**
+ * 유형(type)·상태(status) 를 두 컬럼으로 그대로 노출 (2026-09-08 상태 모델 — 조합 4종):
+ *   GUEST·GUEST 순수 게스트 · GUEST·PENDING 게스트가 소셜 로그인만 누름 ·
+ *   USER·PENDING 바로 소셜 로그인(프로필 미완) · USER·ACTIVE 가입 완료
+ */
+const TYPE_LABEL: Record<AdminUserType, string> = { USER: '회원', GUEST: '게스트' }
+const TYPE_BADGE: Record<AdminUserType, string> = { USER: 'badge live', GUEST: 'badge neutral' }
+const STATUS_LABEL: Record<AdminUserStatus, string> = {
+  GUEST: '게스트', PENDING: '가입 중', ACTIVE: '활성', SUSPENDED: '정지', DELETED: '탈퇴 유예',
+}
+const STATUS_BADGE: Record<AdminUserStatus, string> = {
+  GUEST: 'badge neutral', PENDING: 'badge pending', ACTIVE: 'badge live', SUSPENDED: 'badge danger', DELETED: 'badge hidden',
+}
 
 /**
- * 유형 = type × status 합성 (2026-09-08 상태 모델):
- *   회원 = USER·ACTIVE · 가입 중 = status PENDING (GUEST·PENDING 게스트 출신 / USER·PENDING 직가입) · 게스트 = GUEST·GUEST
+ * 유형 필터 — type 그대로 + 풀잇 관계자(is_staff) 는 별도 유형으로 뺀다 (회원/게스트 필터엔 안 잡힘).
+ * 게스트 출신(맛보기 게스트 → 소셜 로그인) 은 회원/게스트와 겹치는 별도 축
  */
-type MemberKind = 'USER' | 'PENDING' | 'GUEST'
-/** 유형 필터 — 게스트 출신(맛보기 게스트 → 소셜 로그인으로 승격) 은 회원/가입 중과 겹치는 별도 축 */
-type TypeFilter = 'all' | MemberKind | 'FROM_GUEST'
+type TypeFilter = 'all' | AdminUserType | 'STAFF' | 'FROM_GUEST'
 
 /**
  * 게스트 출신 — 가입 중이면 type 이 아직 GUEST 라 바로 드러나고,
@@ -44,12 +56,14 @@ function isFromGuest(u: AdminUser): boolean {
   return !!u.registeredAt && u.registeredAt > u.createdAt
 }
 
-function memberKind(u: AdminUser): MemberKind {
-  if (u.status === 'PENDING') return 'PENDING'
-  return (u.type ?? 'USER') === 'GUEST' ? 'GUEST' : 'USER'
-}
 type RoleFilter = 'all' | UserRole
-type StatusFilter = 'all' | 'ACTIVE' | 'DELETED'
+/** 상태 필터 — status 그대로 (구서버는 status 를 안 주므로 필터 시 GUEST 는 type 으로 보정) */
+type StatusFilter = 'all' | AdminUserStatus
+
+/** 구서버 응답 보정 — status 가 없으면 type 으로 추정 (GUEST → GUEST, 그 외 ACTIVE) */
+function statusOf(u: AdminUser): AdminUserStatus {
+  return u.status ?? ((u.type ?? 'USER') === 'GUEST' ? 'GUEST' : 'ACTIVE')
+}
 type SortKey = 'newest' | 'oldest' | 'active'
 
 /** 01012345678 → 010-1234-5678. 형식이 다르면 원본 그대로 노출 */
@@ -76,7 +90,9 @@ export default function AllMembersPage() {
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [hoveredRole, setHoveredRole] = useState<UserRole | null>(null)
+  const [staffEditingId, setStaffEditingId] = useState<number | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const staffDropdownRef = useRef<HTMLDivElement | null>(null)
 
   // 필터·정렬·페이지
   const [query, setQuery] = useState('')
@@ -84,6 +100,7 @@ export default function AllMembersPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [gradeFilter, setGradeFilter] = useState<'all' | Grade>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [excludeStaff, setExcludeStaff] = useState(true) // 풀잇 관계자 제외 — 기본 켜짐
   const [sort, setSort] = useState<SortKey>('newest')
   const [page, setPage] = useState(1)
 
@@ -110,18 +127,31 @@ export default function AllMembersPage() {
     document.addEventListener('pointerdown', handler)
     return () => document.removeEventListener('pointerdown', handler)
   }, [editingId])
+  useEffect(() => {
+    if (staffEditingId == null) return
+    const handler = (e: Event) => {
+      const target = e.target as HTMLElement
+      if (staffDropdownRef.current?.contains(target)) return
+      if (target.closest?.('[data-staff-badge]')) return
+      setStaffEditingId(null)
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [staffEditingId])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const digits = q.replace(/\D/g, '')
     const list = users.filter((u) => {
+      if (typeFilter === 'STAFF') {
+        if (!u.staff) return false
+      } else if (excludeStaff && u.staff) return false
       if (typeFilter === 'FROM_GUEST') {
         if (!isFromGuest(u)) return false
-      } else if (typeFilter !== 'all' && memberKind(u) !== typeFilter) return false
+      } else if (typeFilter !== 'all' && typeFilter !== 'STAFF' && (u.type ?? 'USER') !== typeFilter) return false
       if (roleFilter !== 'all' && u.role !== roleFilter) return false
       if (gradeFilter !== 'all' && u.grade !== gradeFilter) return false
-      if (statusFilter === 'ACTIVE' && u.status === 'DELETED') return false
-      if (statusFilter === 'DELETED' && u.status !== 'DELETED') return false
+      if (statusFilter !== 'all' && statusOf(u) !== statusFilter) return false
       if (!q) return true
       const hay = [u.name, u.nickname, u.email].filter(Boolean).join(' ').toLowerCase()
       if (hay.includes(q)) return true
@@ -132,12 +162,12 @@ export default function AllMembersPage() {
     else if (sort === 'oldest') list.sort(byCreated)
     else list.sort((a, b) => (b.lastActiveAt ?? '').localeCompare(a.lastActiveAt ?? '') || byCreated(b, a))
     return list
-  }, [users, query, typeFilter, roleFilter, gradeFilter, statusFilter, sort])
+  }, [users, query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, sort])
 
   // 필터가 바뀌면 1페이지로
   useEffect(() => {
     setPage(1)
-  }, [query, typeFilter, roleFilter, gradeFilter, statusFilter, sort])
+  }, [query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, sort])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -166,8 +196,29 @@ export default function AllMembersPage() {
     }
   }
 
-  const memberCount = users.filter((u) => (u.type ?? 'USER') === 'USER').length
-  const guestCount = users.length - memberCount
+  const handleStaffToggle = async (user: AdminUser) => {
+    setStaffEditingId(null)
+    const next = !user.staff
+    const name = user.name ?? user.nickname ?? '회원'
+    const ok = window.confirm(
+      next
+        ? `'${name}' 을(를) 풀잇 관계자로 지정할까요? 회원·게스트 집계에서 빠집니다.`
+        : `'${name}' 의 풀잇 관계자 표시를 해제할까요?`,
+    )
+    if (!ok) return
+    try {
+      const updated = await updateUserStaff(user.id, next)
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
+      toast(next ? `${name} 을(를) 풀잇 관계자로 표시했어요` : `${name} 관계자 표시를 해제했어요`)
+    } catch {
+      toast('관계자 표시 변경에 실패했어요. 다시 시도해주세요')
+    }
+  }
+
+  // 헤더 요약 — 풀잇 관계자는 회원·게스트 어느 쪽에도 넣지 않고 따로 센다
+  const staffCount = users.filter((u) => u.staff).length
+  const memberCount = users.filter((u) => !u.staff && (u.type ?? 'USER') === 'USER').length
+  const guestCount = users.length - staffCount - memberCount
 
   return (
     <section className="view">
@@ -179,7 +230,7 @@ export default function AllMembersPage() {
           <h2 className="section-title" style={{ marginBottom: 4 }}>전체 회원</h2>
           <p className="page-sub">
             모든 회원을 조회하고 권한을 변경합니다
-            {state === 'done' && ` · 회원 ${memberCount.toLocaleString()}명 · 게스트 ${guestCount.toLocaleString()}명`}
+            {state === 'done' && ` · 회원 ${memberCount.toLocaleString()}명 · 게스트 ${guestCount.toLocaleString()}명 · 관계자 ${staffCount.toLocaleString()}명`}
           </p>
         </div>
         <button type="button" className="btn btn-ghost" onClick={load}>
@@ -201,9 +252,16 @@ export default function AllMembersPage() {
           <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)} aria-label="유형">
             <option value="all">전체 유형</option>
             <option value="USER">회원</option>
-            <option value="PENDING">가입 중</option>
             <option value="GUEST">게스트</option>
-            <option value="FROM_GUEST">게스트 출신 (회원+가입 중)</option>
+            <option value="STAFF">풀잇 관계자</option>
+            <option value="FROM_GUEST">게스트 출신</option>
+          </select>
+          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} aria-label="상태">
+            <option value="all">전체 상태</option>
+            <option value="GUEST">게스트</option>
+            <option value="PENDING">가입 중</option>
+            <option value="ACTIVE">활성</option>
+            <option value="DELETED">탈퇴 유예</option>
           </select>
           <select className="select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as RoleFilter)} aria-label="권한">
             <option value="all">전체 권한</option>
@@ -217,11 +275,19 @@ export default function AllMembersPage() {
               <option key={g} value={g}>{GRADE_LABEL[g]}</option>
             ))}
           </select>
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} aria-label="상태">
-            <option value="all">전체 상태</option>
-            <option value="ACTIVE">활성</option>
-            <option value="DELETED">탈퇴 유예</option>
-          </select>
+          {/* 풀잇 관계자 제외 — 기본 켜짐. 유형 필터가 "풀잇 관계자" 면 의미가 없어 비활성 */}
+          <label className="check-box">
+            <input
+              type="checkbox"
+              checked={typeFilter === 'STAFF' ? false : excludeStaff}
+              disabled={typeFilter === 'STAFF'}
+              onChange={(e) => setExcludeStaff(e.target.checked)}
+            />
+            <span className="box" aria-hidden>
+              <svg viewBox="0 0 11 9" fill="none"><path d="M1 4.5 4 7.5 10 1.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            풀잇 관계자 제외
+          </label>
           <div className="seg" role="group" aria-label="정렬">
             <button type="button" className={sort === 'newest' ? 'on' : undefined} onClick={() => setSort('newest')}>최근 가입순</button>
             <button type="button" className={sort === 'oldest' ? 'on' : undefined} onClick={() => setSort('oldest')}>오래된순</button>
@@ -260,12 +326,13 @@ export default function AllMembersPage() {
           <div className="table-wrap">
             {/* 넓은 레이아웃(main-inner.wide 1600) 기준 고정 폭 — 배지 컬럼은 108px 이상, 이메일이 남는 폭을 받는다.
                 min-width: 창이 좁으면 컬럼을 쥐어짜는 대신 카드 안에서 가로 스크롤 (th 폭은 content-box · +28 패딩) */}
-            <table style={{ minWidth: 1500 }}>
+            <table style={{ minWidth: 1608 }}>
               <thead>
                 <tr>
                   <th style={{ width: 140 }}>이름</th>
                   <th style={{ width: 140 }}>닉네임</th>
                   <th style={{ width: 108, textAlign: 'center' }}>유형</th>
+                  <th style={{ width: 108, textAlign: 'center' }}>상태</th>
                   <th style={{ width: 84 }}>학년</th>
                   <th>이메일</th>
                   <th style={{ width: 150 }}>전화번호</th>
@@ -278,7 +345,8 @@ export default function AllMembersPage() {
               <tbody>
                 {pageRows.map((u) => {
                   const withdrawn = u.status === 'DELETED'
-                  const kind = memberKind(u)
+                  const type: AdminUserType = (u.type ?? 'USER') === 'GUEST' ? 'GUEST' : 'USER'
+                  const status = statusOf(u)
                   return (
                     <tr key={u.id} style={withdrawn ? { opacity: 0.55 } : undefined}>
                       <td className="strong" title={u.name ?? undefined}>
@@ -286,9 +354,47 @@ export default function AllMembersPage() {
                         {withdrawn && <span className="sub">탈퇴 유예</span>}
                       </td>
                       <td title={u.nickname ?? undefined}>{u.nickname ?? '—'}</td>
-                      <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
-                        <span className={KIND_BADGE[kind]}>{KIND_LABEL[kind]}</span>
+                      <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip', position: 'relative' }}>
+                        {/* 유형 배지 — 클릭하면 관계자 지정/해제 메뉴 (권한 배지와 같은 팝오버 패턴) */}
+                        <button
+                          type="button"
+                          data-staff-badge
+                          className={u.staff ? 'badge danger' : TYPE_BADGE[type]}
+                          style={{ cursor: 'pointer', border: 'none' }}
+                          onClick={() => setStaffEditingId(staffEditingId === u.id ? null : u.id)}
+                          title="클릭해서 풀잇 관계자 지정/해제"
+                        >
+                          {u.staff ? '관계자' : TYPE_LABEL[type]}
+                        </button>
                         {isFromGuest(u) && <span className="sub">게스트 출신</span>}
+                        {staffEditingId === u.id && (
+                          <div
+                            ref={staffDropdownRef}
+                            className="card"
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(50% + 18px)',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              zIndex: 30,
+                              minWidth: 150,
+                              padding: 6,
+                              boxShadow: 'var(--shadow-menu)',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              style={{ width: '100%', whiteSpace: 'nowrap' }}
+                              onClick={() => handleStaffToggle(u)}
+                            >
+                              {u.staff ? '관계자 해제' : '풀잇 관계자로 지정'}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center', overflow: 'visible', textOverflow: 'clip' }}>
+                        <span className={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</span>
                       </td>
                       <td>{gradeLabel(u.grade)}</td>
                       <td title={u.email ?? undefined}>{u.email ?? '—'}</td>
