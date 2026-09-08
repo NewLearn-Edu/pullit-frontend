@@ -26,17 +26,24 @@ export function MemberKpi({ users: given }: { users?: AdminUser[] | null }) {
   const staffCount = (users ?? []).filter((u) => u.staff).length
   const list = (users ?? []).filter((u) => !u.staff)
 
-  const todayKey = new Date().toISOString().slice(0, 10)
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  // 날짜 키는 기기 로컬(KST) 기준 — toISOString 은 UTC 라 09:00 전엔 어제로 잡혀 대시보드(서버 KST 자정)와 어긋났다
+  const localKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const todayKey = localKey(new Date())
+  const weekAgo = localKey(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
   // 상태 모델(2026-09-08): 회원 = USER 이면서 PENDING 아님 · 가입 중 = PENDING(게스트 출신·직가입 합산) · 게스트 = GUEST·GUEST
   // (status 를 안 주는 구서버는 type 으로만 — 그래서 status === 'GUEST' 대신 "GUEST 인데 PENDING 아님")
   const pendingCount = list.filter((u) => u.status === 'PENDING').length
   const memberCount = list.filter((u) => (u.type ?? 'USER') === 'USER' && u.status !== 'PENDING').length
   const guestCount = list.filter((u) => u.type === 'GUEST' && u.status !== 'PENDING').length
   const withdrawnCount = list.filter((u) => u.status === 'DELETED').length
-  const joinedToday = list.filter((u) => u.createdAt?.slice(0, 10) === todayKey).length
-  const joinedWeek = list.filter((u) => (u.createdAt?.slice(0, 10) ?? '') >= weekAgo).length
-  const activeWeek = list.filter((u) => (u.lastActiveAt?.slice(0, 10) ?? '') >= weekAgo).length
+  // "가입" = 프로필까지 마친 회원(USER·ACTIVE)의 registered_at — 대시보드 todaySignups 와 같은 정의.
+  // 게스트 생성일(created_at)로 세면 맛보기만 한 게스트까지 가입으로 잡혀 홈 대시보드와 숫자가 달랐다 (2026-09-08)
+  const isCompletedMember = (u: AdminUser) => (u.type ?? 'USER') === 'USER' && u.status === 'ACTIVE'
+  const joinedAt = (u: AdminUser) => (u.registeredAt ?? u.createdAt)?.slice(0, 10) ?? ''
+  const joinedToday = list.filter((u) => isCompletedMember(u) && joinedAt(u) === todayKey).length
+  const joinedWeek = list.filter((u) => isCompletedMember(u) && joinedAt(u) >= weekAgo).length
+  const activeWeek = list.filter((u) => isCompletedMember(u) && (u.lastActiveAt?.slice(0, 10) ?? '') >= weekAgo).length
   const n = (v: number) => (ready ? v.toLocaleString() : '—')
 
   return (

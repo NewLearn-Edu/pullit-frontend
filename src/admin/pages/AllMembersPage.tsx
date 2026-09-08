@@ -101,6 +101,7 @@ export default function AllMembersPage() {
   const [gradeFilter, setGradeFilter] = useState<'all' | Grade>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [excludeStaff, setExcludeStaff] = useState(true) // 풀잇 관계자 제외 — 기본 켜짐
+  const [excludeGuest, setExcludeGuest] = useState(true) // 게스트 제외 — 기본 켜짐 (2026-09-08 확정)
   const [sort, setSort] = useState<SortKey>('newest')
   const [page, setPage] = useState(1)
 
@@ -146,6 +147,8 @@ export default function AllMembersPage() {
       if (typeFilter === 'STAFF') {
         if (!u.staff) return false
       } else if (excludeStaff && u.staff) return false
+      // 게스트 제외 — 유형 필터가 "게스트" 면 의미가 없어 무시
+      if (excludeGuest && typeFilter !== 'GUEST' && (u.type ?? 'USER') === 'GUEST') return false
       if (typeFilter === 'FROM_GUEST') {
         if (!isFromGuest(u)) return false
       } else if (typeFilter !== 'all' && typeFilter !== 'STAFF' && (u.type ?? 'USER') !== typeFilter) return false
@@ -162,12 +165,12 @@ export default function AllMembersPage() {
     else if (sort === 'oldest') list.sort(byCreated)
     else list.sort((a, b) => (b.lastActiveAt ?? '').localeCompare(a.lastActiveAt ?? '') || byCreated(b, a))
     return list
-  }, [users, query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, sort])
+  }, [users, query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, excludeGuest, sort])
 
   // 필터가 바뀌면 1페이지로
   useEffect(() => {
     setPage(1)
-  }, [query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, sort])
+  }, [query, typeFilter, roleFilter, gradeFilter, statusFilter, excludeStaff, excludeGuest, sort])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -287,6 +290,18 @@ export default function AllMembersPage() {
               <svg viewBox="0 0 11 9" fill="none"><path d="M1 4.5 4 7.5 10 1.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
             풀잇 관계자 제외
+          </label>
+          <label className="check-box">
+            <input
+              type="checkbox"
+              checked={typeFilter === 'GUEST' ? false : excludeGuest}
+              disabled={typeFilter === 'GUEST'}
+              onChange={(e) => setExcludeGuest(e.target.checked)}
+            />
+            <span className="box" aria-hidden>
+              <svg viewBox="0 0 11 9" fill="none"><path d="M1 4.5 4 7.5 10 1.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            게스트 제외
           </label>
           <div className="seg" role="group" aria-label="정렬">
             <button type="button" className={sort === 'newest' ? 'on' : undefined} onClick={() => setSort('newest')}>최근 가입순</button>
