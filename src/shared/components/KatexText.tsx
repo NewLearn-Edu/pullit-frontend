@@ -23,6 +23,17 @@ const enlargeSetOps = (tex: string) => tex.replace(/\\(cup|cap)\b/g, '\\mathbin{
 const collapseCdots = (tex: string) => tex.replace(/\\cdots(\s*\\cdots)+/g, '\\cdots')
 
 /**
+ * 실선 표(\hline 이 있는 array — 표준정규분포표 등)의 행 높이 확대 (2026-09-08).
+ * KaTeX 기본 행 높이는 숫자가 괘선에 붙어 답답하다 — \arraystretch 1.5 로 셀 상하 여백을 준다.
+ * (KaTeX 는 \renewcommand 가 아니라 \def 로만 정의된다). 열 좌우 여백은 CSS(.katex-hline 스코프)가 담당.
+ * 행렬·cases 같은 괘선 없는 array 는 손대지 않는다
+ */
+const stretchRuledArrays = (tex: string) =>
+  /\\begin\{array\}/.test(tex) && /\\hline/.test(tex) && !/\\arraystretch/.test(tex)
+    ? `\\def\\arraystretch{1.5}${tex}`
+    : tex
+
+/**
  * 절댓값(|)·대괄호([ ]) 획 보강 — KaTeX 기본이 수능 지면보다 가늘어 볼드 글리프로 교체.
  * KaTeX 가 이웃 글리프를 한 span 으로 합치는 경우("2∣" 등)에도 놓치지 않도록
  * 텍스트 노드 안의 막대·대괄호를 개별로 감싼다 (태그 속성은 >…< 밖이라 안전).
@@ -226,7 +237,9 @@ const addBreakPoints = (tex: string): string => addCommaBreaks(protectParenGroup
 
 /** 인라인 수식 1개 → HTML (폭 실측용으로도 사용 — 실제 렌더와 동일 처리) */
 export const renderInlineHtml = (tex: string) =>
-  emboldenDelims(renderWithFallback(displaySizeFractions(enlargeSetOps(collapseCdots(tex))), false))
+  emboldenDelims(
+    renderWithFallback(displaySizeFractions(enlargeSetOps(collapseCdots(stretchRuledArrays(tex)))), false),
+  )
 
 interface Part {
   type: 'text' | 'inline' | 'block'
@@ -323,10 +336,16 @@ export function KatexText({ text, wrap = false }: KatexTextProps) {
  * 가로 스크롤 없이 딱 맞춘다 (최소 0.7배 · 그 밑으로는 스크롤 폴백).
  * 컨테이너 폭 변화(디바이스 토글·패드 드래그)에도 ResizeObserver 로 재계산.
  */
+/** 블록 수식 축소 하한 — 이보다 작아지면 읽기 어려워 축소 대신 접기(fold)로 넘어간다 */
+const MIN_BLOCK_SCALE = 0.7
+
 function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null)
   const scaleRef = useRef(1)
   const [scale, setScale] = useState(1)
+  // 하한 배율로도 안 들어가는 식 — 가로 스크롤 대신 조각(base) 경계에서 줄을 접는다 (2026-09-08).
+  // 스크롤은 문제·해설 어디서도 쓰지 않는다
+  const [fold, setFold] = useState(false)
 
   const html = useMemo(
     // displaySizeFractions: 블록 본문 분수는 이미 display 크기라 영향 없고,
@@ -334,7 +353,7 @@ function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
     () =>
       emboldenDelims(
         renderWithFallback(
-          displaySizeFractions(enlargeSetOps(collapseCdots(wrap ? addBreakPoints(tex) : tex))),
+          displaySizeFractions(enlargeSetOps(collapseCdots(stretchRuledArrays(wrap ? addBreakPoints(tex) : tex)))),
           true,
         ),
       ),
@@ -344,6 +363,7 @@ function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
   useLayoutEffect(() => {
     scaleRef.current = 1
     setScale(1)
+    setFold(false)
   }, [html])
 
   useLayoutEffect(() => {
@@ -354,19 +374,32 @@ function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
     const el = ref.current
     if (!el || wrap) return  // wrap 모드는 축소하지 않는다 — 크기 균일 유지
     const measure = () => {
-      const container = el.clientWidth
+      // span 이 inline 으로 떨어져 clientWidth 가 0 이면(전역 유틸 미적용 컨텍스트) 부모 폭으로 잰다 —
+      // 0 이면 축소가 아예 안 돌아 가로 스크롤로 떨어졌다 (2026-09-08)
+      const container = el.clientWidth || el.parentElement?.clientWidth || 0
       if (!container) return
       // 실제 수식 콘텐츠 폭을 매번 실측 — base 가 콘텐츠 크기(min-content)를
       // 갖는 유일한 노드 (.katex-display/.katex 는 블록이라 컨테이너 폭과 같고,
       // scrollWidth 는 컨테이너 폭 아래로 안 내려가 축소 후 복귀 불가)
-      // KaTeX 0.18 부터 클래스가 .katex-base 로 바뀌어 둘 다 잡는다
+      // KaTeX 0.18 부터 클래스가 .katex-base 로 바뀌어 둘 다 잡는다.
+      // ★ 합산이어야 한다 — KaTeX 는 = · 관계연산자마다 base 를 나누므로 "S(a,b) = {…}" 처럼
+      //   base 가 여럿인 식은 가장 넓은 base 만 재면 컨테이너 안이라고 오판해 축소 없이
+      //   가로 스크롤로 떨어졌다 (2026-09-08). 비-wrap 블록은 nowrap 한 줄이라 합 = 실제 폭
       const bases = el.querySelectorAll<HTMLElement>('.katex-base, .base')
-      const contentWidth = bases.length
-        ? Math.max(...Array.from(bases, (b) => b.getBoundingClientRect().width))
-        : el.scrollWidth
-      const natural = contentWidth / scaleRef.current
+      const widths = Array.from(bases, (b) => b.getBoundingClientRect().width / scaleRef.current)
+      const natural = widths.length ? widths.reduce((sum, w) => sum + w, 0) : el.scrollWidth / scaleRef.current
       const needed = container / natural
-      const next = needed >= 1 ? 1 : Math.max(0.7, needed * 0.98)
+      if (needed * 0.98 < MIN_BLOCK_SCALE) {
+        // 하한으로도 넘친다 — 접는다. 접어도 한 조각(\left…\right 묶음 등)이 폭보다 넓으면 그 조각이
+        // 들어갈 만큼만 줄인다 (하한 없음 — 가로 스크롤보다 낫다). 조각 폭은 접혀도 그대로라 판정이 안 흔들린다
+        setFold(true)
+        const widest = widths.length ? Math.max(...widths) : natural
+        const fit = Math.min(1, (container / widest) * 0.98)
+        if (Math.abs(fit - scaleRef.current) > 0.02) setScale(fit)
+        return
+      }
+      setFold(false)
+      const next = needed >= 1 ? 1 : Math.max(MIN_BLOCK_SCALE, needed * 0.98)
       if (Math.abs(next - scaleRef.current) > 0.02) setScale(next)
     }
     measure()
@@ -380,7 +413,7 @@ function BlockMath({ tex, wrap = false }: { tex: string; wrap?: boolean }) {
   return (
     <span
       ref={ref}
-      className="katex-block block my-md overflow-x-auto text-center"
+      className={'katex-block block my-md overflow-x-auto text-center' + (fold ? ' is-fold' : '')}
       style={!wrap && scale < 1 ? { fontSize: `${scale}em` } : undefined}
       dangerouslySetInnerHTML={{ __html: html }}
     />

@@ -122,7 +122,18 @@ function renderBlock(
     case 'box':
       return (
         <div key={key} className="pv-box">
-          {(b.blocks ?? []).map((c, j) => renderBlock(c, j, english))}
+          {(b.blocks ?? []).flatMap((c, j): React.ReactNode[] => {
+            // (가)(나)(다) 조건이 한 paragraph 에 줄바꿈으로 묶여 오면 항목별로 나눠 항목 사이에만 간격을 준다
+            // (.pv-box-item · 구 문자열 question 의 BoxContent 와 같은 규칙, 2026-09-08)
+            const items =
+              c.type === 'paragraph' && c.text ? c.text.split(/\n(?=\s*\([가-힣]\))/) : []
+            if (items.length <= 1) return [renderBlock(c, j, english)]
+            return items.map((item, k) => (
+              <div key={`${j}-${k}`} className="pv-box-item">
+                <ExamText text={item.replace(/^\n+/, '')} keepChoiceMarkersInline />
+              </div>
+            ))
+          })}
         </div>
       )
 

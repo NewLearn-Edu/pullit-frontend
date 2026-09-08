@@ -47,7 +47,7 @@ export function ProblemExplain({
   const isEnglish = String(subject ?? '').toLowerCase() === 'english'
   const blocks = parseExplainBlocks(explanation)
   // 영어는 [핵심 발상] 없이 [풀이] → [선택지별 진단] 만 (2026-09-06)
-  if (blocks) return <ExplainBlocksRender blocks={blocks} hideInsight={isEnglish} />
+  if (blocks) return <ExplainBlocksRender blocks={blocks} hideInsight={isEnglish} subject={subject} />
 
   const Render = isEnglish ? EnglishExplainRender : MathExplainRender
   const text = typeof explanation === 'string' && explanation.trim() ? explanation : emptyText

@@ -33,6 +33,13 @@ export interface ExplainBlock {
   ref?: string
   /** formula */
   latex?: string
+  /**
+   * derivation · formula — 이 블록만 폰트 배율 (생성 파이프라인이 MathJax 실측으로 채움 · 2026-09-08 조판 규격).
+   * 없으면 1.0. 런타임 폭 맞추기(StepsBlock)는 이 배율을 시작점으로 그 아래로만 더 줄인다
+   */
+  font_scale?: number
+  /** derivation — true 면 & 등호 정렬을 포기하고 좌측 정렬 스택으로 그린다 (없으면 false = & 유무로 정렬 판단) */
+  degrade_to_stacked?: boolean
   /** cases — {label, blocks} · diagnosis — {choice, role, blocks} (2026-09 3섹션 규격) */
   items?: Array<{ label?: string; choice?: number; role?: string; blocks: ExplainBlock[] }>
   /** conclusion · box · 섹션(insight·solution) */
@@ -171,18 +178,25 @@ function renderSection(b: ExplainBlock, key: number): React.ReactNode {
 export function ExplainBlocksRender({
   blocks,
   hideInsight = false,
+  subject,
 }: {
   blocks: ExplainBlock[]
   /** 영어는 핵심 발상 섹션을 보여주지 않는다 (2026-09-06 결정) — 데이터에 있어도 렌더에서 뺀다 */
   hideInsight?: boolean
+  /**
+   * 'math' 면 수학 해설지 실측 조판 규격(줄간격 2.3 · 블록 간격 · 전개식 행 간격)을 켠다 (2026-09-08).
+   * 영어·미지정은 종전 간격 그대로 — 규격이 수학 해설지 실측이라 영어엔 적용하지 않는다
+   */
+  subject?: string | null
 }) {
   if (hideInsight) blocks = blocks.filter((b) => b.type !== 'insight')
   const sectioned = blocks.some(isSectionBlock)
+  const math = String(subject ?? '').toLowerCase() === 'math'
   return (
     // exam-explain-root 가 컨테이너 쿼리 기준 — 폭 350~500px 에 따라
     // .exam-blocks 폰트가 13~15.5px 로 움직인다 (MathExplainLayout 과 동일 규칙)
     <div className="exam-explain-root">
-      <div className="exam-blocks">
+      <div className={clsx('exam-blocks', math && 'exam-blocks--math')}>
         {sectioned
           ? // 섹션 사이에 섞인 일반 블록(규격 위반 데이터)도 버리지 않고 제자리에 그린다
             blocks.map((b, i) => (isSectionBlock(b) ? renderSection(b, i) : renderBlock(normalizeBlock(b), i)))
@@ -359,22 +373,45 @@ function toStepRows(lines: string[], split: boolean): Array<[string, string]> {
  * 한 유도 안에서 수식 크기가 들쭉날쭉해지지 않는다.
  * 가로 스크롤은 쓰지 않는다 — 넘치면 축소로만 맞춘다.
  */
-function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string }) {
+/** 유도 블록 조판 모드 — aligned: & 등호 세로 정렬 · sequential: & 없음, 좌측 스택 · stacked: & 무시, 좌측 스택(격하) */
+type StepsMode = 'aligned' | 'sequential' | 'stacked'
+
+function stepsMode(lines: string[], stacked: boolean): StepsMode {
+  if (stacked) return 'stacked'
+  return lines.some((l) => findAlignIndex(l).drop) ? 'aligned' : 'sequential'
+}
+
+function StepsBlock({
+  lines,
+  refLabel,
+  fontScale,
+  stacked = false,
+}: {
+  lines: string[]
+  refLabel?: string
+  /** 파이프라인이 준 블록 폰트 배율 (font_scale) — 런타임 축소의 시작점 */
+  fontScale?: number
+  /** degrade_to_stacked — & 무시하고 좌측 정렬 */
+  stacked?: boolean
+}) {
+  // 0 < font_scale ≤ 1 만 신뢰 — 그 외(누락·이상값)는 1
+  const base = typeof fontScale === 'number' && fontScale > 0 && fontScale <= 1 ? fontScale : 1
+  const mode = stepsMode(lines, stacked)
   const wrapRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
-  const scaleRef = useRef(1)
-  const [scale, setScale] = useState(1)
+  const scaleRef = useRef(base)
+  const [scale, setScale] = useState(base)
   // 폭이 모자랄 때 축소보다 먼저 시도하는 "등호 단위 행 분해" (2026-09-07) —
   // "49 = A = B" 한 줄이 통째로 0.6배로 줄던 것을 "49 = A / = B" 두 행으로 편다
   const [split, setSplit] = useState(false)
   const splittable = lines.some((l) => splitRhsAtEquals(splitAtAlign(l)[1]) !== null)
 
-  // 내용이 바뀌면 원래 크기에서 다시 측정 (이전 배율이 남으면 자연 폭을 못 구한다)
+  // 내용이 바뀌면 시작 배율(font_scale)에서 다시 측정 (이전 배율이 남으면 자연 폭을 못 구한다)
   useLayoutEffect(() => {
-    scaleRef.current = 1
-    setScale(1)
+    scaleRef.current = base
+    setScale(base)
     setSplit(false)
-  }, [lines])
+  }, [lines, base])
 
   useLayoutEffect(() => {
     scaleRef.current = scale
@@ -395,7 +432,8 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
         setSplit(true)
         return
       }
-      const next = needed >= 1 ? 1 : Math.max(MIN_STEPS_SCALE, needed * 0.98)
+      // font_scale 이 시작점 — 들어가면 그 배율 그대로, 안 들어가면 그 아래로만 더 줄인다
+      const next = needed >= base ? base : Math.max(MIN_STEPS_SCALE, needed * 0.98)
       if (Math.abs(next - scaleRef.current) > 0.02) setScale(next)
     }
     measure()
@@ -404,28 +442,41 @@ function StepsBlock({ lines, refLabel }: { lines: string[]; refLabel?: string })
     const ro = new ResizeObserver(measure)
     ro.observe(wrap)
     return () => ro.disconnect()
-  }, [lines, scale, split, splittable])
+  }, [lines, scale, split, splittable, base])
 
+  const rows = toStepRows(lines, split)
   return (
     <div ref={wrapRef} className={clsx('xb-math xb-steps-fit', refLabel && 'has-ref')}>
       {/* 식 참조 라벨(㉠) — 수능 조판처럼 식 오른쪽 끝에 붙인다 */}
       {refLabel && <span className="xb-ref">{refLabel}</span>}
       <div
         ref={gridRef}
-        className="xb-steps"
+        className={clsx('xb-steps', `xb-steps--${mode}`)}
         style={scale < 1 ? { fontSize: `${scale}em` } : undefined}
       >
-        {toStepRows(lines, split).map(([lhs, rhs], j) => {
-          // 한 행 = 한 줄 수식, 전체 폭 가운데 정렬 (2026-09-07 — 등호 세로 정렬 대신).
-          // 등호 분해된 이어지는 행은 "= C" 만 남아 가운데에 놓인다
-          const tex = [lhs, rhs].filter(Boolean).join(' ')
-          if (!tex) return null
-          return (
-            <div key={j} className={clsx('xb-step', TALL_STEP.test(tex) && 'is-tall')}>
-              <KatexText wrap text={`$$${tex}$$`} />
-            </div>
-          )
-        })}
+        {mode === 'aligned'
+          ? // & 등호 정렬 — 2열 그리드: 1열(좌변) 우측 정렬 · 2열(우변) 좌측 정렬 → 등호가 세로로 맞는다.
+            // 등호 분해된 이어지는 행은 좌변이 비어 "= C" 가 2열에 놓인다 (2026-09-08 조판 규격으로 복원)
+            rows.map(([lhs, rhs], j) => {
+              if (!lhs && !rhs) return null
+              const tall = TALL_STEP.test(lhs + rhs)
+              return (
+                <div key={j} className={clsx('xb-step xb-step-row', tall && 'is-tall')}>
+                  <span className="xb-step-l">{lhs ? <KatexText wrap text={`$$${lhs}$$`} /> : null}</span>
+                  <span className="xb-step-r">{rhs ? <KatexText wrap text={`$$${rhs}$$`} /> : null}</span>
+                </div>
+              )
+            })
+          : // sequential(& 없음) · stacked(& 무시) — 한 행 = 한 줄 수식, 좌측 정렬 스택
+            rows.map(([lhs, rhs], j) => {
+              const tex = [lhs, rhs].filter(Boolean).join(' ')
+              if (!tex) return null
+              return (
+                <div key={j} className={clsx('xb-step', TALL_STEP.test(tex) && 'is-tall')}>
+                  <KatexText wrap text={`$$${tex}$$`} />
+                </div>
+              )
+            })}
       </div>
     </div>
   )
@@ -473,8 +524,21 @@ function splitColumnPairs(line: string): string[] {
   return out.length > 0 ? out : [line]
 }
 
-function renderSteps(lines: string[], key: number, refLabel?: string) {
-  return <StepsBlock key={key} lines={lines.flatMap(splitColumnPairs)} refLabel={refLabel} />
+function renderSteps(
+  lines: string[],
+  key: number,
+  refLabel?: string,
+  opts?: { fontScale?: number; stacked?: boolean },
+) {
+  return (
+    <StepsBlock
+      key={key}
+      lines={lines.flatMap(splitColumnPairs)}
+      refLabel={refLabel}
+      fontScale={opts?.fontScale}
+      stacked={opts?.stacked}
+    />
+  )
 }
 
 /** box 안 paragraph — '|' 구분 줄들이면 표, 여러 줄이면 줄 단위 문단, 그 외는 일반 블록 */
@@ -534,15 +598,21 @@ function renderBlock(b: ExplainBlock, key: number): React.ReactNode {
     case 'derivation': {
       const lines = b.lines ?? []
       if (lines.length === 0) return null
-      return renderSteps(lines, key, b.ref?.trim() || undefined)
+      return renderSteps(lines, key, b.ref?.trim() || undefined, {
+        fontScale: b.font_scale,
+        stacked: b.degrade_to_stacked === true,
+      })
     }
 
-    case 'formula':
+    case 'formula': {
+      // font_scale — 이 식만 폰트 배율 (0 < s ≤ 1 만 신뢰)
+      const fs = typeof b.font_scale === 'number' && b.font_scale > 0 && b.font_scale <= 1 ? b.font_scale : 1
       return (
-        <div key={key} className="xb-math">
+        <div key={key} className="xb-math" style={fs < 1 ? { fontSize: `${fs}em` } : undefined}>
           <KatexText wrap text={`$$${b.latex ?? ''}$$`} />
         </div>
       )
+    }
 
     case 'table': {
       const rows = b.rows ?? []

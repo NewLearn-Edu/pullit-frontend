@@ -15,9 +15,9 @@
   margin: 16px 0;
 }
 
-/* 조건 항목((가)(나)(다)) 사이 간격 — 항목 내부 줄바꿈에는 영향 없음 */
+/* 조건 항목((가)(나)(다)) 사이 간격 — 항목 내부 줄바꿈에는 영향 없음 (2026-09-08 10px → 5px) */
 .pv-box-item + .pv-box-item {
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 /* ── question 블록 조판 (prompt·paragraph·box·table — QuestionBlocksRender) ── */
@@ -409,6 +409,15 @@
   overflow: visible;
 }
 
+/* 실선 표(\hline array — 표준정규분포표 등) 열 좌우 여백 — KaTeX 기본 0.5em 은 괘선에 글자가 붙는다.
+   행 높이는 KatexText 가 \arraystretch 로 키운다. 괘선 없는 행렬은 그대로 (2026-09-08) */
+/* KaTeX array 는 열(.col-align-*)·세로 괘선(.vertical-separator)·열 여백(.arraycolsep)을 형제로 놓는다 —
+   세로 괘선 양옆의 열 여백만 넓힌다 (괘선 없는 행렬·cases 는 그대로) */
+.katex .vertical-separator + .arraycolsep,
+.katex .arraycolsep:has(+ .vertical-separator) {
+  width: 1em !important;
+}
+
 /* 절댓값(|)·대괄호([ ]) 볼드 글리프 — 수능 지면의 획 굵기 (KatexText 가 감쌈) */
 .katex-delim-bold {
   font-weight: 700;
@@ -442,9 +451,19 @@
    overflow-x:auto 가 세로 스크롤바까지 만들지 않게 세로는 숨김 (패딩으로 글리프 여유).
    span 셀렉터는 tailwind 유틸(my-md)보다 우선순위 확보용 */
 span.katex-block {
+  display: block; /* tailwind .block 에 기대지 않는다 — inline 이면 폭 측정이 0 이라 축소가 안 돈다 */
   margin: 18px 0;
   padding: 3px 0;
   overflow-y: hidden;
+}
+/* 하한 배율(0.7)로도 안 들어가는 블록 수식 — 가로 스크롤 대신 조각(base) 경계에서 접는다.
+   KaTeX 0.18 은 관계·이항연산자마다 .katex-base 를 끊어 두므로 그 사이에서만 줄이 바뀐다 (2026-09-08) */
+span.katex-block.is-fold {
+  overflow-x: visible;
+}
+span.katex-block.is-fold .katex,
+span.katex-block.is-fold .katex-display > .katex {
+  white-space: normal;
 }
 .katex-display {
   margin: 0;
@@ -466,23 +485,52 @@ span.katex-block {
   font-weight: 400;
   line-height: 1.8;
   color: var(--pv-fg, #120c0b);
+
+  /* ── 간격 변수 — 기본값은 종전(영어·미지정) 조판. 수학은 아래 .exam-blocks--math 가 실측 규격으로 덮는다 ── */
+  --xb-line-height: 1.8;
+  --xb-block-gap: 12px; /* 종전 문단 10px · 수식 6/14px 을 한 값으로 */
+  --xb-step-gap: 20px; /* 2026-09-07 행이 붙어 보인다는 피드백 값 */
+  --xb-lead-gap: 8px; /* lead 문단 → 바로 아래 수식 밀착 (종전 2+6px) */
+  --xb-steps-top: 6px; /* 전개식 블록 위 여백 (종전 6px) */
+  --xb-tall-pad: 6px; /* 분수·적분 행 위아래 (종전 6px) */
+}
+
+/* ── 수학 조판 규격 (2026-09-08 · 6모대비 해설지 실측, 폰트 대비 배율) ──
+   본문 줄간격 × 2.3 · 블록(문단·전개식) 간 여백 × 4.0 · 전개식 내부 줄간격 × 0.6.
+   영어 해설엔 적용하지 않는다 (규격 출처가 수학 해설지). 값은 실기기 확인 후 여기서만 조정 */
+.exam-blocks.exam-blocks--math {
+  --xb-line-height: 2.3;
+  /* 블록 간 여백 — 실측 규격은 4em(70px)이나 화면에선 너무 벌어져(2026-09-08 피드백) 1.5em 으로 */
+  --xb-block-gap: 1.5em;
+  --xb-step-gap: 0.6em;
+  --xb-lead-gap: 10px; /* lead 문단 → 바로 아래 수식 (규격에 없음, 2026-09-08 10px 확정) */
+  --xb-steps-top: 10px; /* 전개식 블록 위 여백 (2026-09-08 10px 확정) */
+  --xb-tall-pad: 0.35em; /* 분수·적분 행 — 규격 줄간격만으론 잉크가 붙어 보여 행 자체에 여백 */
 }
 
 .exam-blocks .xb-p {
-  margin: 10px 0;
+  margin: 0;
+  line-height: var(--xb-line-height);
 }
 
-.exam-blocks .xb-p:first-child {
-  margin-top: 0;
+/* 블록 간 여백 — 형제 블록 사이에만 (.block + .block). 섹션 제목·첫 블록엔 붙지 않는다 */
+.exam-blocks .xb-p + *,
+.exam-blocks .xb-math + *,
+.exam-blocks .xb-case + *,
+.exam-blocks .xb-conclusion + *,
+.exam-blocks .xb-note + *,
+.exam-blocks .xb-box + *,
+.exam-blocks .exam-table-wrap + * {
+  margin-top: var(--xb-block-gap);
 }
 
 /* lead 문단은 바로 아래 수식을 이끈다 — 밀착 */
-.exam-blocks .xb-lead {
-  margin-bottom: 2px;
+.exam-blocks .xb-lead + * {
+  margin-top: var(--xb-lead-gap);
 }
 
 .exam-blocks .xb-math .katex-block {
-  margin: 6px 0 14px;
+  margin: 0;
 }
 
 /* 유도 단계 — aligned 를 대신하는 grid 2열.
@@ -491,26 +539,78 @@ span.katex-block {
    .katex-block 인접 선택자로는 잡히지 않는다).
    폭이 모자라면 접지 않고 블록 단위로 축소한다 — .xb-steps-fit 이 가용 폭
    기준선, 그 안의 .xb-steps 는 자연 폭을 유지하고 배율은 StepsBlock 이 계산 */
-.exam-blocks .xb-steps-fit {
+/* :where 로 특이도를 낮춘다 — 형제 간격 규칙(.xb-p + * 등 1.5em · lead 10px)이 있으면 그쪽이 이기고,
+   첫 블록처럼 형제 규칙이 없을 때만 이 10px 이 남는다 (2026-09-08) */
+:where(.exam-blocks) .xb-steps-fit {
   width: 100%;
-  margin: 6px 0 14px;
+  margin: var(--xb-steps-top) 0 0;
   /* ★ overflow 를 걸지 않는다 — 한 축만 auto/hidden 이면 나머지 축의 visible 이
      auto 로 계산돼(CSS Overflow §3) 세로 스크롤바까지 생긴다.
      폭 맞추기는 전적으로 StepsBlock 의 배율이 담당한다 */
 }
 
 .exam-blocks .xb-steps {
-  /* 행마다 한 줄 수식 · 전체 폭 가운데 정렬 (2026-09-07). 이전의 등호 세로 정렬(2열 그리드)은
-     좌변이 길면 우변이 오른쪽으로 밀려 시험지와 달라 보여 폐기 */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  row-gap: 20px; /* 2026-09-07 8px → 20px, 행이 붙어 보인다는 피드백 */
-  /* 컨테이너에 눌리면 행이 접힌다 — 자연 폭을 유지하고 폭 맞추기는
-     StepsBlock 이 (등호 분해 → 배율 축소) 담당한다 */
+  /* 전개식 내부 줄간격 — 규격 × 0.6 (2026-09-08). 컨테이너에 눌리면 행이 접힌다 —
+     자연 폭을 유지하고 폭 맞추기는 StepsBlock 이 (font_scale → 등호 분해 → 배율 축소) 담당한다 */
+  row-gap: var(--xb-step-gap);
   width: max-content;
   max-width: none;
+}
+
+/* aligned — & 등호 세로 정렬 (2026-09-08 조판 규격으로 복원). 1열(좌변) 우측 정렬 · 2열(우변) 좌측 정렬,
+   덩어리는 가운데. 좌변이 길어 우변이 밀리는 케이스는 파이프라인이 degrade_to_stacked 로 격하한다 */
+.exam-blocks .xb-steps--aligned {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  column-gap: 0.25em;
+  /* 좌·우변을 baseline 으로 맞춘다 — 우변에 분수·적분이 있으면 셀이 커져 등호가 좌변보다 내려앉는다 */
+  align-items: baseline;
   margin: 0 auto;
+}
+.exam-blocks .xb-steps--aligned .xb-step-row {
+  display: contents;
+}
+.exam-blocks .xb-steps--aligned .xb-step-l {
+  text-align: right;
+}
+.exam-blocks .xb-steps--aligned .xb-step-r {
+  text-align: left;
+}
+/* display:contents 행에는 row-gap 이 안 걸리므로 셀에 직접 */
+.exam-blocks .xb-steps--aligned .xb-step-row + .xb-step-row > span {
+  margin-top: var(--xb-step-gap);
+}
+/* KatexText 래퍼(.katex-block · text-center)와 .katex-display 가 셀 안에서 가운데 정렬을 걸어
+   좌·우변이 등호에서 떨어진다 — 셀 정렬을 그대로 따르게 덮어쓴다 */
+/* KaTeX 는 .katex-display > .katex 를 block + text-align:center 로 두어 셀을 꽉 채우고 안에서 가운데 정렬한다 —
+   그 .katex 까지 덮어써야 좌·우변이 등호에 붙는다 */
+.exam-blocks .xb-steps--aligned .xb-step-l .katex-block,
+.exam-blocks .xb-steps--aligned .xb-step-l .katex-display,
+.exam-blocks .xb-steps--aligned .xb-step-l .katex-display > .katex {
+  text-align: right;
+}
+.exam-blocks .xb-steps--aligned .xb-step-r .katex-block,
+.exam-blocks .xb-steps--aligned .xb-step-r .katex-display,
+.exam-blocks .xb-steps--aligned .xb-step-r .katex-display > .katex {
+  text-align: left;
+}
+/* 좌측 스택도 래퍼·.katex 의 가운데 정렬을 풀어야 행 시작점이 맞는다 */
+.exam-blocks .xb-steps--sequential .katex-block,
+.exam-blocks .xb-steps--sequential .katex-display,
+.exam-blocks .xb-steps--sequential .katex-display > .katex,
+.exam-blocks .xb-steps--stacked .katex-block,
+.exam-blocks .xb-steps--stacked .katex-display,
+.exam-blocks .xb-steps--stacked .katex-display > .katex {
+  text-align: left;
+}
+
+/* sequential(& 없음) · stacked(& 무시 격하) — 좌측 정렬 스택 */
+.exam-blocks .xb-steps--sequential,
+.exam-blocks .xb-steps--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
 }
 
 /* 유도 줄만 줄바꿈 금지 — 접히면 "304cos²(∠ABC) − = 0" 처럼 식이 뒤죽박죽으로 읽힌다 */
@@ -521,10 +621,14 @@ span.katex-block {
 .exam-blocks .xb-steps .xb-step {
   min-width: 0;
 }
-/* 분수·근호·큰 괄호 행 — 글리프가 위아래로 커서 기본 8px 간격이 답답하다. 행 자체에 여백을 더해
-   큰 행끼리는 20px, 큰 행·보통 행 사이는 14px 이 되게 한다 */
+/* 분수·적분·근호·큰 괄호 행 — 글리프가 위아래로 커서 규격 줄간격(0.6em)만으론 잉크가 붙어 보인다.
+   행 자체에 여백을 더해 큰 행끼리는 0.6 + 0.7 ≈ 1.3em, 큰 행·보통 행 사이는 ≈ 0.95em 이 되게 (2026-09-08 피드백) */
 .exam-blocks .xb-steps .xb-step.is-tall {
-  padding: 6px 0;
+  padding: var(--xb-tall-pad) 0;
+}
+/* 등호 정렬 그리드는 행이 display:contents 라 셀에 건다 */
+.exam-blocks .xb-steps--aligned .xb-step-row.is-tall > span {
+  padding: var(--xb-tall-pad) 0;
 }
 .exam-blocks .xb-steps .katex-block {
   margin: 0;
@@ -549,9 +653,9 @@ span.katex-block {
   overflow: visible;
 }
 
-/* (i)(ii)(iii) 케이스 분기 — 각 케이스 위에 여백을 넉넉히 줘 구획감 부여 */
+/* (i)(ii)(iii) 케이스 분기 — 블록 간 여백은 공통 규칙(--xb-block-gap)이 담당 */
 .exam-blocks .xb-case {
-  margin: 26px 0 12px;
+  margin: 0;
 }
 
 .exam-blocks .xb-case-label {
@@ -563,13 +667,13 @@ span.katex-block {
   padding-left: 14px;
 }
 
-/* 마무리(conclusion) — 구분선 없이 여백만으로 답 도출부 구획 (2026-09-07 선 제거) */
+/* 마무리(conclusion) — 구분선 없이 여백만으로 답 도출부 구획 (여백은 --xb-block-gap 공통 규칙) */
 .exam-blocks .xb-conclusion {
-  margin-top: 18px;
+  margin-top: 0;
 }
 
 .exam-blocks .xb-note {
-  margin: 10px 0;
+  margin: 0;
   font-size: 15.2px; /* 13 × 1.1667 */
   color: #8a8582;
 }
@@ -579,7 +683,7 @@ span.katex-block {
   border: 1px solid currentColor;
   border-radius: 2px;
   padding: 12px 16px;
-  margin: 14px 0;
+  margin: 0;
 }
 
 .exam-blocks .xb-box > .exam-table-wrap {
@@ -592,7 +696,7 @@ span.katex-block {
 
 /* ── 3섹션 해설 (insight · solution · diagnosis — 2026-09 규격) ── */
 .exam-blocks .xb-section + .xb-section {
-  margin-top: 24px;
+  margin-top: var(--xb-block-gap);
 }
 
 /* 섹션 제목 — 정책 표기 그대로 "[핵심 발상]" 등. 본문과 같은 서체, 굵게만 */
