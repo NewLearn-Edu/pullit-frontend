@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
+import { StoreBadges } from '@/user/components/StoreBadges'
 
 /**
  * 마케팅 진입용 시네마틱 인트로 (/start)
@@ -217,6 +218,9 @@ export default function TrialIntroPage() {
           시작하기
         </button>
       </div>
+
+      {/* 앱 받기 — 연출 타임라인에 넣지 않는다. 처음부터 그대로 있는 고정 요소 */}
+      <StoreBadges className="mt-[22px] max-md:mt-[18px]" />
     </div>
   )
 }
