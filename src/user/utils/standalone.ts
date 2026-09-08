@@ -27,6 +27,20 @@ export function isStandaloneApp(): boolean {
   } catch {
     /* noop */
   }
+  return detectAppNow()
+}
+
+/**
+ * 기억된 플래그 없이 지금 이 문서의 신호만으로 판정 (2026-09-08) — 루트(/) 진입 분기용.
+ * 안드로이드는 TWA·홈 화면 PWA 가 크롬 브라우저와 localStorage 를 공유해, 앱을 한 번 열면
+ * 브라우저에서 www.pullit.co.kr 을 쳐도 앱으로 기억돼 랜딩이 영영 안 보이게 된다.
+ * 랜딩을 막는 판정은 그래서 살아 있는 신호(UA·display-mode·?app=·referrer)만 쓴다.
+ */
+export function isStandaloneAppNow(): boolean {
+  return detectAppNow()
+}
+
+function detectAppNow(): boolean {
   try {
     const w = window as Window & { __PULLIT_APP__?: boolean }
     if (w.__PULLIT_APP__ === true) return remember()

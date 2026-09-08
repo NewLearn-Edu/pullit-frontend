@@ -5,6 +5,7 @@ import { useBlockBackNavigation } from './user/hooks/useBlockBackNavigation'
 import { type Subject } from './user/stores/trialStore'
 import { CURRICULUM } from './user/data/curriculum'
 import LandingPage from './user/pages/landing/LandingPage'
+import { isStandaloneAppNow } from './user/utils/standalone'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
 import WrongNoteDetailPage from './user/pages/wrongnote/WrongNoteDetailPage'
@@ -89,6 +90,16 @@ function TodayRedirect() {
 }
 
 /**
+ * 루트(/) 진입 (2026-09-08) — 앱(래퍼 웹뷰·홈 화면 PWA·TWA)은 마케팅 랜딩 대신 /login 으로.
+ * 세션이 있으면 LoginPage 가드가 완주 여부로 /home · /start 를 고르고, 없으면 로그인에 머문다.
+ * 홈 화면 PWA 는 start_url 이 /login 이라 이미 그랬지만, 래퍼 앱과 링크 탭(유니버설 링크)으로
+ * 열리는 경우는 루트로 들어와 랜딩이 떴다. 웹은 로그인 상태여도 랜딩 유지 (2026-08-20 결정)
+ */
+function RootEntry() {
+  return isStandaloneAppNow() ? <Navigate to="/login" replace /> : <LandingPage />
+}
+
+/**
  * POC 단계에서는 skill_node · 유형 선택 페이지를 스킵하고
  * 수학 = 지수와 로그 (sn-exp-log-01) · 영어 = 빈칸 추론 (en-blank) 로 강제.
  * 정책 (page 64847873) 상 "학생이 선택" 이지만 실서비스 붙일 때 열 예정.
@@ -130,7 +141,7 @@ export default function App() {
     <MetaPixelPageView />
     <BlockBackNavigation />
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<RootEntry />} />
       {/* 오픈 전 테스트 배포용 진입점 — 얼리버드 모드 표식 후 랜딩으로 */}
       <Route path="/earlybird" element={<EarlybirdEntryPage />} />
       {/* 회원 영역 — 세션 없음 → /login · 맛보기 미완주 → /start. 판정 전엔 그리지 않는다 (RequireTrialDone).
