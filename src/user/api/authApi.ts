@@ -1,3 +1,4 @@
+import { detectClient, detectDevice } from '@/user/utils/standalone'
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import type { WithdrawalReason } from '@/user/data/withdrawalReasons'
 
@@ -41,6 +42,10 @@ interface BaseResponse<T> {
 
 /** 백엔드 API 클라이언트 — httpOnly 인증 쿠키 자동 전송 + 401 시 재발급 후 1회 재시도 */
 export const api = axios.create({ baseURL: API_BASE, withCredentials: true })
+// 접속 정보 헤더 — 서버가 가입 시점(users.signup_client/device)·최근(last_*)·방문(visit_events.client/device)에 박제한다 (2026-09-08).
+// 웹/앱 + 기기(OS × 폰/패드). 없으면 서버가 UA 로 추정하지만, 헤더가 있으면 그 값을 우선한다 (iPadOS 는 헤더만 정확)
+api.defaults.headers.common['X-Pullit-Client'] = detectClient()
+api.defaults.headers.common['X-Pullit-Device'] = detectDevice()
 
 api.interceptors.response.use(
   (res) => res,

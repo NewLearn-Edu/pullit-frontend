@@ -92,3 +92,45 @@ export function applyAppInsets(): void {
     /* noop */
   }
 }
+
+/**
+ * 접속 정보 (2026-09-08) — 서버 users.signup_client/device · last_client/device · visit_events.client/device 와 같은 값 체계.
+ * 백엔드 ClientKind · DeviceKind enum 과 반드시 동일하게 유지한다.
+ *
+ * client: 스토어 앱(래퍼)이면 APP, 그 밖(브라우저 · 홈 화면 추가)은 WEB.
+ *   래퍼 신호 = UA "PullitApp" · ?app= · __PULLIT_APP__ · WebView 토큰 · android-app 참조 (isStandaloneApp 과 같은 판정).
+ * device: OS × 폰/패드. iPadOS 13+ 는 데스크톱 UA 라 platform+터치로 잡는다 — 서버 UA 추정으로는 불가능해 헤더가 정본.
+ */
+export type ClientKind = 'WEB' | 'APP'
+export type DeviceKind = 'ANDROID_PHONE' | 'ANDROID_TABLET' | 'IOS_PHONE' | 'IOS_TABLET' | 'DESKTOP' | 'UNKNOWN'
+
+export function detectDevice(): DeviceKind {
+  try {
+    const ua = navigator.userAgent || ''
+    if (isIPadLike()) return 'IOS_TABLET'
+    if (/iPhone|iPod/i.test(ua)) return 'IOS_PHONE'
+    if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? 'ANDROID_PHONE' : 'ANDROID_TABLET'
+    return 'DESKTOP'
+  } catch {
+    return 'UNKNOWN'
+  }
+}
+
+export function detectClient(): ClientKind {
+  try {
+    const ua = navigator.userAgent || ''
+    const w = window as Window & { __PULLIT_APP__?: boolean }
+    const android = /Android/i.test(ua)
+    const ios = /iPhone|iPad|iPod/i.test(ua) || isIPadLike()
+    const app =
+      w.__PULLIT_APP__ === true ||
+      /PullitApp/i.test(ua) ||
+      new URLSearchParams(window.location.search).has('app') ||
+      /^android-app:\/\//.test(document.referrer || '') ||
+      (android && (/;\s*wv\b/.test(ua) || /\bVersion\/\d+\.\d+/.test(ua))) ||
+      (ios && /AppleWebKit/i.test(ua) && !/Safari\//i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua))
+    return app ? 'APP' : 'WEB'
+  } catch {
+    return 'WEB'
+  }
+}
