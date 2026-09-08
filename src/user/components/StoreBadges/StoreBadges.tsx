@@ -16,8 +16,9 @@ import { isStandaloneApp } from '@/user/utils/standalone'
  * - Google Play: https://play.google.com/intl/ko/badges/
  */
 
-/** 스토어 링크 — 출시 전이면 빈 문자열. 그 배지는 링크 없이 그림만 나온다 */
-const APP_STORE_URL = import.meta.env.VITE_APP_STORE_URL ?? ''
+/** 스토어 링크 — 빈 문자열로 두면 그 배지는 링크 없이 그림만 나온다 */
+const APP_STORE_URL =
+  import.meta.env.VITE_APP_STORE_URL ?? 'https://apps.apple.com/kr/app/id6806731002'
 const PLAY_STORE_URL =
   import.meta.env.VITE_PLAY_STORE_URL ??
   'https://play.google.com/store/apps/details?id=com.newlearn.pullit'
