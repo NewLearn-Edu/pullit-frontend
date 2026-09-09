@@ -8,6 +8,7 @@ import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { isEarlybird } from '@/user/services/earlybird'
 import { isStandaloneApp } from '@/user/utils/standalone'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
+import { useRequireTrialFunnelEntry } from '@/user/hooks/useRequireTrialFunnelEntry'
 import { clearAllQuizStarts } from '@/user/pages/trial/TrialQuizPage'
 import styles from './styles/TrialStartPage.module.scss'
 
@@ -36,6 +37,8 @@ export default function TrialStartPage() {
 
   // 맛보기를 이미 완주한 회원만 홈으로 — 미완이면 방금 가입한 회원도 퍼널을 탄다
   useTrialFunnelGuard()
+  // /start 를 거치지 않은 직접 진입은 /start 로
+  const entered = useRequireTrialFunnelEntry()
 
   /**
    * 퀴즈 직행 — 세션 없이 시작한다. users 로우는 결과 화면 이후 /signup 에서
@@ -52,6 +55,8 @@ export default function TrialStartPage() {
     setLastSubject(selected)
     navigate(`/trial/quiz/${selected}/0`)
   }
+
+  if (!entered) return null
 
   return (
     <div className={styles.page}>

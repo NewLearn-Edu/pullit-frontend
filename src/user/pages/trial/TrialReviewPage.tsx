@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useRequireTrialFunnelEntry } from '@/user/hooks/useRequireTrialFunnelEntry'
 import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { TimerBadge } from '@/user/components/quiz/TimerBadge'
@@ -29,6 +30,7 @@ export default function TrialReviewPage() {
   // 결과 화면 주소 — 온보딩 퍼널(pendingUnit 없음)만 /trial/{subject}/weakness (TrialQuizPage 와 같은 기준)
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   const funnel = !pendingUnit
+  const entered = useRequireTrialFunnelEntry(funnel) // 온보딩 퍼널 리뷰만 — /start 미경유 직접 진입 차단
   // 세트 시작 때 찍어 둔 단원명 — pendingUnit 은 결과 확정 시 비워지므로 리뷰에선 이쪽이 정본 (2026-09-06)
   const activeUnitName = useTrialStore((s) => s.activeUnitName)
   const navigate = useNavigate()
@@ -85,6 +87,8 @@ export default function TrialReviewPage() {
 
   // 정답 번호 — 서버 세트 문항은 로컬 answer 가 0 이라 서버 채점 응답을 우선
   const answerNo = myResult?.serverAnswerNo ?? (problem.answer !== 0 ? problem.answer : null)
+
+  if (!entered) return null
 
   return (
     <ReviewScreen

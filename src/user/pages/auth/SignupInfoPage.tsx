@@ -1,3 +1,4 @@
+import { enterTrialFunnel } from '@/user/services/trialFunnel'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
@@ -610,7 +611,7 @@ export default function SignupInfoPage() {
             </p>
             <button
               type="button"
-              onClick={() => navigate('/trial', { replace: true })}
+              onClick={() => navigate(enterTrialFunnel(), { replace: true })}
               className="mt-lg flex h-[56px] w-full max-w-[400px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
             >
               비회원으로 계속하기

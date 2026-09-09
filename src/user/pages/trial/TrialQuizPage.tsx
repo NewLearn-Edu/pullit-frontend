@@ -23,6 +23,7 @@ import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { useUserStore } from '@/user/stores/userStore'
 import { clearSolveSessionMeta, readSolveSessionMeta, useSolveStore } from '@/user/stores/solveStore'
 import { useTrialFunnelGuard } from '@/user/hooks/useTrialFunnelGuard'
+import { useRequireTrialFunnelEntry } from '@/user/hooks/useRequireTrialFunnelEntry'
 import { submitAttempt, type AttemptSubmitRequest } from '@/user/api/attemptApi'
 import { enqueueAttempt, isRetryableAttemptError, trackAttempt } from '@/user/services/attemptQueue'
 import { computeScore } from '@/user/utils/scoring'
@@ -109,6 +110,8 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
   // 건너뛰기(게스트) 또는 소셜 가입 시점에만 생성된다 (2026-08-19 확정)
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
   useTrialFunnelGuard(isTrial && !pendingUnit)
+  // 맛보기 모드 직접 진입(주소 입력) 차단 — /start 를 거친 표식이 없으면 /start 로
+  const entered = useRequireTrialFunnelEntry(isTrial && !pendingUnit)
   // 상단 단원명 — 진단은 pendingUnit → 세트 시작 때 저장한 activeUnitName, 자유 풀이는 세션의 unitName (2026-09-06)
   const activeUnitName = useTrialStore((s) => s.activeUnitName)
   const startedUnitName = isTrial ? (pendingUnit?.unitName ?? activeUnitName) : solveSession?.unitName ?? null
@@ -332,6 +335,7 @@ export default function TrialQuizPage({ mode = 'trial' }: { mode?: QuizMode }) {
     }
   }, [])
 
+  if (!entered) return null // /start 미경유 직접 진입 — 리다이렉트 중
   if (!problem) return null
 
   const overTime = elapsedSec > problem.tMaxSec

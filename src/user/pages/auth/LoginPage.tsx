@@ -18,6 +18,8 @@ import { isEarlybird } from '@/user/services/earlybird'
 import { useMe } from '@/user/hooks/useMe'
 import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
+import { startPath } from '@/user/services/startVariants'
+import { enterTrialFunnel } from '@/user/services/trialFunnel'
 import { isStandaloneApp } from '@/user/utils/standalone'
 import { PageHeader } from '@/user/components/PageHeader/PageHeader'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
@@ -64,7 +66,7 @@ export default function LoginPage() {
     let alive = true
     hasCompletedTrial()
       .then((done) => {
-        if (alive) navigate(done ? '/home' : '/start', { replace: true })
+        if (alive) navigate(done ? '/home' : startPath(), { replace: true }) // 미완주 → 들어온 /start 변형으로
       })
       .catch(() => {
         if (alive) navigate('/home', { replace: true }) // 판정 불가 — 퍼널 오감금 방지
@@ -149,7 +151,7 @@ export default function LoginPage() {
         {!isStandaloneApp() && (
           <button
             type="button"
-            onClick={() => navigate('/trial')}
+            onClick={() => navigate(enterTrialFunnel())}
             className={styles.guestLink}
           >
             비회원으로 약점보기

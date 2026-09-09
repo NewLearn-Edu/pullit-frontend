@@ -2,6 +2,7 @@ import { refreshSession } from '@/user/api/authApi'
 import { flushAttemptQueue } from '@/user/services/attemptQueue'
 import { hasCompletedTrial } from '@/user/services/trialGate'
 import { claimUtmVisit } from '@/user/services/visitMetrics'
+import { startPath } from '@/user/services/startVariants'
 import { isSignupPending, useUserStore } from '@/user/stores/userStore'
 import { consumePostLoginRedirect } from '@/user/utils/postLoginRedirect'
 
@@ -32,7 +33,7 @@ export async function finishLogin(): Promise<string> {
  */
 export async function resolvePostAuthDestination(): Promise<string> {
   const completed = await hasCompletedTrial().catch(() => true)
-  if (!completed) return '/start'
+  if (!completed) return startPath() // 유저가 들어온 /start 변형 유지
 
   const back = consumePostLoginRedirect()
   return back ?? '/home'

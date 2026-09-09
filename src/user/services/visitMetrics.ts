@@ -32,7 +32,7 @@ const PATH_RANK_KEY = 'pullit_visit_path_rank'
  * visit_events.furthest_path 에 남긴다 ("시작하기는 눌렀는데 어디서 빠졌나").
  */
 const FUNNEL_STEPS: RegExp[] = [
-  /^\/start$/,
+  /^\/start(\/[a-z0-9-]+)?$/, // 소재별 변형 /start/<슬러그> 도 0단계 (startVariants.START_PATH_RE 와 동일)
   /^\/trial$/,
   /^\/trial\/quiz\/(math|english)\/0$/,
   /^\/trial\/quiz\/(math|english)\/1$/,

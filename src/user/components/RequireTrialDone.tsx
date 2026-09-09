@@ -7,6 +7,7 @@ import {
   isTrialCompletedCached,
   markTrialCompleted,
 } from '@/user/services/trialGate'
+import { startPath } from '@/user/services/startVariants'
 
 /**
  * 회원 영역 공용 가드 (2026-09-02 강화) — 아래 셋 중 하나라도 해당하면
@@ -85,7 +86,7 @@ export default function RequireTrialDone() {
   }
 
   if (verdict === 'checking') return null
-  if (verdict === 'missing') return <Navigate to="/start" replace />
+  if (verdict === 'missing') return <Navigate to={startPath()} replace />
 
   return <Outlet />
 }

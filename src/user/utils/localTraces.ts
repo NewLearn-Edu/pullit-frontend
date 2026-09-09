@@ -13,6 +13,7 @@ export function clearLocalTraces(): void {
       'pullit_post_login_redirect',
       'pullit_oauth_state_naver',
       'pullit_oauth_state_google',
+      'pullit_trial_funnel_entered', // 맛보기 퍼널 진입 표식 (/start 경유)
     ].forEach((key) => sessionStorage.removeItem(key))
   } catch {
     /* storage 접근 불가 — 무시 */

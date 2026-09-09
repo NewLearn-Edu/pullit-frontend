@@ -7,6 +7,7 @@ import { useUserStore } from './user/stores/userStore'
 import { type Subject } from './user/stores/trialStore'
 import { CURRICULUM } from './user/data/curriculum'
 import LandingPage from './user/pages/landing/LandingPage'
+import StartVariantPage from './user/pages/trial/StartVariantPage'
 import { isStandaloneAppNow } from './user/utils/standalone'
 import HomePage from './user/pages/home/HomePage'
 import WrongNotePage from './user/pages/wrongnote/WrongNotePage'
@@ -34,7 +35,6 @@ import NaverCallbackPage from './user/pages/auth/NaverCallbackPage'
 import GoogleCallbackPage from './user/pages/auth/GoogleCallbackPage'
 import AppleCallbackPage from './user/pages/auth/AppleCallbackPage'
 import TrialStartPage from './user/pages/trial/TrialStartPage'
-import TrialIntroPage from './user/pages/trial/TrialIntroPage'
 import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
@@ -222,7 +222,9 @@ export default function App() {
       {/* 애플 리다이렉트(form_post) 방식 전용 — 안드로이드 웹앱. 팝업 방식은 콜백 페이지 없음 */}
       <Route path="/auth/apple/callback" element={<AppleCallbackPage />} />
       {/* 마케팅 인트로 → 과목 선택 → 퀴즈 순서 (랜딩 CTA 는 /start 로 진입) */}
-      <Route path="/start" element={<TrialIntroPage />} />
+      {/* /start 소재별 변형 — /start/math-1 처럼. 등록 안 된 슬러그도 기본 인트로를 그 주소로 (services/startVariants) */}
+      <Route path="/start" element={<StartVariantPage />} />
+      <Route path="/start/:variant" element={<StartVariantPage />} />
       <Route path="/trial" element={<TrialStartPage />} />
       <Route path="/trial/quiz/:subject/:index" element={<TrialQuizPage />} />
       <Route path="/trial/review/:subject/:index" element={<TrialReviewPage />} />

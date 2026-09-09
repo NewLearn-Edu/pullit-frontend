@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useRequireTrialFunnelEntry } from '@/user/hooks/useRequireTrialFunnelEntry'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { clsx } from 'clsx'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
 import { useMe } from '@/user/hooks/useMe'
@@ -350,6 +351,9 @@ export default function WeaknessResultPage() {
    * trialStore.activeUnitName(sessionStorage)으로 되찾는다. 온보딩 퍼널(둘 다 없음)만 고정 영역명으로 폴백.
    */
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
+  // /start 를 거치지 않은 직접 진입 차단 — 온보딩 퍼널 주소(/trial/…/weakness)만. 홈·지도 진단(/weakness · pendingUnit)은 제외
+  const funnelRoute = useLocation().pathname.startsWith('/trial/')
+  const entered = useRequireTrialFunnelEntry(funnelRoute && !pendingUnit)
   const activeUnitName = useTrialStore((s) => s.activeUnitName)
   const activeReturnTo = useTrialStore((s) => s.activeReturnTo)
   const pendingNameRef = useRef<string | null>(null)
@@ -532,6 +536,8 @@ export default function WeaknessResultPage() {
     })
     return () => timers.forEach(clearTimeout)
   }, [rows, correctCount])
+
+  if (!entered) return null
 
   return (
     // 결과 화면 배경 — 상단 붉은 기운(#fff1f2)에서 흰색으로 (Figma 2824-5560)
