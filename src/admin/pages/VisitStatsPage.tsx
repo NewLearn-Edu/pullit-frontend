@@ -1,130 +1,49 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  fetchAcquisitionFunnel,
-  fetchVisitStats,
-  fetchVisitTimes,
-  type AcquisitionFunnelRow,
-  type VisitCampaignStats,
-} from '../api/adminApi'
+import { fetchAcquisitionFunnel, fetchVisitTimes, type AcquisitionFunnelRow } from '../api/adminApi'
 import { StatCard } from '../components/StatCard'
 
-/** "2026-08-20T14:51:36" → "2026-08-20 14:51" */
-const fmtDateTime = (iso: string) => iso.slice(0, 16).replace('T', ' ')
-
-type SortKey = 'recent' | 'total' | 'today'
-
-/** 사용법 카드 접힘 상태 — 한 번 접으면 다음 방문에도 접힌 채로 (관리자 개인 설정) */
-const GUIDE_KEY = 'pa-guide-visits'
+/** 비율 표기 — 분모 0 이면 "—" */
+const pct = (n: number, d: number) => (d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '—')
 
 /**
- * 페이지 사용법 — 표보다 먼저 읽히도록 상단에 둔다.
- * "링크에 꼬리표를 붙여 뿌리면 여기 쌓인다" 한 줄이 이 페이지의 전부이고,
- * 나머지는 집계 규칙(중복·오늘 기준)이라 헷갈릴 만한 것만 짧게 적는다.
+ * 퍼널 단계 정의 — 표 열 순서와 같다. 경로 단계는 헤더에 엔드포인트를 그대로 쓴다 (pre = 윗줄, label = 아랫줄).
+ * 모든 % 의 분모는 "방문" 하나로 통일한다 (2026-09-09). 단계별 이탈(이전 단계 대비)은 셀 툴팁으로만 —
+ * 분모가 열마다 달라지면 비교가 안 된다.
  */
-function UsageGuide() {
-  const [open, setOpen] = useState(() => {
-    try {
-      return localStorage.getItem(GUIDE_KEY) !== 'closed'
-    } catch {
-      return true
-    }
-  })
-  const toggle = () => {
-    setOpen((v) => {
-      try {
-        localStorage.setItem(GUIDE_KEY, v ? 'closed' : 'open')
-      } catch {
-        /* storage 불가 환경 — 이번 세션만 적용 */
-      }
-      return !v
-    })
-  }
+const STEPS = [
+  { key: 'trials', pre: '', label: '/trial', hint: '시작하기를 눌러 /trial 화면까지 간 방문' },
+  { key: 'quiz0', pre: '/trial/quiz/*/', label: '0', hint: '맛보기 1번 문제 화면까지 간 방문' },
+  { key: 'quiz1', pre: '/trial/quiz/*/', label: '1', hint: '맛보기 2번 문제 화면까지 간 방문' },
+  { key: 'quiz2', pre: '/trial/quiz/*/', label: '2', hint: '맛보기 3번 문제 화면까지 간 방문' },
+  { key: 'weakness', pre: '/trial/*/', label: 'weakness', hint: '맛보기 3문제를 끝내고 약점 결과 화면까지 간 방문 (로그인 여부 무관)' },
+  { key: 'signup', pre: '', label: '/signup', hint: '가입 화면까지 간 방문' },
+  { key: 'signupInfo', pre: '/signup/', label: 'info', hint: '소셜 로그인 후 추가 정보 화면까지 간 방문' },
+  { key: 'members', pre: '', label: '회원가입', hint: '이 방문 이후 프로필까지 완료한 회원 · 기존 회원의 재로그인은 제외' },
+  { key: 'completed', pre: '', label: '첫 세트 완료', hint: '그 회원 중 첫 학습 세트까지 끝냄' },
+] as const
 
-  return (
-    <div className="card guide" style={{ marginBottom: 24 }}>
-      <div className="guide-head">
-        <div>
-          <p className="card-title">사용법</p>
-          <p className="card-sub">링크에 꼬리표를 붙여 뿌리면, 어디서 몇 명이 들어왔는지 여기에 쌓입니다</p>
-        </div>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={toggle} aria-expanded={open}>
-          {open ? '접기' : '펼치기'}
-        </button>
-      </div>
+type StepKey = (typeof STEPS)[number]['key']
 
-      {open && (
-        <>
-          <div className="guide-steps">
-            <div className="guide-step">
-              <p className="guide-step-title">
-                <span className="guide-num">1</span> 링크에 꼬리표 붙이기
-              </p>
-              <p>
-                주소 뒤에 <b>utm_source</b>(어디에 뿌리나)를 붙입니다. medium·campaign 은 선택이에요.
-              </p>
-              <div className="guide-code">
-                https://pullit.co.kr/?<b>utm_source</b>=instagram&amp;<b>utm_medium</b>=social&amp;
-                <b>utm_campaign</b>=launch1
-              </div>
-            </div>
-
-            <div className="guide-step">
-              <p className="guide-step-title">
-                <span className="guide-num">2</span> 그대로 배포하기
-              </p>
-              <p>
-                따로 <b>등록할 곳이 없습니다.</b> 그 링크로 첫 방문이 들어오는 순간 아래 표에 줄이 생겨요.
-                꼬리표를 새로 지으면 새 줄이 자동으로 늘어납니다.
-              </p>
-            </div>
-
-            <div className="guide-step">
-              <p className="guide-step-title">
-                <span className="guide-num">3</span> 표에서 확인하기
-              </p>
-              <p>
-                <b>소스 × 미디엄 × 캠페인</b> 조합 하나가 한 줄입니다. 줄을 누르면 그 링크의 방문 시각이
-                날짜별로 열려요.
-              </p>
-            </div>
-          </div>
-
-          <div className="guide-rules">
-            <span className="guide-rule">
-              <b>중복 방지</b> 같은 브라우저는 24시간에 1회만 집계
-            </span>
-            <span className="guide-rule">
-              <b>오늘 기준</b> 서버 자정(KST)부터
-            </span>
-            <span className="guide-rule">
-              <b>기기 구분</b> 폰·노트북은 각각 집계 · 시크릿 창은 매번 새로 집계
-            </span>
-            <span className="guide-rule">
-              <b>개인정보</b> IP·식별자는 저장하지 않음
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+/** 정렬 가능한 열 — 숫자 열은 값 내림차순, 퍼널 열은 건수 내림차순(동률이면 방문 대비 % 내림차순) */
+type SortKey = 'today' | 'visits' | StepKey
 
 /**
- * 유입 링크 통계 — UTM 캠페인별 방문 집계 (visit_events).
- * 마케팅 링크(?utm_source=...&utm_campaign=...)와 얼리버드 직접 방문(earlybird·direct)이
- * 소스×캠페인 단위로 쌓인다. 같은 브라우저는 24시간 1회만 집계.
+ * 유입 · 퍼널 — 소재(utm_content) 단위 한 표. visit_events 한 테이블 기준.
+ * 방문 → /trial 진입 → 맛보기 완주 → 회원가입 → 첫 세트 완료 를 한 줄에서 왼쪽→오른쪽으로 읽는다.
+ * 예전엔 "유입 링크(캠페인 단위)"와 "캠페인 퍼널(소재 단위)" 두 표였는데 줄이 서로 대응되지 않아 합쳤다 (2026-09-09).
  */
 export default function VisitStatsPage() {
-  const [rows, setRows] = useState<VisitCampaignStats[]>([])
+  const [rows, setRows] = useState<AcquisitionFunnelRow[]>([])
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
-  const [sort, setSort] = useState<SortKey>('recent')
-  // 상세 팝업 대상 캠페인 (null = 닫힘)
-  const [detail, setDetail] = useState<VisitCampaignStats | null>(null)
+  // 헤더 클릭으로 정렬 열 선택 — 항상 내림차순(높은 값 먼저). 기본은 방문 수
+  const [sort, setSort] = useState<SortKey>('visits')
+  // 상세 팝업 대상 소재 (null = 닫힘)
+  const [detail, setDetail] = useState<AcquisitionFunnelRow | null>(null)
 
   const load = () => {
     setState('loading')
-    fetchVisitStats()
+    fetchAcquisitionFunnel()
       .then((list) => {
         setRows(list)
         setState('done')
@@ -136,21 +55,34 @@ export default function VisitStatsPage() {
 
   const sorted = useMemo(() => {
     const copy = [...rows]
-    if (sort === 'total') copy.sort((a, b) => b.total - a.total)
-    if (sort === 'today') copy.sort((a, b) => b.today - a.today)
-    return copy // 'recent' 는 서버 정렬(마지막 방문 순) 그대로
+    const rate = (n: number, d: number) => (d > 0 ? n / d : -1)
+    copy.sort((a, b) => {
+      const diff = b[sort] - a[sort]
+      if (diff !== 0 || sort === 'visits' || sort === 'today') return diff || b.visits - a.visits
+      return rate(b[sort], b.visits) - rate(a[sort], a.visits) // 퍼널 건수 동률 → 방문 대비 % 높은 쪽 먼저
+    })
+    return copy
   }, [rows, sort])
 
-  const totalVisits = rows.reduce((s, r) => s + r.total, 0)
-  const todayVisits = rows.reduce((s, r) => s + r.today, 0)
+  const total = useMemo(() => {
+    const acc: FunnelCounts & { today: number } = {
+      visits: 0, today: 0, trials: 0, quiz0: 0, quiz1: 0, quiz2: 0, weakness: 0, signup: 0, signupInfo: 0, members: 0, completed: 0,
+    }
+    for (const r of rows) {
+      acc.visits += r.visits
+      acc.today += r.today
+      for (const s of STEPS) acc[s.key] += r[s.key]
+    }
+    return acc
+  }, [rows])
 
   return (
     <section className="view">
       <div className="page-head">
         <div>
-          <h2 className="section-title" style={{ marginBottom: 4 }}>유입 링크</h2>
+          <h2 className="section-title" style={{ marginBottom: 4 }}>유입 · 퍼널</h2>
           <p className="page-sub">
-            utm_source·utm_campaign 별 방문 수 · 같은 브라우저는 24시간 1회 집계
+            소재(utm_content)별로 방문이 어디까지 갔는지 · 모든 %는 방문 대비 · 같은 브라우저는 24시간 1회 집계
           </p>
         </div>
         <button type="button" className="btn btn-ghost" onClick={load}>
@@ -158,42 +90,38 @@ export default function VisitStatsPage() {
         </button>
       </div>
 
-      <UsageGuide />
-
-      <div className="kpi-problems" style={{ marginBottom: 24 }}>
+      <div className="kpi-problems kpi-funnel" style={{ marginBottom: 24 }}>
         <StatCard
           label="오늘 방문"
-          value={state === 'done' ? todayVisits.toLocaleString() : '—'}
-          delta="전 캠페인 합계"
+          value={state === 'done' ? total.today.toLocaleString() : '—'}
+          delta="전 소재 합계"
           tone="up"
         />
         <StatCard
           label="누적 방문"
-          value={state === 'done' ? totalVisits.toLocaleString() : '—'}
+          value={state === 'done' ? total.visits.toLocaleString() : '—'}
           delta="집계 시작 이후"
           tone="good"
         />
         <StatCard
-          label="캠페인 수"
-          value={state === 'done' ? rows.length.toLocaleString() : '—'}
-          delta="소스 × 캠페인 조합 기준"
+          label="/trial 진입률"
+          value={state === 'done' ? pct(total.trials, total.visits) : '—'}
+          delta={state === 'done' ? `방문 ${total.visits.toLocaleString()} 중 ${total.trials.toLocaleString()}` : '방문 대비'}
+          tone="flat"
+        />
+        <StatCard
+          label="가입률"
+          value={state === 'done' ? pct(total.members, total.visits) : '—'}
+          delta={state === 'done' ? `방문 ${total.visits.toLocaleString()} 중 ${total.members.toLocaleString()}` : '방문 대비'}
           tone="flat"
         />
       </div>
 
       <div className="card" style={{ padding: 18 }}>
         <div className="toolbar">
-          <div className="seg">
-            <button className={sort === 'recent' ? 'on' : undefined} onClick={() => setSort('recent')}>
-              최근 방문순
-            </button>
-            <button className={sort === 'total' ? 'on' : undefined} onClick={() => setSort('total')}>
-              누적순
-            </button>
-            <button className={sort === 'today' ? 'on' : undefined} onClick={() => setSort('today')}>
-              오늘순
-            </button>
-          </div>
+          <p className="page-sub" style={{ margin: 0 }}>
+            열 이름을 누르면 그 열 기준 높은 순으로 정렬 · 열 이름에 마우스를 올리면 단계 설명
+          </p>
         </div>
 
         {state === 'loading' && <p className="page-sub">불러오는 중…</p>}
@@ -208,128 +136,125 @@ export default function VisitStatsPage() {
 
         {state === 'done' && sorted.length > 0 && (
           <div className="table-wrap">
-            <table>
+            <table className="funnel-table">
               <thead>
                 <tr>
-                  <th style={{ width: 180 }}>소스</th>
-                  <th style={{ width: 140 }}>미디엄</th>
-                  <th>캠페인</th>
-                  <th style={{ width: 110, textAlign: 'right' }}>오늘</th>
-                  <th style={{ width: 110, textAlign: 'right' }}>누적</th>
-                  <th style={{ width: 170 }}>마지막 방문</th>
+                  <th style={{ width: 92 }}>소스</th>
+                  <th style={{ width: 70 }}>미디엄</th>
+                  <th style={{ width: 190 }}>캠페인</th>
+                  {/* 소재도 폭 고정 — 유일한 auto 열이면 좁은 화면에서 0폭이 되어 글자가 세로로 쏟아진다 (fixed layout) */}
+                  <th style={{ width: 200 }}>소재</th>
+                  <SortTh k="today" sort={sort} onSort={setSort} width={56}>오늘</SortTh>
+                  <SortTh k="visits" sort={sort} onSort={setSort} width={70}>방문</SortTh>
+                  {STEPS.map((s) => (
+                    <SortTh key={s.key} k={s.key} sort={sort} onSort={setSort} width={s.pre ? 132 : 100} hint={s.hint} pre={s.pre}>
+                      {s.label}
+                    </SortTh>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((v) => (
+                {sorted.map((r) => (
                   <tr
-                    key={`${v.utmSource}:${v.utmMedium ?? ''}:${v.utmCampaign ?? ''}`}
+                    key={`${r.utmSource}:${r.utmMedium ?? ''}:${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`}
                     className="visit-row"
-                    onClick={() => setDetail(v)}
+                    onClick={() => setDetail(r)}
                   >
-                    <td className="strong">{v.utmSource}</td>
-                    <td>{v.utmMedium ?? '—'}</td>
-                    <td>{v.utmCampaign ?? '—'}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{v.today.toLocaleString()}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{v.total.toLocaleString()}</td>
-                    <td className="num">{fmtDateTime(v.lastVisitAt)}</td>
+                    <td>{r.utmSource}</td>
+                    <td>{r.utmMedium ?? '—'}</td>
+                    <td className="funnel-wrap">{r.utmCampaign ?? '—'}</td>
+                    <td className="strong funnel-wrap">{r.utmContent ?? '—'}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{r.today.toLocaleString()}</td>
+                    <td className="num strong" style={{ textAlign: 'right' }}>{r.visits.toLocaleString()}</td>
+                    {STEPS.map((s, i) => (
+                      <FunnelCell key={s.key} row={r} step={s.key} prev={i === 0 ? 'visits' : STEPS[i - 1].key} />
+                    ))}
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="funnel-total">
+                  <td className="strong" colSpan={4}>합계</td>
+                  <td className="num" style={{ textAlign: 'right' }}>{total.today.toLocaleString()}</td>
+                  <td className="num strong" style={{ textAlign: 'right' }}>{total.visits.toLocaleString()}</td>
+                  {STEPS.map((s, i) => (
+                    <FunnelCell key={s.key} row={total} step={s.key} prev={i === 0 ? 'visits' : STEPS[i - 1].key} />
+                  ))}
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
-      </div>
 
-      <AcquisitionFunnel />
+      </div>
 
       {detail && <VisitDetailModal target={detail} onClose={() => setDetail(null)} />}
     </section>
   )
 }
 
-/**
- * 캠페인 퍼널 (2026-09-07) — 방문 → 맛보기 완주 → 회원가입 → 첫 세트 완료.
- * users 행은 맛보기 3문제를 끝내고 결과 화면에서 [건너뛰기](게스트) 또는 소셜 로그인(회원)을 할 때 처음 생기므로,
- * 귀속 유저 수 = 맛보기를 완주한 사람 수다. /start·/trial·풀이 중 이탈은 방문 1 로만 남는다.
- * 전부 visit_events 한 테이블 — 방문은 전체 행, 나머지 셋은 user_id 가 채워진 행(유저가 생길 때 인수).
- * 광고 링크에 utm_content 를 붙이면 소재별로 갈라진다.
- */
-function AcquisitionFunnel() {
-  const [rows, setRows] = useState<AcquisitionFunnelRow[]>([])
-  const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
-  useEffect(() => {
-    fetchAcquisitionFunnel()
-      .then((list) => {
-        setRows(list)
-        setState('done')
-      })
-      .catch(() => setState('error'))
-  }, [])
-  const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : '—')
+/** 정렬 헤더 — 클릭하면 그 열 기준 내림차순. 현재 정렬 열은 강조 + ↓ 표시. pre 는 엔드포인트 앞부분(윗줄 작은 글씨) */
+function SortTh({
+  k,
+  sort,
+  onSort,
+  width,
+  hint,
+  pre,
+  children,
+}: {
+  k: SortKey
+  sort: SortKey
+  onSort: (k: SortKey) => void
+  width: number
+  hint?: string
+  pre?: string
+  children: ReactNode
+}) {
+  const on = sort === k
   return (
-    <div className="card" style={{ padding: 18, marginTop: 24 }}>
-      <div className="toolbar">
-        <div>
-          <strong>캠페인 퍼널</strong>
-          <p className="page-sub" style={{ margin: '4px 0 0' }}>
-            방문 → 맛보기 완주(결과 화면에서 건너뛰기 또는 가입) → 회원가입 → 첫 세트 완료.
-            유저에 최초 유입 UTM 을 붙여 세는 값이라 링크를 누른 브라우저에서 이어서 진행해야 잡힙니다.
-          </p>
-        </div>
-      </div>
-      {state === 'loading' && <p className="page-sub">불러오는 중…</p>}
-      {state === 'error' && <p className="page-sub">퍼널 데이터를 불러오지 못했습니다.</p>}
-      {state === 'done' && rows.length === 0 && (
-        <p className="page-sub">아직 귀속된 유저가 없습니다. utm 링크로 들어와 맛보기를 완주하면 여기에 쌓입니다.</p>
-      )}
-      {state === 'done' && rows.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 150 }}>소스</th>
-                <th style={{ width: 110 }}>미디엄</th>
-                <th>캠페인</th>
-                <th>소재 (content)</th>
-                <th style={{ width: 90, textAlign: 'right' }}>방문</th>
-                <th style={{ width: 110, textAlign: 'right' }}>맛보기 완주</th>
-                <th style={{ width: 110, textAlign: 'right' }}>회원가입</th>
-                <th style={{ width: 120, textAlign: 'right' }}>첫 세트 완료</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={`${r.utmSource}:${r.utmMedium ?? ''}:${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`}>
-                  <td className="strong">{r.utmSource}</td>
-                  <td>{r.utmMedium ?? '—'}</td>
-                  <td>{r.utmCampaign ?? '—'}</td>
-                  <td>{r.utmContent ?? '—'}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>{r.visits.toLocaleString()}</td>
-                  <td className="num" style={{ textAlign: 'right' }}>
-                    {r.users.toLocaleString()} <span className="page-sub">({pct(r.users, r.visits)})</span>
-                  </td>
-                  <td className="num" style={{ textAlign: 'right' }}>
-                    {r.members.toLocaleString()} <span className="page-sub">({pct(r.members, r.users)})</span>
-                  </td>
-                  <td className="num" style={{ textAlign: 'right' }}>
-                    {r.completed.toLocaleString()} <span className="page-sub">({pct(r.completed, r.users)})</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+    <th
+      style={{ width, textAlign: 'right' }}
+      className={on ? 'sort-th on' : 'sort-th'}
+      title={hint ? `${hint} · 클릭하면 이 열 기준 정렬` : '클릭하면 이 열 기준 정렬'}
+      aria-sort={on ? 'descending' : 'none'}
+    >
+      <button type="button" onClick={() => onSort(k)}>
+        {/* 경로 접두(pre)는 한 줄로 이어 붙인다 — 헤더 줄바꿈 대신 표가 좌우 스크롤 (2026-09-09) */}
+        <span className="sort-main">
+          {pre && <span className="sort-pre">{pre}</span>}
+          {children}
+          <span className="sort-arrow" aria-hidden="true">↓</span>
+        </span>
+      </button>
+    </th>
   )
 }
 
-/** 캠페인 1건의 개별 방문 시각 목록 팝업 — 날짜별로 묶어 최신순 표시 */
+type FunnelCounts = Pick<AcquisitionFunnelRow, 'visits' | StepKey>
+
+/** 퍼널 셀 — 큰 숫자 + 방문 대비 % + 비율 막대. 이전 단계 대비 %는 툴팁으로만 */
+function FunnelCell({ row, step, prev }: { row: FunnelCounts; step: StepKey; prev: 'visits' | StepKey }) {
+  const n = row[step]
+  const title = `방문 대비 ${pct(n, row.visits)} · 이전 단계 대비 ${pct(n, row[prev])}`
+  const ratio = row.visits > 0 ? Math.min(1, n / row.visits) : 0
+  return (
+    <td className="num funnel-cell" style={{ textAlign: 'right' }} title={title}>
+      <span className="funnel-n">{n.toLocaleString()}</span>
+      <span className="funnel-pct">{pct(n, row.visits)}</span>
+      <span className="funnel-bar" aria-hidden="true">
+        <i style={{ width: `${ratio * 100}%` }} />
+      </span>
+    </td>
+  )
+}
+
+/** 소재 1건의 개별 방문 시각 목록 팝업 — 날짜별로 묶어 최신순 표시 */
 function VisitDetailModal({
   target,
   onClose,
 }: {
-  target: VisitCampaignStats
+  target: AcquisitionFunnelRow
   onClose: () => void
 }) {
   const [times, setTimes] = useState<string[] | null>(null)
@@ -337,7 +262,7 @@ function VisitDetailModal({
 
   useEffect(() => {
     let alive = true
-    fetchVisitTimes(target.utmSource, target.utmMedium, target.utmCampaign)
+    fetchVisitTimes(target.utmSource, target.utmMedium, target.utmCampaign, target.utmContent)
       .then((list) => alive && setTimes(list))
       .catch(() => alive && setFailed(true))
     return () => {
@@ -358,7 +283,7 @@ function VisitDetailModal({
     return groups
   }, [times])
 
-  const title = [target.utmSource, target.utmCampaign].filter(Boolean).join(' · ')
+  const title = [target.utmSource, target.utmCampaign, target.utmContent].filter(Boolean).join(' · ')
 
   return createPortal(
     <div className="visit-modal-dim" onClick={onClose}>

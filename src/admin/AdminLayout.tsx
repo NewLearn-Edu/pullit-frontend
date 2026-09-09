@@ -81,6 +81,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
   const isMembersAll = pathname.includes('/members/all') // 전체 회원 — 필터·10컬럼 표라 넓게 (2026-09-07)
+  const isVisits = pathname.includes('/stats/visits') // 유입 · 퍼널 — 소재별 10컬럼 표라 넓게 (2026-09-09)
   // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
   const isUpload = pathname.includes('/upload') || pathname.includes('/review')
 
@@ -156,7 +157,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
             <div className="nav-label">마케팅</div>
             <NavLink to="/admin/stats/visits" className={navClass}>
               <span className="ico"><IcoStats /></span>
-              유입 링크
+              유입 · 퍼널
             </NavLink>
 
             <div className="nav-label">학습 리포트</div>
@@ -248,7 +249,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
       </aside>
 
       <main className="main">
-        <div className={clsx('main-inner', (isList || isTrial || isMembersAll) && 'wide', isUpload && 'mid')}>
+        <div className={clsx('main-inner', (isList || isTrial || isMembersAll) && 'wide', isVisits && 'xwide', isUpload && 'mid')}>
           {isProblem && <ProblemKpi />}
           <Outlet />
         </div>

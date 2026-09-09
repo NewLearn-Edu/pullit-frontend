@@ -492,16 +492,27 @@ export async function fetchVisitStats(): Promise<VisitCampaignStats[]> {
   return data.data
 }
 
-/** 캠페인 퍼널 1행 — 방문 → 체험 시작(귀속 유저) → 회원 → 첫 세트 완료 (소재 단위) */
+/**
+ * 캠페인 퍼널 1행 (소재 단위) — 방문 → /trial → quiz 0·1·2 → 약점 결과 → /signup → /signup/info (여기까지 최대 도달 경로 기준 · 누적)
+ * → 회원가입(방문 이후 프로필 완료) → 첫 세트 완료. today·lastVisitAt 은 같은 키의 오늘 방문 수·마지막 방문 시각.
+ */
 export interface AcquisitionFunnelRow {
   utmSource: string
   utmMedium: string | null
   utmCampaign: string | null
   utmContent: string | null
   visits: number
-  users: number
+  today: number
+  trials: number
+  quiz0: number
+  quiz1: number
+  quiz2: number
+  weakness: number
+  signup: number
+  signupInfo: number
   members: number
   completed: number
+  lastVisitAt: string | null
 }
 
 export async function fetchAcquisitionFunnel(): Promise<AcquisitionFunnelRow[]> {
@@ -511,14 +522,20 @@ export async function fetchAcquisitionFunnel(): Promise<AcquisitionFunnelRow[]> 
   return data.data
 }
 
-/** 캠페인 1건의 개별 방문 시각 목록 (최신순 · 최대 500) — 상세 팝업 */
+/** 소재 1건의 개별 방문 시각 목록 (최신순 · 최대 500) — 상세 팝업 */
 export async function fetchVisitTimes(
   source: string,
   medium: string | null,
   campaign: string | null,
+  content: string | null,
 ): Promise<string[]> {
   const { data } = await adminApi.get<BaseResponse<string[]>>('/api/admin/metrics/visits/detail', {
-    params: { source, medium: medium ?? undefined, campaign: campaign ?? undefined },
+    params: {
+      source,
+      medium: medium ?? undefined,
+      campaign: campaign ?? undefined,
+      content: content ?? undefined,
+    },
   })
   return data.data
 }
