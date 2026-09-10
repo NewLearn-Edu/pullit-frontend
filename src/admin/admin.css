@@ -1067,7 +1067,9 @@
 .kpi-problems.kpi-funnel { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 1100px) { .kpi-problems.kpi-funnel { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) { .kpi-problems.kpi-funnel { grid-template-columns: 1fr; } }
-.table-wrap .funnel-table { table-layout: fixed; min-width: 1740px; }  /* = 열 폭 합. 모든 열이 고정 폭이라 좁은 화면은 .table-wrap 좌우 스크롤 */  /* 헤더를 한 줄로 두고, 좁은 화면은 .table-wrap 이 좌우 스크롤 */
+.table-wrap .funnel-table { table-layout: fixed; min-width: 1740px; }
+.table-wrap .funnel-table.by-content { min-width: 1680px; }  /* 캠페인 열이 묶음 헤더로 빠져 소재별 표는 열 폭 합이 줄었다 (2026-09-10) */
+.table-wrap .funnel-table.by-date { min-width: 1300px; }  /* = 열 폭 합. 모든 열이 고정 폭이라 좁은 화면은 .table-wrap 좌우 스크롤 */  /* 헤더를 한 줄로 두고, 좁은 화면은 .table-wrap 이 좌우 스크롤 */
 .funnel-table th, .funnel-table td { padding-left: 10px; padding-right: 10px; }  /* 15열 — 좌우 여백을 줄여 폭 확보 */
 .funnel-table td.funnel-wrap { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }  /* 소스·캠페인·소재는 자르지 않고 줄바꿈 */  /* 열 폭 고정 — 소재 열이 남는 폭을 다 가져가고 퍼널 헤더가 눌리지 않게 */
 .funnel-table tbody td { padding-top: 14px; padding-bottom: 14px; }
@@ -1089,6 +1091,26 @@
 .sort-th.on .sort-arrow { display: inline; }
 
 /* ============ 유입 통계 — 방문 상세 팝업 ============ */
+/* 캠페인 묶음 헤더 · 소계 · 날짜별 보기 (2026-09-10) */
+.funnel-table tbody tr.funnel-group td { padding: 12px 10px 8px; background: var(--color-canvas); border-bottom: 1px solid var(--color-line); text-align: left; white-space: nowrap; overflow: visible; }  /* colspan 셀 — `tbody td:last-child { text-align: right }` 보다 구체도를 높여 좌측 정렬 */
+.funnel-group-name { font-size: 13px; font-weight: 600; color: var(--color-fg); }
+.funnel-group-meta { margin-left: 10px; font-size: 12px; color: var(--color-muted); }
+tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고르기 */
+.funnel-subtotal td { padding-top: 12px; padding-bottom: 12px; background: var(--color-fill-soft); border-bottom: 1px solid var(--color-line); font-size: 13px; }
+.funnel-subtotal .funnel-n { font-weight: 600; }
+.funnel-subtotal .funnel-bar { visibility: hidden; }
+.funnel-weekday { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--color-muted); }
+.funnel-today td { background: var(--color-primary-soft); }
+/* 기간 필터 — 페이지 헤더 우측. date 인풋은 셀렉트와 같은 44px / r12 규격, 값이 있으면 보더를 진하게 */
+.funnel-period { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.funnel-period-dash { color: var(--color-muted); font-size: 13px; }
+.input-date {
+  height: 44px; padding: 0 14px;
+  background: var(--color-canvas); border: 1px solid var(--color-line); border-radius: 12px;
+  font-size: 14px; font-weight: 600; color: var(--color-fg); font-variant-numeric: tabular-nums;
+}
+.input-date.has-value { border-color: var(--line-strong); }
+.input-date:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(255, 56, 92, .12); }
 .visit-row { cursor: pointer; }
 .visit-row:hover td { background: var(--color-fill-soft); }
 

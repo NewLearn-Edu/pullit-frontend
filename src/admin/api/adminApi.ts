@@ -522,6 +522,35 @@ export async function fetchAcquisitionFunnel(): Promise<AcquisitionFunnelRow[]> 
   return data.data
 }
 
+/**
+ * 캠페인 퍼널을 방문일(KST)까지 쪼갠 1행 (2026-09-10) — 열 의미는 AcquisitionFunnelRow 와 같고 today·lastVisitAt 이 없다.
+ * 유입 페이지는 이 행들을 더해 소재별(캠페인 묶음)·날짜별 표와 기간 필터를 만든다.
+ */
+export interface AcquisitionFunnelDailyRow {
+  date: string // YYYY-MM-DD
+  utmSource: string
+  utmMedium: string | null
+  utmCampaign: string | null
+  utmContent: string | null
+  visits: number
+  trials: number
+  quiz0: number
+  quiz1: number
+  quiz2: number
+  weakness: number
+  signup: number
+  signupInfo: number
+  members: number
+  completed: number
+}
+
+export async function fetchAcquisitionFunnelDaily(): Promise<AcquisitionFunnelDailyRow[]> {
+  const { data } = await adminApi.get<BaseResponse<AcquisitionFunnelDailyRow[]>>(
+    '/api/admin/metrics/acquisition-funnel/daily',
+  )
+  return data.data
+}
+
 /** 소재 1건의 개별 방문 시각 목록 (최신순 · 최대 500) — 상세 팝업 */
 export async function fetchVisitTimes(
   source: string,
