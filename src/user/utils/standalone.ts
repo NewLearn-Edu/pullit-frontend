@@ -12,6 +12,29 @@
  */
 const APP_FLAG_KEY = 'pullit_app'
 
+/**
+ * 다른 앱의 인앱 브라우저인가 (2026-09-10) — 인스타그램·페이스북·카카오톡·네이버·라인·다음.
+ * 이들 웹뷰 UA 는 우리 앱과 같은 흔적(iOS 는 Safari 토큰 없음 · 안드로이드는 "; wv")을 남겨서
+ * 앱 판정에서 반드시 먼저 제외한다 — 안 그러면 광고로 온 사람에게 앱 규칙(비회원 진입 숨김 · 건너뛰기 없음)이
+ * 적용되고, 접속 정보도 APP 으로 잘못 기록된다.
+ */
+export function isInAppBrowser(): boolean {
+  try {
+    return /Instagram|FBAN|FBAV|FB_IAB|KAKAOTALK|NAVER\(inapp|Line\/|DaumApps/i.test(navigator.userAgent || '')
+  } catch {
+    return false
+  }
+}
+
+/** 메타(인스타그램·페이스북) 인앱 브라우저 — 광고 클릭이 이 안에서 열린다. 외부 브라우저 안내 대상 */
+export function isMetaInAppBrowser(): boolean {
+  try {
+    return /Instagram|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent || '')
+  } catch {
+    return false
+  }
+}
+
 function remember(): true {
   try {
     localStorage.setItem(APP_FLAG_KEY, '1')
@@ -47,6 +70,8 @@ function detectAppNow(): boolean {
     const ua = navigator.userAgent || ''
     if (/PullitApp/i.test(ua)) return remember()
     if (new URLSearchParams(window.location.search).has('app')) return remember()
+    // 다른 앱의 인앱 브라우저는 우리 앱이 아니다 — 아래 웹뷰 휴리스틱이 오판하기 전에 끊는다 (2026-09-10)
+    if (isInAppBrowser()) return false
     if (/^android-app:\/\//.test(document.referrer || '')) return remember()
     // Android WebView — "; wv" (Lollipop+ 표준) 또는 "Version/4.0" (WebView 전용 토큰 · 크롬 브라우저엔 없다)
     if (/Android/i.test(ua) && (/;\s*wv\b/.test(ua) || /\bVersion\/\d+\.\d+/.test(ua))) return remember()
@@ -120,6 +145,7 @@ export function detectClient(): ClientKind {
   try {
     const ua = navigator.userAgent || ''
     const w = window as Window & { __PULLIT_APP__?: boolean }
+    if (isInAppBrowser() && !/PullitApp/i.test(ua)) return 'WEB' // 인스타·카톡 등 남의 인앱 브라우저 = 웹
     const android = /Android/i.test(ua)
     const ios = /iPhone|iPad|iPod/i.test(ua) || isIPadLike()
     const app =

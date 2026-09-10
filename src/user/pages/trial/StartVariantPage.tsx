@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import TrialIntroPage from './TrialIntroPage'
+import { InAppBrowserGate } from '@/user/components/InAppBrowserGate'
 import { getStartVariant, rememberStartPath } from '@/user/services/startVariants'
 
 /**
@@ -31,7 +32,18 @@ export default function StartVariantPage() {
 
   if (variant && registered?.component) {
     const Variant = registered.component
-    return <Variant slug={variant} />
+    return (
+      <>
+        <Variant slug={variant} />
+        <InAppBrowserGate />
+      </>
+    )
   }
-  return <TrialIntroPage />
+  // 광고 랜딩 — 인스타·페이스북 인앱 브라우저면 외부 브라우저 안내 시트를 위에 띄운다 (2026-09-10)
+  return (
+    <>
+      <TrialIntroPage />
+      <InAppBrowserGate />
+    </>
+  )
 }
