@@ -13,23 +13,23 @@
 const APP_FLAG_KEY = 'pullit_app'
 
 /**
- * 다른 앱의 인앱 브라우저인가 (2026-09-10) — 인스타그램·페이스북·카카오톡·네이버·라인·다음.
+ * 다른 앱의 인앱 브라우저인가 (2026-09-10) — 인스타그램·스레드(UA "Barcelona")·페이스북·카카오톡·네이버·라인·다음.
  * 이들 웹뷰 UA 는 우리 앱과 같은 흔적(iOS 는 Safari 토큰 없음 · 안드로이드는 "; wv")을 남겨서
  * 앱 판정에서 반드시 먼저 제외한다 — 안 그러면 광고로 온 사람에게 앱 규칙(비회원 진입 숨김 · 건너뛰기 없음)이
  * 적용되고, 접속 정보도 APP 으로 잘못 기록된다.
  */
 export function isInAppBrowser(): boolean {
   try {
-    return /Instagram|FBAN|FBAV|FB_IAB|KAKAOTALK|NAVER\(inapp|Line\/|DaumApps/i.test(navigator.userAgent || '')
+    return /Instagram|Barcelona|FBAN|FBAV|FB_IAB|KAKAOTALK|NAVER\(inapp|Line\/|DaumApps/i.test(navigator.userAgent || '')
   } catch {
     return false
   }
 }
 
-/** 메타(인스타그램·페이스북) 인앱 브라우저 — 광고 클릭이 이 안에서 열린다. 외부 브라우저 안내 대상 */
+/** 메타(인스타그램·스레드·페이스북) 인앱 브라우저 — 광고 클릭이 이 안에서 열린다. 외부 브라우저 안내 대상 */
 export function isMetaInAppBrowser(): boolean {
   try {
-    return /Instagram|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent || '')
+    return /Instagram|Barcelona|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent || '')
   } catch {
     return false
   }
