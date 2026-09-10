@@ -1100,6 +1100,13 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 .funnel-subtotal .funnel-n { font-weight: 600; }
 .funnel-subtotal .funnel-bar { visibility: hidden; }
 .funnel-weekday { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--color-muted); }
+/* 소재×날짜 매트릭스 */
+.funnel-table.by-matrix thead th .num { font-weight: 600; }
+.funnel-table.by-matrix th.matrix-today { color: var(--color-primary); }
+.matrix-cell { line-height: 1.25; }
+.matrix-empty { color: var(--neutral-dash); }
+.funnel-total .matrix-cell .funnel-bar { visibility: hidden; }
+.funnel-table td .sub { font-size: 12px; font-weight: 400; color: var(--color-muted); }
 .funnel-today td { background: var(--color-primary-soft); }
 /* 기간 필터 — 페이지 헤더 우측. date 인풋은 셀렉트와 같은 44px / r12 규격, 값이 있으면 보더를 진하게 */
 .funnel-period { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

@@ -29,13 +29,20 @@ type FunnelCounts = Record<'visits' | StepKey, number>
 /** 정렬 가능한 열 — 숫자 열은 값 내림차순, 퍼널 열은 건수 내림차순(동률이면 방문 대비 % 내림차순) */
 type SortKey = 'today' | 'visits' | StepKey
 
-/** 소재별 보기의 한 줄 — 소재(소스×미디엄×캠페인×소재) 합계 + 오늘 방문 */
+/**
+ * 소재 단위 한 줄. 두 가지 단위로 쓴다 (2026-09-10):
+ * - 소재별 표: 소스×미디엄×캠페인×소재 (ig / an / fb 가 따로)
+ * - 소재×날짜 매트릭스 · 날짜별 셀렉트: 캠페인×소재 로 합침 (엑셀 "소재별" 시트와 같은 단위 · 소스는 목록으로만)
+ */
 interface ContentRow extends FunnelCounts {
   key: string
   utmSource: string
   utmMedium: string | null
   utmCampaign: string | null
   utmContent: string | null
+  /** 합침 단위에서 이 소재가 들어온 소스·미디엄 목록 (방문 많은 순) */
+  sources: Map<string, number>
+  mediums: Set<string>
   today: number
 }
 
@@ -51,8 +58,12 @@ const addCounts = (acc: FunnelCounts, r: FunnelCounts) => {
   acc.visits += r.visits
   for (const s of STEPS) acc[s.key] += r[s.key]
 }
-const contentKey = (r: Pick<AcquisitionFunnelDailyRow, 'utmSource' | 'utmMedium' | 'utmCampaign' | 'utmContent'>) =>
-  `${r.utmSource}:${r.utmMedium ?? ''}:${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`
+const contentKey = (r: Pick<AcquisitionFunnelDailyRow, 'utmSource' | 'utmMedium' | 'utmCampaign' | 'utmContent'>, split: boolean) =>
+  split
+    ? `${r.utmSource}:${r.utmMedium ?? ''}:${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`
+    : `${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`
+/** 합침 단위의 소스 표기 — 방문 많은 순 "ig·an·fb" */
+const joinSources = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).join('·')
 const todayKst = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 const fmtDate = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`
 const weekday = (d: string) => '일월화수목금토'[new Date(`${d}T00:00:00+09:00`).getDay()]
@@ -67,7 +78,9 @@ const weekday = (d: string) => '일월화수목금토'[new Date(`${d}T00:00:00+0
 export default function VisitStatsPage() {
   const [daily, setDaily] = useState<AcquisitionFunnelDailyRow[]>([])
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
-  const [view, setView] = useState<'content' | 'date'>('content')
+  const [view, setView] = useState<'content' | 'date' | 'matrix'>('content')
+  // 소재×날짜 매트릭스 셀 지표
+  const [metric, setMetric] = useState<'visits' | 'trials' | 'members'>('visits')
   // 기간 — 빈 값이면 그 쪽 경계 없음 (전체)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -98,21 +111,27 @@ export default function VisitStatsPage() {
     [daily, from, to],
   )
 
-  // 소재별 합계 (기간 적용) — 캠페인 묶음의 재료
-  const contents = useMemo(() => {
+  // 소재 합계 (기간 적용) — split=true 소스별로 쪼갠 행(소재별 표), false 소재로 합친 행(매트릭스·날짜별 셀렉트)
+  const buildContents = (split: boolean) => {
     const map = new Map<string, ContentRow>()
     for (const r of inRange) {
-      const key = contentKey(r)
+      const key = contentKey(r, split)
       let row = map.get(key)
       if (!row) {
-        row = { key, utmSource: r.utmSource, utmMedium: r.utmMedium, utmCampaign: r.utmCampaign, utmContent: r.utmContent, today: 0, ...emptyCounts() }
+        row = { key, utmSource: r.utmSource, utmMedium: r.utmMedium, utmCampaign: r.utmCampaign, utmContent: r.utmContent, sources: new Map(), mediums: new Set(), today: 0, ...emptyCounts() }
         map.set(key, row)
       }
       addCounts(row, r)
+      row.sources.set(r.utmSource, (row.sources.get(r.utmSource) ?? 0) + r.visits)
+      if (r.utmMedium) row.mediums.add(r.utmMedium)
       if (r.date === today) row.today += r.visits
     }
     return [...map.values()]
-  }, [inRange, today])
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const contents = useMemo(() => buildContents(true), [inRange, today])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const merged = useMemo(() => buildContents(false), [inRange, today])
 
   // 캠페인 묶음 — 캠페인 방문 수 내림차순, 안에서는 선택한 열 기준 내림차순
   const groups = useMemo(() => {
@@ -144,7 +163,7 @@ export default function VisitStatsPage() {
     const map = new Map<string, DateRow>()
     for (const r of inRange) {
       if (campaignFilter !== 'all' && (r.utmCampaign ?? '(캠페인 없음)') !== campaignFilter) continue
-      if (contentFilter !== 'all' && contentKey(r) !== contentFilter) continue
+      if (contentFilter !== 'all' && contentKey(r, false) !== contentFilter) continue
       let row = map.get(r.date)
       if (!row) {
         row = { date: r.date, ...emptyCounts() }
@@ -155,14 +174,35 @@ export default function VisitStatsPage() {
     return [...map.values()].sort((a, b) => (a.date < b.date ? 1 : -1))
   }, [inRange, campaignFilter, contentFilter])
 
+  // 소재×날짜 매트릭스 — 열 = 기간 안 날짜(최신순), 행 = 소재(방문 많은 순), 셀 = 그날 그 소재의 퍼널
+  const matrix = useMemo(() => {
+    const dates = [...new Set(inRange.map((r) => r.date))].sort((a, b) => (a < b ? 1 : -1))
+    const cells = new Map<string, FunnelCounts>() // `${key}|${date}`
+    for (const r of inRange) {
+      const k = `${contentKey(r, false)}|${r.date}`
+      let c = cells.get(k)
+      if (!c) {
+        c = emptyCounts()
+        cells.set(k, c)
+      }
+      addCounts(c, r)
+    }
+    const rows = [...merged].sort((a, b) => b.visits - a.visits)
+    return { dates, cells, rows }
+  }, [inRange, merged])
+
   // 셀렉트 옵션 — 캠페인은 기간 안 전체, 소재는 선택한 캠페인 안
   const campaignOptions = useMemo(() => groups.map((g) => g.name), [groups])
   const contentOptions = useMemo(
-    () => contents.filter((c) => campaignFilter === 'all' || (c.utmCampaign ?? '(캠페인 없음)') === campaignFilter)
+    () => merged.filter((c) => campaignFilter === 'all' || (c.utmCampaign ?? '(캠페인 없음)') === campaignFilter)
       .sort((a, b) => b.visits - a.visits),
-    [contents, campaignFilter],
+    [merged, campaignFilter],
   )
-  const selectedContent = contentFilter === 'all' ? null : contents.find((c) => c.key === contentFilter) ?? null
+  const selectedContent = contentFilter === 'all' ? null : merged.find((c) => c.key === contentFilter) ?? null
+  // 방문 시각 목록은 소스 단위 엔드포인트 — 고른 소재가 한 소스에서만 왔을 때만 연다
+  const detailTarget = selectedContent && selectedContent.sources.size === 1
+    ? contents.find((c) => contentKey(c, false) === selectedContent.key) ?? null
+    : null
 
   // KPI — 보기와 무관하게 기간 전체 (날짜별 필터는 KPI 에 걸지 않는다)
   const total = useMemo(() => {
@@ -182,10 +222,10 @@ export default function VisitStatsPage() {
 
   const periodLabel = from || to ? `${from ? fmtDate(from) : '처음'} ~ ${to ? fmtDate(to) : '오늘'}` : '전체 기간'
 
-  /** 소재 행 클릭 → 그 소재의 날짜별로 */
+  /** 소재 행 클릭 → 그 소재(모든 소스)의 날짜별로 */
   const drillDown = (c: ContentRow) => {
     setCampaignFilter(c.utmCampaign ?? '(캠페인 없음)')
-    setContentFilter(c.key)
+    setContentFilter(contentKey(c, false))
     setView('date')
   }
 
@@ -263,7 +303,17 @@ export default function VisitStatsPage() {
             <button type="button" className={view === 'date' ? 'on' : undefined} onClick={() => setView('date')}>
               날짜별
             </button>
+            <button type="button" className={view === 'matrix' ? 'on' : undefined} onClick={() => setView('matrix')}>
+              소재 × 날짜
+            </button>
           </div>
+          {view === 'matrix' && (
+            <div className="seg" role="group" aria-label="셀 지표">
+              <button type="button" className={metric === 'visits' ? 'on' : undefined} onClick={() => setMetric('visits')}>방문</button>
+              <button type="button" className={metric === 'trials' ? 'on' : undefined} onClick={() => setMetric('trials')}>/trial</button>
+              <button type="button" className={metric === 'members' ? 'on' : undefined} onClick={() => setMetric('members')}>회원가입</button>
+            </div>
+          )}
           {view === 'date' && (
             <>
               <select
@@ -285,11 +335,11 @@ export default function VisitStatsPage() {
               >
                 <option value="all">전체 소재</option>
                 {contentOptions.map((c) => (
-                  <option key={c.key} value={c.key}>{c.utmContent ?? '(소재 없음)'} · {c.utmSource}</option>
+                  <option key={c.key} value={c.key}>{c.utmContent ?? '(소재 없음)'}</option>
                 ))}
               </select>
-              {selectedContent && (
-                <button type="button" className="btn btn-ghost" onClick={() => setDetail(selectedContent)}>
+              {detailTarget && (
+                <button type="button" className="btn btn-ghost" onClick={() => setDetail(detailTarget)}>
                   방문 시각 목록
                 </button>
               )}
@@ -297,9 +347,9 @@ export default function VisitStatsPage() {
           )}
           <div className="spacer" />
           <p className="page-sub" style={{ margin: 0 }}>
-            {view === 'content'
-              ? '캠페인으로 묶음 · 열 이름을 누르면 그 열 기준 정렬 · 소재 행을 누르면 날짜별로'
-              : `${periodLabel} · 하루 한 줄 · 열 이름에 마우스를 올리면 단계 설명`}
+            {view === 'content' && '캠페인으로 묶고 소스별로 나눔 · 열 이름을 누르면 그 열 기준 정렬 · 소재 행을 누르면 날짜별로'}
+            {view === 'date' && `${periodLabel} · 하루 한 줄 · 열 이름에 마우스를 올리면 단계 설명`}
+            {view === 'matrix' && `${periodLabel} · 소재는 소스를 합쳐 한 줄 · 셀 = 그날 그 소재 · 아래 작은 %는 그날 방문 대비`}
           </p>
         </div>
 
@@ -373,6 +423,55 @@ export default function VisitStatsPage() {
                   {STEPS.map((s, i) => (
                     <FunnelCell key={s.key} row={total} step={s.key} prev={i === 0 ? 'visits' : STEPS[i - 1].key} />
                   ))}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+
+        {state === 'done' && contents.length > 0 && view === 'matrix' && (
+          <div className="table-wrap">
+            <table className="funnel-table by-matrix" style={{ minWidth: 300 + 150 + matrix.dates.length * 96 + 100 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 300 }}>소재</th>
+                  <th style={{ width: 150, textAlign: 'right' }}>소스</th>
+                  {matrix.dates.map((d) => (
+                    <th key={d} style={{ width: 96, textAlign: 'right' }} className={d === today ? 'matrix-today' : undefined}>
+                      <span className="num">{fmtDate(d)}</span> <span className="funnel-weekday">({weekday(d)})</span>
+                    </th>
+                  ))}
+                  <th style={{ width: 100, textAlign: 'right' }}>합계</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.rows.map((r) => (
+                  <tr key={r.key} className="visit-row" onClick={() => drillDown(r)} title="누르면 이 소재의 날짜별 퍼널">
+                    <td className="strong funnel-wrap">
+                      {r.utmContent ?? '—'}
+                      <span className="sub" style={{ display: 'block' }}>{r.utmCampaign ?? '(캠페인 없음)'}</span>
+                    </td>
+                    <td className="funnel-wrap" style={{ textAlign: 'right' }}>{joinSources(r.sources)}</td>
+                    {matrix.dates.map((d) => {
+                      const c = matrix.cells.get(`${r.key}|${d}`)
+                      return <MatrixCell key={d} cell={c} metric={metric} />
+                    })}
+                    <MatrixCell cell={r} metric={metric} strong />
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="funnel-total">
+                  <td className="strong" colSpan={2}>합계</td>
+                  {matrix.dates.map((d) => {
+                    const acc = emptyCounts()
+                    for (const r of matrix.rows) {
+                      const c = matrix.cells.get(`${r.key}|${d}`)
+                      if (c) addCounts(acc, c)
+                    }
+                    return <MatrixCell key={d} cell={acc} metric={metric} strong />
+                  })}
+                  <MatrixCell cell={total} metric={metric} strong />
                 </tr>
               </tfoot>
             </table>
@@ -480,6 +579,26 @@ function FunnelCell({ row, step, prev }: { row: FunnelCounts; step: StepKey; pre
       <span className="funnel-bar" aria-hidden="true">
         <i style={{ width: `${ratio * 100}%` }} />
       </span>
+    </td>
+  )
+}
+
+/** 소재×날짜 셀 — 지표 값 + (방문이 아니면) 그날 방문 대비 %. 방문 없는 날은 빈 대시 */
+function MatrixCell({ cell, metric, strong }: { cell: FunnelCounts | undefined; metric: 'visits' | 'trials' | 'members'; strong?: boolean }) {
+  if (!cell || cell.visits === 0) {
+    return <td className="num matrix-cell matrix-empty" style={{ textAlign: 'right' }}>—</td>
+  }
+  const n = cell[metric]
+  const ratio = metric === 'visits' ? 0 : cell.visits > 0 ? Math.min(1, n / cell.visits) : 0
+  return (
+    <td className={strong ? 'num matrix-cell strong' : 'num matrix-cell'} style={{ textAlign: 'right' }} title={metric === 'visits' ? `방문 ${n.toLocaleString()}` : `방문 ${cell.visits.toLocaleString()} 중 ${n.toLocaleString()}`}>
+      <span className="funnel-n">{n.toLocaleString()}</span>
+      {metric !== 'visits' && <span className="funnel-pct">{pct(n, cell.visits)}</span>}
+      {metric !== 'visits' && (
+        <span className="funnel-bar" aria-hidden="true">
+          <i style={{ width: `${ratio * 100}%` }} />
+        </span>
+      )}
     </td>
   )
 }
