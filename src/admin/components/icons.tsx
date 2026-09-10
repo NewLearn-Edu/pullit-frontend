@@ -291,3 +291,21 @@ export function IcoOtp() {
     </svg>
   )
 }
+
+/** 모바일 상단 바 — 메뉴 열기 (햄버거) */
+export function IcoMenu() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** 모바일 드로어 — 닫기 */
+export function IcoClose() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  )
+}

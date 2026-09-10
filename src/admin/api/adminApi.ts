@@ -475,23 +475,6 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   return data.data
 }
 
-/** UTM 캠페인별 유입 현황 1행 (visit_events 집계 · 최근 방문 순) */
-export interface VisitCampaignStats {
-  utmSource: string
-  utmMedium: string | null
-  utmCampaign: string | null
-  total: number
-  today: number
-  lastVisitAt: string
-}
-
-export async function fetchVisitStats(): Promise<VisitCampaignStats[]> {
-  const { data } = await adminApi.get<BaseResponse<VisitCampaignStats[]>>(
-    '/api/admin/metrics/visits',
-  )
-  return data.data
-}
-
 /**
  * 캠페인 퍼널 1행 (소재 단위) — 방문 → /trial → quiz 0·1·2 → 약점 결과 → /signup → /signup/info (여기까지 최대 도달 경로 기준 · 누적)
  * → 회원가입(방문 이후 프로필 완료) → 첫 세트 완료. today·lastVisitAt 은 같은 키의 오늘 방문 수·마지막 방문 시각.
