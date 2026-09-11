@@ -124,7 +124,7 @@ export default function CreditHistoryPage() {
                 onClick={() => navigate('/signup', { state: { from: window.location.pathname + window.location.search } })}
                 className={styles.inviteCta}
               >
-                가입하고 +10 받기
+                가입하고 +3 받기
               </button>
             ) : (
               <button type="button" onClick={openShare} disabled={invite.loading} className={styles.inviteCta}>

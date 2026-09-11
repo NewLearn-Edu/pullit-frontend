@@ -4,9 +4,8 @@ import coinRewardSvg from '@/assets/coin-reward.svg'
 /**
  * 크레딧 지급 축하 콘텐츠 (코인 스핀 + 콘페티 버스트 + 스태거 텍스트).
  *
- * 시안 두 곳이 같은 몸통을 쓴다:
- * - PI-SHEET-FIRST_CREDIT (Figma 2824-5720) — 첫 진단 완료, 결과 화면 시트
- * - PI-SHEET-SIGNUP-COMPLETE_CREDIT (Figma 3680-6615) — 회원가입 완료, 풀 뷰
+ * 사용처: PI-SHEET-SIGNUP-COMPLETE_CREDIT (Figma 3680-6615) — 회원가입 완료, 풀 뷰.
+ * (첫 진단 완료 시트 PI-SHEET-FIRST_CREDIT 는 2026-09-11 보상 폐지로 제거)
  * 래퍼(시트/페이지)는 각자 갖고, 여기는 카드 안쪽 내용만 담당한다.
  */
 

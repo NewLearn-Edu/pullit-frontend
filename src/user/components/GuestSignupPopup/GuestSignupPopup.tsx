@@ -4,7 +4,7 @@ import coinSvg from '@/assets/coin-reward.svg'
 import styles from '@/user/components/CreditShortagePopup/styles/CreditShortagePopup.module.scss'
 
 /** 회원가입 축하 크레딧 — 백엔드 CreditCommandService.SIGNUP_WELCOME_REWARD 와 동일 */
-const SIGNUP_WELCOME_REWARD = 10
+const SIGNUP_WELCOME_REWARD = 3
 
 function CheckIcon() {
   return (
@@ -26,7 +26,7 @@ interface GuestSignupPopupProps {
  * 게스트 가입 유도 팝업 (2026-09-07) — 게스트에겐 친구 초대가 없다. 크레딧이 모자랄 때(부족 팝업)와
  * 홈 크레딧 배지를 눌렀을 때(충전 안내 자리) 모두 이 한 장을 띄운다.
  *
- * "부족" 보다 "가입하면 바로 이어서" 를 앞세우고, 혜택 3줄(즉시 +10 · 약점 맞춤 추천 · 기록 보존)을
+ * "부족" 보다 "가입하면 바로 이어서" 를 앞세우고, 혜택 3줄(즉시 +3 · 약점 맞춤 추천 · 기록 보존)을
  * 체크리스트로 보여준 뒤 브랜드 컬러 CTA 로 /signup 에 보낸다 (돌아올 경로를 state 로 실어 준다).
  * 조판은 크레딧 부족 팝업(Figma 2856-17959)의 카드·딤을 그대로 쓴다.
  */
@@ -58,7 +58,7 @@ export function GuestSignupPopup({ required, onClose }: GuestSignupPopupProps) {
             <CheckIcon />
             <span>
               <span className={styles.benefitStrong}>크레딧 {SIGNUP_WELCOME_REWARD}개 즉시 지급</span>
-              <span className={styles.benefitNote}> · 세트 3개 분량</span>
+              <span className={styles.benefitNote}> · 세트 1개 분량</span>
             </span>
           </li>
           <li className={styles.benefit}>

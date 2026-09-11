@@ -36,13 +36,6 @@ interface TrialState {
   /** 이번 세션에서 실제로 푼 과목 — 완주 가드 판정 기준 */
   lastSubject: Subject | null
   /**
-   * 첫 진단 보상 지급 확정 — 제출 응답의 grantedReward(TRIAL_FIRST_CLEAR)로만 켜진다.
-   * 서버 원장이 진실원이라 로컬 추측 없이 축하 시트 노출 근거가 된다 (회원 경로).
-   */
-  firstRewardGranted: boolean
-  /** 축하 시트 노출 완료 — 같은 세션에서 결과 화면을 재방문해도 다시 뜨지 않게 */
-  firstCreditCelebrated: boolean
-  /**
    * 결과 화면(/weakness · 퍼널은 /trial/{subject}/weakness) 열람권 — 세트를 막 끝낸 직후에만 유효한 1회용 패스.
    * 세트 완료 시 발급하고, 결과를 다 보고 홈으로 나갈 때 소비한다.
    * 해설 왕복·소셜 로그인 왕복은 결과 화면으로 되돌아오므로 유지된다.
@@ -74,8 +67,6 @@ interface TrialState {
   setLastSubject: (subject: Subject) => void
   addResult: (subject: Subject, result: QuizItemResult) => void
   updateResult: (subject: Subject, problemId: number, patch: Partial<QuizItemResult>) => void
-  markFirstRewardGranted: () => void
-  markFirstCreditCelebrated: () => void
   grantResultPass: () => void
   consumeResultPass: () => void
   setActiveSetId: (id: number | null) => void
@@ -104,8 +95,6 @@ export const useTrialStore = create<TrialState>()(
       mathResults: [],
       englishResults: [],
       lastSubject: null,
-      firstRewardGranted: false,
-      firstCreditCelebrated: false,
       resultPass: false,
       resultPassSetId: null,
       activeSetId: null,
@@ -137,9 +126,6 @@ export const useTrialStore = create<TrialState>()(
             [key]: state[key].map((r) => (r.problemId === problemId ? { ...r, ...patch } : r)),
           } as Partial<TrialState>
         }),
-
-      markFirstRewardGranted: () => set({ firstRewardGranted: true }),
-      markFirstCreditCelebrated: () => set({ firstCreditCelebrated: true }),
 
       // 발급 시점의 세트를 함께 새긴다 — 다른 세트의 결과가 이 열람권으로 열리지 않게
       grantResultPass: () => set((state) => ({ resultPass: true, resultPassSetId: state.activeSetId })),
@@ -202,8 +188,6 @@ export const useTrialStore = create<TrialState>()(
         mathResults: state.mathResults,
         englishResults: state.englishResults,
         lastSubject: state.lastSubject,
-        firstRewardGranted: state.firstRewardGranted,
-        firstCreditCelebrated: state.firstCreditCelebrated,
         resultPass: state.resultPass,
         resultPassSetId: state.resultPassSetId,
         activeSetId: state.activeSetId,

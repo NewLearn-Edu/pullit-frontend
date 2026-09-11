@@ -16,7 +16,6 @@ import { isTrialSubject } from '@/user/services/trialRoutes'
 import { useTrialProgressStore } from '@/user/stores/trialProgressStore'
 import { selectIsMember, useUserStore } from '@/user/stores/userStore'
 import { isEarlybird, openEarlybirdForm } from '@/user/services/earlybird'
-import { CreditCelebrationContent } from '@/user/components/CreditCelebration'
 import { setDiagnoseDoneFlash, setLastSolvedFlash, setUnitReopenFlash } from '@/user/pages/home/UnitSheets'
 import markStyles from './styles/WeaknessResultPage.module.scss'
 
@@ -405,28 +404,7 @@ export default function WeaknessResultPage() {
   // 얼리버드 테스트 — "진단 완료"가 가입 유도 대신 사전예약 팝업을 연다
   const [reserveOpen, setReserveOpen] = useState(false)
 
-  // 첫 진단 완료 보상(+5크레딧) 축하 — "진단 완료" 버튼을 눌렀을 때 1회만 끼어든다.
-  // 실제 지급은 서버가 진단 박제 트랜잭션에서 처리(멱등) — 여기는 안내 UI 만 담당.
-  const diagnosedCount = useTrialProgressStore((s) => Object.keys(s.diagnosed).length)
-  const [creditOpen, setCreditOpen] = useState(false)
-  // 판정 근거 (2026-08-26 재설계 — localStorage 플래그 제거):
-  // - 회원: 제출 응답의 grantedReward(TRIAL_FIRST_CLEAR)가 켠 firstRewardGranted. 서버 원장이 진실원.
-  // - 익명(가입 전): 유저 로우가 없어 지급 자체가 불가하므로 로컬 진단 1건 = 첫 진단으로 판정.
-  // - firstCreditCelebrated 는 같은 세션 재방문 시 재노출 방지 (sessionStorage — 탭 닫으면 소멸).
-  const firstRewardGranted = useTrialStore((s) => s.firstRewardGranted)
-  const firstCreditCelebrated = useTrialStore((s) => s.firstCreditCelebrated)
-  const shouldCelebrateFirstCredit = (): boolean => {
-    if (isEarlybird()) return false // 얼리버드는 가입·크레딧 흐름이 없다
-    if (firstCreditCelebrated) return false
-    if (firstRewardGranted) return true
-    return !isMember && diagnosedCount === 1
-  }
-  // 시트의 "확인" — 노출 완료를 기록하고 원래 가려던 곳(홈/가입)으로 이어간다
-  const confirmCreditSheet = () => {
-    useTrialStore.getState().markFirstCreditCelebrated()
-    setCreditOpen(false)
-    leaveResult(exitPath())
-  }
+  // 첫 진단 완료 보상(+5크레딧) 시트는 2026-09-11 보상 폐지와 함께 제거 — "진단 완료" 는 바로 원래 가려던 곳으로
 
   /**
    * 약점 도장은 "이 단원을 처음 진단한" 결과에만 (2026-09-04).
@@ -755,12 +733,10 @@ export default function WeaknessResultPage() {
       <footer className="fixed inset-x-0 bottom-0 flex min-w-[350px] justify-center bg-white px-[40px] pb-[calc(24px+env(safe-area-inset-bottom))] pt-[12px] max-md:px-lg">
         <button
           type="button"
-          // 얼리버드 테스트 모드 — 가입 유도 대신 사전예약 팝업.
-          // 첫 진단이면 보상 시트가 먼저 끼어들고, 그 외에는 잠금 해제 진행 중이던
-          // 세트면 진행 페이지로 복귀
+          // 얼리버드 테스트 모드 — 가입 유도 대신 사전예약 팝업. 그 외에는 잠금 해제 진행 중이던
+          // 세트면 진행 페이지로, 아니면 홈/가입으로 복귀
           onClick={() => {
             if (isEarlybird()) return setReserveOpen(true)
-            if (shouldCelebrateFirstCredit()) return setCreditOpen(true)
             leaveResult(exitPath())
           }}
           className="flex h-[56px] w-full max-w-[620px] items-center justify-center rounded-[12px] bg-[#23272b] px-xl text-[16px] font-bold text-white transition-opacity hover:opacity-90 active:opacity-85"
@@ -770,7 +746,6 @@ export default function WeaknessResultPage() {
       </footer>
 
       {reserveOpen && <EarlybirdReserveModal onClose={() => setReserveOpen(false)} />}
-      {creditOpen && <FirstCreditSheet onClose={confirmCreditSheet} />}
       {infoOpen && <ScoreInfoSheet onClose={() => setInfoOpen(false)} />}
     </div>
   )
@@ -890,33 +865,6 @@ function ScoreInfoSheet({ onClose }: { onClose: () => void }) {
         >
           확인
         </button>
-      </div>
-    </div>
-  )
-}
-
-/**
- * 첫 진단 완료 보상 시트 (Figma 2824-5720 · PI-SHEET-FIRST_CREDIT).
- * 웹(1281+)은 중앙 팝업, 패드·폰은 바텀시트로 뜬다.
- * 지급 자체는 서버(진단 박제 트랜잭션 +5, 멱등) — 이 컴포넌트는 축하 안내만.
- * 카드 안 콘텐츠(코인·콘페티·텍스트)는 가입 완료 뷰와 공용(CreditCelebrationContent).
- */
-function FirstCreditSheet({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="first-credit-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-xl:items-end max-xl:p-0"
-    >
-      <div className="absolute inset-0 animate-[fc-fade_200ms_ease] bg-black/45" aria-hidden />
-      <div className="relative flex w-full max-w-[400px] animate-[fc-card_560ms_cubic-bezier(0.22,0.9,0.3,1)_both] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] max-xl:max-w-none max-xl:animate-[fc-rise_340ms_cubic-bezier(0.22,0.9,0.3,1)] max-xl:rounded-b-none max-xl:rounded-t-[32px] max-xl:pb-[calc(34px+env(safe-area-inset-bottom))]">
-        <CreditCelebrationContent
-          title="첫 진단 완료 선물 도착!"
-          titleId="first-credit-title"
-          amount="5크레딧"
-          onConfirm={onClose}
-        />
       </div>
     </div>
   )
