@@ -177,6 +177,21 @@ export function claimUtmVisit(userId: number | null | undefined): void {
  * 얼리버드 직접 방문 집계 — utm 없이 /earlybird 로 들어온 경우도 세기 위한 폴백.
  * utm 이 붙어 있으면 App 의 reportUtmVisit 이 캠페인별로 집계하므로 여기선 건너뛴다.
  */
+/**
+ * 문자(LMS) 리마인더 링크 착지 — /today 는 문자 전용 경로라 URL 에 utm 이 없어도 도착 자체를 방문으로 센다.
+ * source=sms · campaign=today 로 기록해 어드민 유입 화면에서 "문자로 몇 명 들어왔나" 를 본다.
+ * 같은 브라우저는 소스×캠페인 24시간 1회 (send 의 중복 억제 그대로).
+ */
+export function reportTodayLinkVisit(): void {
+  send({
+    utmSource: 'sms',
+    utmMedium: 'lms',
+    utmCampaign: 'today',
+    utmContent: null,
+    landingPath: '/today',
+  })
+}
+
 export function reportEarlybirdDirectVisit(): void {
   const params = new URLSearchParams(window.location.search)
   if (params.get('utm_source')?.trim()) return

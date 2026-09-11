@@ -39,7 +39,7 @@ import TrialQuizPage from './user/pages/trial/TrialQuizPage'
 import TrialReviewPage from './user/pages/trial/TrialReviewPage'
 import WeaknessResultPage from './user/pages/trial/WeaknessResultPage'
 import RecommendPage from './user/pages/recommend/RecommendPage'
-import { captureUtm, reportUtmVisit, trackFunnelPath } from '@/user/services/visitMetrics'
+import { captureUtm, reportUtmVisit, trackFunnelPath, reportTodayLinkVisit } from '@/user/services/visitMetrics'
 import RequireTrialDone from './user/components/RequireTrialDone'
 
 // 어드민은 지연 로드 — 학생 유저 번들에 어드민 코드·CSS 미포함
@@ -82,6 +82,10 @@ function latestStudiedSubject(): Subject | null {
  */
 function TodayRedirect() {
   const { search } = useLocation()
+  // 문자 링크 도착 카운트 — 리다이렉트와 무관하게 1회 기록 (24시간 중복 억제)
+  useEffect(() => {
+    reportTodayLinkVisit()
+  }, [])
   const params = new URLSearchParams(search)
   if (!params.get('subject')) {
     const last = latestStudiedSubject()
