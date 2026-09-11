@@ -222,12 +222,13 @@ export default function CreditsPage() {
         {state === 'done' && users.length > 0 && (
           <div className="table-wrap">
             {/* min-width: 창이 좁아도 컬럼을 쥐어짜지 않고 카드 안에서 가로 스크롤 (th 폭은 content-box · +28 패딩) */}
-            <table style={{ minWidth: 920 }}>
+            <table style={{ minWidth: 960 }}>
               <thead>
                 <tr>
                   <th style={{ width: 140 }}>이름</th>
                   <th>이메일</th>
-                  <th style={{ width: 130 }}>전화번호</th>
+                  {/* 전화번호 130→165: "010-6257-7123" 이 말줄임 되지 않게 (2026-09-11) */}
+                  <th style={{ width: 165 }}>전화번호</th>
                   <th style={{ width: 90, textAlign: 'center' }}>크레딧</th>
                   <th style={{ width: 170, textAlign: 'center' }}>관리</th>
                 </tr>
@@ -422,10 +423,11 @@ function HistoryModal({
         {!failed && rows != null && rows.length === 0 && <p className="page-sub">이력이 없습니다.</p>}
         {!failed && rows != null && rows.length > 0 && (
           <div className="table-wrap cr-history-wrap">
-            <table style={{ minWidth: 640 }}>
+            <table style={{ minWidth: 680 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 150 }}>일시</th>
+                  {/* 일시 150→180: "2026-09-09 11:23" 이 말줄임 되지 않게 (2026-09-11) */}
+                  <th style={{ width: 180 }}>일시</th>
                   <th style={{ width: 80, textAlign: 'center' }}>구분</th>
                   <th style={{ width: 64, textAlign: 'right' }}>증감</th>
                   <th style={{ width: 64, textAlign: 'right' }}>잔액</th>
