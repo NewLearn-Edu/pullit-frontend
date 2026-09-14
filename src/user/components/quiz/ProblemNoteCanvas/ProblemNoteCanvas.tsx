@@ -28,8 +28,24 @@ interface ProblemNoteCanvasProps extends Omit<DrawingCanvasProps, 'onStrokesChan
  * 문제가 바뀔 때는 부모가 key 를 바꿔 새로 마운트한다 — 목 문항(코드 없음)도 획이 넘어가지 않게.
  */
 export const ProblemNoteCanvas = forwardRef<DrawingCanvasHandle, ProblemNoteCanvasProps>(
-  function ProblemNoteCanvas({ problemCode, target, ...canvasProps }, ref) {
+  function ProblemNoteCanvas({ problemCode, target, onContentHeight, ...canvasProps }, ref) {
     const innerRef = useRef<DrawingCanvasHandle>(null)
+    // 높이 보고는 복원·리사이즈 때만 부모에게 넘긴다 (2026-09-14) — 사용자 편집 직후의 보고는 버린다.
+    // DrawingCanvas 는 편집 커밋마다 onStrokesChange → onContentHeight 순으로 동기 호출하므로,
+    // onStrokesChange 에서 표식을 세우고 바로 뒤따르는 높이 보고 1회를 무시하면 "편집으로 인한 높이 변화" 만 걸러진다.
+    // 예전엔 아래 가장자리에서 그릴 때마다 획 끝만큼 영역이 늘어 끝없이 길어졌다. 저장된 필기가 영역보다 아래에
+    // 있는 경우(폰에서 저장 → 태블릿)는 setStrokes(복원) 경로라 그대로 확보된다
+    const skipHeightRef = useRef(false)
+    const handleContentHeight = useCallback(
+      (px: number) => {
+        if (skipHeightRef.current) {
+          skipHeightRef.current = false
+          return
+        }
+        onContentHeight?.(px)
+      },
+      [onContentHeight],
+    )
     const setRefs = useCallback(
       (handle: DrawingCanvasHandle | null) => {
         innerRef.current = handle
@@ -58,11 +74,19 @@ export const ProblemNoteCanvas = forwardRef<DrawingCanvasHandle, ProblemNoteCanv
 
     const handleStrokesChange = useCallback(
       (strokes: NoteStroke[]) => {
+        skipHeightRef.current = true // 바로 뒤따르는 높이 보고(편집분)는 무시
         if (problemCode) updateProblemNote(problemCode, target, strokes)
       },
       [problemCode, target],
     )
 
-    return <DrawingCanvas ref={setRefs} {...canvasProps} onStrokesChange={handleStrokesChange} />
+    return (
+      <DrawingCanvas
+        ref={setRefs}
+        {...canvasProps}
+        onStrokesChange={handleStrokesChange}
+        onContentHeight={handleContentHeight}
+      />
+    )
   },
 )

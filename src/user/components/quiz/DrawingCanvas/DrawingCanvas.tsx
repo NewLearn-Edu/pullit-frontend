@@ -469,11 +469,17 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       last: complete,
     })
 
-    /** 포인터 화면 좌표 → 월드 좌표 (배율 나눔) */
+    /**
+     * 포인터 화면 좌표 → 월드 좌표 (배율 나눔).
+     * 캔버스 안으로 클램프한다 (2026-09-14) — 포인터 캡처 중엔 캔버스 밖 좌표도 들어오는데, 그대로 두면
+     * 보이지 않는 영역에 획이 저장되고 다음 복원 때 영역이 그만큼 늘어난다. 획은 보이는 캔버스 안에서만 만든다
+     */
     const getPoint = (e: React.PointerEvent<HTMLCanvasElement>): number[] => {
       const rect = liveCanvasRef.current!.getBoundingClientRect()
       const k = scaleRef.current || 1
-      return [(e.clientX - rect.left) / k, (e.clientY - rect.top) / k]
+      const x = Math.min(rect.width, Math.max(0, e.clientX - rect.left))
+      const y = Math.min(rect.height, Math.max(0, e.clientY - rect.top))
+      return [x / k, y / k]
     }
 
     /**
