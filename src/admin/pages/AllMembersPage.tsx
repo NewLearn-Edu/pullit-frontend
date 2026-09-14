@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GRADE_LABEL, type Grade } from '@/user/api/authApi'
+import { SCHOOL_FEATURE_ENABLED } from '@/user/api/schoolApi'
 import {
   fetchAdminUsers,
   updateUserRole,
@@ -343,7 +344,7 @@ export default function AllMembersPage() {
           <div className="table-wrap">
             {/* 넓은 레이아웃(main-inner.wide 1600) 기준 고정 폭 — 배지 컬럼은 108px 이상, 이메일이 남는 폭을 받는다.
                 min-width: 창이 좁으면 컬럼을 쥐어짜는 대신 카드 안에서 가로 스크롤 (th 폭은 content-box · +28 패딩) */}
-            <table style={{ minWidth: 1758 }}>
+            <table style={{ minWidth: SCHOOL_FEATURE_ENABLED ? 1758 : 1608 }}>
               <thead>
                 <tr>
                   <th style={{ width: 140 }}>이름</th>
@@ -351,7 +352,7 @@ export default function AllMembersPage() {
                   <th style={{ width: 108, textAlign: 'center' }}>유형</th>
                   <th style={{ width: 108, textAlign: 'center' }}>상태</th>
                   <th style={{ width: 84 }}>학년</th>
-                  <th style={{ width: 150 }}>학교</th>
+                  {SCHOOL_FEATURE_ENABLED && <th style={{ width: 150 }}>학교</th>}
                   <th>이메일</th>
                   <th style={{ width: 150 }}>전화번호</th>
                   <th style={{ width: 84, textAlign: 'right' }}>크레딧</th>
@@ -415,9 +416,11 @@ export default function AllMembersPage() {
                         <span className={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</span>
                       </td>
                       <td>{gradeLabel(u.grade)}</td>
+                      {SCHOOL_FEATURE_ENABLED && (
                       <td title={u.schoolName ?? undefined}>
                         {u.schoolName ?? (u.schoolNoneReason ? SCHOOL_NONE_SHORT[u.schoolNoneReason] : <span className="sub">미입력</span>)}
                       </td>
+                      )}
                       <td title={u.email ?? undefined}>{u.email ?? '—'}</td>
                       <td className="num">{formatPhone(u.phoneNumber)}</td>
                       <td className="num" style={{ textAlign: 'right' }}>

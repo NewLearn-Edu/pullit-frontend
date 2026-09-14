@@ -10,6 +10,7 @@ import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
 import { SchoolPromptPopup, isSchoolPromptSnoozed } from '@/user/components/SchoolPicker'
+import { SCHOOL_FEATURE_ENABLED } from '@/user/api/schoolApi'
 import { Skeleton } from '@/user/components/Skeleton'
 import { type Subject } from '@/user/stores/trialStore'
 import { useUnitLocks } from '@/user/hooks/useUnitLocks'
@@ -245,7 +246,7 @@ export default function HomePage() {
   // 이어풀기 팝업과 겹치지 않게 그 팝업이 닫힌 뒤에 뜬다. 판정 근거는 서버 /me (로컬 추측 없음)
   const [schoolPromptOpen, setSchoolPromptOpen] = useState(false)
   useEffect(() => {
-    if (sessionStatus !== 'ready' || !me || resumePromptOpen) return
+    if (!SCHOOL_FEATURE_ENABLED || sessionStatus !== 'ready' || !me || resumePromptOpen) return
     const unset = me.type === 'USER' && me.status === 'ACTIVE' && me.schoolId == null && !me.schoolNoneReason
     if (unset && !isSchoolPromptSnoozed()) setSchoolPromptOpen(true)
   }, [sessionStatus, me, resumePromptOpen])

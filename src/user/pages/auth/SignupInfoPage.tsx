@@ -1,6 +1,6 @@
 import { enterTrialFunnel } from '@/user/services/trialFunnel'
 import { SchoolPicker, type SchoolChoice } from '@/user/components/SchoolPicker'
-import { type SchoolGrade } from '@/user/api/schoolApi'
+import { SCHOOL_FEATURE_ENABLED, type SchoolGrade } from '@/user/api/schoolApi'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
@@ -526,9 +526,11 @@ export default function SignupInfoPage() {
    */
   const schoolGrade: SchoolGrade | null =
     grade == null ? null : grade.startsWith('MIDDLE') ? 'MIDDLE' : grade.startsWith('HIGH') ? 'HIGH' : null
-  const schoolStepShown = grade != null && grade !== 'PARENT' && grade !== 'TEACHER' && grade !== 'GENERAL'
-  const effectiveSchool: SchoolChoice | null = schoolStepShown ? school : grade != null ? { noneReason: 'OTHER' } : null
-  const schoolReady = effectiveSchool != null
+  // 기능 OFF 면 단계 자체가 없고 학교 값은 null/null 로 보낸다 (오픈 후 홈 팝업이 받아 채우도록 사유도 안 채움)
+  const schoolStepShown = SCHOOL_FEATURE_ENABLED && grade != null && grade !== 'PARENT' && grade !== 'TEACHER' && grade !== 'GENERAL'
+  const effectiveSchool: SchoolChoice | null =
+    !SCHOOL_FEATURE_ENABLED ? null : schoolStepShown ? school : grade != null ? { noneReason: 'OTHER' } : null
+  const schoolReady = !SCHOOL_FEATURE_ENABLED || effectiveSchool != null
   const readyForConsent =
     nameValid && nicknameValid && birthValid && !under14 && grade != null && schoolReady && phoneVerified && !pending
   /**
@@ -918,9 +920,9 @@ export default function SignupInfoPage() {
                             // 학교급이 바뀌면 고른 학교는 무효 · N수생은 "학교 없음(N수생)" 기본 선택 (출신교 검색으로 바꿀 수 있다)
                             const nextGrade = g.startsWith('MIDDLE') ? 'MIDDLE' : g.startsWith('HIGH') ? 'HIGH' : null
                             if (school?.school && school.school.grade !== nextGrade) setSchool(null)
-                            if (g === 'RETAKE' && !school) setSchool({ noneReason: 'RETAKE' })
-                            const student = g !== 'PARENT' && g !== 'TEACHER' && g !== 'GENERAL'
-                            reveal(student ? 4 : 5) // 다음: 학교 (학생) / 휴대폰 인증 (비학생)
+                            if (SCHOOL_FEATURE_ENABLED && g === 'RETAKE' && !school) setSchool({ noneReason: 'RETAKE' })
+                            const student = SCHOOL_FEATURE_ENABLED && g !== 'PARENT' && g !== 'TEACHER' && g !== 'GENERAL'
+                            reveal(student ? 4 : 5) // 다음: 학교 (학생, 기능 ON 일 때만) / 휴대폰 인증
                           }}
                           className={`su-subchip flex h-[52px] min-w-[64px] items-center justify-center gap-[5px] rounded-[14px] border px-[18px] text-[15px] font-semibold transition-colors duration-150 ${
                             on

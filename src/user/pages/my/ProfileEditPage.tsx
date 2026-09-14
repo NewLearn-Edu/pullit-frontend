@@ -16,7 +16,7 @@ import { useMe } from '@/user/hooks/useMe'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
 import { SchoolPicker, SchoolInitial, type SchoolChoice } from '@/user/components/SchoolPicker'
-import { SCHOOL_NONE_LABEL, updateSchool } from '@/user/api/schoolApi'
+import { SCHOOL_FEATURE_ENABLED, SCHOOL_NONE_LABEL, updateSchool } from '@/user/api/schoolApi'
 
 /** 닉네임 허용 문자 — 완성형 한글·영문·숫자 (자모 단독·공백·특수문자 불가, 서버와 동일) */
 const NICKNAME_CHARS = /^[가-힣a-zA-Z0-9]*$/
@@ -300,7 +300,8 @@ export default function ProfileEditPage() {
           )}
         </div>
 
-        {/* 학교 (2026-09-14) — 현재 값 표시 + [변경] 으로 검색 UI 펼침. 학년의 학교급으로 검색을 좁힌다 */}
+        {/* 학교 (2026-09-14) — 현재 값 표시 + [변경] 으로 검색 UI 펼침. 학년의 학교급으로 검색을 좁힌다. 기능 OFF 면 통째로 숨김 */}
+        {SCHOOL_FEATURE_ENABLED && (
         <div className="mt-[28px] flex w-full flex-col gap-[8px]">
           <span className="text-[13px] font-semibold text-[#5e6368]">학교</span>
           {schoolEditing ? (
@@ -340,6 +341,7 @@ export default function ProfileEditPage() {
             </button>
           )}
         </div>
+        )}
 
         {/* 계정 정보 — 이름 · 이메일 · 휴대전화번호. 소셜 로그인(네이버 등)으로 받은 값이라 여기서는 보기만 하고
             수정할 수 없다 (네이버 로그인 검수 "제공 정보 활용처" 캡처 대상 · 2026-09-04) */}
