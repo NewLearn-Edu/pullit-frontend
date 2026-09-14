@@ -24,8 +24,7 @@ import {
   IcoSettings,
   IcoStats,
   IcoSun,
-  IcoUpload,
-} from './components/icons'
+  IcoUpload, IcoPanelClose, IcoPanelOpen } from './components/icons'
 
 type Theme = 'light' | 'dark'
 
@@ -92,8 +91,26 @@ function initTheme(): Theme {
   return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+/** 사이드바 접힘 상태 (2026-09-14) — 레일 하단 토글. localStorage 'pa-nav' = 'collapsed' | 'open' (테마 저장과 같은 방식) */
+function initNavCollapsed(): boolean {
+  try {
+    return localStorage.getItem('pa-nav') === 'collapsed'
+  } catch {
+    return false
+  }
+}
+
 export default function AdminLayout() {
   const [theme, setTheme] = useState<Theme>(initTheme)
+  const [navCollapsed, setNavCollapsed] = useState<boolean>(initNavCollapsed)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pa-nav', navCollapsed ? 'collapsed' : 'open')
+    } catch {
+      /* noop */
+    }
+  }, [navCollapsed])
 
   useEffect(() => {
     try {
@@ -104,15 +121,27 @@ export default function AdminLayout() {
   }, [theme])
 
   return (
-    <div className="admin-root" data-theme={theme}>
+    <div className={clsx('admin-root', navCollapsed && 'nav-collapsed')} data-theme={theme}>
       <ToastProvider>
-        <LayoutBody onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} />
+        <LayoutBody
+          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          navCollapsed={navCollapsed}
+          onToggleNav={() => setNavCollapsed((v) => !v)}
+        />
       </ToastProvider>
     </div>
   )
 }
 
-function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
+function LayoutBody({
+  onToggleTheme,
+  navCollapsed,
+  onToggleNav,
+}: {
+  onToggleTheme: () => void
+  navCollapsed: boolean
+  onToggleNav: () => void
+}) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const toast = useToast()
@@ -156,18 +185,42 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
 
   const navClass = ({ isActive }: { isActive: boolean }) => clsx('nav-item', isActive && 'active')
 
+  // 접힌 상태에서 레일 섹션에 마우스를 올리면 그 섹션 메뉴가 팝오버로 뜬다 — 안 펼치고도 하위 메뉴로 이동.
+  // 경로가 바뀌면(팝오버에서 클릭) 닫는다
+  const [hoverKey, setHoverKey] = useState<NavSection['key'] | null>(null)
+  useEffect(() => {
+    setHoverKey(null)
+  }, [pathname])
+
   return (
     <>
       <nav className="rail">
         {NAV_SECTIONS.map((sec) => (
-          <button
+          <div
             key={sec.key}
-            className={clsx('rail-item', sectionKey === sec.key && 'active')}
-            onClick={() => navigate(sec.home)}
+            className="rail-slot"
+            onMouseEnter={() => navCollapsed && setHoverKey(sec.key)}
+            onMouseLeave={() => setHoverKey((k) => (k === sec.key ? null : k))}
           >
-            <span className="rico">{sec.ico}</span>
-            <span>{sec.label}</span>
-          </button>
+            <button
+              className={clsx('rail-item', sectionKey === sec.key && 'active')}
+              onClick={() => navigate(sec.home)}
+            >
+              <span className="rico">{sec.ico}</span>
+              <span>{sec.label}</span>
+            </button>
+            {navCollapsed && hoverKey === sec.key && (
+              <div className="rail-pop" role="menu" aria-label={`${sec.label} 메뉴`}>
+                <div className="rail-pop-box">
+                  {/* 첫 그룹에 라벨이 있으면(문제·통계) 그게 제목 역할 — 섹션명을 또 쓰면 "문제 / 문제" 로 겹친다 */}
+                  {!sec.groups[0]?.label && <div className="rail-pop-title">{sec.label}</div>}
+                  {sec.groups.map((g, i) => (
+                    <NavGroupList key={g.label ?? i} group={g} navClass={navClass} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         ))}
         {soonMenus.map(({ name, ico }) => (
           <button
@@ -179,6 +232,16 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
             <span>{name}</span>
           </button>
         ))}
+        {/* 사이드바 접기/펼치기 — 레일은 남고 244px 사이드바만 접힌다. 넓은 표(재고·퍼널)에서 본문 폭 확보 (2026-09-14) */}
+        <button
+          className="rail-item nav-toggle"
+          onClick={onToggleNav}
+          aria-pressed={navCollapsed}
+          title={navCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
+        >
+          <span className="rico">{navCollapsed ? <IcoPanelOpen /> : <IcoPanelClose />}</span>
+          <span>{navCollapsed ? '펼치기' : '접기'}</span>
+        </button>
         <button className="rail-item theme-toggle" onClick={onToggleTheme}>
           <span className="rico">
             <IcoMoon />

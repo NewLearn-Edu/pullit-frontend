@@ -165,7 +165,29 @@
   .rail-item.disabled .rico { color: var(--rail-disabled); }
   .rail-item.disabled span { color: var(--rail-disabled); }
   .rail-item.disabled:hover .rico { background: none; color: var(--rail-disabled); }
-  .theme-toggle { margin-top: auto; }
+  .nav-toggle { margin-top: auto; }
+  .theme-toggle { margin-top: 0; }
+
+  /* 접힌 사이드바 · 레일 팝오버 (2026-09-14) */
+  .rail-slot { position: relative; width: 100%; }
+  .rail-pop {
+    position: absolute; left: 100%; top: 0; z-index: 30;
+    padding-left: 10px;   /* 레일 → 팝오버 사이 마우스가 지나갈 다리 (hover 끊김 방지) */
+  }
+  .rail-pop-box {
+    min-width: 220px; padding: 8px;
+    background: var(--color-canvas); border-radius: var(--r-menu); box-shadow: var(--shadow-menu);
+    border: 1px solid var(--color-line);
+    animation: pa-pop-in .18s cubic-bezier(.2,.8,.3,1);
+  }
+  .rail-pop-title { font-size: 12px; font-weight: 600; color: var(--color-muted); padding: 6px 12px 2px; }
+  .rail-pop-box .nav-label { padding-top: 12px; }
+  .rail-pop-box .nav-label:first-child { padding-top: 6px; }
+  .rail-pop-box .nav-item { white-space: nowrap; }
+  @keyframes pa-pop-in {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
   .theme-toggle .ico-sun { display: none; }
   &[data-theme="dark"] .theme-toggle .ico-moon { display: none; }
   &[data-theme="dark"] .theme-toggle .ico-sun { display: block; }
@@ -176,7 +198,12 @@
     padding: 24px 16px;
     display: flex; flex-direction: column; gap: 4px;
     position: sticky; top: 0; height: 100vh;
+    overflow: hidden;
+    transition: width .34s cubic-bezier(.22,.9,.3,1), padding .34s cubic-bezier(.22,.9,.3,1), opacity .22s;
   }
+  /* 내용은 원래 폭(244−32)을 유지한 채 바깥이 잘려 나간다 — 폭이 줄며 글자가 줄바꿈되지 않게 */
+  .sidebar > * { min-width: 212px; }
+  &.nav-collapsed .sidebar { width: 0; padding-left: 0; padding-right: 0; opacity: 0; pointer-events: none; }
   .brand {
     display: flex; align-items: center; gap: 9px;
     padding: 4px 10px 20px;

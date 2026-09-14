@@ -309,3 +309,25 @@ export function IcoClose() {
     </svg>
   )
 }
+
+/** 사이드바 접기 — 왼쪽 패널 + 안쪽 ‹ (레일 하단 토글, 2026-09-14) */
+export function IcoPanelClose() {
+  return (
+    <svg className="ico-panel-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4.5" width="18" height="15" rx="3" />
+      <path d="M9.5 4.5v15" />
+      <path d="M16.5 9.5 14 12l2.5 2.5" />
+    </svg>
+  )
+}
+
+/** 사이드바 펼치기 — 왼쪽 패널 + 안쪽 › */
+export function IcoPanelOpen() {
+  return (
+    <svg className="ico-panel-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4.5" width="18" height="15" rx="3" />
+      <path d="M9.5 4.5v15" />
+      <path d="m14 9.5 2.5 2.5-2.5 2.5" />
+    </svg>
+  )
+}
