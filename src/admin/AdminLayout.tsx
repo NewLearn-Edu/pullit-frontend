@@ -138,7 +138,8 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
   const isList = pathname.includes('/problems/')
   const isTrial = pathname.includes('/trial-tests/')
   const isMembersAll = pathname.includes('/members/all') // 전체 회원 — 필터·10컬럼 표라 넓게 (2026-09-07)
-  const isVisits = pathname.includes('/stats/visits') // 유입 · 퍼널 — 소재별 10컬럼 표라 넓게 (2026-09-09)
+  // 유입 · 퍼널(소재별 10컬럼) · 리텐션(코호트 D0~D30 표) — 가장 넓은 폭 (2026-09-09 · 리텐션 2026-09-14)
+  const isVisits = pathname.includes('/stats/visits') || pathname.includes('/stats/retention')
   // 업로드·검수는 문제(524)+해설(524) 2단이라 같은 폭을 쓴다
   const isUpload = pathname.includes('/upload') || pathname.includes('/review')
 

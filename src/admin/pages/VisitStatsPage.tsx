@@ -274,7 +274,7 @@ export default function VisitStatsPage() {
         </div>
       </div>
 
-      <div className="kpi-problems kpi-funnel" style={{ marginBottom: 24 }}>
+      <div className="kpi-problems kpi-funnel">
         <StatCard
           label="오늘 방문"
           value={state === 'done' ? total.today.toLocaleString() : '—'}

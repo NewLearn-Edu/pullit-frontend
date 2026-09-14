@@ -442,12 +442,14 @@ export async function adjustCredit(
 // 대시보드
 // ---------------------------------------------------------------------------
 
-/** 일별 학습 활동 (풀이 수 · 학습 유저 수) — 추이 차트용, 빈 날짜는 백엔드가 0 으로 채움 */
+/** 일별 학습 활동 (풀이 수 · 학습 유저 수 · 가입자 수) — 추이 차트용, 빈 날짜는 백엔드가 0 으로 채움 */
 export interface DailyActivity {
   /** YYYY-MM-DD */
   date: string
   solved: number
   learners: number
+  /** 그날 가입을 끝낸 회원 수 (ACTIVE · 관계자 제외 · 누적 아님) — "오늘 가입" 카드와 같은 정의 (2026-09-14) */
+  signups: number
 }
 
 export interface DashboardStats {

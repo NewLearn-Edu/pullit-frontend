@@ -20,6 +20,11 @@ const pct = (numerator: number, denominator: number) =>
 
 /** 'YYYY-MM-DD' → 'MM.DD' */
 const shortDate = (iso: string) => iso.slice(5).replace('-', '.')
+/** 툴팁 헤더용 — "9월 12일 (금)" */
+const longDate = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`
+}
 
 // ---------------------------------------------------------------------------
 // 학습 활동 추이 차트 — 풀린 문제(primary) · 학습 유저(accent) 2선
@@ -91,9 +96,14 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
   const PAD_R = compact ? 12 : 18
   const PAD_T = 14
   const PAD_B = 30
+  // 날짜별 수치 (2026-09-14) — 세로 구간에 마우스를 올리면 그날의 세 수치를 툴팁으로. 30일 뷰는 점을 안 찍지만 hover 구간은 30개 다 둔다.
+  // 클릭하면 그 날짜에 고정(마우스를 움직여도 안 바뀜), 다시 클릭하면 고정 해제 → 마우스를 따라간다. 모바일은 탭이 곧 고정
+  const [hovered, setHovered] = useState<number | null>(null)
+  const [pinned, setPinned] = useState<number | null>(null)
+  const active = pinned ?? hovered
 
-  const { yMax, xLabels, solvedPath, solvedArea, learnersPath, points } = useMemo(() => {
-    const rawMax = Math.max(4, ...data.map((d) => Math.max(d.solved, d.learners)))
+  const { yMax, xLabels, solvedPath, solvedArea, learnersPath, signupsPath, points, cols, innerH } = useMemo(() => {
+    const rawMax = Math.max(4, ...data.map((d) => Math.max(d.solved, d.learners, d.signups)))
     const yMax = Math.ceil(rawMax / 4) * 4
 
     const innerW = W - PAD_L - PAD_R
@@ -101,7 +111,7 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
     const x = (i: number) => PAD_L + (data.length === 1 ? innerW / 2 : (i / (data.length - 1)) * innerW)
     const y = (v: number) => PAD_T + innerH - (v / yMax) * innerH
 
-    const toPath = (key: 'solved' | 'learners') =>
+    const toPath = (key: 'solved' | 'learners' | 'signups') =>
       monotoneCurvePath(data.map((d, i) => [x(i), y(d[key])]))
 
     const solvedPath = toPath('solved')
@@ -121,10 +131,17 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
     // 점은 14개 이하일 때만 (30일 뷰에선 선만)
     const points =
       data.length <= 14
-        ? data.map((d, i) => ({ x: x(i), ySolved: y(d.solved), yLearners: y(d.learners), last: i === data.length - 1 }))
+        ? data.map((d, i) => ({ x: x(i), ySolved: y(d.solved), yLearners: y(d.learners), ySignups: y(d.signups), last: i === data.length - 1 }))
         : []
 
-    return { yMax, xLabels, solvedPath, solvedArea, learnersPath: toPath('learners'), points }
+    // hover 구간 — 각 날짜를 가운데 둔 세로 띠 (이웃 점과의 중간까지)
+    const half = data.length === 1 ? innerW / 2 : innerW / (data.length - 1) / 2
+    const cols = data.map((d, i) => ({
+      x: x(i), ySolved: y(d.solved), yLearners: y(d.learners), ySignups: y(d.signups),
+      left: Math.max(PAD_L, x(i) - half), width: Math.min(W - PAD_R, x(i) + half) - Math.max(PAD_L, x(i) - half),
+    }))
+
+    return { yMax, xLabels, solvedPath, solvedArea, learnersPath: toPath('learners'), signupsPath: toPath('signups'), points, cols, innerH }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, compact])
 
@@ -132,7 +149,7 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
 
   return (
     <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} onMouseLeave={() => setHovered(null)}>
         <g className="grid" strokeWidth="1">
           {gridYs.map((gy) => (
             <line key={gy} x1={PAD_L} y1={gy} x2={W - PAD_R} y2={gy} />
@@ -180,15 +197,68 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
             <circle key={`s${p.x}`} cx={p.x} cy={p.ySolved} r={p.last ? 4.5 : 3.5} stroke={p.last ? 'var(--color-canvas)' : undefined} strokeWidth={p.last ? 2 : undefined} />
           ))}
         </g>
+        {/* 가입자 (2026-09-14) — 세 번째 선. 같은 y 축이라 아래쪽에 낮게 깔리지만 정확한 값은 점 hover 로 읽는다 */}
+        <path
+          d={signupsPath}
+          fill="none"
+          stroke="var(--color-warn)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         <g fill="var(--color-accent)">
           {points.map((p) => (
             <circle key={`l${p.x}`} cx={p.x} cy={p.yLearners} r="3" />
           ))}
         </g>
+        <g fill="var(--color-warn)">
+          {points.map((p) => (
+            <circle key={`g${p.x}`} cx={p.x} cy={p.ySignups} r="3" />
+          ))}
+        </g>
+        {/* 선택한 날짜 — 세로 가이드 + 세 선 위의 강조 점 */}
+        {active != null && (
+          <g className="chart-active">
+            {/* 고정 상태는 실선, 따라다니는 상태는 점선 */}
+            <line x1={cols[active].x} y1={PAD_T} x2={cols[active].x} y2={PAD_T + innerH} strokeDasharray={pinned != null ? undefined : '3 3'} />
+            <circle cx={cols[active].x} cy={cols[active].ySolved} r="5" fill="var(--color-primary)" />
+            <circle cx={cols[active].x} cy={cols[active].yLearners} r="5" fill="var(--color-accent)" />
+            <circle cx={cols[active].x} cy={cols[active].ySignups} r="5" fill="var(--color-warn)" />
+          </g>
+        )}
+        {/* hover·탭 영역 — 투명, 맨 위 */}
+        <g fill="transparent">
+          {cols.map((c, i) => (
+            <rect
+              key={`h${c.x}`}
+              x={c.left}
+              y={PAD_T}
+              width={c.width}
+              height={innerH}
+              onMouseEnter={() => setHovered(i)}
+              onClick={() => setPinned(pinned != null ? null : i)}
+            />
+          ))}
+        </g>
       </svg>
+      {active != null && (() => {
+        const d = data[active]
+        const pct = (cols[active].x / W) * 100
+        // 오른쪽 구간에서는 왼쪽으로 펼쳐 카드 밖으로 안 나가게 — 모바일은 폭이 좁아 절반부터 뒤집는다
+        const side = pct > (compact ? 50 : 72) ? 'left' : 'right'
+        return (
+          <div className={`chart-tip ${side}`} style={{ left: `${pct}%`, top: `${(PAD_T / H) * 100}%` }}>
+            <div className="tip-date">{longDate(d.date)}</div>
+            <div className="tip-row"><i style={{ background: 'var(--color-primary)' }} />풀린 문제<b className="num">{d.solved.toLocaleString()}</b></div>
+            <div className="tip-row"><i style={{ background: 'var(--color-accent)' }} />학습 유저<b className="num">{d.learners.toLocaleString()}</b></div>
+            <div className="tip-row"><i style={{ background: 'var(--color-warn)' }} />가입자<b className="num">{d.signups.toLocaleString()}</b></div>
+          </div>
+        )
+      })()}
       <div className="chart-legend">
         <span><i style={{ background: 'var(--color-primary)' }} />풀린 문제</span>
         <span><i style={{ background: 'var(--color-accent)' }} />학습 유저</span>
+        <span><i style={{ background: 'var(--color-warn)' }} />가입자</span>
       </div>
     </div>
   )
@@ -272,7 +342,7 @@ export default function DashboardPage() {
           <div>
             <div className="card-title">학습 활동 추이</div>
             <div className="card-sub">
-              {narrow ? `최근 ${range}일` : `최근 ${range}일 · 풀린 문제 / 학습 유저`}
+              {narrow ? `최근 ${range}일` : `최근 ${range}일 · 풀린 문제 / 학습 유저 / 가입자`}
               {!hasActivity && stats ? ' · 아직 풀이 데이터가 없어요' : ''}
             </div>
           </div>
