@@ -55,6 +55,7 @@ const NAV_SECTIONS: NavSection[] = [
         { to: '/admin/trial-tests/english', label: '영어 테스트', ico: <IcoEnglishTest /> },
       ] },
       { label: '업로드', items: [{ to: '/admin/upload', label: '문제 업로드', ico: <IcoUpload /> }] },
+      { label: '학교', items: [{ to: '/admin/schools', label: '학교 관리', ico: <IcoList /> }] },
     ],
   },
   {
@@ -127,7 +128,8 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
     pathname.includes('/problems/') ||
     pathname.includes('/upload') ||
     pathname.includes('/trial-tests/') ||
-    pathname.includes('/review')
+    pathname.includes('/review') ||
+    pathname.includes('/schools') // 학교 관리 (2026-09-14) — 문제 섹션
   const isMember =
     pathname.includes('/members') || pathname.includes('/credits') || pathname.includes('/policies')
   const isStats = pathname.includes('/stats')
@@ -216,7 +218,7 @@ function LayoutBody({ onToggleTheme }: { onToggleTheme: () => void }) {
 
       <main className="main">
         <div className={clsx('main-inner', (isList || isTrial || isMembersAll) && 'wide', isVisits && 'xwide', isUpload && 'mid')}>
-          {isProblem && <ProblemKpi />}
+          {isProblem && !pathname.includes('/schools') && <ProblemKpi />} {/* 학교 관리는 문제 KPI 와 무관 */}
           <Outlet />
         </div>
       </main>

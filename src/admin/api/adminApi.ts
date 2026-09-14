@@ -316,6 +316,9 @@ export interface AdminUser {
   lastActiveAt?: string | null
   /** 풀잇 관계자(팀원·테스트 계정) — 회원·게스트 집계에서 제외. 어드민에서 지정 (구서버엔 없음) */
   staff?: boolean
+  /** 학교 (2026-09-14) — 미입력 null · "학교 없음" 이면 schoolNoneReason 만 */
+  schoolName?: string | null
+  schoolNoneReason?: 'RETAKE' | 'GED' | 'OVERSEAS' | 'OTHER' | null
 }
 
 /** 회원 목록 — role 지정 시 해당 권한만 (예: 'ADMIN'), 미지정 시 전체 */
@@ -531,6 +534,74 @@ export async function fetchAcquisitionFunnelDaily(): Promise<AcquisitionFunnelDa
   const { data } = await adminApi.get<BaseResponse<AcquisitionFunnelDailyRow[]>>(
     '/api/admin/metrics/acquisition-funnel/daily',
   )
+  return data.data
+}
+
+// ======================= 학교 (2026-09-14 · AI-314) =======================
+
+export type SchoolGrade = 'MIDDLE' | 'HIGH'
+export type SchoolStatus = 'ACTIVE' | 'CLOSED'
+export interface AdminSchool {
+  id: number
+  eduOfficeCode: string
+  schoolCode: string
+  name: string
+  grade: SchoolGrade
+  region: string | null
+  address: string | null
+  foundation: 'NATIONAL' | 'PUBLIC' | 'PRIVATE' | 'OTHER' | null
+  genderType: 'BOYS' | 'GIRLS' | 'MIXED' | null
+  highType: 'GENERAL' | 'SPECIAL_PURPOSE' | 'AUTONOMOUS' | 'SPECIALIZED' | null
+  status: SchoolStatus
+  neisUpdatedAt: string | null
+  modifiedAt: string
+  /** 이 학교를 고른 회원 수 (관계자 포함) */
+  userCount: number
+}
+export interface SchoolSyncLog {
+  id: number
+  triggeredBy: 'BATCH' | 'ADMIN'
+  result: 'RUNNING' | 'SUCCESS' | 'SKIPPED_CLOSING' | 'FAILED'
+  startedAt: string
+  finishedAt: string | null
+  fetched: number
+  added: number
+  updated: number
+  closed: number
+  errorMessage: string | null
+}
+export interface SchoolSyncStatus {
+  running: boolean
+  totalActive: number
+  totalClosed: number
+  highActive: number
+  middleActive: number
+  /** 학교 미입력 ACTIVE 회원 (관계자 제외) — 홈 팝업 대상 규모 */
+  unsetMembers: number
+  last: SchoolSyncLog | null
+  logs: SchoolSyncLog[]
+}
+export interface AdminSchoolDetail {
+  school: AdminSchool
+  members: { id: number; nickname: string | null; name: string | null; grade: string | null; status: string | null; staff: boolean }[]
+}
+
+/** 전체 학교 + 회원 수 (5.8천 행 · 필터·페이지는 화면에서) */
+export async function fetchAdminSchools(): Promise<AdminSchool[]> {
+  const { data } = await adminApi.get<BaseResponse<AdminSchool[]>>('/api/admin/schools')
+  return data.data
+}
+export async function fetchAdminSchool(id: number): Promise<AdminSchoolDetail> {
+  const { data } = await adminApi.get<BaseResponse<AdminSchoolDetail>>(`/api/admin/schools/${id}`)
+  return data.data
+}
+export async function fetchSchoolSyncStatus(): Promise<SchoolSyncStatus> {
+  const { data } = await adminApi.get<BaseResponse<SchoolSyncStatus>>('/api/admin/schools/sync')
+  return data.data
+}
+/** 지금 최신화 — NEIS → schools. INSERT/UPDATE 만, 삭제 없음 (응답에서 사라진 학교는 CLOSED). 끝난 뒤 상태를 돌려준다 */
+export async function runSchoolSync(): Promise<SchoolSyncStatus> {
+  const { data } = await adminApi.post<BaseResponse<SchoolSyncStatus>>('/api/admin/schools/sync')
   return data.data
 }
 

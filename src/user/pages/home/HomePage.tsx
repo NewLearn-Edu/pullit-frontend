@@ -9,6 +9,7 @@ import { PageHeader } from '@/user/components/PageHeader'
 import { SubjectTabs } from '@/user/components/SubjectTabs'
 import { CreditBadge } from '@/user/components/CreditBadge'
 import { CreditRefillPopup } from '@/user/components/CreditRefillPopup'
+import { SchoolPromptPopup, isSchoolPromptSnoozed } from '@/user/components/SchoolPicker'
 import { Skeleton } from '@/user/components/Skeleton'
 import { type Subject } from '@/user/stores/trialStore'
 import { useUnitLocks } from '@/user/hooks/useUnitLocks'
@@ -238,6 +239,16 @@ export default function HomePage() {
   const [resumableByUnit, setResumableByUnit] = useState<Record<string, ResumableSet>>({})
   const [resumePromptOpen, setResumePromptOpen] = useState(false)
   const [resumeError, setResumeError] = useState<string | null>(null) // 이어풀기 실패 안내 팝업
+
+  // ── 학교 입력 팝업 (2026-09-14 · AI-314) ─────────────────────────────
+  // 학교 정보가 없는 ACTIVE 회원(학교도 사유도 없음)에게 1회. "나중에" 는 7일 쿨다운(localStorage).
+  // 이어풀기 팝업과 겹치지 않게 그 팝업이 닫힌 뒤에 뜬다. 판정 근거는 서버 /me (로컬 추측 없음)
+  const [schoolPromptOpen, setSchoolPromptOpen] = useState(false)
+  useEffect(() => {
+    if (sessionStatus !== 'ready' || !me || resumePromptOpen) return
+    const unset = me.type === 'USER' && me.status === 'ACTIVE' && me.schoolId == null && !me.schoolNoneReason
+    if (unset && !isSchoolPromptSnoozed()) setSchoolPromptOpen(true)
+  }, [sessionStatus, me, resumePromptOpen])
   useEffect(() => {
     if (sessionStatus !== 'ready') return
     let alive = true
@@ -282,6 +293,7 @@ export default function HomePage() {
     <div className={styles.page}>
       <UserNav active="recommend" subject={subject} cat={category.slug} />
       {creditPopupOpen && <CreditRefillPopup onClose={() => setCreditPopupOpen(false)} />}
+      {schoolPromptOpen && <SchoolPromptPopup onClose={() => setSchoolPromptOpen(false)} />}
 
       <main className={styles.main}>
         {/* 상단 헤더 — 크레딧 · 과목 토글 · 오답노트/마이 */}

@@ -1,4 +1,6 @@
 import { enterTrialFunnel } from '@/user/services/trialFunnel'
+import { SchoolPicker, type SchoolChoice } from '@/user/components/SchoolPicker'
+import { type SchoolGrade } from '@/user/api/schoolApi'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAxiosError } from 'axios'
@@ -117,6 +119,8 @@ interface SavedSignupForm {
   birthM: string
   birthD: string
   grade: Grade | null
+  /** 학교 선택 (2026-09-14) — 학교 또는 "학교 없음" 사유. 복원용 스냅샷 */
+  school: SchoolChoice | null
   phone: string
   phoneVerified: boolean
   /** 인증 완료 시각(ms) — 서버 유효창(30분)이 있어 복원 시 오래된 인증은 무효 처리 */
@@ -184,6 +188,7 @@ export default function SignupInfoPage() {
       ? (GRADE_GROUPS.find((gr) => (gr.options as readonly Grade[]).includes(saved.grade!))?.key ?? null)
       : null,
   )
+  const [school, setSchool] = useState<SchoolChoice | null>(saved.school ?? null)
   const [phone, setPhone] = useState(saved.phone ?? '')
   // 전화번호 SMS 인증 상태
   const [codeSent, setCodeSent] = useState(false)
@@ -215,7 +220,7 @@ export default function SignupInfoPage() {
   /**
    * 토스식 캐스케이드 — 한 번에 한 단계만 보여주고, 완성되면 다음 인풋이
    * 애니메이션과 함께 "위에서" 나타난다 (이전 단계는 아래로 쌓임).
-   * 1 이름 → 2 생년월일 → 3 휴대폰 인증 → 4 약관 동의. 뒤로는 안 접는다(수정 자유).
+   * 1 이름 → 2 생년월일 → 3 학년 → 4 학교 → 5 휴대폰 인증 → 6 약관 동의. 뒤로는 안 접는다(수정 자유).
    */
   const [revealed, setRevealed] = useState(saved.revealed ?? 1)
   const reveal = (step: number) => setRevealed((r) => Math.max(r, step))
@@ -262,14 +267,14 @@ export default function SignupInfoPage() {
       sessionStorage.setItem(
         SIGNUP_FORM_KEY,
         JSON.stringify({
-          name, nickname, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt,
+          name, nickname, birthY, birthM, birthD, grade, school, phone, phoneVerified, phoneVerifiedAt,
           agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen,
         } satisfies SavedSignupForm),
       )
     } catch {
       /* noop */
     }
-  }, [name, nickname, birthY, birthM, birthD, grade, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
+  }, [name, nickname, birthY, birthM, birthD, grade, school, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
 
   // 소셜 로그인을 거친 계정만 올 수 있는 화면 — 가입 중(GUEST·PENDING / USER·PENDING) 또는 회원.
   // 순수 게스트(GUEST·GUEST)·비로그인은 로그인으로
@@ -304,7 +309,7 @@ export default function SignupInfoPage() {
     const justVerified = phoneVerified && !prevVerifiedRef.current
     prevVerifiedRef.current = phoneVerified
     if (!justVerified) return
-    reveal(5)
+    reveal(6)
     // 앞 단계가 전부 유효할 때만 — 인증만 됐고 생년월일이 에러면 시트 대신 폼에 머문다
     if (nameValid && birthValid && !under14 && grade != null) setConsentOpen(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -515,8 +520,17 @@ export default function SignupInfoPage() {
   /** 필수 동의 3종 — 하나라도 빠지면 시작할 수 없다 (2026-09-06) */
   const requiredAgreed = agreeAge && agreeTerms && agreePrivacy
   /** 입력이 다 찼는가 — 동의 시트를 열 수 있는 조건 */
+  /**
+   * 학교 단계 (2026-09-14) — 중·고등학생은 학교 검색 또는 "학교 없음" 사유, N수생은 사유 기본 선택(출신교 검색 가능),
+   * 학부모·선생님·일반인은 단계 없이 "해당 없음" 으로 채운다. 학교급은 학년에서 정해진다
+   */
+  const schoolGrade: SchoolGrade | null =
+    grade == null ? null : grade.startsWith('MIDDLE') ? 'MIDDLE' : grade.startsWith('HIGH') ? 'HIGH' : null
+  const schoolStepShown = grade != null && grade !== 'PARENT' && grade !== 'TEACHER' && grade !== 'GENERAL'
+  const effectiveSchool: SchoolChoice | null = schoolStepShown ? school : grade != null ? { noneReason: 'OTHER' } : null
+  const schoolReady = effectiveSchool != null
   const readyForConsent =
-    nameValid && nicknameValid && birthValid && !under14 && grade != null && phoneVerified && !pending
+    nameValid && nicknameValid && birthValid && !under14 && grade != null && schoolReady && phoneVerified && !pending
   /**
    * 실제 제출 가능 여부 — 입력 완료 + 필수 동의 3종.
    * 예전엔 버튼 클릭 자체를 동의 의사표시로 보고(토스 패턴) 눌리는 순간 체크를 채웠는데,
@@ -540,6 +554,9 @@ export default function SignupInfoPage() {
         agreePrivacy,
         agreeMarketing, // 선택 — 명시적 체크만 유효 (정보통신망법 §50)
         inviteCode: readInviteCode(), // 초대 링크로 들어온 가입이면 초대자에게 +5 (없으면 null)
+        // 학교 (2026-09-14) — 학교 id 또는 "학교 없음" 사유 중 하나
+        schoolId: effectiveSchool?.school?.id ?? null,
+        schoolNoneReason: effectiveSchool?.school ? null : (effectiveSchool?.noneReason ?? null),
       })
       await loadMe(true) // phoneNumber 채워진 상태 반영
       flushAttemptQueue()
@@ -898,7 +915,12 @@ export default function SignupInfoPage() {
                           style={{ animationDelay: `${i * 45}ms` }}
                           onClick={() => {
                             setGrade(g)
-                            reveal(4) // 다음: 휴대폰 인증
+                            // 학교급이 바뀌면 고른 학교는 무효 · N수생은 "학교 없음(N수생)" 기본 선택 (출신교 검색으로 바꿀 수 있다)
+                            const nextGrade = g.startsWith('MIDDLE') ? 'MIDDLE' : g.startsWith('HIGH') ? 'HIGH' : null
+                            if (school?.school && school.school.grade !== nextGrade) setSchool(null)
+                            if (g === 'RETAKE' && !school) setSchool({ noneReason: 'RETAKE' })
+                            const student = g !== 'PARENT' && g !== 'TEACHER' && g !== 'GENERAL'
+                            reveal(student ? 4 : 5) // 다음: 학교 (학생) / 휴대폰 인증 (비학생)
                           }}
                           className={`su-subchip flex h-[52px] min-w-[64px] items-center justify-center gap-[5px] rounded-[14px] border px-[18px] text-[15px] font-semibold transition-colors duration-150 ${
                             on
@@ -919,7 +941,22 @@ export default function SignupInfoPage() {
             </Step>
             )}
 
-            {revealed >= 4 && (
+            {revealed >= 4 && schoolStepShown && (
+            <Step className="flex flex-col gap-sm">
+              <span className="text-[14px] font-semibold text-[#23272b]">학교</span>
+              <SchoolPicker
+                grade={schoolGrade}
+                value={school}
+                onChange={(c) => {
+                  setSchool(c)
+                  if (c) reveal(5) // 다음: 휴대폰 인증
+                }}
+                noneOptions={grade === 'RETAKE' ? ['RETAKE', 'GED', 'OVERSEAS'] : ['GED', 'OVERSEAS', 'OTHER']}
+              />
+            </Step>
+            )}
+
+            {revealed >= 5 && (
             <Step className="flex flex-col gap-sm">
               <span className="text-[14px] font-semibold text-[#23272b]">휴대폰 번호</span>
               <div className="flex gap-sm">

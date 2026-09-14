@@ -514,6 +514,10 @@ export interface MeResult {
   nextDailyCreditAtMs?: number
   /** 매일 충전량 (3) */
   dailyCreditAmount?: number
+  /** 학교 (2026-09-14) — 둘 다 null 이면 미입력(홈에서 묻는다). schoolNoneReason 이 있으면 "학교 없음" 을 고른 것 */
+  schoolId?: number | null
+  schoolName?: string | null
+  schoolNoneReason?: 'RETAKE' | 'GED' | 'OVERSEAS' | 'OTHER' | null
 }
 
 /** 학년/신분 — 서버 common.enums.Grade 와 동일 값 */
@@ -553,6 +557,9 @@ export interface ProfileCompleteRequest {
   agreeMarketing: boolean
   /** [선택] 초대 코드 — 초대 링크(?invite=)로 들어와 가입한 경우 실린다 (초대자 +5 지급 근거) */
   inviteCode?: string | null
+  /** [선택] 학교 (2026-09-14) — schools.id. 없으면 schoolNoneReason. 둘 다 없으면 미입력 */
+  schoolId?: number | null
+  schoolNoneReason?: 'RETAKE' | 'GED' | 'OVERSEAS' | 'OTHER' | null
 }
 
 /**

@@ -15,6 +15,8 @@ import {
 import { useMe } from '@/user/hooks/useMe'
 import { UserAvatar } from '@/user/components/UserAvatar'
 import { useUserStore } from '@/user/stores/userStore'
+import { SchoolPicker, SchoolInitial, type SchoolChoice } from '@/user/components/SchoolPicker'
+import { SCHOOL_NONE_LABEL, updateSchool } from '@/user/api/schoolApi'
 
 /** 닉네임 허용 문자 — 완성형 한글·영문·숫자 (자모 단독·공백·특수문자 불가, 서버와 동일) */
 const NICKNAME_CHARS = /^[가-힣a-zA-Z0-9]*$/
@@ -71,7 +73,11 @@ export default function ProfileEditPage() {
   }, [gradeOpen])
 
   // 저장 가능 — 닉네임이 바뀌었으면 규칙을 지켜야 하고, 학년만 바뀐 경우도 저장
-  const canSave = changed ? nicknameOk : gradeChanged
+  // 학교 (2026-09-14) — 편집 모드에서 고른 값. null = 아직 안 건드림 (현재 값 유지)
+  const [schoolChoice, setSchoolChoice] = useState<SchoolChoice | null>(null)
+  const [schoolEditing, setSchoolEditing] = useState(false)
+  const schoolChanged = schoolChoice != null
+  const canSave = changed ? nicknameOk : gradeChanged || schoolChanged
 
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -124,7 +130,8 @@ export default function ProfileEditPage() {
     try {
       if (changed) await updateNickname(nickname)
       if (gradeChanged && grade) await updateGrade(grade)
-      await loadMe(true) // 새 닉네임·학년 반영
+      if (schoolChoice) await updateSchool(schoolChoice.school ? { schoolId: schoolChoice.school.id } : { noneReason: schoolChoice.noneReason })
+      await loadMe(true) // 새 닉네임·학년·학교 반영
       navigate('/my', { replace: true })
     } catch (e) {
       // 서버 메시지가 곧 UX 카피 (중복·잠금·형식) — 그대로 노출
@@ -290,6 +297,47 @@ export default function ProfileEditPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        {/* 학교 (2026-09-14) — 현재 값 표시 + [변경] 으로 검색 UI 펼침. 학년의 학교급으로 검색을 좁힌다 */}
+        <div className="mt-[28px] flex w-full flex-col gap-[8px]">
+          <span className="text-[13px] font-semibold text-[#5e6368]">학교</span>
+          {schoolEditing ? (
+            <SchoolPicker
+              grade={grade?.startsWith('MIDDLE') ? 'MIDDLE' : grade?.startsWith('HIGH') ? 'HIGH' : null}
+              value={schoolChoice}
+              onChange={(c) => {
+                setServerError(null)
+                setSchoolChoice(c)
+                if (c) setSchoolEditing(false)
+              }}
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSchoolEditing(true)}
+              className={clsx(
+                'flex h-[56px] w-full items-center gap-[12px] rounded-[12px] border bg-white px-[16px] text-left text-[17px] font-medium transition-colors duration-150',
+                schoolChoice || me?.schoolId || me?.schoolNoneReason ? 'border-[#a6abb1] text-[#121417]' : 'border-[#ebedf0] text-[#a6abb1]',
+              )}
+            >
+              {(() => {
+                const name = schoolChoice?.school?.name ?? (schoolChoice?.noneReason ? SCHOOL_NONE_LABEL[schoolChoice.noneReason] : null)
+                  ?? me?.schoolName ?? (me?.schoolNoneReason ? SCHOOL_NONE_LABEL[me.schoolNoneReason] : null)
+                const initial = schoolChoice?.school?.initial ?? (me?.schoolName ? me.schoolName.slice(0, 1) : null)
+                return name ? (
+                  <>
+                    {initial && <SchoolInitial initial={initial} size={30} />}
+                    <span className="min-w-0 flex-1 truncate">{name}</span>
+                    <span className="shrink-0 text-[13px] font-semibold text-[#5e6368]">변경</span>
+                  </>
+                ) : (
+                  <span className="flex-1">학교를 선택해주세요</span>
+                )
+              })()}
+            </button>
           )}
         </div>
 
