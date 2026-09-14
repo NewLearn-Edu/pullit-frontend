@@ -525,9 +525,6 @@ export interface AcquisitionFunnelDailyRow {
   signupInfo: number
   members: number
   completed: number
-  /** 스토어 배지를 1번 이상 누른 방문 수 (button_events · 2026-09-14) — 퍼널 단계가 아니라 별도 행동 */
-  storeApp: number
-  storePlay: number
 }
 
 export async function fetchAcquisitionFunnelDaily(): Promise<AcquisitionFunnelDailyRow[]> {
@@ -577,6 +574,19 @@ export async function fetchRetention(days = 30): Promise<RetentionResponse> {
   const { data } = await adminApi.get<BaseResponse<RetentionResponse>>('/api/admin/stats/retention', {
     params: { days },
   })
+  return data.data
+}
+
+/** 버튼별 누적 클릭 (button_events · 2026-09-14) — 스토어 배지 등. 클릭 많은 순 */
+export interface ButtonClickStatsRow {
+  button: 'STORE_APP' | 'STORE_PLAY' | string
+  clickCount: number
+  firstClickedAt: string
+  lastClickedAt: string
+}
+
+export async function fetchButtonClicks(): Promise<ButtonClickStatsRow[]> {
+  const { data } = await adminApi.get<BaseResponse<ButtonClickStatsRow[]>>('/api/admin/metrics/buttons')
   return data.data
 }
 

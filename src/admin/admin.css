@@ -1126,8 +1126,8 @@
 @media (max-width: 1100px) { .kpi-problems.kpi-funnel { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 700px) { .kpi-problems.kpi-funnel { grid-template-columns: 1fr; } }
 .table-wrap .funnel-table { table-layout: fixed; min-width: 1740px; }
-.table-wrap .funnel-table.by-content { min-width: 1890px; }  /* + 스토어 클릭 열 2개 (2026-09-14) */  /* 캠페인 열이 묶음 헤더로 빠져 소재별 표는 열 폭 합이 줄었다 (2026-09-10) */
-.table-wrap .funnel-table.by-date { min-width: 1510px; }  /* = 열 폭 합. 모든 열이 고정 폭이라 좁은 화면은 .table-wrap 좌우 스크롤 */  /* 헤더를 한 줄로 두고, 좁은 화면은 .table-wrap 이 좌우 스크롤 */
+.table-wrap .funnel-table.by-content { min-width: 1680px; }  /* 캠페인 열이 묶음 헤더로 빠져 소재별 표는 열 폭 합이 줄었다 (2026-09-10) */
+.table-wrap .funnel-table.by-date { min-width: 1300px; }
 .funnel-table th, .funnel-table td { padding-left: 10px; padding-right: 10px; }  /* 15열 — 좌우 여백을 줄여 폭 확보 */
 .funnel-table td.funnel-wrap { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }  /* 소스·캠페인·소재는 자르지 않고 줄바꿈 */  /* 열 폭 고정 — 소재 열이 남는 폭을 다 가져가고 퍼널 헤더가 눌리지 않게 */
 .funnel-table tbody td { padding-top: 14px; padding-bottom: 14px; }

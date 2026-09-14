@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { fetchAcquisitionFunnelDaily, fetchVisitTimes, type AcquisitionFunnelDailyRow } from '../api/adminApi'
+import { fetchAcquisitionFunnelDaily, fetchButtonClicks, fetchVisitTimes, type AcquisitionFunnelDailyRow, type ButtonClickStatsRow } from '../api/adminApi'
 import { StatCard } from '../components/StatCard'
 
 /** 비율 표기 — 분모 0 이면 "—" */
@@ -64,6 +64,10 @@ const contentKey = (r: Pick<AcquisitionFunnelDailyRow, 'utmSource' | 'utmMedium'
     : `${r.utmCampaign ?? ''}:${r.utmContent ?? ''}`
 /** 합침 단위의 소스 표기 — 방문 많은 순 "ig·an·fb" */
 const joinSources = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).join('·')
+/** 버튼 코드 → 표시 이름 */
+const BUTTON_LABEL: Record<string, string> = { STORE_APP: 'App Store 배지', STORE_PLAY: 'Google Play 배지' }
+const fmtDateTime = (iso: string) => `${iso.slice(5, 10).replace('-', '.')} ${iso.slice(11, 16)}`
+
 const todayKst = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 const fmtDate = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`
 const weekday = (d: string) => '일월화수목금토'[new Date(`${d}T00:00:00+09:00`).getDay()]
@@ -91,6 +95,8 @@ export default function VisitStatsPage() {
   const [sort, setSort] = useState<SortKey>('visits')
   // 방문 시각 팝업 대상 (null = 닫힘)
   const [detail, setDetail] = useState<ContentRow | null>(null)
+  // 버튼별 누적 클릭 (스토어 배지) — 퍼널과 별개 표
+  const [buttons, setButtons] = useState<ButtonClickStatsRow[] | null>(null)
 
   const load = () => {
     setState('loading')
@@ -100,6 +106,7 @@ export default function VisitStatsPage() {
         setState('done')
       })
       .catch(() => setState('error'))
+    fetchButtonClicks().then(setButtons).catch(() => setButtons([]))
   }
   useEffect(load, [])
 
@@ -519,6 +526,41 @@ export default function VisitStatsPage() {
                   </tr>
                 </tfoot>
               )}
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 버튼 클릭 — 버튼당 누적 카운트 (방문·소재와 무관 · 소재별은 광고 관리자의 StoreClick 이벤트) */}
+      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div className="toolbar">
+          <p className="card-title" style={{ margin: 0 }}>버튼 클릭</p>
+          <div className="spacer" />
+          <p className="page-sub" style={{ margin: 0 }}>버튼별 누적 · 소재별로 보려면 광고 관리자의 StoreClick 커스텀 이벤트</p>
+        </div>
+        {buttons === null && <p className="page-sub">불러오는 중…</p>}
+        {buttons !== null && buttons.length === 0 && <p className="page-sub">아직 클릭 기록이 없습니다.</p>}
+        {buttons !== null && buttons.length > 0 && (
+          <div className="table-wrap">
+            <table className="funnel-table" style={{ minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 220 }}>버튼</th>
+                  <th style={{ width: 110, textAlign: 'right' }}>누적 클릭</th>
+                  <th style={{ width: 130, textAlign: 'right' }}>첫 클릭</th>
+                  <th style={{ width: 130, textAlign: 'right' }}>마지막 클릭</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buttons.map((b) => (
+                  <tr key={b.button}>
+                    <td className="strong">{BUTTON_LABEL[b.button] ?? b.button}</td>
+                    <td className="num strong" style={{ textAlign: 'right' }}>{b.clickCount.toLocaleString()}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{fmtDateTime(b.firstClickedAt)}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{fmtDateTime(b.lastClickedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         )}

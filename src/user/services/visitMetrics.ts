@@ -149,6 +149,16 @@ export function trackFunnelPath(pathname: string): void {
 }
 
 /**
+ * 버튼 클릭 +1 (2026-09-14) — 스토어 배지처럼 화면 이동은 아니지만 세어야 하는 클릭 (button_events · 버튼별 누적).
+ * 방문·소재와는 연결하지 않는다 — 소재별은 픽셀 커스텀 이벤트(StoreClick)로 광고 관리자에서 본다.
+ * 실패는 조용히 무시 — 클릭 집계 하나 때문에 스토어 이동을 막지 않는다.
+ */
+export type ButtonKind = 'STORE_APP' | 'STORE_PLAY'
+export function trackButton(button: ButtonKind): void {
+  api.post('/api/metrics/button', { button }).catch(() => {})
+}
+
+/**
  * users 행이 생긴 직후 호출 — 보관된 방문 id 가 있으면 그 방문을 이 유저에 귀속시킨다.
  * 실패는 조용히 무시 (귀속 하나 때문에 로그인·체험 흐름을 막지 않는다).
  */

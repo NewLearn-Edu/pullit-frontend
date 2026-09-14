@@ -16,6 +16,11 @@ declare global {
   }
 }
 
+/** 커스텀 이벤트 — 스토어 배지 클릭 등. 이벤트 관리자에서 소재별로 집계된다 (웹 픽셀이라 앱 심사와 무관) */
+export function trackCustomEvent(name: string, params?: Record<string, string>): void {
+  window.fbq?.('trackCustom', name, params)
+}
+
 export function trackPageView(pathname: string): void {
   if (pathname.startsWith('/admin')) return
   window.fbq?.('track', 'PageView')
