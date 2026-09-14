@@ -27,9 +27,13 @@ const SUBJECT_LABEL: Record<Subject, string> = {
  */
 export default function TrialReviewPage() {
   const { subject, index } = useParams<{ subject: Subject; index: string }>()
-  // 결과 화면 주소 — 온보딩 퍼널(pendingUnit 없음)만 /trial/{subject}/weakness (TrialQuizPage 와 같은 기준)
+  // 결과 화면 주소 — 온보딩 퍼널만 /trial/{subject}/weakness, 홈·지도 진단은 /weakness.
+  // 홈 진단은 결과 확정(finishPendingUnit) 때 pendingUnit 이 비워지므로 pendingUnit 만으로는 온보딩과 구분이 안 된다 —
+  // 세트 시작 때 찍는 activeSetId(온보딩 맛보기는 서버 세트가 없어 null)로 보강한다 (2026-09-14).
+  // 예전엔 홈 진단 결과에서 "해설"을 누르면 퍼널로 오판 → /start 경유 가드 → /start → 완주 회원이라 /home 으로 튕겼다
   const pendingUnit = useTrialProgressStore((s) => s.pendingUnit)
-  const funnel = !pendingUnit
+  const activeSetId = useTrialStore((s) => s.activeSetId)
+  const funnel = !pendingUnit && activeSetId == null
   const entered = useRequireTrialFunnelEntry(funnel) // 온보딩 퍼널 리뷰만 — /start 미경유 직접 진입 차단
   // 세트 시작 때 찍어 둔 단원명 — pendingUnit 은 결과 확정 시 비워지므로 리뷰에선 이쪽이 정본 (2026-09-06)
   const activeUnitName = useTrialStore((s) => s.activeUnitName)
