@@ -73,6 +73,7 @@ const NAV_SECTIONS: NavSection[] = [
     key: 'stats', label: '통계', ico: <IcoStats />, home: '/admin/stats/visits',
     groups: [
       { label: '마케팅', items: [{ to: '/admin/stats/visits', label: '유입 · 퍼널', ico: <IcoStats /> }] },
+      { label: '회원 지표', items: [{ to: '/admin/stats/retention', label: '리텐션', ico: <IcoMember /> }] },
       { label: '학습 리포트', items: [{ to: '/admin/stats/unit-averages', label: '평균 관리', ico: <IcoList /> }] },
     ],
   },

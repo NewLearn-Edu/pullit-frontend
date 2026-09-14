@@ -525,12 +525,58 @@ export interface AcquisitionFunnelDailyRow {
   signupInfo: number
   members: number
   completed: number
+  /** 스토어 배지를 1번 이상 누른 방문 수 (button_events · 2026-09-14) — 퍼널 단계가 아니라 별도 행동 */
+  storeApp: number
+  storePlay: number
 }
 
 export async function fetchAcquisitionFunnelDaily(): Promise<AcquisitionFunnelDailyRow[]> {
   const { data } = await adminApi.get<BaseResponse<AcquisitionFunnelDailyRow[]>>(
     '/api/admin/metrics/acquisition-funnel/daily',
   )
+  return data.data
+}
+
+// ======================= 리텐션 (2026-09-14) =======================
+
+export interface RetentionKpi {
+  active: number
+  studied: number
+  returned: number
+  steadyWeek: number
+  churned: number
+}
+export interface RetentionCohortRow {
+  date: string
+  signupAll: number
+  staff: number
+  deleted: number
+  pending: number
+  active: number
+  day0Sets: number
+  /** offsets 순서대로 D{n} 학습자 수. 아직 그 날이 안 왔으면 null */
+  retained: (number | null)[]
+}
+export interface RetentionDailyRow {
+  date: string
+  learners: number
+  newLearners: number
+  returning: number
+  wau: number
+}
+export interface RetentionResponse {
+  today: string
+  offsets: number[]
+  kpi: RetentionKpi
+  cohorts: RetentionCohortRow[]
+  daily: RetentionDailyRow[]
+}
+
+/** 가입일 코호트(D0~D30)·일별 활성·KPI — 기준은 회원 현황 카드와 같다 (가입 전체 → 관계자 → 탈퇴 → 가입 중 → ACTIVE) */
+export async function fetchRetention(days = 30): Promise<RetentionResponse> {
+  const { data } = await adminApi.get<BaseResponse<RetentionResponse>>('/api/admin/stats/retention', {
+    params: { days },
+  })
   return data.data
 }
 
