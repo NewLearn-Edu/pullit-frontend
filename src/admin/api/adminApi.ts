@@ -839,6 +839,18 @@ export interface AdminProblemInventory {
   oneSetLeftCount: number
   /** 남은 문항 3개 미만 — 세트 발급 불가 */
   exhaustedCount: number
+  /** 배점별 최다 풀이 (2026-09-14) — 그 배점 노출 문항을 가장 많이 푼 유저의 풀이 수. 노출과 같으면 그 배점은 바닥 */
+  score2MaxSolved: number
+  score3MaxSolved: number
+  score4MaxSolved: number
+  /** 배점별 소진 유저 — 그 배점 노출 문항을 전부 푼 유저 수 */
+  score2ExhaustedUsers: number
+  score3ExhaustedUsers: number
+  score4ExhaustedUsers: number
+  /** 단원 최다 풀이 유저 — 풀이 수 · 남은 문항 · 표시 이름 (관계자 제외) */
+  topSolvedCount: number
+  topRemainingCount: number
+  topSolverName: string | null
 }
 
 export async function fetchAdminProblemInventory(
