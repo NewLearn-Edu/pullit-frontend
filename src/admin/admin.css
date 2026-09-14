@@ -1267,8 +1267,6 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 .retention-table th.step, .retention-table td.step { background: rgba(255, 56, 92, .04); }   /* 가입 → ACTIVE 계단은 옅은 분홍 */
 .retention-table th.step-active, .retention-table td.step-active { background: rgba(255, 56, 92, .09); font-weight: 600; }
 .retention-table td.retention-cell { line-height: 1.25; }
+.retention-note { margin: 6px 0 0; font-size: 12px; color: var(--color-muted); line-height: 1.5; }   /* 학교 관리 각주에서도 사용 */
 .retention-table td.retention-wait { color: var(--color-muted); }
-.retention-note { margin: 6px 0 0; font-size: 12px; color: var(--color-muted); line-height: 1.5; }
-.retention-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--color-muted); }
-.retention-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 

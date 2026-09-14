@@ -71,9 +71,6 @@ export default function RetentionPage() {
       <div className="page-head">
         <div>
           <h2 className="section-title" style={{ marginBottom: 4 }}>리텐션</h2>
-          <p className="page-sub">
-            가입한 사람이 며칠 뒤에 돌아오나 · 모든 %는 그날 가입해 ACTIVE 가 된 사람 대비 · 학습 = 맛보기 말고 세트 제출
-          </p>
         </div>
         <div className="funnel-period">
           {([7, 14, 30, 60] as Range[]).map((r) => (
@@ -101,9 +98,6 @@ export default function RetentionPage() {
         <div className="card-head">
           <div>
             <p className="card-title">가입일 코호트</p>
-            <p className="card-sub">
-              한 줄 = 그날 가입한 사람들 · 왼쪽 분홍 = 가입 전체에서 ACTIVE 까지 빠지는 계단 · D0 = 가입 당일, D1 = 다음 날 … 학습한 비율
-            </p>
           </div>
         </div>
         {state === 'loading' && <p className="page-sub">불러오는 중…</p>}
@@ -165,14 +159,6 @@ export default function RetentionPage() {
             </table>
           </div>
         )}
-        <p className="retention-note">
-          "—" 는 아직 그 날이 안 와서 판정할 수 없는 칸 — 매일 오른쪽으로 한 칸씩 채워진다 · 합계의 D{'{'}n{'}'} 은 판정 가능한 코호트만 모은 비율 ·
-          탈퇴 30일·게스트 7일 정리 배치가 지운 계정은 과거 코호트의 "가입 전체"에서 빠진다
-        </p>
-        <div className="retention-legend">
-          <span><i style={{ background: 'rgba(255,56,92,.09)' }} />ACTIVE = 분모</span>
-          <span><i style={{ background: 'var(--color-primary)', opacity: .75 }} />막대 = ACTIVE 대비 비율</span>
-        </div>
       </div>
 
       {/* ② 일별 활성 */}
@@ -180,7 +166,6 @@ export default function RetentionPage() {
         <div className="card-head">
           <div>
             <p className="card-title">일별 활성</p>
-            <p className="card-sub">그날 학습한 ACTIVE 회원 · 신규 = 그날 가입 · 복귀 = 이전에 가입한 사람이 돌아옴 · WAU = 그날 포함 최근 7일 학습</p>
           </div>
         </div>
         {state === 'done' && data && (
@@ -215,9 +200,6 @@ export default function RetentionPage() {
             </table>
           </div>
         )}
-        <p className="retention-note">
-          오늘 줄은 아직 쌓이는 중 · 복귀가 리마인더(19시 문자) 효과를 보는 칸 — 문자가 나간 날 저녁 이후 복귀가 늘면 효과가 있는 것
-        </p>
       </div>
     </>
   )

@@ -15,8 +15,6 @@ function dayDelta(today: number | undefined, yesterday: number | undefined) {
   return { text: '어제와 동일', tone: 'flat' as const }
 }
 
-const pct = (numerator: number, denominator: number) =>
-  denominator > 0 ? `${Math.round((numerator / denominator) * 100)}%` : '—'
 
 /** 'YYYY-MM-DD' → 'MM.DD' */
 const shortDate = (iso: string) => iso.slice(5).replace('-', '.')
@@ -358,27 +356,7 @@ export default function DashboardPage() {
         {trend.length > 0 && <TrendChart data={trend} compact={narrow} />}
       </div>
 
-      {/* 전환 요약 — 퍼널 핵심 숫자 3개 */}
-      <div className="grid-stats cols-3" style={{ marginTop: 16 }}>
-        <StatCard
-          label="맛보기 완주율"
-          value={stats ? pct(stats.trialCompleters, stats.trialStarters) : '—'}
-          delta={stats ? `응시 ${fmt(stats.trialStarters)} · 완주 ${fmt(stats.trialCompleters)}` : '응시 — · 완주 —'}
-          tone="flat"
-        />
-        <StatCard
-          label="게스트→회원 전환율"
-          value={stats ? pct(stats.totalMembers, stats.totalMembers + stats.totalGuests) : '—'}
-          delta="현재 잔존 유저 기준 근사치"
-          tone="flat"
-        />
-        <StatCard
-          label="오늘 크레딧 소진"
-          value={fmt(stats?.todayCreditsSpent)}
-          delta="추천 세트 · 새 문제 풀기"
-          tone="flat"
-        />
-      </div>
+      {/* 전환 요약(맛보기 완주율·게스트→회원 전환율·오늘 크레딧 소진) 카드는 2026-09-14 제거 — 유입·퍼널/크레딧 페이지가 담당 */}
     </section>
   )
 }
