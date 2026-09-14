@@ -51,6 +51,7 @@
   --rail-disabled: #c5ccd3;
   --green-text: #148f6b;
   --green-strong: #1ba57b;
+  --blue-text: #3182f6;            /* 하락 delta (증시 관례: 상승 빨강 · 하락 파랑, 2026-09-14) */
   --warn-text: #c07f0a;
   --hidden-bg: rgba(22, 15, 14, .06);
   --neutral-dash: #c5ccd3;
@@ -104,6 +105,7 @@
   --rail-disabled: #4a4f59;
   --green-text: #3fe0b0;
   --green-strong: #3fe0b0;
+  --blue-text: #64a8ff;
   --warn-text: #f5b942;
   --hidden-bg: rgba(255, 255, 255, .07);
   --neutral-dash: #5a616c;
@@ -292,8 +294,9 @@
   .stat .label { font-size: 13px; font-weight: 600; color: var(--color-muted); }
   .stat .value { margin-top: 6px; font-size: 26px; font-weight: 800; color: var(--color-fg); letter-spacing: -0.02em; }
   .stat .delta { margin-top: 6px; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-  .delta.up { color: var(--color-primary); }
-  .delta.good { color: var(--green-strong); }
+  .delta.up { color: var(--color-primary); }      /* 상승 — 빨강 (어제보다 +N) */
+  .delta.down { color: var(--blue-text); }        /* 하락 — 파랑 (어제보다 −N) */
+  .delta.good { color: var(--green-strong); }     /* 긍정 상태 (검수 완료 등) */
   .delta.flat { color: var(--color-muted); }
 
   .grid-two { display: grid; grid-template-columns: 1.7fr 1fr; gap: 16px; align-items: start; }

@@ -10,8 +10,9 @@ const fmt = (n: number | undefined) => (n == null ? '—' : n.toLocaleString())
 function dayDelta(today: number | undefined, yesterday: number | undefined) {
   if (today == null || yesterday == null) return { text: '어제 대비 —', tone: 'flat' as const }
   const diff = today - yesterday
-  if (diff > 0) return { text: `▲ 어제보다 +${diff.toLocaleString()}`, tone: 'good' as const }
-  if (diff < 0) return { text: `▼ 어제보다 ${diff.toLocaleString()}`, tone: 'up' as const }
+  // 증시 관례 — 상승은 빨강(up), 하락은 파랑(down) (2026-09-14)
+  if (diff > 0) return { text: `▲ 어제보다 +${diff.toLocaleString()}`, tone: 'up' as const }
+  if (diff < 0) return { text: `▼ 어제보다 ${diff.toLocaleString()}`, tone: 'down' as const }
   return { text: '어제와 동일', tone: 'flat' as const }
 }
 
@@ -309,7 +310,6 @@ export default function DashboardPage() {
         <StatCard
           label="오늘 풀린 문제"
           value={fmt(stats?.todaySolved)}
-          valueColor={stats && stats.todaySolved > 0 ? 'var(--color-primary)' : undefined}
           delta={solvedDelta.text}
           tone={solvedDelta.tone}
         />
@@ -328,7 +328,6 @@ export default function DashboardPage() {
         <StatCard
           label="오늘 가입"
           value={fmt(stats?.todaySignups)}
-          valueColor={stats && stats.todaySignups > 0 ? 'var(--color-primary)' : undefined}
           delta="게스트→회원 전환 포함"
           tone={stats && stats.todaySignups > 0 ? 'good' : 'flat'}
         />
