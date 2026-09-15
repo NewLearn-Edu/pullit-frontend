@@ -1265,6 +1265,13 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 /* ── 평균 관리 (UnitAveragesPage) ───────────────────────────── */
 /* "실제 88점"처럼 내용 길이가 변하는 배지 — 고정 80px 대신 내용 맞춤 */
 .ua-badge-fit { width: auto; min-width: 80px; padding: 0 12px; }
+/* 시드 고정 스위치 (2026-09-15) — 44×26 필, 켜짐 = primary. 색은 전부 변수라 다크 자동 대응 */
+.ua-lock { position: relative; display: inline-block; width: 44px; height: 26px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--neutral-dash); cursor: pointer; transition: background .18s ease; vertical-align: middle; }
+.ua-lock.on { background: var(--color-primary); }
+.ua-lock:disabled { opacity: .55; cursor: default; }
+.ua-lock:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255, 56, 92, .18); }
+.ua-lock-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .18); transition: transform .18s ease; }
+.ua-lock.on .ua-lock-knob { transform: translateX(18px); }
 .ua-seed-input {
   width: 76px;
   height: 36px;

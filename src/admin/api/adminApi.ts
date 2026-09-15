@@ -865,6 +865,8 @@ export interface AdminUnitAverage {
   userCount: number
   /** 어드민이 관리하는 시드값 (표본 부족 시 이 값이 노출됨) */
   seedScore: number
+  /** 시드 고정 — true 면 표본이 임계를 넘어도 시드가 노출된다 (2026-09-15) */
+  seedLocked: boolean
   /** 현재 유저 리포트에 노출 중인 값 */
   exposedScore: number
   source: 'SEED' | 'REAL'
@@ -938,4 +940,9 @@ export async function updateAdminUnitAverageSeed(
   seedScore: number,
 ): Promise<void> {
   await adminApi.put(`/api/admin/unit-averages/${unitCode}`, { seedScore })
+}
+
+/** 시드 고정 켜기/끄기 — 켜면 표본과 무관하게 시드가 노출된다 */
+export async function updateAdminUnitAverageLock(unitCode: string, locked: boolean): Promise<void> {
+  await adminApi.patch(`/api/admin/unit-averages/${unitCode}/lock`, { locked })
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import clsx from 'clsx'
 import {
   fetchAdminUnitAverages,
+  updateAdminUnitAverageLock,
   updateAdminUnitAverageSeed,
   type AdminUnitAverage,
 } from '../api/adminApi'
@@ -15,6 +16,8 @@ type SubjectKey = 'MATH' | 'ENGLISH'
  * 실제 평균(유저별 최신 진단 실측)은 읽기 전용으로 보여주고,
  * 노출 평균(시드)만 여기서 수정한다. 표본이 minSample 이상 모인 단원은
  * 시드 대신 실측이 자동 노출된다(REAL) — 그때부터 시드는 예비값.
+ * "시드 고정" 을 켜면 표본과 무관하게 시드가 계속 나간다 (2026-09-15) — 실측이 관계자 테스트로
+ * 오염됐거나 운영자가 값을 직접 쥐고 싶을 때. 실제 평균 자체는 관계자·관리자를 이미 뺀 값.
  */
 export default function UnitAveragesPage() {
   const toast = useToast()
@@ -25,6 +28,7 @@ export default function UnitAveragesPage() {
   // unitCode → 입력 중인 시드값 문자열 (서버값과 같으면 키 제거)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
+  const [locking, setLocking] = useState<string | null>(null)
 
   const load = useCallback(
     (target: SubjectKey) => {
@@ -90,6 +94,32 @@ export default function UnitAveragesPage() {
     }
   }
 
+  /** 시드 고정 토글 — 노출값이 바뀌므로 서버 계산을 그대로 반영한다 */
+  const toggleLock = async (row: AdminUnitAverage) => {
+    const next = !row.seedLocked
+    setLocking(row.unitCode)
+    try {
+      await updateAdminUnitAverageLock(row.unitCode, next)
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.unitCode !== row.unitCode) return r
+          const useReal = !next && r.userCount >= r.minSample && r.realAverage != null
+          return {
+            ...r,
+            seedLocked: next,
+            source: useReal ? 'REAL' : 'SEED',
+            exposedScore: useReal ? (r.realAverage as number) : r.seedScore,
+          }
+        }),
+      )
+      toast(next ? `${row.skillNode} 시드를 고정했어요 — 표본과 무관하게 시드가 나가요` : `${row.skillNode} 시드 고정을 풀었어요`)
+    } catch {
+      toast('변경에 실패했어요. 잠시 후 다시 시도해주세요')
+    } finally {
+      setLocking(null)
+    }
+  }
+
   const minSample = rows[0]?.minSample ?? 30
 
   return (
@@ -100,6 +130,7 @@ export default function UnitAveragesPage() {
           <p style={{ fontSize: 14, color: 'var(--color-muted)', margin: 0 }}>
             리포트 평균 점수 비교에 나가는 풀잇 평균이에요. 진단 표본이 {minSample}명 미만인
             단원은 노출 평균(시드)이 나가고, 그 이상 모이면 실제 평균으로 자동 전환돼요.
+            시드 고정을 켜면 표본과 무관하게 시드가 나가요. 실제 평균은 관계자·관리자를 뺀 값이에요.
           </p>
         </div>
         <div className="seg">
@@ -128,6 +159,7 @@ export default function UnitAveragesPage() {
                   <th style={{ width: 130 }}>실제 평균</th>
                   <th style={{ width: 90 }}>표본</th>
                   <th style={{ width: 170 }}>노출 평균 (시드)</th>
+                  <th style={{ width: 100, textAlign: 'center' }}>시드 고정</th>
                   <th style={{ width: 110 }}>노출 중</th>
                   <th style={{ width: 90 }} />
                 </tr>
@@ -162,11 +194,26 @@ export default function UnitAveragesPage() {
                         />
                         <span style={{ fontSize: 13, color: 'var(--color-muted)', marginLeft: 6 }}>점</span>
                       </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={row.seedLocked}
+                          aria-label={`${row.skillNode} 시드 고정`}
+                          className={clsx('ua-lock', row.seedLocked && 'on')}
+                          disabled={locking === row.unitCode}
+                          onClick={() => toggleLock(row)}
+                        >
+                          <span className="ua-lock-knob" />
+                        </button>
+                      </td>
                       <td>
                         {row.source === 'REAL' ? (
                           <span className="badge live ua-badge-fit">실제 {row.exposedScore}점</span>
                         ) : (
-                          <span className="badge neutral ua-badge-fit">시드 {row.exposedScore}점</span>
+                          <span className={clsx('badge ua-badge-fit', row.seedLocked ? 'pending' : 'neutral')}>
+                            {row.seedLocked ? '고정' : '시드'} {row.exposedScore}점
+                          </span>
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
