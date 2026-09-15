@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import TrialIntroPage from './TrialIntroPage'
 import { InAppBrowserGate } from '@/user/components/InAppBrowserGate'
+import StartLoginButton from '@/user/components/StartLoginButton'
 import { getStartVariant, rememberStartPath } from '@/user/services/startVariants'
 
 /**
@@ -9,6 +10,7 @@ import { getStartVariant, rememberStartPath } from '@/user/services/startVariant
  * 등록된 변형이면 그 화면, 아니면 기본 인트로 — 어느 쪽이든 주소는 바꾸지 않는다 (utm · landing_path 보존).
  * 변형 경로는 기억해 두어 로그인·가입 뒤 퍼널 복귀가 같은 변형으로 돌아온다.
  * 변형은 광고 전용이라 검색엔진에 중복 랜딩으로 잡히지 않게 noindex.
+ * 세션 없는 방문자에게는 우측 상단 로그인 버튼을 띄운다 (기존 회원의 재진입 경로 · 2026-09-15).
  */
 export default function StartVariantPage() {
   const { variant } = useParams<{ variant?: string }>()
@@ -35,6 +37,7 @@ export default function StartVariantPage() {
     return (
       <>
         <Variant slug={variant} />
+        <StartLoginButton />
         <InAppBrowserGate />
       </>
     )
@@ -43,6 +46,7 @@ export default function StartVariantPage() {
   return (
     <>
       <TrialIntroPage />
+      <StartLoginButton />
       <InAppBrowserGate />
     </>
   )
