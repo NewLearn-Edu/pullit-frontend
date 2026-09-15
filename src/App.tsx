@@ -17,6 +17,7 @@ import WrongNoteRetryResultPage from './user/pages/wrongnote/WrongNoteRetryResul
 import MyPage from './user/pages/my/MyPage'
 import ProfileEditPage from './user/pages/my/ProfileEditPage'
 import WithdrawPage from './user/pages/my/WithdrawPage'
+import NotificationSettingsPage from './user/pages/my/NotificationSettingsPage'
 import ReportPage from './user/pages/report/ReportPage'
 import WeaknessMapPage from './user/pages/map/WeaknessMapPage'
 import UnitResultPage from './user/pages/home/UnitResultPage'
@@ -201,6 +202,7 @@ export default function App() {
         <Route path="/my" element={<MyPage />} />
         <Route path="/my/profile" element={<ProfileEditPage />} />
         <Route path="/my/withdraw" element={<WithdrawPage />} />
+        <Route path="/my/notifications" element={<NotificationSettingsPage />} />
         <Route path="/weakness-map" element={<WeaknessMapPage />} />
         {/* 약점 그래프 잠금 해제 진행 — subject = math|english, slug = curriculum 카테고리 */}
         {/* 진단 결과 재열람 — 홈 소단원 리스트의 완료 행에서 진입 */}

@@ -8,7 +8,7 @@ import { PageHeader } from '@/user/components/PageHeader'
 import { ConfirmDialog } from '@/user/components/ConfirmDialog'
 import { isStandaloneApp } from '@/user/utils/standalone'
 import { openExternal } from '@/user/utils/openExternal'
-import { GRADE_LABEL, logout, updateMarketingConsent } from '@/user/api/authApi'
+import { GRADE_LABEL, logout } from '@/user/api/authApi'
 import { clearLocalTraces } from '@/user/utils/localTraces'
 import { CreditCoin } from '@/user/components/CreditBadge/CreditBadge'
 import { useMe } from '@/user/hooks/useMe'
@@ -60,7 +60,6 @@ export default function MyPage() {
   }, [sessionStatus, navigate])
 
   const isGuest = me?.type === 'GUEST'
-  const loadMe = useUserStore((s) => s.loadMe)
 
   // 준비 전 메뉴 안내용 미니 토스트
   const [toast, setToast] = useState<string | null>(null)
@@ -69,33 +68,6 @@ export default function MyPage() {
     const timer = setTimeout(() => setToast(null), 2200)
     return () => clearTimeout(timer)
   }, [toast])
-
-  // 마케팅 수신동의 토글 — 진실원은 me.marketingConsentAt, 저장 중엔 잠금
-  const marketingOn = !!me?.marketingConsentAt
-  const [consentSaving, setConsentSaving] = useState(false)
-  // 끄기(철회)만 확인 팝업을 거친다 — 켜기는 바로 저장 (2026-09-04)
-  const [consentOffOpen, setConsentOffOpen] = useState(false)
-  const toggleMarketing = () => {
-    if (consentSaving) return
-    if (marketingOn) {
-      setConsentOffOpen(true)
-      return
-    }
-    void saveMarketing(true)
-  }
-  const saveMarketing = async (next: boolean) => {
-    if (consentSaving) return
-    setConsentSaving(true)
-    try {
-      await updateMarketingConsent(next)
-      await loadMe(true) // marketingConsentAt 갱신 반영
-      setToast(next ? '마케팅 정보 수신에 동의했어요' : '마케팅 수신동의를 철회했어요')
-    } catch {
-      setToast('변경에 실패했어요. 잠시 후 다시 시도해주세요')
-    } finally {
-      setConsentSaving(false)
-    }
-  }
 
   // 로그아웃 — 확인 팝업(공용 ConfirmDialog)을 거친다 (2026-09-04)
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -175,22 +147,8 @@ export default function MyPage() {
         <section className={styles.menuSection}>
           <p className={styles.menuLabel}>계정</p>
           <div className={styles.menuCard}>
-            {/* 마케팅 수신동의 — 문서에 "언제든 철회 가능"을 명시했으므로 철회 수단 필수 */}
-            {!isGuest && (
-              <div className={styles.menuItem}>
-                <span>마케팅 정보 수신 동의</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={marketingOn}
-                  onClick={toggleMarketing}
-                  disabled={consentSaving}
-                  className={clsx(styles.switch, marketingOn && styles.switchOn)}
-                >
-                  <span className={styles.switchKnob} />
-                </button>
-              </div>
-            )}
+            {/* 알림 설정 — 학습 알림·마케팅 수신동의 스위치를 한 화면으로 (2026-09-15). 문서에 "언제든 철회 가능"을 명시했으므로 철회 수단은 그 화면이 담당 */}
+            {!isGuest && <MenuItem label="알림 설정" onClick={() => navigate('/my/notifications')} />}
             <MenuItem
               label="고객센터"
               // 카카오톡 채널 채팅으로 연결 (채널 추가 + 1:1 문의) — 앱에선 새 창이 안 열려 같은 창 폴백
@@ -244,21 +202,6 @@ export default function MyPage() {
         {toast}
       </Toast>
 
-      {/* 마케팅 수신동의 철회 확인 — 켜기는 바로, 끄기만 묻는다 */}
-      {consentOffOpen && (
-        <ConfirmDialog
-          title="마케팅 수신동의를 철회할까?"
-          desc="철회하면 새 문제·이벤트 같은 소식을 알림톡으로 받을 수 없어. 언제든 다시 켤 수 있어."
-          cancelLabel="취소"
-          confirmLabel="철회하기"
-          danger
-          onCancel={() => setConsentOffOpen(false)}
-          onConfirm={() => {
-            setConsentOffOpen(false)
-            void saveMarketing(false)
-          }}
-        />
-      )}
 
       {/* 로그아웃 확인 — 풀이 나가기 등과 같은 공용 팝업. 확인은 파괴적 동작이라 빨강 */}
       {logoutOpen && (

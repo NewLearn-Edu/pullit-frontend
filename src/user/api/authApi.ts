@@ -423,6 +423,11 @@ export async function updateMarketingConsent(agree: boolean): Promise<void> {
   await api.patch('/api/users/me/marketing-consent', { agree })
 }
 
+/** 학습 알림(데일리 문제 알림톡) 켜기/끄기 — 마이페이지 토글 (2026-09-15) */
+export async function updateStudyAlert(enabled: boolean): Promise<void> {
+  await api.patch('/api/users/me/study-alert', { enabled })
+}
+
 /**
  * 닉네임 사용 가능 여부 (가입 화면 · 2026-09-06).
  * 형식 위반도 false 로 내려온다 — 호출부가 형식을 먼저 걸러 쓰기를 권한다.
@@ -491,6 +496,8 @@ export interface MeResult {
   profileImageUrl: string | null
   /** 마케팅 수신동의 시각 — null 이면 미동의/철회 상태 (마이페이지 토글의 진실원) */
   marketingConsentAt: string | null
+  /** 학습 알림(데일리 문제 알림톡) 수신 여부 — 기본 true, 마이페이지에서 끔 (2026-09-15). 구버전 서버엔 없어 undefined 면 켜짐으로 본다 */
+  studyAlertEnabled?: boolean
   /** 마지막 닉네임 변경 시각 — 이력 표시용 (한 번도 안 바꿨으면 null). 재변경 제한은 없다 */
   nicknameChangedAt: string | null
   /** 가입 소셜 — 애플 가입자는 이름 칸을 수정할 수 없다 (Apple 정책). 게스트/미연동이면 null */
