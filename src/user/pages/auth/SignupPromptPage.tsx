@@ -19,6 +19,8 @@ import { setPostLoginRedirect } from '@/user/utils/postLoginRedirect'
 import { weaknessResultPath } from '@/user/services/trialRoutes'
 import { useTrialStore } from '@/user/stores/trialStore'
 import OnboardingHeader from '@/user/components/OnboardingHeader'
+import { isStandaloneApp } from '@/user/utils/standalone'
+import { useNavStackStore } from '@/user/stores/navStackStore'
 import SocialLoginButtons from '@/user/components/SocialLoginButtons'
 import RadarDemoCard from '@/user/components/WeaknessRadar/RadarDemoCard'
 
@@ -92,6 +94,12 @@ export default function SignupPromptPage() {
   const backTo = rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/home'
   const returnTo = resultPass ? weaknessResultPath(lastSubject, true) : backTo
 
+  /** 뒤로가기 — 직전 화면(앱 방문 스택)으로, 없으면 결과 화면(열람권 있을 때) 또는 랜딩 */
+  const goBack = () => {
+    const prev = useNavStackStore.getState().back()
+    navigate(prev ?? (resultPass ? weaknessResultPath(lastSubject, true) : '/'), { replace: true })
+  }
+
   /** 소셜 로그인 시작 전 공통 처리 — 로그인 후 복귀 경로를 항상 덮어쓴다 (stale 값 소비 방지) */
   const withReturn = (startLogin: () => void) => () => {
     setPostLoginRedirect(returnTo)
@@ -126,8 +134,10 @@ export default function SignupPromptPage() {
 
   return (
     <div className="flex h-dvh touch-none flex-col overflow-hidden overscroll-none bg-white">
-      {/* 상단바 — 건너뛰기 없음 (2026-09-15 게스트 폐지). 상단 여백만 */}
-      <OnboardingHeader />
+      {/* 상단바 — 좌측 뒤로가기만 (2026-09-15). 건너뛰기(게스트)는 폐지.
+          뒤로가기 = 직전 화면(보통 약점 결과 · 열람권이 남아 있어 다시 열린다). 직전 화면이 없으면(URL 직접 진입)
+          열람권이 있으면 결과 화면, 없으면 랜딩. 앱(홈 화면 웹앱)은 회원 전용이라 뒤로가기를 두지 않는다 */}
+      <OnboardingHeader onBack={isStandaloneApp() ? undefined : goBack} />
 
       <main className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden px-[40px] py-[40px] max-md:px-lg max-md:py-[24px]">
         {/* 레이더 카드 — 배경색 없이 그래프만 (2026-08-25).
