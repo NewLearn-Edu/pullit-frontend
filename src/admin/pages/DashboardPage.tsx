@@ -101,7 +101,7 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
   const [pinned, setPinned] = useState<number | null>(null)
   const active = pinned ?? hovered
 
-  const { yMax, xLabels, solvedPath, solvedArea, learnersPath, signupsPath, points, cols, innerH } = useMemo(() => {
+  const { yMax, xLabels, solvedArea, learnersArea, signupsArea, solvedPath, learnersPath, signupsPath, cols, innerH } = useMemo(() => {
     const rawMax = Math.max(4, ...data.map((d) => Math.max(d.solved, d.learners, d.signups)))
     const yMax = Math.ceil(rawMax / 4) * 4
 
@@ -112,9 +112,9 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
 
     const toPath = (key: 'solved' | 'learners' | 'signups') =>
       monotoneCurvePath(data.map((d, i) => [x(i), y(d[key])]))
-
-    const solvedPath = toPath('solved')
-    const solvedArea = `${solvedPath} L${x(data.length - 1).toFixed(1)},${(PAD_T + innerH).toFixed(1)} L${x(0).toFixed(1)},${(PAD_T + innerH).toFixed(1)} Z`
+    // 면(wave) — 곡선 아래를 바닥까지 닫는다. 세 시리즈 모두 면으로 그리고 반투명하게 겹친다 (2026-09-14)
+    const toArea = (key: 'solved' | 'learners' | 'signups') =>
+      `${toPath(key)} L${x(data.length - 1).toFixed(1)},${(PAD_T + innerH).toFixed(1)} L${x(0).toFixed(1)},${(PAD_T + innerH).toFixed(1)} Z`
 
     // x 라벨 겹침 방지 — 데스크톱 7개 · 모바일 4개 내외
     const step = Math.max(1, Math.ceil(data.length / (compact ? 4 : 7)))
@@ -127,12 +127,6 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
       }))
       .filter((l) => l.show)
 
-    // 점은 14개 이하일 때만 (30일 뷰에선 선만)
-    const points =
-      data.length <= 14
-        ? data.map((d, i) => ({ x: x(i), ySolved: y(d.solved), yLearners: y(d.learners), ySignups: y(d.signups), last: i === data.length - 1 }))
-        : []
-
     // hover 구간 — 각 날짜를 가운데 둔 세로 띠 (이웃 점과의 중간까지)
     const half = data.length === 1 ? innerW / 2 : innerW / (data.length - 1) / 2
     const cols = data.map((d, i) => ({
@@ -140,7 +134,11 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
       left: Math.max(PAD_L, x(i) - half), width: Math.min(W - PAD_R, x(i) + half) - Math.max(PAD_L, x(i) - half),
     }))
 
-    return { yMax, xLabels, solvedPath, solvedArea, learnersPath: toPath('learners'), signupsPath: toPath('signups'), points, cols, innerH }
+    return {
+      yMax, xLabels, cols, innerH,
+      solvedArea: toArea('solved'), learnersArea: toArea('learners'), signupsArea: toArea('signups'),
+      solvedPath: toPath('solved'), learnersPath: toPath('learners'), signupsPath: toPath('signups'),
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, compact])
 
@@ -168,61 +166,36 @@ function TrendChart({ data, compact }: { data: DailyActivity[]; compact: boolean
             </text>
           ))}
         </g>
+        {/* 물결 면 (2026-09-14) — 점 없이, 위가 진하고 아래로 옅어지는 면 + 윗가장자리 선 2px.
+            큰 시리즈(풀린 문제)를 먼저 깔고 작은 시리즈(학습 유저 → 가입자)를 위에 올린다. 값은 hover·탭 툴팁으로 */}
         <defs>
-          <linearGradient id="dashGradSolved" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="var(--color-primary)" stopOpacity=".14" />
-            <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
+          <linearGradient id="dashWaveSolved" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--color-primary)" stopOpacity=".62" />
+            <stop offset="1" stopColor="var(--color-primary)" stopOpacity=".14" />
+          </linearGradient>
+          <linearGradient id="dashWaveLearners" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--color-accent)" stopOpacity=".72" />
+            <stop offset="1" stopColor="var(--color-accent)" stopOpacity=".2" />
+          </linearGradient>
+          <linearGradient id="dashWaveSignups" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--color-warn)" stopOpacity=".78" />
+            <stop offset="1" stopColor="var(--color-warn)" stopOpacity=".24" />
           </linearGradient>
         </defs>
-        <path d={solvedArea} fill="url(#dashGradSolved)" />
-        <path
-          d={solvedPath}
-          fill="none"
-          stroke="var(--color-primary)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d={learnersPath}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <g fill="var(--color-primary)">
-          {points.map((p) => (
-            <circle key={`s${p.x}`} cx={p.x} cy={p.ySolved} r={p.last ? 4.5 : 3.5} stroke={p.last ? 'var(--color-canvas)' : undefined} strokeWidth={p.last ? 2 : undefined} />
-          ))}
-        </g>
-        {/* 가입자 (2026-09-14) — 세 번째 선. 같은 y 축이라 아래쪽에 낮게 깔리지만 정확한 값은 점 hover 로 읽는다 */}
-        <path
-          d={signupsPath}
-          fill="none"
-          stroke="var(--color-warn)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <g fill="var(--color-accent)">
-          {points.map((p) => (
-            <circle key={`l${p.x}`} cx={p.x} cy={p.yLearners} r="3" />
-          ))}
-        </g>
-        <g fill="var(--color-warn)">
-          {points.map((p) => (
-            <circle key={`g${p.x}`} cx={p.x} cy={p.ySignups} r="3" />
-          ))}
-        </g>
-        {/* 선택한 날짜 — 세로 가이드 + 세 선 위의 강조 점 */}
+        <path d={solvedArea} fill="url(#dashWaveSolved)" />
+        <path d={solvedPath} fill="none" stroke="var(--color-primary)" strokeWidth="2.2" strokeLinejoin="round" />
+        <path d={learnersArea} fill="url(#dashWaveLearners)" />
+        <path d={learnersPath} fill="none" stroke="var(--color-accent)" strokeWidth="2.2" strokeLinejoin="round" />
+        <path d={signupsArea} fill="url(#dashWaveSignups)" />
+        <path d={signupsPath} fill="none" stroke="var(--color-warn)" strokeWidth="2.2" strokeLinejoin="round" />
+        {/* 선택한 날짜 — 세로 가이드 + 세 면 위의 강조 점 (흰 테두리로 면 위에서 도드라지게) */}
         {active != null && (
           <g className="chart-active">
             {/* 고정 상태는 실선, 따라다니는 상태는 점선 */}
             <line x1={cols[active].x} y1={PAD_T} x2={cols[active].x} y2={PAD_T + innerH} strokeDasharray={pinned != null ? undefined : '3 3'} />
-            <circle cx={cols[active].x} cy={cols[active].ySolved} r="5" fill="var(--color-primary)" />
-            <circle cx={cols[active].x} cy={cols[active].yLearners} r="5" fill="var(--color-accent)" />
-            <circle cx={cols[active].x} cy={cols[active].ySignups} r="5" fill="var(--color-warn)" />
+            <circle cx={cols[active].x} cy={cols[active].ySolved} r="4.5" fill="var(--color-primary)" stroke="var(--color-canvas)" strokeWidth="2" />
+            <circle cx={cols[active].x} cy={cols[active].yLearners} r="4.5" fill="var(--color-accent)" stroke="var(--color-canvas)" strokeWidth="2" />
+            <circle cx={cols[active].x} cy={cols[active].ySignups} r="4.5" fill="var(--color-warn)" stroke="var(--color-canvas)" strokeWidth="2" />
           </g>
         )}
         {/* hover·탭 영역 — 투명, 맨 위 */}
