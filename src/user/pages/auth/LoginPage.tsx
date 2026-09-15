@@ -146,15 +146,15 @@ export default function LoginPage() {
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {/* 가입 없이 맛보기 진입 — 게스트 세션으로 약점 진단까지 가능.
-            홈 화면 웹앱(아이패드·안드로이드)은 회원 전용이라 비회원 진입을 두지 않는다 (2026-09-04) */}
+        {/* 가입 없이 맛보기 진입 — 진단 3문제와 약점 결과까지는 세션 없이, 그 뒤는 가입 필수 (2026-09-15 게스트 폐지).
+            홈 화면 웹앱(아이패드·안드로이드)은 회원 전용이라 이 진입을 두지 않는다 (2026-09-04) */}
         {!isStandaloneApp() && (
           <button
             type="button"
             onClick={() => navigate(enterTrialFunnel())}
             className={styles.guestLink}
           >
-            비회원으로 약점보기
+            가입 없이 진단해보기
           </button>
         )}
       </div>

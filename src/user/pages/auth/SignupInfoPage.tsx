@@ -1,4 +1,3 @@
-import { enterTrialFunnel } from '@/user/services/trialFunnel'
 import { SchoolPicker, type SchoolChoice } from '@/user/components/SchoolPicker'
 import { SCHOOL_FEATURE_ENABLED, type SchoolGrade } from '@/user/api/schoolApi'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -626,14 +625,15 @@ export default function SignupInfoPage() {
             <p className="break-keep text-[16px] text-[#5e6368] max-md:text-[15px]">
               보호자 동의 가입은 준비 중이에요.
               <br />
-              지금은 가입 없이 문제 풀이와 약점 진단을 이용할 수 있어요.
+              준비되면 다시 찾아와 주세요.
             </p>
+            {/* 2026-09-15 게스트 폐지 — 예전 "비회원으로 계속하기"(퍼널 → 건너뛰기 → 게스트 홈) 는 갈 곳이 없어 돌아가기로 */}
             <button
               type="button"
-              onClick={() => navigate(enterTrialFunnel(), { replace: true })}
+              onClick={() => navigate(exitPath(), { replace: true })}
               className="mt-lg flex h-[56px] w-full max-w-[400px] items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90"
             >
-              비회원으로 계속하기
+              돌아가기
             </button>
           </div>
         </main>
@@ -863,7 +863,7 @@ export default function SignupInfoPage() {
               )}
               {under14 && (
                 <p className="text-[13px] text-danger">
-                  만 14세 미만은 아직 가입할 수 없어 — 가입 없이 문제 풀이는 이용할 수 있어
+                  만 14세 미만은 아직 가입할 수 없어
                 </p>
               )}
             </Step>

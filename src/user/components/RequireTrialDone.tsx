@@ -34,6 +34,7 @@ export default function RequireTrialDone() {
   useMe() // 세션 미조회 상태로 직행해도 판정이 돌게 로드 (조회 전용 — 게스트를 만들지 않는다)
   const status = useUserStore((s) => s.status)
   const userId = useUserStore((s) => s.me?.id ?? null)
+  const me = useUserStore((s) => s.me)
 
   const [verdict, setVerdict] = useState<Verdict>(() =>
     userId != null && isTrialCompletedCached(userId) ? 'done' : 'checking',
@@ -83,6 +84,12 @@ export default function RequireTrialDone() {
     return (
       <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
     )
+  }
+
+  // 게스트는 회원 영역 불가 (2026-09-15 게스트 폐지). 소셜만 누른 게스트(GUEST·PENDING)는 프로필 입력으로,
+  // 순수 게스트는 가입 유도로. 기존 게스트 계정은 7일 정리 배치가 지울 때까지 여기서 막는다
+  if (me?.type === 'GUEST') {
+    return <Navigate to={me.status === 'PENDING' ? '/signup/info' : '/signup'} replace />
   }
 
   if (verdict === 'checking') return null

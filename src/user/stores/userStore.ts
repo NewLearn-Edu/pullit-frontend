@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import { createGuestSession, fetchMe, probeSession, type MeResult } from '@/user/api/authApi'
-import { claimUtmVisit } from '@/user/services/visitMetrics'
+import { probeSession, type MeResult } from '@/user/api/authApi'
 
 export type SessionStatus =
   | 'idle' // 아직 조회하지 않음
@@ -11,10 +10,8 @@ export type SessionStatus =
 interface UserState {
   me: MeResult | null
   status: SessionStatus
-  /** 조회만 — 세션이 없어도 게스트를 만들지 않는다 (홈·네비 등 표시용) */
+  /** 조회만 — 세션이 없으면 익명 (2026-09-15 게스트 폐지 후 세션은 소셜 로그인으로만 생긴다) */
   loadMe: (force?: boolean) => Promise<MeResult | null>
-  /** 확보 — 없으면 게스트를 발급받는다 (맛보기 진입 전용) */
-  ensureSession: () => Promise<MeResult | null>
   setMe: (me: MeResult | null) => void
   clear: () => void
 }
@@ -23,21 +20,16 @@ interface UserState {
  * 세션 상태 전역 스토어.
  *
  * persist 를 붙이지 않는다 — 진실원은 httpOnly 쿠키이고, me 를 저장하면
- * 로그아웃·게스트 승격 후 stale 데이터가 남는다.
- *
- * react-query 를 쓰지 않는 이유: ensureSession 은 "없으면 만든다"는 부수효과가 있는
- * 명령형 절차라 useQuery 의 자동 refetch 와 충돌한다 (포커스 복귀 때마다 게스트가 생길 수 있음).
+ * 로그아웃 후 stale 데이터가 남는다.
  */
 // 동시 호출 합류용 — zustand 밖 모듈 스코프여야 StrictMode 이중 마운트에도 1회만 나간다
 let loadPromise: Promise<MeResult | null> | null = null
-let ensurePromise: Promise<MeResult | null> | null = null
 
 /**
  * 세션 힌트 — "이 브라우저에 세션 쿠키가 있었을 것"이라는 표식.
  * httpOnly 쿠키는 JS 로 존재 여부를 알 수 없어, 힌트 없이는 첫 방문자에게도
  * 매 페이지 me 조회 → 401 → refresh 401 탐침이 나가 콘솔이 붉게 물든다.
  * 힌트가 없으면 조회 전용(loadMe)은 네트워크 없이 익명으로 단정한다.
- * (ensureSession 은 게스트 중복 생성 방지를 위해 항상 fetchMe 부터 — 힌트와 무관)
  */
 const SESSION_HINT_KEY = 'pullit_session_hint'
 const hasSessionHint = () => {
@@ -94,39 +86,10 @@ export const useUserStore = create<UserState>((set, get) => ({
     return loadPromise
   },
 
-  ensureSession: () => {
-    if (get().status === 'ready' && get().me) return Promise.resolve(get().me)
-    if (ensurePromise) return ensurePromise
-    set({ status: 'loading' })
-    ensurePromise = (async () => {
-      // 1) 재방문자 — 401 이면 인터셉터가 /api/auth/token 으로 재발급 후 재시도한다.
-      //    (이 경로로만 refresh 쿠키가 전송되므로 게스트 중복 생성이 방지된다)
-      let me = await fetchMe()
-      // 2) 첫 방문 — 게스트 발급 후 재조회
-      if (!me) {
-        await createGuestSession()
-        me = await fetchMe()
-        claimUtmVisit(me?.id) // 방금 생긴 users 행에 최초 유입 방문 귀속
-      }
-      if (me) setSessionHint()
-      set({ me, status: me ? 'ready' : 'anonymous' })
-      return me
-    })()
-      .catch(() => {
-        set({ me: null, status: 'anonymous' })
-        return null
-      })
-      .finally(() => {
-        ensurePromise = null
-      })
-    return ensurePromise
-  },
-
   setMe: (me) => set({ me, status: me ? 'ready' : 'anonymous' }),
 
   clear: () => {
     loadPromise = null
-    ensurePromise = null
     clearSessionHint() // 로그아웃·탈퇴 후 재방문 시 불필요한 세션 탐침 방지
     set({ me: null, status: 'idle' })
   },
