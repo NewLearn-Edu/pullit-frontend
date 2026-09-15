@@ -1300,3 +1300,31 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 .retention-note { margin: 6px 0 0; font-size: 12px; color: var(--color-muted); line-height: 1.5; }   /* 학교 관리 각주에서도 사용 */
 .retention-table td.retention-wait { color: var(--color-muted); }
 
+
+/* ---- 알림톡 (2026-09-15) — 발송 내역 + 최근 14일 2열. 1080px 미만은 한 열 ---- */
+.alimtalk-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.alimtalk-layout > .card + .card { margin-top: 0; }
+@media (max-width: 1080px) { .alimtalk-layout { grid-template-columns: minmax(0, 1fr); } }   /* 1fr 만 두면 표 min-width 가 카드 폭을 밀어 페이지가 가로로 넘친다 */
+.alimtalk-status { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-muted); white-space: nowrap; }
+.alimtalk-status .sep { color: var(--neutral-dash); }
+.alimtalk-status .on { color: var(--green-text); font-weight: 600; }
+.alimtalk-status .off { color: var(--color-muted); font-weight: 600; }
+.table-wrap .alimtalk-table { table-layout: fixed; min-width: 640px; }   /* ID 72 + 회원 132 + 채널 108 + 상태 108 + 시각 92 = 512 → 실패 사유 최소 128px. main-inner 1040 − 우측 340 − gap 16 − 패딩 36 = 648 이라 1440 폭에서 스크롤 없이 들어간다 */
+.alimtalk-table td.member { overflow: hidden; }
+.alimtalk-table td.member .name { font-weight: 600; color: var(--table-fg); overflow: hidden; text-overflow: ellipsis; }
+.alimtalk-table td.member .sub { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--color-muted); }
+.alimtalk-table td.reason { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; font-size: 13px; color: var(--color-body); }
+.alimtalk-table td.reason.none { color: var(--neutral-dash); }
+.alimtalk-daily { table-layout: fixed; width: 100%; min-width: 0; }
+.alimtalk-daily th, .alimtalk-daily td { padding-left: 8px; padding-right: 8px; }
+.alimtalk-daily th:first-child, .alimtalk-daily td:first-child { width: 92px; padding-left: 12px; }
+.alimtalk-daily th:last-child, .alimtalk-daily td:last-child { padding-right: 12px; }
+.alimtalk-daily tbody td { padding-top: 12px; padding-bottom: 12px; cursor: pointer; }
+.alimtalk-daily tbody tr.on td { background: var(--color-fill-hover); }
+.alimtalk-daily tbody tr.on td:first-child { border-radius: var(--r-menu) 0 0 var(--r-menu); }
+.alimtalk-daily tbody tr.on td:last-child { border-radius: 0 var(--r-menu) var(--r-menu) 0; }
+.alimtalk-daily td.day { font-weight: 600; color: var(--table-fg); }
+.alimtalk-daily td.day .wd { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--color-muted); }
+.alimtalk-daily td.day.today { color: var(--color-primary); }
+.alimtalk-daily td.zero { color: var(--neutral-dash); }
+.alimtalk-daily td.fail { color: var(--color-primary); font-weight: 600; }

@@ -292,6 +292,18 @@ export function IcoOtp() {
   )
 }
 
+/** 알림톡 — 말풍선 (2026-09-15) */
+export function IcoChat() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none">
+      <path
+        d="M10 3c-4.1 0-7.3 2.6-7.3 5.9 0 2 1.2 3.7 3 4.8l-.7 2.9c-.1.3.3.6.6.4l3.4-2.1c.3 0 .7.1 1 .1 4.1 0 7.3-2.6 7.3-5.9S14.1 3 10 3z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 /** 모바일 상단 바 — 메뉴 열기 (햄버거) */
 export function IcoMenu() {
   return (

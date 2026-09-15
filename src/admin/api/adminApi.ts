@@ -780,6 +780,75 @@ export async function fetchPhoneVerifications(params: {
 }
 
 // ---------------------------------------------------------------------------
+// 알림톡 (매일 19:00 학습 알림 캠페인 · sms_campaign_sends)
+// ---------------------------------------------------------------------------
+
+/** 오늘 배치가 돌면 누구에게 무엇이 갈지 — 발송 없이 조회만 (dev 에서도 동작) */
+export interface CampaignPreview {
+  /** prod 이면서 EVENING_REMINDER_ENABLED=true 일 때만 true */
+  enabled: boolean
+  /** LMS | ALIMTALK */
+  channel: string
+  date: string
+  targetCount: number
+  sampleUserIds: number[]
+  sampleMessage: string
+}
+
+export async function fetchCampaignPreview(): Promise<CampaignPreview> {
+  const { data } = await adminApi.get<BaseResponse<CampaignPreview>>(
+    '/api/admin/campaigns/evening-reminder/preview',
+  )
+  return data.data
+}
+
+export type CampaignSendStatus = 'SENT' | 'FAILED'
+export type CampaignKind = 'EVENING_REMINDER' | 'DAILY_PROBLEM_ALIMTALK'
+
+/** 발송 1건 — status SENT 는 카카오(SENS) 접수 성공, FAILED 는 failReason 에 원인 */
+export interface CampaignSend {
+  id: number
+  userId: number
+  userName: string | null
+  phoneNumber: string
+  campaign: CampaignKind
+  status: CampaignSendStatus
+  failReason: string | null
+  sentAt: string
+}
+
+export type CampaignSendPage = Paged<CampaignSend>
+
+/** 지정일 발송 내역 최신순 — date 생략 시 오늘(KST), status 생략 시 전체 */
+export async function fetchCampaignSends(params: {
+  date?: string
+  status?: CampaignSendStatus
+  page?: number
+  size?: number
+}): Promise<CampaignSendPage> {
+  const { data } = await adminApi.get<BaseResponse<CampaignSendPage>>(
+    '/api/admin/campaigns/evening-reminder/sends',
+    { params },
+  )
+  return data.data
+}
+
+/** 하루 집계 — 기록 없는 날도 0 으로 내려온다 (최신일 먼저) */
+export interface CampaignDaily {
+  date: string
+  sent: number
+  failed: number
+}
+
+export async function fetchCampaignDaily(days = 14): Promise<CampaignDaily[]> {
+  const { data } = await adminApi.get<BaseResponse<CampaignDaily[]>>(
+    '/api/admin/campaigns/evening-reminder/daily',
+    { params: { days } },
+  )
+  return data.data
+}
+
+// ---------------------------------------------------------------------------
 // 소단원 평균 관리 (리포트 노출 평균)
 // ---------------------------------------------------------------------------
 

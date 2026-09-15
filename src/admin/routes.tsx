@@ -15,6 +15,7 @@ import PoliciesPage from './pages/PoliciesPage'
 import VisitStatsPage from './pages/VisitStatsPage'
 import UnitAveragesPage from './pages/UnitAveragesPage'
 import RetentionPage from './pages/RetentionPage'
+import AlimtalkPage from './pages/AlimtalkPage'
 import SchoolsPage from './pages/SchoolsPage'
 import ProblemInventoryPage from './pages/ProblemInventoryPage'
 import './admin.css'
@@ -64,6 +65,7 @@ export default function AdminRoutes() {
         <Route path="stats/visits" element={<VisitStatsPage />} />
         <Route path="stats/unit-averages" element={<UnitAveragesPage />} />
         <Route path="stats/retention" element={<RetentionPage />} />
+        <Route path="stats/alimtalk" element={<AlimtalkPage />} />
         <Route path="schools" element={<SchoolsPage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
