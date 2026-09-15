@@ -188,14 +188,22 @@ export function claimUtmVisit(userId: number | null | undefined): void {
  * utm 이 붙어 있으면 App 의 reportUtmVisit 이 캠페인별로 집계하므로 여기선 건너뛴다.
  */
 /**
- * 문자(LMS) 리마인더 링크 착지 — /today 는 문자 전용 경로라 URL 에 utm 이 없어도 도착 자체를 방문으로 센다.
- * source=sms · campaign=today 로 기록해 어드민 유입 화면에서 "문자로 몇 명 들어왔나" 를 본다.
+ * 리마인더 링크 착지 — /today 는 리마인더 전용 경로라 URL 에 utm 이 없어도 도착 자체를 방문으로 센다.
+ * 문자(LMS)·알림톡 버튼 링크가 둘 다 쿼리 없는 /today 라 프론트는 채널을 모른다 — source=today-link 로 보내면
+ * 서버가 지금 발송 채널에 맞춰 sms/lms 또는 kakao/alimtalk 으로 기록한다 (VisitMetricsService · 2026-09-15).
  * 같은 브라우저는 소스×캠페인 24시간 1회 (send 의 중복 억제 그대로).
  */
 export function reportTodayLinkVisit(): void {
+  // ?via=kakao 가 붙어 오면 확실히 카카오 — 없으면 today-link 로 보내 서버가 채널을 정한다
+  let viaKakao = false
+  try {
+    viaKakao = new URLSearchParams(window.location.search).get('via') === 'kakao'
+  } catch {
+    /* noop */
+  }
   send({
-    utmSource: 'sms',
-    utmMedium: 'lms',
+    utmSource: viaKakao ? 'kakao' : 'today-link',
+    utmMedium: viaKakao ? 'alimtalk' : null,
     utmCampaign: 'today',
     utmContent: null,
     landingPath: '/today',
