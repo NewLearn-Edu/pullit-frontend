@@ -542,6 +542,8 @@ export interface ProfileCompleteRequest {
   agreePrivacy: boolean
   /** [선택] 마케팅 정보 수신 동의 — 유저가 직접 체크한 경우에만 true */
   agreeMarketing: boolean
+  /** [선택] 학습 알림 받기 — 매일 저녁 오늘의 문제 알림톡. 유저가 직접 체크(또는 전체 동의)한 경우에만 true (2026-09-15) */
+  studyAlert: boolean
   /** [선택] 초대 코드 — 초대 링크(?invite=)로 들어와 가입한 경우 실린다 (초대자 +5 지급 근거) */
   inviteCode?: string | null
   /** [선택] 학교 (2026-09-14) — schools.id. 없으면 schoolNoneReason. 둘 다 없으면 미입력 */

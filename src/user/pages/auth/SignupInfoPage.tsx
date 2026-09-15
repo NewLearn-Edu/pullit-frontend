@@ -128,6 +128,8 @@ interface SavedSignupForm {
   agreeTerms: boolean
   agreePrivacy: boolean
   agreeMarketing: boolean
+  /** 학습 알림 받기 — 기본 꺼짐, 체크 시 true (2026-09-15) */
+  studyAlert?: boolean
   revealed: number
   /** 동의 시트 열림 — "보기"로 정책 화면을 다녀와 페이지가 다시 마운트돼도 시트가 그대로 떠 있게 (2026-09-06) */
   consentOpen?: boolean
@@ -212,6 +214,8 @@ export default function SignupInfoPage() {
   const [agreePrivacy, setAgreePrivacy] = useState(saved.agreePrivacy ?? false)
   // [선택] 마케팅 수신 동의 — 기본 해제. 명시적 체크만 유효하며 시작 조건에 넣지 않는다
   const [agreeMarketing, setAgreeMarketing] = useState(saved.agreeMarketing ?? false)
+  // 학습 알림(데일리 문제 알림톡) — 다른 선택 항목처럼 기본 꺼짐, 직접 체크하거나 "전체 동의"로 켠다. 가입 후 마이페이지에서 바꿀 수 있다 (2026-09-15)
+  const [studyAlert, setStudyAlert] = useState(saved.studyAlert ?? false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false) // 만 14세 미만 차단됨
@@ -267,13 +271,13 @@ export default function SignupInfoPage() {
         SIGNUP_FORM_KEY,
         JSON.stringify({
           name, nickname, birthY, birthM, birthD, grade, school, phone, phoneVerified, phoneVerifiedAt,
-          agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen,
+          agreeAge, agreeTerms, agreePrivacy, agreeMarketing, studyAlert, revealed, consentOpen,
         } satisfies SavedSignupForm),
       )
     } catch {
       /* noop */
     }
-  }, [name, nickname, birthY, birthM, birthD, grade, school, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, revealed, consentOpen])
+  }, [name, nickname, birthY, birthM, birthD, grade, school, phone, phoneVerified, phoneVerifiedAt, agreeAge, agreeTerms, agreePrivacy, agreeMarketing, studyAlert, revealed, consentOpen])
 
   // 소셜 로그인을 거친 계정만 올 수 있는 화면 — 가입 중(GUEST·PENDING / USER·PENDING) 또는 회원.
   // 순수 게스트(GUEST·GUEST)·비로그인은 로그인으로
@@ -554,6 +558,7 @@ export default function SignupInfoPage() {
         agreeTerms,
         agreePrivacy,
         agreeMarketing, // 선택 — 명시적 체크만 유효 (정보통신망법 §50)
+        studyAlert, // 학습 알림(알림톡) — 체크한 경우에만 true
         inviteCode: readInviteCode(), // 초대 링크로 들어온 가입이면 초대자에게 +5 (없으면 null)
         // 학교 (2026-09-14) — 학교 id 또는 "학교 없음" 사유 중 하나
         schoolId: effectiveSchool?.school?.id ?? null,
@@ -1093,22 +1098,23 @@ export default function SignupInfoPage() {
               <br />꼭 필요한 동의만 추렸어
             </h2>
 
-            {/* 전체 동의 — 필수 3종 + 선택(마케팅)까지 일괄 토글 */}
+            {/* 전체 동의 — 필수 3종 + 선택(마케팅·학습 알림)까지 일괄 토글 */}
             <button
               type="button"
               onClick={() => {
-                const next = !(requiredAgreed && agreeMarketing)
+                const next = !(requiredAgreed && agreeMarketing && studyAlert)
                 setAgreeAge(next)
                 setAgreeTerms(next)
                 setAgreePrivacy(next)
                 setAgreeMarketing(next)
+                setStudyAlert(next)
               }}
               className="mt-[20px] flex w-full items-center gap-[10px] border-b border-[#f0f1f3] pb-[14px] pt-[4px] text-left"
             >
-              <CheckMark on={requiredAgreed && agreeMarketing} />
+              <CheckMark on={requiredAgreed && agreeMarketing && studyAlert} />
               <span
                 className={`text-[16px] font-bold transition-colors duration-150 ${
-                  requiredAgreed && agreeMarketing ? 'text-[#121417]' : 'text-[#a6abb1]'
+                  requiredAgreed && agreeMarketing && studyAlert ? 'text-[#121417]' : 'text-[#a6abb1]'
                 }`}
               >
                 전체 동의
@@ -1125,13 +1131,15 @@ export default function SignupInfoPage() {
                   { checked: agreeTerms, toggle: () => setAgreeTerms((v) => !v), label: '이용약관 동의', doc: '/policies/terms', required: true },
                   { checked: agreePrivacy, toggle: () => setAgreePrivacy((v) => !v), label: '개인정보 수집·이용 동의', doc: '/policies/privacy', required: true },
                   { checked: agreeMarketing, toggle: () => setAgreeMarketing((v) => !v), label: '마케팅 정보 수신 동의', doc: '/policies/marketing', required: false },
+                  // 학습 알림 — 정보성 알림톡(매일 저녁 오늘의 문제). 마케팅과 별개 스위치, 기본 꺼짐 (2026-09-15)
+                  { checked: studyAlert, toggle: () => setStudyAlert((v) => !v), label: '학습 알림 받기', doc: null, required: false },
                 ] as const
-              ).map((item) => (
+              ).map((item, i, list) => (
                 <div
                   key={item.label}
-                  // 필수 그룹과 선택 그룹 사이 구분선 + 간격
+                  // 필수 그룹과 선택 그룹 사이 구분선 + 간격 — 선택 항목 중 첫 번째에만 (선택이 2개가 되어 항목마다 선 긋지 않게 · 2026-09-15)
                   className={`flex items-center ${
-                    !item.required ? 'mt-[10px] border-t border-[#f0f1f3] pt-[10px]' : ''
+                    !item.required && list[i - 1]?.required ? 'mt-[10px] border-t border-[#f0f1f3] pt-[10px]' : ''
                   }`}
                 >
                   <button
