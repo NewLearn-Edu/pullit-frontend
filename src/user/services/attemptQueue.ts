@@ -35,6 +35,18 @@ export function enqueueAttempt(req: AttemptSubmitRequest) {
   write([...read(), req])
 }
 
+/**
+ * 큐에서 온보딩 맛보기 건(세트 없는 TRIAL)만 버린다 (2026-09-15).
+ * 세션 끊긴 기존 회원이 /start 로 맛보기를 다시 풀면 3문항이 큐에 쌓이는데, 로그인해 보니 이미 완주한 회원이면
+ * 그 기록은 가치가 없다 (재진단은 홈의 진단 세트가 정식 경로). 세트 있는 건은 정상 기록이라 남긴다
+ */
+export function dropOnboardingTrialAttempts(): number {
+  const queue = read()
+  const kept = queue.filter((req) => !(req.source === 'TRIAL' && req.setId == null))
+  if (kept.length !== queue.length) write(kept)
+  return queue.length - kept.length
+}
+
 /** 재시도 가치가 있는 실패인가 — 네트워크 단절·5xx 만. 4xx(401 제외)는 폐기해 무한 재시도를 막는다 */
 export function isRetryableAttemptError(error: unknown): boolean {
   if (!isAxiosError(error)) return true // 네트워크 레벨 실패
