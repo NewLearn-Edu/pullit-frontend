@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { fetchMe, type MeResult } from '@/user/api/authApi'
-import { SCHOOL_FEATURE_ENABLED } from '@/user/api/schoolApi'
+import { SCHOOL_ADMIN_ENABLED } from '@/user/api/schoolApi'
 import { ToastProvider, useToast } from './components/toast'
 import { ProblemKpi } from './components/ProblemKpi'
 import {
@@ -56,8 +56,8 @@ const NAV_SECTIONS: NavSection[] = [
         { to: '/admin/trial-tests/english', label: '영어 테스트', ico: <IcoEnglishTest /> },
       ] },
       { label: '업로드', items: [{ to: '/admin/upload', label: '문제 업로드', ico: <IcoUpload /> }] },
-      // 학교 관리 (AI-314) — 기능 오픈 전까지 메뉴 숨김 (라우트는 유지)
-      ...(SCHOOL_FEATURE_ENABLED ? [{ label: '학교', items: [{ to: '/admin/schools', label: '학교 관리', ico: <IcoList /> }] }] : []),
+      // 학교 관리 (AI-314) — 어드민은 유저 화면보다 먼저 연다 (SCHOOL_ADMIN_ENABLED)
+      ...(SCHOOL_ADMIN_ENABLED ? [{ label: '학교', items: [{ to: '/admin/schools', label: '학교 관리', ico: <IcoList /> }] }] : []),
     ],
   },
   {

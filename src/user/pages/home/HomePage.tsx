@@ -239,28 +239,44 @@ export default function HomePage() {
   // 카드 라벨은 풀다 만 단원마다 붙어야 한다 (예전엔 최근 1건으로 라벨을 그려 하나만 이어풀기로 보였다)
   const [resumableByUnit, setResumableByUnit] = useState<Record<string, ResumableSet>>({})
   const [resumePromptOpen, setResumePromptOpen] = useState(false)
+  const [resumePromptDone, setResumePromptDone] = useState(false) // 이번 진입에서 한 번 띄웠는가
   const [resumeError, setResumeError] = useState<string | null>(null) // 이어풀기 실패 안내 팝업
 
   // ── 학교 입력 팝업 (2026-09-14 · AI-314) ─────────────────────────────
-  // 학교 정보가 없는 ACTIVE 회원(학교도 사유도 없음)에게 1회. "나중에" 는 7일 쿨다운(localStorage).
-  // 이어풀기 팝업과 겹치지 않게 그 팝업이 닫힌 뒤에 뜬다. 판정 근거는 서버 /me (로컬 추측 없음)
+  // 학교 정보가 없는 ACTIVE 중·고등학생에게 1회. "나중에" 는 7일 쿨다운(localStorage).
+  // 홈 진입 팝업 순서는 학교 먼저, 이어풀기 나중 (2026-09-16) — 학교는 한 번 답하면 끝이고
+  // 이어풀기는 매일 다시 뜨므로, 겹치는 날엔 학교를 먼저 묻고 닫힌 뒤에 이어풀기를 띄운다.
+  // 판정 근거는 서버 /me (로컬 추측 없음)
   const [schoolPromptOpen, setSchoolPromptOpen] = useState(false)
+  const [schoolChecked, setSchoolChecked] = useState(false) // 띄울지 말지 판정이 끝났는가 — 이어풀기는 이 뒤에
   useEffect(() => {
-    if (!SCHOOL_FEATURE_ENABLED || sessionStatus !== 'ready' || !me || resumePromptOpen) return
-    const unset = me.type === 'USER' && me.status === 'ACTIVE' && me.schoolId == null && !me.schoolNoneReason
+    if (sessionStatus !== 'ready') return
+    if (!SCHOOL_FEATURE_ENABLED || !me) {
+      setSchoolChecked(true) // 기능 OFF·세션 없음 — 이어풀기를 막지 않는다
+      return
+    }
+    // 중·고등학생만 — N수생·학부모·선생님·일반인은 학교를 묻지 않는다 (2026-09-16)
+    const student = !!me.grade && (me.grade.startsWith('MIDDLE') || me.grade.startsWith('HIGH'))
+    const unset = student && me.type === 'USER' && me.status === 'ACTIVE' && me.schoolId == null && !me.schoolNoneReason
     if (unset && !isSchoolPromptSnoozed()) setSchoolPromptOpen(true)
-  }, [sessionStatus, me, resumePromptOpen])
+    setSchoolChecked(true)
+  }, [sessionStatus, me])
+
+  // 이어풀기 팝업 — 학교 팝업 판정이 끝나고, 그 팝업이 닫힌 뒤에 띄운다 (겹침 방지)
+  useEffect(() => {
+    if (!schoolChecked || schoolPromptOpen || resumePromptDone) return
+    if (!resumableSet || resumePromptCoolingDown()) return
+    localStorage.setItem(RESUME_PROMPT_SHOWN_AT_KEY, String(Date.now()))
+    setResumePromptOpen(true)
+    setResumePromptDone(true)
+  }, [schoolChecked, schoolPromptOpen, resumableSet, resumePromptDone])
+
   useEffect(() => {
     if (sessionStatus !== 'ready') return
     let alive = true
     fetchResumableSet()
       .then((resumable) => {
-        if (!alive) return
-        setResumableSet(resumable)
-        if (resumable && !resumePromptCoolingDown()) {
-          localStorage.setItem(RESUME_PROMPT_SHOWN_AT_KEY, String(Date.now()))
-          setResumePromptOpen(true)
-        }
+        if (alive) setResumableSet(resumable) // 띄우는 건 위 효과가 순서를 보고 결정한다
       })
       .catch(() => {})
     fetchResumableSets()
@@ -554,7 +570,7 @@ export default function HomePage() {
           aria-labelledby="resume-prompt-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.2)] px-[20px]"
         >
-          <div className="flex w-[335px] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] shadow-[0px_0px_7px_rgba(0,0,0,0.21)]">
+          <div className="flex w-[335px] max-w-full flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] shadow-[0px_0px_7px_rgba(0,0,0,0.21)] md:w-[460px] md:gap-[20px] md:px-[32px] md:py-[40px]" /* 패드·PC 는 넓게 — 학교 팝업과 같은 규격 (2026-09-16) */>
             <h2
               id="resume-prompt-title"
               className="text-[18px] font-bold leading-[1.4] text-[#121417]"

@@ -52,50 +52,47 @@ export function SchoolPromptPopup({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    // 이어풀기 팝업(PI-POPUP-RESUME)과 같은 조판 — 전 기기 중앙 다이얼로그. 예전엔 폰에서만 바텀시트라 둘이 달라 보였다 (2026-09-16)
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="school-prompt-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-[20px] max-md:items-end max-md:p-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.2)] px-[20px]"
     >
-      <style>{`
-        @keyframes pi-school-fade { from { opacity: 0 } }
-        @keyframes pi-school-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }
-        @keyframes pi-school-rise { from { transform: translateY(100%) } }
-      `}</style>
-      <button type="button" aria-label="닫기" onClick={later} className="absolute inset-0 animate-[pi-school-fade_200ms_ease] bg-[rgba(21,17,18,0.38)]" />
-
-      <div className="relative w-full max-w-[440px] animate-[pi-school-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] rounded-[24px] bg-white px-[20px] pb-[20px] pt-[32px] shadow-[0px_-16px_25px_rgba(0,0,0,0.12)] max-md:max-w-none max-md:animate-[pi-school-rise_300ms_cubic-bezier(0.22,0.9,0.3,1)] max-md:rounded-b-none max-md:rounded-t-[32px] max-md:pb-[calc(20px+env(safe-area-inset-bottom))]">
-        <div className="mb-[16px] hidden justify-center max-md:flex">
-          <span className="h-[5px] w-[42px] rounded-full bg-[#d6d8db]" />
-        </div>
-
-        <h2 id="school-prompt-title" className="text-center text-[20px] font-semibold leading-[1.4] text-[#121417]">
+      <style>{`@keyframes pi-school-pop { from { opacity: 0; transform: scale(0.94) translateY(10px) } }`}</style>
+      <div className="flex w-[335px] max-w-full animate-[pi-school-pop_260ms_cubic-bezier(0.22,0.9,0.3,1)] flex-col items-center gap-[16px] rounded-[24px] bg-white px-[20px] py-[34px] shadow-[0px_0px_7px_rgba(0,0,0,0.21)] md:w-[460px] md:gap-[20px] md:px-[32px] md:py-[40px]" /* 패드·PC 는 넓게 (2026-09-16) */>
+        <h2 id="school-prompt-title" className="text-[18px] font-bold leading-[1.4] text-[#121417]">
           어느 학교에 다녀?
         </h2>
-        <p className="mt-[8px] text-center text-[14px] leading-[1.6] text-[#5e6368]">
-          학교를 알려주면 같은 학교 친구들과
-          <br />
-          비교한 결과를 보여줄 수 있어
-        </p>
+        <div className="flex w-full flex-col items-center gap-[24px]">
+          <p className="text-center text-[16px] font-medium leading-[1.4] text-[#121417]">
+            같은 학교 친구들과 비교하는 기능을
+            <br />
+            준비하고 있어. 미리 알려줄래?
+          </p>
 
-        <div className="mt-[20px]">
-          <SchoolPicker value={choice} onChange={setChoice} />
-        </div>
-        {error && <p className="mt-[8px] text-center text-[13px] text-[#ff385c]">{error}</p>}
+          <div className="w-full">
+            <SchoolPicker value={choice} onChange={setChoice} />
+            {error && <p className="mt-[8px] text-center text-[13px] text-[#ff385c]">{error}</p>}
+          </div>
 
-        <div className="mt-[20px] flex gap-[8px]">
-          <button type="button" onClick={later} className="h-[54px] flex-1 rounded-[12px] bg-[#f2f4f6] text-[15px] font-semibold text-[#5e6368] transition-colors hover:bg-[#e8ebee]">
-            나중에
-          </button>
-          <button
-            type="button"
-            disabled={!choice || saving}
-            onClick={save}
-            className="h-[54px] flex-[1.4] rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:bg-[#e3e5e8] disabled:text-[#a6abb1]"
-          >
-            {saving ? '저장 중…' : '저장'}
-          </button>
+          <div className="flex w-full gap-[8px]">
+            <button
+              type="button"
+              onClick={later}
+              className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#f8f8f8] text-[16px] font-bold text-[#121417]"
+            >
+              나중에
+            </button>
+            <button
+              type="button"
+              disabled={!choice || saving}
+              onClick={save}
+              className="flex h-[56px] min-w-0 flex-1 items-center justify-center rounded-[12px] bg-[#23272b] text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:bg-[#e3e5e8] disabled:text-[#a6abb1]"
+            >
+              {saving ? '저장 중…' : '저장'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

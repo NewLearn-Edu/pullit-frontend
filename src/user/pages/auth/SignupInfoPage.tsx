@@ -525,12 +525,12 @@ export default function SignupInfoPage() {
   /** 입력이 다 찼는가 — 동의 시트를 열 수 있는 조건 */
   /**
    * 학교 단계 (2026-09-14) — 중·고등학생은 학교 검색 또는 "학교 없음" 사유, N수생은 사유 기본 선택(출신교 검색 가능),
-   * 학부모·선생님·일반인은 단계 없이 "해당 없음" 으로 채운다. 학교급은 학년에서 정해진다
+   * N수생·학부모·선생님·일반인은 단계 없이 기타로 채운다 (N수생 2026-09-16 결정). 학교급은 학년에서 정해진다
    */
   const schoolGrade: SchoolGrade | null =
     grade == null ? null : grade.startsWith('MIDDLE') ? 'MIDDLE' : grade.startsWith('HIGH') ? 'HIGH' : null
   // 기능 OFF 면 단계 자체가 없고 학교 값은 null/null 로 보낸다 (오픈 후 홈 팝업이 받아 채우도록 사유도 안 채움)
-  const schoolStepShown = SCHOOL_FEATURE_ENABLED && grade != null && grade !== 'PARENT' && grade !== 'TEACHER' && grade !== 'GENERAL'
+  const schoolStepShown = SCHOOL_FEATURE_ENABLED && schoolGrade != null // 중·고등학생만
   const effectiveSchool: SchoolChoice | null =
     !SCHOOL_FEATURE_ENABLED ? null : schoolStepShown ? school : grade != null ? { noneReason: 'OTHER' } : null
   const schoolReady = !SCHOOL_FEATURE_ENABLED || effectiveSchool != null
@@ -922,12 +922,11 @@ export default function SignupInfoPage() {
                           style={{ animationDelay: `${i * 45}ms` }}
                           onClick={() => {
                             setGrade(g)
-                            // 학교급이 바뀌면 고른 학교는 무효 · N수생은 "학교 없음(N수생)" 기본 선택 (출신교 검색으로 바꿀 수 있다)
+                            // 학교급이 바뀌면 고른 학교는 무효. 학교 단계는 중·고등학생만 — N수생·학부모·선생님·일반인은 기타로 자동 저장
                             const nextGrade = g.startsWith('MIDDLE') ? 'MIDDLE' : g.startsWith('HIGH') ? 'HIGH' : null
                             if (school?.school && school.school.grade !== nextGrade) setSchool(null)
-                            if (SCHOOL_FEATURE_ENABLED && g === 'RETAKE' && !school) setSchool({ noneReason: 'RETAKE' })
-                            const student = SCHOOL_FEATURE_ENABLED && g !== 'PARENT' && g !== 'TEACHER' && g !== 'GENERAL'
-                            reveal(student ? 4 : 5) // 다음: 학교 (학생, 기능 ON 일 때만) / 휴대폰 인증
+                            const student = SCHOOL_FEATURE_ENABLED && nextGrade != null
+                            reveal(student ? 4 : 5) // 다음: 학교 (중·고 학생, 기능 ON 일 때만) / 휴대폰 인증
                           }}
                           className={`su-subchip flex h-[52px] min-w-[64px] items-center justify-center gap-[5px] rounded-[14px] border px-[18px] text-[15px] font-semibold transition-colors duration-150 ${
                             on
@@ -958,8 +957,12 @@ export default function SignupInfoPage() {
                   setSchool(c)
                   if (c) reveal(5) // 다음: 휴대폰 인증
                 }}
-                noneOptions={grade === 'RETAKE' ? ['RETAKE', 'GED', 'OVERSEAS'] : ['GED', 'OVERSEAS', 'OTHER']}
               />
+              {/* 고른 학교를 "변경"으로 지운 뒤 — 아래 단계(휴대폰)는 이미 열려 있어 접지 않고, 왜 시작 버튼이
+                  안 눌리는지 여기서 알린다 (생년월일 오류 안내와 같은 규격 · 2026-09-16) */}
+              {revealed >= 5 && !school && (
+                <p className="text-[13px] text-danger">학교를 골라줘. 없으면 "찾는 학교가 없어요 - 기타"를 선택해줘</p>
+              )}
             </Step>
             )}
 
