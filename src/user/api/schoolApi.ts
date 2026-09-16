@@ -1,12 +1,10 @@
 import { api } from '@/user/api/authApi'
 
 /**
- * 학교 기능 노출 스위치 (2026-09-14 · AI-314)
- * 백엔드 배포·NEIS 첫 동기화 전까지 false — 가입 학교 단계 · 프로필 학교 필드 · 홈 입력 팝업 · 어드민 학교 메뉴/컬럼을 전부 숨긴다.
- * 오픈 시 true 로만 바꾸면 된다 (코드 삭제·주석 없음)
+ * 학교 기능 노출 스위치 (2026-09-14 · AI-314) — 가입 학교 단계 · 프로필 학교 필드 · 홈 입력 팝업.
+ * 2026-09-16 오픈: 운영 NEIS 첫 동기화 완료(5,723교 적재)를 확인하고 켰다
  */
-// 로컬 개발 서버(npm run dev)에서는 항상 켜서 바로 볼 수 있게, 빌드(dev·prod 배포)에서는 false (2026-09-16)
-export const SCHOOL_FEATURE_ENABLED = import.meta.env.DEV || false
+export const SCHOOL_FEATURE_ENABLED = true
 /**
  * 어드민 학교 관리 노출 스위치 (2026-09-16) — 유저 화면과 별개로 먼저 켠다.
  * 사이드바 "학교 > 학교 관리" 메뉴와 회원 목록 학교 컬럼. 운영에서 "지금 최신화"로 NEIS 첫 동기화를 하기 위함
