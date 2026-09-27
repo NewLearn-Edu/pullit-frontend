@@ -406,6 +406,8 @@ export function refreshSession(): Promise<void> {
 
 /** 로그아웃 — 서버가 RefreshToken 무효화 + 인증 쿠키 삭제 */
 export async function logout(): Promise<void> {
+  // 이 기기 푸시 토큰을 계정에서 먼저 뗀다 — 인증이 살아 있을 때만 가능. 실패해도 로그아웃은 진행
+  await unregisterPushToken().catch(() => {})
   await api.post('/api/auth/logout')
 }
 
@@ -414,6 +416,7 @@ export async function logout(): Promise<void> {
  * 유예 기간(30일) 안에 같은 소셜로 재로그인하면 복구되고, 지나면 완전 삭제된다.
  */
 export async function withdrawAccount(reason: WithdrawalReason, detail?: string): Promise<void> {
+  await unregisterPushToken().catch(() => {}) // 탈퇴한 계정 앞으로 푸시가 가지 않게 (로그아웃과 동일)
   // 사유는 필수 · 상세는 "기타" 등 선택 — 서버 users.withdrawal_reason/detail 에 남아 이탈 집계에 쓰인다 (2026-09-04)
   await api.delete('/api/users/me', { data: { reason, detail: detail?.trim() || null } })
 }
@@ -421,6 +424,34 @@ export async function withdrawAccount(reason: WithdrawalReason, detail?: string)
 /** 마케팅 수신동의 변경 — 동의(시각 기록) / 철회(삭제). 마이페이지 토글 */
 export async function updateMarketingConsent(agree: boolean): Promise<void> {
   await api.patch('/api/users/me/marketing-consent', { agree })
+}
+
+/**
+ * 앱 푸시(FCM) 토큰 — 스토어 앱 래퍼가 주입하는 규약 (2026-09-17 · Android 구현 완료, iOS 동일 예정).
+ * 첫 로드 때 pushToken 이 null 일 수 있고, 토큰이 생기거나 바뀌면 'pullit:pushToken' 이벤트가 온다.
+ * 서버 동기화는 services/pushToken.ts 가 담당한다.
+ */
+export interface PullitNative {
+  platform: 'android' | 'ios'
+  pushToken: string | null
+  requestPushPermission(): void
+}
+export type PushPlatform = 'ANDROID' | 'IOS'
+
+export function getPullitNative(): PullitNative | null {
+  return (window as Window & { PullitNative?: PullitNative }).PullitNative ?? null
+}
+
+/** 이 기기 푸시 토큰 등록 — 서버 멱등 (같은 토큰이면 주인만 갱신) */
+export async function registerPushToken(token: string, platform: PushPlatform): Promise<void> {
+  await api.post('/api/push-tokens', { token, platform })
+}
+
+/** 이 기기 푸시 토큰 해제 — 로그아웃·탈퇴 직전. 앱이 아니거나 토큰이 없으면 요청 없음 */
+export async function unregisterPushToken(): Promise<void> {
+  const token = getPullitNative()?.pushToken
+  if (!token) return
+  await api.delete('/api/push-tokens', { data: { token } })
 }
 
 /** 학습 알림(데일리 문제 알림톡) 켜기/끄기 — 마이페이지 토글 (2026-09-15) */

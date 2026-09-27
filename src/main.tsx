@@ -6,6 +6,7 @@ import App from './App'
 import { captureInviteCode } from './user/services/referral'
 import { applyAppInsets } from './user/utils/standalone'
 import { restoreProblemNotes } from './user/services/problemNotes'
+import { startPushTokenSync } from './user/services/pushToken'
 // Pretendard 셀프호스팅 (dynamic subset) — CDN 통짜 가변 폰트(~2MB) 로드가
 // 매 새로고침마다 시스템 폰트 → Pretendard 교체 깜빡임(FOUT)을 만들어 전환.
 // 유니코드 범위별 분할 파일이라 필요한 글리프만 수십 KB 단위로 즉시 로드된다.
@@ -36,6 +37,9 @@ applyAppInsets()
 
 // 못 올린 필기(로컬 저널) 복구 — 어떤 화면으로 들어오든 세션이 확인되는 즉시 서버로 보낸다
 void restoreProblemNotes()
+
+// 앱(래퍼)의 푸시 토큰을 로그인한 계정에 저장 — 첫 로드엔 토큰이 없을 수 있어 이벤트도 함께 받는다
+startPushTokenSync()
 
 const queryClient = new QueryClient({
   defaultOptions: {
