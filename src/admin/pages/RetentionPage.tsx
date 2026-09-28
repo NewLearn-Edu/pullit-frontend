@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { fetchRetention, type RetentionResponse } from '../api/adminApi'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { fetchRetention, type RetentionMetric, type RetentionResponse } from '../api/adminApi'
+import { RetentionUsersModal, type RetentionCell } from '../components/RetentionUsersModal'
 import { StatCard } from '../components/StatCard'
 
 const pct = (n: number, d: number) => (d > 0 ? `${((n / d) * 100).toFixed(1)}%` : '—')
@@ -19,11 +20,14 @@ type Range = 7 | 14 | 30 | 60
  *   ① 가입일 코호트 — 세로로 비교한다. 9/09 가입자의 D1 과 9/13 가입자의 D1 이 다르면 그 사이 뭔가 바뀐 것.
  *      아직 그 날이 안 온 칸은 "—" (매일 오른쪽으로 한 칸씩 채워진다)
  *   ② 일별 활성 — 어제 대비 오늘. 학습자 중 "복귀"(그날 가입이 아닌 사람)가 리마인더 효과를 보는 칸
+ *
+ * 숫자 칸(0 제외)은 전부 누를 수 있다 (2026-09-28) — 그 칸에 든 회원이 누구인지 팝업으로 펼친다.
  */
 export default function RetentionPage() {
   const [range, setRange] = useState<Range>(30)
   const [data, setData] = useState<RetentionResponse | null>(null)
   const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
+  const [cell, setCell] = useState<RetentionCell | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -46,6 +50,12 @@ export default function RetentionPage() {
     const lastIdx = data.daily.map((d) => d.learners > 0 || d.wau > 0).lastIndexOf(true)
     return lastIdx < 0 ? data.daily.slice(0, 7) : data.daily.slice(0, lastIdx + 1)
   }, [data])
+
+  // 셀 열기 — 표에 찍힌 숫자가 0 이거나 판정 불가(—)면 열 게 없으니 클릭도 막는다
+  const drill = (metric: RetentionMetric, date: string | null, expected: number | null, offset?: number) =>
+    expected == null || expected === 0
+      ? undefined
+      : () => setCell({ metric, date, offset, expected, days: range })
 
   const kpi = data?.kpi
   const n = (v: number | undefined) => (state === 'done' && v != null ? v.toLocaleString() : '—')
@@ -87,10 +97,10 @@ export default function RetentionPage() {
       </div>
 
       <div className="kpi-problems kpi-funnel">
-        <StatCard label="ACTIVE 회원" value={n(kpi?.active)} delta="모든 비율의 분모" tone="flat" />
-        <StatCard label="재방문 (학습 2일 이상)" value={n(kpi?.returned)} delta={`ACTIVE 대비 ${k(kpi?.returned)} · 학습 1일 이상 ${n(kpi?.studied)}명`} tone="up" />
-        <StatCard label="이번 주 꾸준 (7일 중 3일+)" value={n(kpi?.steadyWeek)} delta={`ACTIVE 대비 ${k(kpi?.steadyWeek)}`} tone="good" />
-        <StatCard label="이탈 중" value={n(kpi?.churned)} delta="학습한 적 있는데 최근 7일 0일 · 리마인더 대상" tone="flat" />
+        <StatCard label="ACTIVE 회원" value={n(kpi?.active)} delta="모든 비율의 분모" tone="flat" onOpen={drill('KPI_ACTIVE', null, kpi?.active ?? null)} />
+        <StatCard label="재방문 (학습 2일 이상)" value={n(kpi?.returned)} delta={`ACTIVE 대비 ${k(kpi?.returned)} · 학습 1일 이상 ${n(kpi?.studied)}명`} tone="up" onOpen={drill('KPI_RETURNED', null, kpi?.returned ?? null)} />
+        <StatCard label="이번 주 꾸준 (7일 중 3일+)" value={n(kpi?.steadyWeek)} delta={`ACTIVE 대비 ${k(kpi?.steadyWeek)}`} tone="good" onOpen={drill('KPI_STEADY', null, kpi?.steadyWeek ?? null)} />
+        <StatCard label="이탈 중" value={n(kpi?.churned)} delta="학습한 적 있는데 최근 7일 0일 · 리마인더 대상" tone="flat" onOpen={drill('KPI_CHURNED', null, kpi?.churned ?? null)} />
       </div>
 
       {/* ① 가입일 코호트 */}
@@ -128,14 +138,19 @@ export default function RetentionPage() {
                     <td className="strong num" title={c.date}>
                       {fmtDate(c.date)} <span className="funnel-weekday">({weekday(c.date)}){c.date === data.today ? ' 오늘' : ''}</span>
                     </td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{c.signupAll}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{c.staff || <span className="sub">0</span>}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{c.deleted || <span className="sub">0</span>}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{c.pending || <span className="sub">0</span>}</td>
-                    <td className="num step step-active" style={{ textAlign: 'right' }}>{c.active}</td>
-                    <RetentionCell n={c.day0Sets} base={c.active} />
+                    <StepCell n={c.signupAll} cls="step" onOpen={drill('SIGNUP_ALL', c.date, c.signupAll)} />
+                    <StepCell n={c.staff} cls="step" dim onOpen={drill('STAFF', c.date, c.staff)} />
+                    <StepCell n={c.deleted} cls="step" dim onOpen={drill('DELETED', c.date, c.deleted)} />
+                    <StepCell n={c.pending} cls="step" dim onOpen={drill('PENDING', c.date, c.pending)} />
+                    <StepCell n={c.active} cls="step step-active" onOpen={drill('ACTIVE', c.date, c.active)} />
+                    <RetentionCell n={c.day0Sets} base={c.active} onOpen={drill('DAY0_SET', c.date, c.day0Sets)} />
                     {c.retained.map((v, i) => (
-                      <RetentionCell key={data.offsets[i]} n={v} base={c.active} />
+                      <RetentionCell
+                        key={data.offsets[i]}
+                        n={v}
+                        base={c.active}
+                        onOpen={drill('RETAINED', c.date, v, data.offsets[i])}
+                      />
                     ))}
                   </tr>
                 ))}
@@ -144,14 +159,19 @@ export default function RetentionPage() {
                 <tfoot>
                   <tr className="funnel-total">
                     <td className="strong">합계</td>
-                    <td className="num strong step" style={{ textAlign: 'right' }}>{cohortTotal.signupAll}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{cohortTotal.staff}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{cohortTotal.deleted}</td>
-                    <td className="num step" style={{ textAlign: 'right' }}>{cohortTotal.pending}</td>
-                    <td className="num strong step step-active" style={{ textAlign: 'right' }}>{cohortTotal.active}</td>
-                    <RetentionCell n={cohortTotal.day0Sets} base={cohortTotal.active} />
+                    <StepCell n={cohortTotal.signupAll} cls="strong step" onOpen={drill('SIGNUP_ALL', null, cohortTotal.signupAll)} />
+                    <StepCell n={cohortTotal.staff} cls="step" onOpen={drill('STAFF', null, cohortTotal.staff)} />
+                    <StepCell n={cohortTotal.deleted} cls="step" onOpen={drill('DELETED', null, cohortTotal.deleted)} />
+                    <StepCell n={cohortTotal.pending} cls="step" onOpen={drill('PENDING', null, cohortTotal.pending)} />
+                    <StepCell n={cohortTotal.active} cls="strong step step-active" onOpen={drill('ACTIVE', null, cohortTotal.active)} />
+                    <RetentionCell n={cohortTotal.day0Sets} base={cohortTotal.active} onOpen={drill('DAY0_SET', null, cohortTotal.day0Sets)} />
                     {cohortTotal.ret.map((r, i) => (
-                      <RetentionCell key={data.offsets[i]} n={r.base > 0 ? r.n : null} base={r.base} />
+                      <RetentionCell
+                        key={data.offsets[i]}
+                        n={r.base > 0 ? r.n : null}
+                        base={r.base}
+                        onOpen={drill('RETAINED', null, r.base > 0 ? r.n : null, data.offsets[i])}
+                      />
                     ))}
                   </tr>
                 </tfoot>
@@ -188,11 +208,16 @@ export default function RetentionPage() {
                     <td className="strong num" title={d.date}>
                       {fmtDate(d.date)} <span className="funnel-weekday">({weekday(d.date)}){d.date === data.today ? ' 오늘' : ''}</span>
                     </td>
-                    <td className="num strong" style={{ textAlign: 'right' }}>{d.learners}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{d.newLearners}</td>
-                    <td className="num strong" style={{ textAlign: 'right', color: d.returning > 0 ? 'var(--green-text)' : undefined }}>{d.returning}</td>
+                    <StepCell n={d.learners} cls="strong" onOpen={drill('DAILY_LEARNER', d.date, d.learners)} />
+                    <StepCell n={d.newLearners} onOpen={drill('DAILY_NEW', d.date, d.newLearners)} />
+                    <StepCell
+                      n={d.returning}
+                      cls="strong"
+                      color={d.returning > 0 ? 'var(--green-text)' : undefined}
+                      onOpen={drill('DAILY_RETURNING', d.date, d.returning)}
+                    />
                     <td className="num" style={{ textAlign: 'right' }}>{pct(d.returning, d.learners)}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{d.wau}</td>
+                    <StepCell n={d.wau} onOpen={drill('DAILY_WAU', d.date, d.wau)} />
                     <td className="num" style={{ textAlign: 'right' }}>{pct(d.learners, d.wau)}</td>
                   </tr>
                 ))}
@@ -201,18 +226,57 @@ export default function RetentionPage() {
           </div>
         )}
       </div>
+
+      {cell && <RetentionUsersModal cell={cell} onClose={() => setCell(null)} />}
     </>
   )
 }
 
+/** 누르면 회원 목록이 열리는 셀에 공통으로 붙는 속성 — onOpen 이 없으면(0·판정 불가) 아무 일도 안 한다 */
+function drillProps(onOpen?: () => void) {
+  if (!onOpen) return {}
+  return {
+    onClick: onOpen,
+    role: 'button' as const,
+    tabIndex: 0,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        onOpen()
+      }
+    },
+  }
+}
+
+/** 계단·일별 활성의 숫자 셀. dim = 0 일 때 옅게 (관계자·탈퇴처럼 보통 0 인 칸) */
+function StepCell({
+  n, cls, dim, color, onOpen,
+}: { n: number; cls?: string; dim?: boolean; color?: string; onOpen?: () => void }) {
+  return (
+    <td
+      className={['num', cls, onOpen && 'rt-drill'].filter(Boolean).join(' ')}
+      style={{ textAlign: 'right', color }}
+      title={onOpen ? '누르면 이 칸의 회원 목록' : undefined}
+      {...drillProps(onOpen)}
+    >
+      {dim && n === 0 ? <span className="sub">0</span> : n}
+    </td>
+  )
+}
+
 /** 코호트 셀 — 인원 + ACTIVE 대비 % + 막대. 아직 판정 불가(null)면 "—" */
-function RetentionCell({ n, base }: { n: number | null; base: number }) {
+function RetentionCell({ n, base, onOpen }: { n: number | null; base: number; onOpen?: () => void }) {
   if (n == null) {
     return <td className="num retention-cell retention-wait" style={{ textAlign: 'right' }} title="아직 그 날이 안 왔음">—</td>
   }
   const ratio = base > 0 ? Math.min(1, n / base) : 0
   return (
-    <td className="num retention-cell" style={{ textAlign: 'right' }} title={`ACTIVE ${base}명 중 ${n}명`}>
+    <td
+      className={['num', 'retention-cell', onOpen && 'rt-drill'].filter(Boolean).join(' ')}
+      style={{ textAlign: 'right' }}
+      title={`ACTIVE ${base}명 중 ${n}명${onOpen ? ' · 누르면 회원 목록' : ''}`}
+      {...drillProps(onOpen)}
+    >
       <span className="funnel-n">{n}</span>
       <span className="funnel-pct">{pct(n, base)}</span>
       <span className="funnel-bar" aria-hidden="true">

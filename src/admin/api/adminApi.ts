@@ -314,6 +314,11 @@ export interface AdminUser {
   /** 정회원이 된 시각 — 직가입은 createdAt 과 동일, 게스트 출신은 승격 시점(createdAt 보다 늦음), 게스트는 null */
   registeredAt?: string | null
   lastActiveAt?: string | null
+  /** 가입 시점 · 최근 접속의 웹/앱(WEB·APP) 과 기기(IOS_PHONE·ANDROID_TABLET…) — 구버전 가입자는 null */
+  signupClient?: string | null
+  signupDevice?: string | null
+  lastClient?: string | null
+  lastDevice?: string | null
   /** 풀잇 관계자(팀원·테스트 계정) — 회원·게스트 집계에서 제외. 어드민에서 지정 (구서버엔 없음) */
   staff?: boolean
   /** 학교 (2026-09-14) — 미입력 null · "학교 없음" 이면 schoolNoneReason 만 */
@@ -647,6 +652,60 @@ export async function fetchRetention(days = 30): Promise<RetentionResponse> {
   const { data } = await adminApi.get<BaseResponse<RetentionResponse>>('/api/admin/stats/retention', {
     params: { days },
   })
+  return data.data
+}
+
+// ---- 셀 드릴다운 (2026-09-28) — 리텐션 표의 숫자 한 칸에 들어간 회원이 누구인지 ----
+
+/**
+ * 셀을 가리키는 지표. 판정은 전부 백엔드가 집계와 같은 조건으로 한다.
+ *   코호트 계단 SIGNUP_ALL·STAFF·DELETED·PENDING·ACTIVE · 당일 완주 DAY0_SET · D{n} RETAINED(offset 필수)
+ *   일별 활성 DAILY_*(date 필수) · 상단 KPI KPI_*(오늘 기준 · date 불필요)
+ */
+export type RetentionMetric =
+  | 'SIGNUP_ALL' | 'STAFF' | 'DELETED' | 'PENDING' | 'ACTIVE' | 'DAY0_SET' | 'RETAINED'
+  | 'DAILY_LEARNER' | 'DAILY_NEW' | 'DAILY_RETURNING' | 'DAILY_WAU'
+  | 'KPI_ACTIVE' | 'KPI_STUDIED' | 'KPI_RETURNED' | 'KPI_STEADY' | 'KPI_CHURNED'
+
+export interface RetentionUserRow {
+  user: AdminUser
+  /** 전체 학습일 수 (온보딩 맛보기 제외) */
+  studyDayCount: number
+  firstStudyDate: string | null
+  lastStudyDate: string | null
+  day0Done: boolean
+  /** offsets 중 실제로 학습한 경과일 — 코호트 D{n} 가로줄을 회원 단위로 본 것 */
+  hitOffsets: number[]
+}
+
+export interface RetentionUsersResponse {
+  today: string
+  metric: RetentionMetric
+  /** 코호트 가입일 또는 일별 활성 날짜 — 합계 행·KPI 는 null */
+  date: string | null
+  offset: number | null
+  offsets: number[]
+  total: number
+  users: RetentionUserRow[]
+}
+
+export async function fetchRetentionUsers(params: {
+  metric: RetentionMetric
+  date?: string | null
+  offset?: number | null
+  days?: number
+}): Promise<RetentionUsersResponse> {
+  const { data } = await adminApi.get<BaseResponse<RetentionUsersResponse>>(
+    '/api/admin/stats/retention/users',
+    {
+      params: {
+        metric: params.metric,
+        ...(params.date ? { date: params.date } : {}),
+        ...(params.offset != null ? { offset: params.offset } : {}),
+        days: params.days ?? 30,
+      },
+    },
+  )
   return data.data
 }
 

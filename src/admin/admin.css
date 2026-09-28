@@ -1335,3 +1335,58 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 .alimtalk-daily td.day.today { color: var(--color-primary); }
 .alimtalk-daily td.zero { color: var(--neutral-dash); }
 .alimtalk-daily td.fail { color: var(--color-primary); font-weight: 600; }
+
+/* ---------- 리텐션 셀 드릴다운 팝업 (2026-09-28) ---------- */
+/* 표의 숫자 칸을 누르면 그 안에 든 회원을 그대로 펼친다. 셀은 기존 행 클릭 관례를 따라 td 자체를 누른다 */
+.retention-table td.rt-drill, .retention-daily td.rt-drill { cursor: pointer; }
+.retention-table td.rt-drill:hover, .retention-daily td.rt-drill:hover { background: var(--color-fill-hover); }
+.retention-table td.rt-drill.step:hover { background: rgba(255, 56, 92, .12); }          /* 계단 칸은 원래 분홍이라 한 단계 진하게 */
+.retention-table td.rt-drill.step-active:hover { background: rgba(255, 56, 92, .16); }
+.retention-table td.rt-drill:focus-visible, .retention-daily td.rt-drill:focus-visible {
+  outline: none; box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.rtu-dim {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.rtu-modal {
+  width: min(1440px, calc(100vw - 32px));
+  max-height: 84vh;
+  display: flex; flex-direction: column;
+}
+.rtu-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px;
+}
+.rtu-head-text { min-width: 0; }
+.rtu-count { margin-left: 8px; font-size: 14px; font-weight: 600; color: var(--color-muted); }
+.rtu-mismatch { color: var(--color-primary); }
+.rtu-body { overflow-y: auto; }
+.rtu-body .table-wrap { overflow-x: auto; }
+.rtu-table tbody tr { cursor: default; }                                                  /* 팝업 안에서는 행 클릭 동작이 없다 */
+.rtu-table td { vertical-align: top; }
+.rtu-table td .badge { vertical-align: middle; }
+
+/* 학습한 경과일 — D0…D30 을 한 줄 칩으로. 학습한 날만 채운다 */
+.rtu-hits { display: flex; flex-wrap: wrap; gap: 4px; }
+.rtu-hit {
+  min-width: 30px; padding: 3px 6px;
+  border-radius: 8px;
+  background: var(--hidden-bg);
+  font-size: 11px; font-weight: 600; color: var(--neutral-dash);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rtu-hit.on { background: var(--color-primary-soft); color: var(--color-primary); }
+.rtu-hit-set { background: var(--color-accent-soft); color: var(--green-text); }
+@media (max-width: 900px) { .rtu-modal { max-height: 90vh; } .rtu-dim { padding: 12px; } }
+
+/* 누르면 상세가 열리는 스탯 카드 (2026-09-28 · 리텐션 KPI) — 규격은 그대로, 커서·hover 만 */
+.card.stat.stat-drill { cursor: pointer; transition: box-shadow .14s ease, transform .14s ease; }
+.card.stat.stat-drill:hover { box-shadow: var(--shadow-menu); transform: translateY(-1px); }
+.card.stat.stat-drill:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255, 56, 92, .18); }
+.rtu-table td.rtu-badges { overflow: visible; }                                           /* 배지 두 개가 말줄임에 잘리지 않게 */
+.rtu-table td:last-child { text-align: left; }                                            /* 마지막 칸은 경과일 칩 — 전역 우측정렬 해제 */
