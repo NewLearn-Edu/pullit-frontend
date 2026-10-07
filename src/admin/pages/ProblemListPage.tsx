@@ -15,6 +15,7 @@ import {
   MathProblemRender,
 } from '@/shared/components/ExamRender'
 import { IcoSearch } from '../components/icons'
+import BulkLookupModal from '../components/BulkLookupModal'
 import {
   fetchProblemDetail,
   fetchProblemFilters,
@@ -105,6 +106,8 @@ export default function ProblemListPage() {
   const [page, setPage] = useState(0)
   const [data, setData] = useState<ProblemPage | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // ID 일괄 조회 팝업 (2026-10-07) — 엑셀 열을 붙여넣고 조회하면 ID 별 ●/✕ 로 존재 여부를 보여준다
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [detail, setDetail] = useState<ProblemDetail | null>(null)
   // 미리보기 디바이스 프레임 — 문제 영역 폭: min 350px · max 500px (실서비스 규칙)
   const [device, setDevice] = useState<'web' | 'pad' | 'mobile'>('web')
@@ -146,6 +149,7 @@ export default function ProblemListPage() {
     setPage(0)
     setSelectedId(null)
     setDetail(null)
+    setBulkOpen(false)
   }, [subject])
 
   // 분류 트리 로드
@@ -371,8 +375,22 @@ export default function ProblemListPage() {
                 placeholder="문제 ID, 발문으로 검색"
                 value={qInput}
                 onChange={(e) => setQInput(e.target.value)}
+                onPaste={(e) => {
+                  // 엑셀 열 복사본은 줄바꿈 구분 — input 은 줄바꿈을 지워 ID 가 붙어버리므로 공백으로 바꿔 넣는다
+                  const text = e.clipboardData.getData('text')
+                  if (!/[\r\n\t]/.test(text)) return
+                  e.preventDefault()
+                  const el = e.currentTarget
+                  const start = el.selectionStart ?? el.value.length
+                  const end = el.selectionEnd ?? el.value.length
+                  const pasted = text.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim()
+                  setQInput(el.value.slice(0, start) + pasted + el.value.slice(end))
+                }}
               />
             </div>
+            <button type="button" className="btn btn-ghost" onClick={() => setBulkOpen(true)}>
+              ID 일괄 조회
+            </button>
             <select
               className="select"
               value={status}
@@ -418,12 +436,12 @@ export default function ProblemListPage() {
           </div>
 
           <div className="table-wrap">
-            <table>
+            <table className="no-rowclick">
               <thead>
                 {isMath ? (
                   <tr>
                     {/* 소단원만 유동 폭 — 전 컬럼 고정 px 면 남는 공간이 빈 영역으로 남아 헤더가 잘려 보임 */}
-                    <th style={{ width: 150 }}>ID</th>
+                    <th style={{ width: 200 }} className="col-id">ID</th>
                     <th style={{ width: 150 }}>대단원</th>
                     <th style={{ width: 210 }} className="col-mid">중단원</th>
                     <th>소단원</th>
@@ -436,7 +454,7 @@ export default function ProblemListPage() {
                   </tr>
                 ) : (
                   <tr>
-                    <th style={{ width: 210 }}>ID</th>
+                    <th style={{ width: 220 }} className="col-id">ID</th>
                     <th style={{ width: 180 }}>영역</th>
                     <th>유형</th>
                     <th style={{ width: 70 }}>점수</th>
@@ -450,12 +468,8 @@ export default function ProblemListPage() {
               </thead>
               <tbody>
                 {rows.map((p) => (
-                  <tr
-                    key={p.id}
-                    className={clsx(selectedId === p.id && 'selected')}
-                    onClick={() => toggleRow(p.id)}
-                  >
-                    <td className="num" style={{ color: 'var(--color-muted)' }}>{p.id}</td>
+                  <tr key={p.id} className={clsx(selectedId === p.id && 'selected')}>
+                    <td className="num col-id" style={{ color: 'var(--color-muted)' }}>{p.id}</td>
                     <td className="strong">{p.unitLarge}</td>
                     {isMath && <td className="col-mid">{p.unitMid}</td>}
                     <td>
@@ -475,7 +489,7 @@ export default function ProblemListPage() {
                     </td>
                     <td className="num">{p.correctRate == null ? '–' : `${p.correctRate}%`}</td>
                     <td className="num col-date">{formatDate(p.createdAt)}</td>
-                    <td><button className="btn btn-ghost btn-sm">상세</button></td>
+                    <td><button className="btn btn-ghost btn-sm" onClick={() => toggleRow(p.id)}>상세</button></td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
@@ -491,6 +505,18 @@ export default function ProblemListPage() {
         </div>
 
       </div>
+
+      {bulkOpen && apiSubject && (
+        <BulkLookupModal
+          subject={apiSubject}
+          subjectLabel={label}
+          onOpenDetail={(id) => {
+            setDevice('web')
+            setSelectedId(id)
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
 
       {/* 문제 미리보기 모달 — 문제 영역 500px 고정(실서비스 렌더 폭 검증) + 우측 해설.
           .view 진입 애니메이션의 transform 이 fixed 기준점을 바꾸므로 포털로 밖에 렌더 (항상 화면 정중앙).

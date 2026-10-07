@@ -471,6 +471,9 @@
   tbody tr:hover { background: var(--color-fill-soft); }
   tbody tr:last-child td { border-bottom: none; }
   td.strong { color: var(--table-fg); font-weight: 600; }
+  /* 문제 목록 (2026-10-07) — 행 클릭으로 열지 않고 "상세" 버튼으로만 연다. ID 는 절대 말줄임하지 않는다 */
+  table.no-rowclick tbody tr { cursor: default; }
+  table.no-rowclick td.col-id, table.no-rowclick th.col-id { overflow: visible; text-overflow: clip; }
   td .sub { display: block; font-size: 12px; color: var(--color-muted); margin-top: 2px; font-weight: 400; }
 
   .badge {
@@ -1390,3 +1393,42 @@ tbody + tbody .funnel-group td { padding-top: 22px; }  /* 묶음 사이 숨 고�
 .card.stat.stat-drill:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255, 56, 92, .18); }
 .rtu-table td.rtu-badges { overflow: visible; }                                           /* 배지 두 개가 말줄임에 잘리지 않게 */
 .rtu-table td:last-child { text-align: left; }                                            /* 마지막 칸은 경과일 칩 — 전역 우측정렬 해제 */
+
+/* ---- ID 일괄 조회 팝업 (2026-10-07) — 문제 목록 툴바 "ID 일괄 조회". 왼쪽 붙여넣기 · 오른쪽 결과 ●/✕ ---- */
+.bulk-dim { z-index: 55; }                                                                /* 문제 미리보기(60) 아래, 그 외 위 */
+.bulk-modal { width: min(1180px, calc(100vw - 32px)); max-height: 86vh; }
+.bulk-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; min-height: 0; flex: 1; }
+.bulk-input { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.bulk-input textarea {
+  flex: 1; min-height: 320px; resize: none;
+  padding: 12px 14px; border: 1px solid var(--color-line); border-radius: 12px;
+  background: var(--color-canvas); color: var(--color-fg);
+  font-size: 13px; line-height: 1.6; font-variant-numeric: tabular-nums; white-space: pre; overflow: auto;
+  outline: none;
+}
+.bulk-input textarea:focus { border-color: var(--line-strong); }
+.bulk-input textarea::placeholder { color: var(--color-muted); }
+.bulk-input-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bulk-count { font-size: 13px; font-weight: 600; color: var(--table-fg); }
+.bulk-count .sub { display: inline; font-size: 12px; font-weight: 400; color: var(--color-muted); margin: 0; }
+.bulk-count.over { color: var(--color-primary); }
+.bulk-actions { display: flex; gap: 8px; }
+.bulk-actions .btn:disabled { opacity: .45; cursor: default; filter: none; }
+.bulk-result { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.bulk-empty { margin: 0; padding: 24px 0; }
+.bulk-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 13px; color: var(--color-muted); }
+.bulk-summary b { font-weight: 700; color: var(--table-fg); }
+.bulk-summary b.ok { color: var(--green-strong); }
+.bulk-summary b.no { color: var(--color-primary); }
+.bulk-table-wrap { overflow: auto; min-height: 0; }
+.bulk-table { table-layout: fixed; min-width: 720px; }
+.bulk-table tbody tr { cursor: default; }
+.bulk-table tbody td { overflow: visible; text-overflow: clip; }                           /* 배지·버튼이 말줄임 점으로 바뀌지 않게. 단원 칸만 말줄임 */
+.bulk-table td.bulk-unit { overflow: hidden; text-overflow: ellipsis; }
+.bulk-table td.bulk-id { color: var(--table-fg); }
+.bulk-table tr.missing td.bulk-id { color: var(--color-muted); }
+.bulk-table tbody td { padding-top: 12px; padding-bottom: 12px; }
+.bulk-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; font-weight: 700; line-height: 1; }
+.bulk-mark.ok { color: var(--green-strong); background: var(--color-accent-soft); }
+.bulk-mark.no { color: var(--color-primary); background: var(--color-primary-soft); }
+@media (max-width: 900px) { .bulk-body { grid-template-columns: 1fr; } .bulk-input textarea { min-height: 160px; } }
